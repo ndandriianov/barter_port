@@ -1,10 +1,14 @@
 package transport
 
 import (
-	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/ndandriianov/barter_port/backend/internal/service/auth"
+)
+
+var (
+	ErrInvalidRequest = errors.New("invalid request")
 )
 
 type Handlers struct {
@@ -19,8 +23,8 @@ func NewHandlers(authService *auth.Service) *Handlers {
 
 func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 	var req registerReq
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid json"})
+	if err := decodeJSON(r, &req); err != nil {
+		handleError(w, http.StatusBadRequest, ErrInvalidRequest)
 		return
 	}
 
@@ -38,8 +42,8 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handlers) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	var req verifyReq
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": "invalid json"})
+	if err := decodeJSON(r, &req); err != nil {
+		handleError(w, http.StatusBadRequest, ErrInvalidRequest)
 		return
 	}
 
