@@ -23,23 +23,28 @@ type TokenRepo interface {
 	DeleteAllForUser(userID string)
 }
 
+type Mailer interface {
+	Send(to, subject, body string) error
+}
+
 type RegisterResult struct {
-	UserID    string
-	Email     string
-	VerifyURL string
+	UserID string
+	Email  string
 }
 
 type Service struct {
 	users  UserRepo
 	tokens TokenRepo
+	mailer Mailer
 
 	FrontendBaseURL string
 }
 
-func NewService(users UserRepo, tokens TokenRepo, frontendBaseURL string) *Service {
+func NewService(users UserRepo, tokens TokenRepo, mailer Mailer, frontendBaseURL string) *Service {
 	return &Service{
 		users:           users,
 		tokens:          tokens,
+		mailer:          mailer,
 		FrontendBaseURL: strings.TrimRight(frontendBaseURL, "/"),
 	}
 }
@@ -93,12 +98,16 @@ func (s *Service) Register(email, password string) (RegisterResult, error) {
 
 	verifyURL := s.FrontendBaseURL + "/verify-email?token=" + rawToken
 
-	// В реальном проекте тут отправка письма.
-	// Пока просто вернём ссылку, чтобы можно было тестить.
+	subject := "Confirm your email"
+	body := "Hello!\n\nPlease confirm your email by clicking the link:\n\n" + verifyURL + "\n\nIf you didn't register, ignore this email."
+
+	if err := s.mailer.Send(user.Email, subject, body); err != nil {
+		return RegisterResult{}, err
+	}
+
 	return RegisterResult{
-		UserID:    user.ID,
-		Email:     user.Email,
-		VerifyURL: verifyURL,
+		UserID: user.ID,
+		Email:  user.Email,
 	}, nil
 }
 

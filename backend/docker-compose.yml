@@ -1,0 +1,13 @@
+services:
+  smtp4dev:
+    image: rnwood/smtp4dev:latest
+    container_name: smtp4dev
+    restart: unless-stopped
+    ports:
+      - "5005:80"   # Web UI
+      - "2525:25"   # SMTP
+    environment:
+      - ServerOptions__HostName=localhost
+      - ServerOptions__AuthenticationRequired=true
+      - ServerOptions__Users__0__Username=user
+      - ServerOptions__Users__0__Password=password
