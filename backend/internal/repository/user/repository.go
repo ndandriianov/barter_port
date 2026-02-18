@@ -20,6 +20,9 @@ func NewInMemoryUserRepo() *InMemoryUserRepo {
 	}
 }
 
+// Create adds a new user to the repository.
+// Errors:
+//   - errors.ErrEmailAlreadyInUse - email already exists
 func (r *InMemoryUserRepo) Create(u model.User) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -33,6 +36,9 @@ func (r *InMemoryUserRepo) Create(u model.User) error {
 	return nil
 }
 
+// GetByEmail retrieves a user by their email address.
+// Errors:
+//   - errors.ErrUserNotFound: Occurs if no user is found with the given email address.
 func (r *InMemoryUserRepo) GetByEmail(email string) (model.User, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -50,6 +56,9 @@ func (r *InMemoryUserRepo) GetByEmail(email string) (model.User, error) {
 	return u, nil
 }
 
+// GetByID retrieves a user by their unique ID.
+// Errors:
+//   - errors.ErrUserNotFound: Occurs if no user is found with the given ID.
 func (r *InMemoryUserRepo) GetByID(id string) (model.User, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -61,6 +70,9 @@ func (r *InMemoryUserRepo) GetByID(id string) (model.User, error) {
 	return u, nil
 }
 
+// VerifyEmail marks a user's email as verified.
+// Errors:
+//   - errors.ErrUserNotFound: Occurs if no user is found with the given userID.
 func (r *InMemoryUserRepo) VerifyEmail(userID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()

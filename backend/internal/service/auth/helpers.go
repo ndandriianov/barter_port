@@ -55,3 +55,11 @@ func (s *Service) getEmailBody(token string) string {
 		"If you didn't register, ignore this email."
 	return body
 }
+
+func getHashFromRawToken(rawToken string) (string, error) {
+	trimmedToken := strings.TrimSpace(rawToken)
+	if trimmedToken == "" {
+		return "", errors.ErrInvalidToken
+	}
+	return sha256Hex(rawToken), nil
+}

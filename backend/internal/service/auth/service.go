@@ -21,6 +21,7 @@ const (
 
 type UserRepo interface {
 	Create(user model.User) error
+	// GetByEmail(email string) (model.User, error)
 	GetByID(id string) (model.User, error)
 	VerifyEmail(userID string) error
 }
@@ -34,11 +35,6 @@ type TokenRepo interface {
 
 type Mailer interface {
 	Send(to, subject, body string) error
-}
-
-type RegisterResult struct {
-	UserID string
-	Email  string
 }
 
 type Service struct {
@@ -56,6 +52,11 @@ func NewService(users UserRepo, tokens TokenRepo, mailer Mailer, frontendBaseURL
 		mailer:          mailer,
 		frontendBaseURL: strings.TrimRight(frontendBaseURL, "/"),
 	}
+}
+
+type RegisterResult struct {
+	UserID string
+	Email  string
 }
 
 func (s *Service) Register(email, password string) (RegisterResult, error) {
@@ -99,12 +100,10 @@ func (s *Service) Register(email, password string) (RegisterResult, error) {
 }
 
 func (s *Service) VerifyEmail(rawToken string) error {
-	rawToken = strings.TrimSpace(rawToken)
-	if rawToken == "" {
-		return errors.ErrInvalidToken
+	tokenHash, err := getHashFromRawToken(rawToken)
+	if err != nil {
+		return err
 	}
-
-	tokenHash := sha256Hex(rawToken)
 
 	t, err := s.tokens.GetByHash(tokenHash)
 	if err != nil {
