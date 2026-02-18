@@ -6,8 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"strings"
-
-	"github.com/ndandriianov/barter_port/backend/internal/errors"
 )
 
 func generateToken(nBytes int) (string, error) {
@@ -36,10 +34,10 @@ func validateEmail(email string) bool {
 
 func validateCredentials(email, password string) error {
 	if !validateEmail(email) {
-		return errors.ErrInvalidEmail
+		return ErrInvalidEmail
 	}
 	if len(password) < minPasswordLength {
-		return errors.ErrPasswordTooShort
+		return ErrPasswordTooShort
 	}
 	return nil
 }
@@ -59,7 +57,7 @@ func (s *Service) getEmailBody(token string) string {
 func getHashFromRawToken(rawToken string) (string, error) {
 	trimmedToken := strings.TrimSpace(rawToken)
 	if trimmedToken == "" {
-		return "", errors.ErrInvalidToken
+		return "", ErrInvalidToken
 	}
 	return sha256Hex(rawToken), nil
 }

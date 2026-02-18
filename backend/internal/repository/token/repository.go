@@ -1,10 +1,15 @@
 package token
 
 import (
+	"errors"
 	"sync"
 
-	"github.com/ndandriianov/barter_port/backend/internal/errors"
 	"github.com/ndandriianov/barter_port/backend/internal/model"
+)
+
+var (
+	ErrTokenNotFound      = errors.New("token not found")
+	ErrTokenAlreadyExists = errors.New("token already exists")
 )
 
 type InMemoryTokenRepo struct {
@@ -26,7 +31,7 @@ func (r *InMemoryTokenRepo) Save(t model.EmailVerificationToken) error {
 	defer r.mu.Unlock()
 
 	if _, exists := r.byHash[t.TokenHash]; exists {
-		return errors.ErrTokenAlreadyExists
+		return ErrTokenAlreadyExists
 	}
 
 	r.byHash[t.TokenHash] = t
@@ -42,7 +47,7 @@ func (r *InMemoryTokenRepo) GetByHash(tokenHash string) (model.EmailVerification
 
 	t, ok := r.byHash[tokenHash]
 	if !ok {
-		return model.EmailVerificationToken{}, errors.ErrTokenNotFound
+		return model.EmailVerificationToken{}, ErrTokenNotFound
 	}
 	return t, nil
 }
@@ -56,7 +61,7 @@ func (r *InMemoryTokenRepo) MarkUsed(tokenHash string) error {
 
 	t, ok := r.byHash[tokenHash]
 	if !ok {
-		return errors.ErrTokenNotFound
+		return ErrTokenNotFound
 	}
 
 	t.Used = true
