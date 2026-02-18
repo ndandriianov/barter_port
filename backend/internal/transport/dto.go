@@ -6,9 +6,8 @@ type registerReq struct {
 }
 
 type registerResp struct {
-	UserID    string `json:"userId"`
-	Email     string `json:"email"`
-	VerifyURL string `json:"verifyUrl"`
+	UserID string `json:"userId"`
+	Email  string `json:"email"`
 }
 
 type verifyReq struct {

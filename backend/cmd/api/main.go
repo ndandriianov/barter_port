@@ -1,6 +1,10 @@
 package main
 
 import (
+	"strconv"
+
+	"github.com/joho/godotenv"
+	"github.com/ndandriianov/barter_port/backend/internal/mailer"
 	"github.com/ndandriianov/barter_port/backend/internal/repository/token"
 	"github.com/ndandriianov/barter_port/backend/internal/repository/user"
 	"github.com/ndandriianov/barter_port/backend/internal/service/auth"
@@ -12,12 +16,26 @@ import (
 )
 
 func main() {
+	_ = godotenv.Load()
+
 	frontendURL := getEnv("FRONTEND_URL", "http://localhost:5173")
 
 	userRepo := user.NewInMemoryUserRepo()
 	tokenRepo := token.NewInMemoryTokenRepo()
 
-	authService := auth.NewService(userRepo, tokenRepo, frontendURL)
+	smtpHost := getEnv("SMTP_HOST", "")
+	smtpPort := mustInt(getEnv("SMTP_PORT", "587"))
+	smtpUser := getEnv("SMTP_USER", "")
+	smtpPass := getEnv("SMTP_PASS", "")
+	smtpFrom := getEnv("SMTP_FROM", smtpUser)
+
+	if smtpHost == "" {
+		log.Fatal("SMTP_HOST is required")
+	}
+
+	m := mailer.NewSMTPMailer(smtpHost, smtpPort, smtpUser, smtpPass, smtpFrom)
+
+	authService := auth.NewService(userRepo, tokenRepo, m, frontendURL)
 
 	handlers := transport.NewHandlers(authService)
 	router := transport.NewRouter(handlers)
@@ -31,6 +49,14 @@ func getEnv(key, fallback string) string {
 	v := os.Getenv(key)
 	if v == "" {
 		return fallback
+	}
+	return v
+}
+
+func mustInt(s string) int {
+	v, err := strconv.Atoi(s)
+	if err != nil {
+		log.Fatalf("invalid integer value: %s", s)
 	}
 	return v
 }

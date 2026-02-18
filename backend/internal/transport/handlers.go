@@ -31,9 +31,8 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, registerResp{
-		UserID:    res.UserID,
-		Email:     res.Email,
-		VerifyURL: res.VerifyURL,
+		UserID: res.UserID,
+		Email:  res.Email,
 	})
 }
 
