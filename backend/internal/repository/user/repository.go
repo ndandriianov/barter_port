@@ -1,10 +1,15 @@
 package user
 
 import (
+	"errors"
 	"sync"
 
-	"github.com/ndandriianov/barter_port/backend/internal/errors"
 	"github.com/ndandriianov/barter_port/backend/internal/model"
+)
+
+var (
+	ErrUserNotFound      = errors.New("user not found")
+	ErrEmailAlreadyInUse = errors.New("email already in use")
 )
 
 type InMemoryUserRepo struct {
@@ -28,7 +33,7 @@ func (r *InMemoryUserRepo) Create(u model.User) error {
 	defer r.mu.Unlock()
 
 	if _, ok := r.byEmail[u.Email]; ok {
-		return errors.ErrEmailAlreadyInUse
+		return ErrEmailAlreadyInUse
 	}
 
 	r.byID[u.ID] = u
@@ -45,12 +50,12 @@ func (r *InMemoryUserRepo) GetByEmail(email string) (model.User, error) {
 
 	id, ok := r.byEmail[email]
 	if !ok {
-		return model.User{}, errors.ErrUserNotFound
+		return model.User{}, ErrUserNotFound
 	}
 
 	u, ok := r.byID[id]
 	if !ok {
-		return model.User{}, errors.ErrUserNotFound
+		return model.User{}, ErrUserNotFound
 	}
 
 	return u, nil
@@ -65,7 +70,7 @@ func (r *InMemoryUserRepo) GetByID(id string) (model.User, error) {
 
 	u, ok := r.byID[id]
 	if !ok {
-		return model.User{}, errors.ErrUserNotFound
+		return model.User{}, ErrUserNotFound
 	}
 	return u, nil
 }
@@ -79,7 +84,7 @@ func (r *InMemoryUserRepo) VerifyEmail(userID string) error {
 
 	u, ok := r.byID[userID]
 	if !ok {
-		return errors.ErrUserNotFound
+		return ErrUserNotFound
 	}
 
 	u.EmailVerified = true

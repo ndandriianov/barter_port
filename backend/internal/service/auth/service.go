@@ -1,10 +1,10 @@
 package auth
 
 import (
+	"errors"
 	"strings"
 	"time"
 
-	"github.com/ndandriianov/barter_port/backend/internal/errors"
 	"github.com/ndandriianov/barter_port/backend/internal/model"
 
 	"golang.org/x/crypto/bcrypt"
@@ -17,6 +17,14 @@ const (
 	tokenExpirationTime = 24 * time.Hour
 	tokenUrlPath        = "/verify-email?token="
 	subject             = "Confirm your email"
+)
+
+var (
+	ErrInvalidEmail         = errors.New("invalid email")
+	ErrPasswordTooShort     = errors.New("password too short")
+	ErrInvalidToken         = errors.New("invalid token")
+	ErrTokenExpired         = errors.New("token expired")
+	ErrEmailAlreadyVerified = errors.New("email already verified")
 )
 
 type UserRepo interface {
@@ -59,6 +67,7 @@ type RegisterResult struct {
 	Email  string
 }
 
+// Register creates a new user, generates a verification token, and sends a verification email.
 func (s *Service) Register(email, password string) (RegisterResult, error) {
 	if err := validateCredentials(email, password); err != nil {
 		return RegisterResult{}, err
@@ -99,6 +108,7 @@ func (s *Service) Register(email, password string) (RegisterResult, error) {
 	}, nil
 }
 
+// VerifyEmail verifies a user's email using a raw token.
 func (s *Service) VerifyEmail(rawToken string) error {
 	tokenHash, err := getHashFromRawToken(rawToken)
 	if err != nil {
@@ -107,14 +117,14 @@ func (s *Service) VerifyEmail(rawToken string) error {
 
 	t, err := s.tokens.GetByHash(tokenHash)
 	if err != nil {
-		return errors.ErrInvalidToken
+		return ErrInvalidToken
 	}
 
 	if t.Used {
 		return nil
 	}
 	if time.Now().After(t.ExpiresAt) {
-		return errors.ErrTokenExpired
+		return ErrTokenExpired
 	}
 
 	u, err := s.users.GetByID(t.UserID)
@@ -123,7 +133,7 @@ func (s *Service) VerifyEmail(rawToken string) error {
 	}
 
 	if u.EmailVerified {
-		return errors.ErrEmailAlreadyVerified
+		return ErrEmailAlreadyVerified
 	}
 
 	if err = s.users.VerifyEmail(u.ID); err != nil {
