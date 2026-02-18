@@ -18,6 +18,9 @@ func NewInMemoryTokenRepo() *InMemoryTokenRepo {
 	}
 }
 
+// Save stores a new email verification token in the repository.
+// Errors:
+//   - errors.ErrTokenAlreadyExists: Occurs if a token with the same hash already exists in the repository.
 func (r *InMemoryTokenRepo) Save(t model.EmailVerificationToken) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -30,6 +33,9 @@ func (r *InMemoryTokenRepo) Save(t model.EmailVerificationToken) error {
 	return nil
 }
 
+// GetByHash retrieves an email verification token by its hash.
+// Errors:
+//   - errors.ErrTokenNotFound: Occurs if no token is found with the given hash.
 func (r *InMemoryTokenRepo) GetByHash(tokenHash string) (model.EmailVerificationToken, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -41,6 +47,9 @@ func (r *InMemoryTokenRepo) GetByHash(tokenHash string) (model.EmailVerification
 	return t, nil
 }
 
+// MarkUsed marks an email verification token as used.
+// Errors:
+//   - errors.ErrTokenNotFound: Occurs if no token is found with the given hash.
 func (r *InMemoryTokenRepo) MarkUsed(tokenHash string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
@@ -55,6 +64,8 @@ func (r *InMemoryTokenRepo) MarkUsed(tokenHash string) error {
 	return nil
 }
 
+// DeleteAllForUser removes all tokens associated with a specific user.
+// Errors: None.
 func (r *InMemoryTokenRepo) DeleteAllForUser(userID string) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
