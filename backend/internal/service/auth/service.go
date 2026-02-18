@@ -10,6 +10,15 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
+const (
+	bcryptCost          = 12
+	minPasswordLength   = 6
+	tokenLength         = 32
+	tokenExpirationTime = 24 * time.Hour
+	tokenUrlPath        = "/verify-email?token="
+	subject             = "Confirm your email"
+)
+
 type UserRepo interface {
 	Create(user model.User) error
 	GetByID(id string) (model.User, error)
@@ -37,7 +46,7 @@ type Service struct {
 	tokens TokenRepo
 	mailer Mailer
 
-	FrontendBaseURL string
+	frontendBaseURL string
 }
 
 func NewService(users UserRepo, tokens TokenRepo, mailer Mailer, frontendBaseURL string) *Service {
@@ -45,16 +54,13 @@ func NewService(users UserRepo, tokens TokenRepo, mailer Mailer, frontendBaseURL
 		users:           users,
 		tokens:          tokens,
 		mailer:          mailer,
-		FrontendBaseURL: strings.TrimRight(frontendBaseURL, "/"),
+		frontendBaseURL: strings.TrimRight(frontendBaseURL, "/"),
 	}
 }
 
 func (s *Service) Register(email, password string) (RegisterResult, error) {
-	if !validateEmail(email) {
-		return RegisterResult{}, errors.ErrInvalidEmail
-	}
-	if len(password) < 6 {
-		return RegisterResult{}, errors.ErrPasswordTooShort
+	if err := validateCredentials(email, password); err != nil {
+		return RegisterResult{}, err
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), 12)
@@ -62,46 +68,27 @@ func (s *Service) Register(email, password string) (RegisterResult, error) {
 		return RegisterResult{}, err
 	}
 
-	user := model.User{
-		ID:            newID(),
-		Email:         email,
-		PasswordHash:  string(hash),
-		EmailVerified: false,
-		CreatedAt:     time.Now(),
-	}
-
+	user := model.NewUser(newID(), email, string(hash))
 	if err := s.users.Create(user); err != nil {
 		return RegisterResult{}, err
 	}
 
-	// на всякий случай удалим все старые токены для этого юзера, если они были
+	// на всякий случай удаляются все старые токены для этого юзера, если они были
 	s.tokens.DeleteAllForUser(user.ID)
 
-	rawToken, err := generateToken(32)
+	rawToken, err := generateToken(tokenLength)
 	if err != nil {
 		return RegisterResult{}, err
 	}
 
 	tokenHash := sha256Hex(rawToken)
+	t := model.NewEmailVerificationToken(tokenHash, user.ID, time.Now().Add(tokenExpirationTime))
 
-	t := model.EmailVerificationToken{
-		TokenHash: tokenHash,
-		UserID:    user.ID,
-		ExpiresAt: time.Now().Add(24 * time.Hour),
-		Used:      false,
-		CreatedAt: time.Now(),
-	}
-
-	if err := s.tokens.Save(t); err != nil {
+	if err = s.tokens.Save(t); err != nil {
 		return RegisterResult{}, err
 	}
 
-	verifyURL := s.FrontendBaseURL + "/verify-email?token=" + rawToken
-
-	subject := "Confirm your email"
-	body := "Hello!\n\nPlease confirm your email by clicking the link:\n\n" + verifyURL + "\n\nIf you didn't register, ignore this email."
-
-	if err := s.mailer.Send(user.Email, subject, body); err != nil {
+	if err = s.mailer.Send(user.Email, subject, s.getEmailBody(rawToken)); err != nil {
 		return RegisterResult{}, err
 	}
 
