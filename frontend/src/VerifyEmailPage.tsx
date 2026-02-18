@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 
 export function VerifyEmailPage() {
@@ -10,7 +10,12 @@ export function VerifyEmailPage() {
   );
   const [error, setError] = useState<string | null>(null);
 
+  const didRun = useRef(false);
+
   useEffect(() => {
+    if (didRun.current) return;
+    didRun.current = true;
+
     async function run() {
       if (!token) {
         setStatus("error");
