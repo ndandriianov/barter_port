@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	frontendURL := getEnv("FRONTEND_URL", "http://localhost:3000")
+	frontendURL := getEnv("FRONTEND_URL", "http://localhost:5173")
 
 	userRepo := user.NewInMemoryUserRepo()
 	tokenRepo := token.NewInMemoryTokenRepo()
