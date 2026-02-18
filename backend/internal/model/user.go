@@ -9,3 +9,13 @@ type User struct {
 	EmailVerified bool
 	CreatedAt     time.Time
 }
+
+func NewUser(id, email, passwordHash string) User {
+	return User{
+		ID:            id,
+		Email:         email,
+		PasswordHash:  passwordHash,
+		EmailVerified: false,
+		CreatedAt:     time.Now(),
+	}
+}
