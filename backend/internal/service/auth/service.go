@@ -12,10 +12,14 @@ import (
 
 type UserRepo interface {
 	Create(user model.User) error
+	GetByID(id string) (model.User, error)
+	VerifyEmail(userID string) error
 }
 
 type TokenRepo interface {
 	Save(t model.EmailVerificationToken) error
+	GetByHash(tokenHash string) (model.EmailVerificationToken, error)
+	MarkUsed(tokenHash string) error
 	DeleteAllForUser(userID string)
 }
 
@@ -96,4 +100,44 @@ func (s *Service) Register(email, password string) (RegisterResult, error) {
 		Email:     user.Email,
 		VerifyURL: verifyURL,
 	}, nil
+}
+
+func (s *Service) VerifyEmail(rawToken string) error {
+	rawToken = strings.TrimSpace(rawToken)
+	if rawToken == "" {
+		return errors.ErrInvalidToken
+	}
+
+	tokenHash := sha256Hex(rawToken)
+
+	t, err := s.tokens.GetByHash(tokenHash)
+	if err != nil {
+		return errors.ErrInvalidToken
+	}
+
+	if t.Used {
+		return errors.ErrTokenAlreadyUsed
+	}
+	if time.Now().After(t.ExpiresAt) {
+		return errors.ErrTokenExpired
+	}
+
+	u, err := s.users.GetByID(t.UserID)
+	if err != nil {
+		return err
+	}
+
+	if u.EmailVerified {
+		return errors.ErrEmailAlreadyVerified
+	}
+
+	if err = s.users.VerifyEmail(u.ID); err != nil {
+		return err
+	}
+
+	if err = s.tokens.MarkUsed(tokenHash); err != nil {
+		return err
+	}
+
+	return nil
 }

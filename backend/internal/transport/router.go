@@ -24,7 +24,7 @@ func NewRouter(h *Handlers) http.Handler {
 
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/register", h.Register)
-		//r.Post("/verify-email", h.VerifyEmail)
+		r.Post("/verify-email", h.VerifyEmail)
 	})
 
 	return r

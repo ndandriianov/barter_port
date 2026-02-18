@@ -10,3 +10,7 @@ type registerResp struct {
 	Email     string `json:"email"`
 	VerifyURL string `json:"verifyUrl"`
 }
+
+type verifyReq struct {
+	Token string `json:"token"`
+}
