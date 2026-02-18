@@ -116,7 +116,7 @@ func (s *Service) VerifyEmail(rawToken string) error {
 	}
 
 	if t.Used {
-		return errors.ErrTokenAlreadyUsed
+		return nil
 	}
 	if time.Now().After(t.ExpiresAt) {
 		return errors.ErrTokenExpired
