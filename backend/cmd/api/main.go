@@ -2,6 +2,7 @@ package main
 
 import (
 	"strconv"
+	"time"
 
 	"github.com/joho/godotenv"
 	"github.com/ndandriianov/barter_port/backend/internal/mailer"
@@ -20,11 +21,14 @@ func main() {
 
 	frontendURL := getEnv("FRONTEND_URL", "http://localhost:5173")
 
+	jwtSecret := getEnv("JWT_SECRET", "")
+	jwtTTL := getEnv("JWT_TTL", "")
+
 	userRepo := user.NewInMemoryUserRepo()
 	tokenRepo := token.NewInMemoryTokenRepo()
 
 	smtpHost := getEnv("SMTP_HOST", "")
-	smtpPort := mustInt(getEnv("SMTP_PORT", "587"))
+	smtpPort := mustInt(getEnv("SMTP_PORT", ""))
 	smtpUser := getEnv("SMTP_USER", "")
 	smtpPass := getEnv("SMTP_PASS", "")
 	smtpFrom := getEnv("SMTP_FROM", smtpUser)
@@ -35,10 +39,17 @@ func main() {
 
 	m := mailer.NewSMTPMailer(smtpHost, smtpPort, smtpUser, smtpPass, smtpFrom)
 
-	authService := auth.NewService(userRepo, tokenRepo, m, frontendURL)
+	authService := auth.NewService(
+		userRepo,
+		tokenRepo,
+		m,
+		frontendURL,
+		jwtSecret,
+		time.Duration(mustInt(jwtTTL))*time.Minute,
+	)
 
 	handlers := transport.NewHandlers(authService)
-	router := transport.NewRouter(handlers)
+	router := transport.NewRouter(handlers, jwtSecret)
 
 	addr := ":8080"
 	log.Println("backend listening on", addr)

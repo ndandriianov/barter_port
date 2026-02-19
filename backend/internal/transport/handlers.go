@@ -1,10 +1,14 @@
 package transport
 
 import (
+	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 
 	"github.com/ndandriianov/barter_port/backend/internal/service/auth"
+	"github.com/ndandriianov/barter_port/backend/internal/transport/helpers"
+	"github.com/ndandriianov/barter_port/backend/internal/transport/middleware/auth_jwt"
 )
 
 var (
@@ -24,8 +28,8 @@ func NewHandlers(authService *auth.Service) *Handlers {
 
 func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 	var req registerReq
-	if err := decodeJSON(r, &req); err != nil {
-		handleError(w, http.StatusBadRequest, ErrInvalidRequest)
+	if err := helpers.DecodeJSON(r, &req); err != nil {
+		helpers.HandleError(w, http.StatusBadRequest, ErrInvalidRequest)
 		return
 	}
 
@@ -33,41 +37,79 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, auth.ErrInvalidEmail):
-			handleError(w, http.StatusBadRequest, auth.ErrInvalidEmail)
+			helpers.HandleError(w, http.StatusBadRequest, auth.ErrInvalidEmail)
 		case errors.Is(err, auth.ErrPasswordTooShort):
-			handleError(w, http.StatusBadRequest, auth.ErrPasswordTooShort)
+			helpers.HandleError(w, http.StatusBadRequest, auth.ErrPasswordTooShort)
 		case errors.Is(err, auth.ErrEmailAlreadyInUse):
-			handleError(w, http.StatusBadRequest, auth.ErrEmailAlreadyInUse)
+			helpers.HandleError(w, http.StatusBadRequest, auth.ErrEmailAlreadyInUse)
 		default:
-			handleError(w, http.StatusInternalServerError, ErrInternalServerError)
+			helpers.HandleError(w, http.StatusInternalServerError, ErrInternalServerError)
 		}
 	}
 
-	writeJSON(w, http.StatusOK, registerResp{
+	helpers.WriteJSON(w, http.StatusOK, registerResp{
 		UserID: res.UserID,
 		Email:  res.Email,
 	})
 }
 
 func (h *Handlers) VerifyEmail(w http.ResponseWriter, r *http.Request) {
-	var req verifyReq
-	if err := decodeJSON(r, &req); err != nil {
-		handleError(w, http.StatusBadRequest, ErrInvalidRequest)
+	var req verifyEmailReq
+	if err := helpers.DecodeJSON(r, &req); err != nil {
+		helpers.HandleError(w, http.StatusBadRequest, ErrInvalidRequest)
 		return
 	}
 
 	if err := h.authService.VerifyEmail(req.Token); err != nil {
 		switch {
 		case errors.Is(err, auth.ErrInvalidToken):
-			handleError(w, http.StatusBadRequest, auth.ErrInvalidToken)
+			helpers.HandleError(w, http.StatusBadRequest, auth.ErrInvalidToken)
 		case errors.Is(err, auth.ErrTokenExpired):
-			handleError(w, http.StatusBadRequest, auth.ErrTokenExpired)
+			helpers.HandleError(w, http.StatusBadRequest, auth.ErrTokenExpired)
 		case errors.Is(err, auth.ErrUserNotFound):
-			handleError(w, http.StatusNotFound, auth.ErrUserNotFound)
+			helpers.HandleError(w, http.StatusNotFound, auth.ErrUserNotFound)
 		default:
-			handleError(w, http.StatusInternalServerError, ErrInternalServerError)
+			helpers.HandleError(w, http.StatusInternalServerError, ErrInternalServerError)
 		}
 	}
 
-	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	helpers.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+}
+
+func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
+	var req loginReq
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		helpers.WriteJSON(w, 400, map[string]string{"error": "invalid json"})
+		return
+	}
+
+	res, err := h.authService.Login(req.Email, req.Password)
+	if err != nil {
+		switch {
+		case errors.Is(err, auth.ErrInvalidCredentials):
+			helpers.WriteJSON(w, 401, map[string]string{"error": "invalid credentials"})
+		case errors.Is(err, auth.ErrEmailNotVerified):
+			helpers.WriteJSON(w, 403, map[string]string{"error": "email not verified"})
+		default:
+			log.Printf("login error: %v", err)
+			helpers.WriteJSON(w, 500, map[string]string{"error": "internal error"})
+		}
+		return
+	}
+
+	helpers.WriteJSON(w, 200, loginResp{AccessToken: res.AccessToken})
+}
+
+type meResp struct {
+	UserID string `json:"userId"`
+}
+
+func (h *Handlers) Me(w http.ResponseWriter, r *http.Request) {
+	userID, ok := auth_jwt.UserIDFromContext(r.Context())
+	if !ok {
+		helpers.WriteJSON(w, 401, map[string]string{"error": "unauthorized"})
+		return
+	}
+
+	helpers.WriteJSON(w, 200, meResp{UserID: userID})
 }

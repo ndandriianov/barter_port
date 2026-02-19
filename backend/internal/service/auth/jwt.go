@@ -1,0 +1,29 @@
+package auth
+
+import (
+	"time"
+
+	"github.com/golang-jwt/jwt/v5"
+	"github.com/ndandriianov/barter_port/backend/internal/model"
+)
+
+type Claims struct {
+	Email string `json:"email"`
+	jwt.RegisteredClaims
+}
+
+func (s *Service) generateJWT(u model.User) (string, error) {
+	now := time.Now()
+
+	claims := Claims{
+		Email: u.Email,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   u.ID,
+			IssuedAt:  jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(now.Add(s.jwtTTL)),
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+	return token.SignedString(s.jwtSecret)
+}

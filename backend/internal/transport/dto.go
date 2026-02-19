@@ -10,6 +10,15 @@ type registerResp struct {
 	Email  string `json:"email"`
 }
 
-type verifyReq struct {
+type verifyEmailReq struct {
 	Token string `json:"token"`
+}
+
+type loginReq struct {
+	Email    string `json:"email"`
+	Password string `json:"password"`
+}
+
+type loginResp struct {
+	AccessToken string `json:"accessToken"`
 }
