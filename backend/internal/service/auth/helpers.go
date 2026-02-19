@@ -8,6 +8,8 @@ import (
 	"strings"
 )
 
+// --- TOKEN HELPERS ---
+
 func generateToken(nBytes int) (string, error) {
 	b := make([]byte, nBytes)
 	if _, err := rand.Read(b); err != nil {
@@ -21,11 +23,27 @@ func sha256Hex(s string) string {
 	return hex.EncodeToString(h[:])
 }
 
+func getHashFromRawToken(rawToken string) (string, error) {
+	trimmedToken := strings.TrimSpace(rawToken)
+	if trimmedToken == "" {
+		return "", ErrInvalidToken
+	}
+	return sha256Hex(rawToken), nil
+}
+
+func getHashFromToken(token string) string {
+	return sha256Hex(token)
+}
+
+// --- ID ---
+
 func newID() string {
 	// максимально простая заглушка
 	raw, _ := generateToken(bcryptCost)
 	return raw
 }
+
+// --- CREDENTIAL VALIDATION ---
 
 func validateEmail(email string) bool {
 	email = strings.TrimSpace(strings.ToLower(email))
@@ -42,6 +60,8 @@ func validateCredentials(email, password string) error {
 	return nil
 }
 
+// --- EMAIL VERIFICATION ---
+
 func (s *Service) getVerifyURL(token string) string {
 	return s.frontendBaseURL + tokenUrlPath + token
 }
@@ -52,12 +72,4 @@ func (s *Service) getEmailBody(token string) string {
 		s.getVerifyURL(token) + "\n\n" +
 		"If you didn't register, ignore this email."
 	return body
-}
-
-func getHashFromRawToken(rawToken string) (string, error) {
-	trimmedToken := strings.TrimSpace(rawToken)
-	if trimmedToken == "" {
-		return "", ErrInvalidToken
-	}
-	return sha256Hex(rawToken), nil
 }
