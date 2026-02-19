@@ -208,36 +208,43 @@ type LoginResult struct {
 	AccessToken string
 }
 
+// Login checks the provided credentials and returns a JWT if they are valid.
+//
+// It returns the following domain errors:
+//   - ErrInvalidCredentials
+//   - ErrEmailNotVerified
+//
+// All other errors are treated as internal and returned wrapped.
 func (s *Service) Login(email, password string) (LoginResult, error) {
 	email = strings.TrimSpace(strings.ToLower(email))
 
-	if email == "" || !strings.Contains(email, "@") {
-		return LoginResult{}, ErrInvalidCredentials
+	if !s.validateEmail(email) {
+		return LoginResult{}, fmt.Errorf("invalid email: %w", ErrInvalidCredentials)
 	}
-	if password == "" {
-		return LoginResult{}, ErrInvalidCredentials
+	if !validatePassword(password) {
+		return LoginResult{}, fmt.Errorf("invalid password: %w", ErrInvalidCredentials)
 	}
 
 	u, err := s.users.GetByEmail(email)
 	if err != nil {
 		if errors.Is(err, user.ErrUserNotFound) {
-			return LoginResult{}, ErrInvalidCredentials
+			return LoginResult{}, fmt.Errorf("user not found: %w", ErrInvalidCredentials)
 		}
-		return LoginResult{}, fmt.Errorf("get user by email: %w", err)
+		return LoginResult{}, fmt.Errorf("failed to get user by email: %w", err)
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password)); err != nil {
-		return LoginResult{}, ErrInvalidCredentials
+	if err = bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password)); err != nil {
+		return LoginResult{}, fmt.Errorf("incorrect password: %w", err)
 	}
 
 	if !u.EmailVerified {
 		return LoginResult{}, ErrEmailNotVerified
 	}
 
-	token, err := s.generateJWT(u)
+	jwtToken, err := s.generateJWT(u)
 	if err != nil {
 		return LoginResult{}, fmt.Errorf("generate jwt: %w", err)
 	}
 
-	return LoginResult{AccessToken: token}, nil
+	return LoginResult{AccessToken: jwtToken}, nil
 }
