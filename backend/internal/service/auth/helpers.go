@@ -49,6 +49,10 @@ func (s *Service) validateEmail(email string) bool {
 	return s.re.MatchString(email)
 }
 
+func validatePassword(password string) bool {
+	return len(password) >= minPasswordLength
+}
+
 func (s *Service) validateCredentials(email, password string) error {
 	if !s.validateEmail(email) {
 		return ErrInvalidEmail
