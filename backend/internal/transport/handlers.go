@@ -8,7 +8,8 @@ import (
 )
 
 var (
-	ErrInvalidRequest = errors.New("invalid request")
+	ErrInvalidRequest      = errors.New("invalid request")
+	ErrInternalServerError = errors.New("internal server error")
 )
 
 type Handlers struct {
@@ -30,8 +31,16 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 
 	res, err := h.authService.Register(req.Email, req.Password)
 	if err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
-		return
+		switch {
+		case errors.Is(err, auth.ErrInvalidEmail):
+			handleError(w, http.StatusBadRequest, auth.ErrInvalidEmail)
+		case errors.Is(err, auth.ErrPasswordTooShort):
+			handleError(w, http.StatusBadRequest, auth.ErrPasswordTooShort)
+		case errors.Is(err, auth.ErrEmailAlreadyInUse):
+			handleError(w, http.StatusBadRequest, auth.ErrEmailAlreadyInUse)
+		default:
+			handleError(w, http.StatusInternalServerError, ErrInternalServerError)
+		}
 	}
 
 	writeJSON(w, http.StatusOK, registerResp{
@@ -48,8 +57,16 @@ func (h *Handlers) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := h.authService.VerifyEmail(req.Token); err != nil {
-		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
-		return
+		switch {
+		case errors.Is(err, auth.ErrInvalidToken):
+			handleError(w, http.StatusBadRequest, auth.ErrInvalidToken)
+		case errors.Is(err, auth.ErrTokenExpired):
+			handleError(w, http.StatusBadRequest, auth.ErrTokenExpired)
+		case errors.Is(err, auth.ErrUserNotFound):
+			handleError(w, http.StatusNotFound, auth.ErrUserNotFound)
+		default:
+			handleError(w, http.StatusInternalServerError, ErrInternalServerError)
+		}
 	}
 
 	writeJSON(w, http.StatusOK, map[string]string{"status": "ok"})
