@@ -124,7 +124,7 @@ func (s *Service) Register(email, password string) (RegisterResult, error) {
 		return RegisterResult{}, fmt.Errorf("failed to generate token: %w", err)
 	}
 
-	tokenHash := sha256Hex(rawToken)
+	tokenHash := getHashFromToken(rawToken)
 	t := model.NewEmailVerificationToken(tokenHash, u.ID, time.Now().Add(tokenExpirationTime))
 
 	if err = s.tokens.Save(t); err != nil {
