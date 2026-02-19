@@ -1,6 +1,7 @@
 package main
 
 import (
+	"regexp"
 	"strconv"
 	"time"
 
@@ -23,6 +24,7 @@ func main() {
 
 	jwtSecret := getEnv("JWT_SECRET", "")
 	jwtTTL := getEnv("JWT_TTL", "")
+	re := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 
 	userRepo := user.NewInMemoryUserRepo()
 	tokenRepo := token.NewInMemoryTokenRepo()
@@ -46,6 +48,7 @@ func main() {
 		frontendURL,
 		jwtSecret,
 		time.Duration(mustInt(jwtTTL))*time.Minute,
+		re,
 	)
 
 	handlers := transport.NewHandlers(authService)

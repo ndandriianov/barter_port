@@ -3,6 +3,7 @@ package auth
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"time"
 
@@ -62,6 +63,8 @@ type Service struct {
 
 	jwtSecret []byte
 	jwtTTL    time.Duration
+
+	re *regexp.Regexp
 }
 
 func NewService(
@@ -71,6 +74,7 @@ func NewService(
 	frontendBaseURL string,
 	jwtSecret string,
 	jwtTTL time.Duration,
+	re *regexp.Regexp,
 ) *Service {
 	return &Service{
 		users:  users,
@@ -81,6 +85,8 @@ func NewService(
 
 		jwtSecret: []byte(jwtSecret),
 		jwtTTL:    jwtTTL,
+
+		re: re,
 	}
 }
 
@@ -99,7 +105,7 @@ type RegisterResult struct {
 //
 // All other errors are treated as internal and returned wrapped.
 func (s *Service) Register(email, password string) (RegisterResult, error) {
-	if err := validateCredentials(email, password); err != nil {
+	if err := s.validateCredentials(email, password); err != nil {
 		return RegisterResult{}, err
 	}
 

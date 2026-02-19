@@ -45,13 +45,12 @@ func newID() string {
 
 // --- CREDENTIAL VALIDATION ---
 
-func validateEmail(email string) bool {
-	email = strings.TrimSpace(strings.ToLower(email))
-	return strings.Contains(email, "@") && len(email) >= 5
+func (s *Service) validateEmail(email string) bool {
+	return s.re.MatchString(email)
 }
 
-func validateCredentials(email, password string) error {
-	if !validateEmail(email) {
+func (s *Service) validateCredentials(email, password string) error {
+	if !s.validateEmail(email) {
 		return ErrInvalidEmail
 	}
 	if len(password) < minPasswordLength {
