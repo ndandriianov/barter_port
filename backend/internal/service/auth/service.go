@@ -30,8 +30,6 @@ var (
 
 	ErrInvalidToken = errors.New("invalid token")
 	ErrTokenExpired = errors.New("token expired")
-
-	ErrEmailAlreadyVerified = errors.New("email already verified")
 )
 
 type UserRepo interface {
@@ -132,7 +130,6 @@ func (s *Service) Register(email, password string) (RegisterResult, error) {
 //   - ErrInvalidToken
 //   - ErrTokenExpired
 //   - ErrUserNotFound
-//   - ErrEmailAlreadyVerified
 //
 // All other errors are treated as internal and returned wrapped.
 func (s *Service) VerifyEmail(rawToken string) error {
@@ -165,7 +162,7 @@ func (s *Service) VerifyEmail(rawToken string) error {
 	}
 
 	if u.EmailVerified {
-		return ErrEmailAlreadyVerified
+		return nil
 	}
 
 	if err = s.users.VerifyEmail(u.ID); err != nil {
