@@ -5,9 +5,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/cors"
+	"github.com/ndandriianov/barter_port/backend/internal/transport/middleware/auth_jwt"
 )
 
-func NewRouter(h *Handlers) http.Handler {
+func NewRouter(h *Handlers, jwtSecret string) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(cors.Handler(cors.Options{
@@ -25,6 +26,12 @@ func NewRouter(h *Handlers) http.Handler {
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/register", h.Register)
 		r.Post("/verify-email", h.VerifyEmail)
+		r.Post("/login", h.Login)
+
+		r.Group(func(r chi.Router) {
+			r.Use(auth_jwt.Middleware([]byte(jwtSecret)))
+			r.Get("/me", h.Me)
+		})
 	})
 
 	return r

@@ -26,15 +26,18 @@ var (
 	ErrInvalidEmail      = errors.New("invalid email")
 	ErrPasswordTooShort  = errors.New("password too short")
 	ErrEmailAlreadyInUse = errors.New("email already in use")
-	ErrUserNotFound      = errors.New("user not found")
 
+	ErrUserNotFound = errors.New("user not found")
 	ErrInvalidToken = errors.New("invalid token")
 	ErrTokenExpired = errors.New("token expired")
+
+	ErrInvalidCredentials = errors.New("invalid credentials")
+	ErrEmailNotVerified   = errors.New("email not verified")
 )
 
 type UserRepo interface {
 	Create(user model.User) error
-	// GetByEmail(email string) (model.User, error)
+	GetByEmail(email string) (model.User, error)
 	GetByID(id string) (model.User, error)
 	VerifyEmail(userID string) error
 }
@@ -56,14 +59,28 @@ type Service struct {
 	mailer Mailer
 
 	frontendBaseURL string
+
+	jwtSecret []byte
+	jwtTTL    time.Duration
 }
 
-func NewService(users UserRepo, tokens TokenRepo, mailer Mailer, frontendBaseURL string) *Service {
+func NewService(
+	users UserRepo,
+	tokens TokenRepo,
+	mailer Mailer,
+	frontendBaseURL string,
+	jwtSecret string,
+	jwtTTL time.Duration,
+) *Service {
 	return &Service{
-		users:           users,
-		tokens:          tokens,
-		mailer:          mailer,
+		users:  users,
+		tokens: tokens,
+		mailer: mailer,
+
 		frontendBaseURL: strings.TrimRight(frontendBaseURL, "/"),
+
+		jwtSecret: []byte(jwtSecret),
+		jwtTTL:    jwtTTL,
 	}
 }
 
@@ -86,7 +103,7 @@ func (s *Service) Register(email, password string) (RegisterResult, error) {
 		return RegisterResult{}, err
 	}
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), 12)
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), 12) // TODO: заменить на константу
 	if err != nil {
 		return RegisterResult{}, fmt.Errorf("failed to hash password: %w", err)
 	}
@@ -179,4 +196,42 @@ func (s *Service) VerifyEmail(rawToken string) error {
 	}
 
 	return nil
+}
+
+type LoginResult struct {
+	AccessToken string
+}
+
+func (s *Service) Login(email, password string) (LoginResult, error) {
+	email = strings.TrimSpace(strings.ToLower(email))
+
+	if email == "" || !strings.Contains(email, "@") {
+		return LoginResult{}, ErrInvalidCredentials
+	}
+	if password == "" {
+		return LoginResult{}, ErrInvalidCredentials
+	}
+
+	u, err := s.users.GetByEmail(email)
+	if err != nil {
+		if errors.Is(err, user.ErrUserNotFound) {
+			return LoginResult{}, ErrInvalidCredentials
+		}
+		return LoginResult{}, fmt.Errorf("get user by email: %w", err)
+	}
+
+	if err := bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password)); err != nil {
+		return LoginResult{}, ErrInvalidCredentials
+	}
+
+	if !u.EmailVerified {
+		return LoginResult{}, ErrEmailNotVerified
+	}
+
+	token, err := s.generateJWT(u)
+	if err != nil {
+		return LoginResult{}, fmt.Errorf("generate jwt: %w", err)
+	}
+
+	return LoginResult{AccessToken: token}, nil
 }
