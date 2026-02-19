@@ -2,10 +2,13 @@ package auth
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"time"
 
 	"github.com/ndandriianov/barter_port/backend/internal/model"
+	"github.com/ndandriianov/barter_port/backend/internal/repository/token"
+	"github.com/ndandriianov/barter_port/backend/internal/repository/user"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -20,10 +23,14 @@ const (
 )
 
 var (
-	ErrInvalidEmail         = errors.New("invalid email")
-	ErrPasswordTooShort     = errors.New("password too short")
-	ErrInvalidToken         = errors.New("invalid token")
-	ErrTokenExpired         = errors.New("token expired")
+	ErrInvalidEmail      = errors.New("invalid email")
+	ErrPasswordTooShort  = errors.New("password too short")
+	ErrEmailAlreadyInUse = errors.New("email already in use")
+	ErrUserNotFound      = errors.New("user not found")
+
+	ErrInvalidToken = errors.New("invalid token")
+	ErrTokenExpired = errors.New("token expired")
+
 	ErrEmailAlreadyVerified = errors.New("email already verified")
 )
 
@@ -67,7 +74,15 @@ type RegisterResult struct {
 	Email  string
 }
 
-// Register creates a new user, generates a verification token, and sends a verification email.
+// Register creates a new user, generates an email verification token,
+// and sends a verification email.
+//
+// It returns the following domain errors:
+//   - ErrInvalidEmail
+//   - ErrPasswordTooShort
+//   - ErrEmailAlreadyInUse
+//
+// All other errors are treated as internal and returned wrapped.
 func (s *Service) Register(email, password string) (RegisterResult, error) {
 	if err := validateCredentials(email, password); err != nil {
 		return RegisterResult{}, err
@@ -75,49 +90,63 @@ func (s *Service) Register(email, password string) (RegisterResult, error) {
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), 12)
 	if err != nil {
-		return RegisterResult{}, err
+		return RegisterResult{}, fmt.Errorf("failed to hash password: %w", err)
 	}
 
-	user := model.NewUser(newID(), email, string(hash))
-	if err := s.users.Create(user); err != nil {
-		return RegisterResult{}, err
+	u := model.NewUser(newID(), email, string(hash))
+	if err := s.users.Create(u); err != nil {
+		if errors.Is(err, user.ErrEmailAlreadyInUse) {
+			return RegisterResult{}, ErrEmailAlreadyInUse
+		}
+		return RegisterResult{}, fmt.Errorf("failed to create user: %w", err)
 	}
 
 	// на всякий случай удаляются все старые токены для этого юзера, если они были
-	s.tokens.DeleteAllForUser(user.ID)
+	s.tokens.DeleteAllForUser(u.ID)
 
 	rawToken, err := generateToken(tokenLength)
 	if err != nil {
-		return RegisterResult{}, err
+		return RegisterResult{}, fmt.Errorf("failed to generate token: %w", err)
 	}
 
 	tokenHash := sha256Hex(rawToken)
-	t := model.NewEmailVerificationToken(tokenHash, user.ID, time.Now().Add(tokenExpirationTime))
+	t := model.NewEmailVerificationToken(tokenHash, u.ID, time.Now().Add(tokenExpirationTime))
 
 	if err = s.tokens.Save(t); err != nil {
-		return RegisterResult{}, err
+		return RegisterResult{}, fmt.Errorf("failed to save token: %w", err)
 	}
 
-	if err = s.mailer.Send(user.Email, subject, s.getEmailBody(rawToken)); err != nil {
-		return RegisterResult{}, err
+	if err = s.mailer.Send(u.Email, subject, s.getEmailBody(rawToken)); err != nil {
+		return RegisterResult{}, fmt.Errorf("failed to send email: %w", err)
 	}
 
 	return RegisterResult{
-		UserID: user.ID,
-		Email:  user.Email,
+		UserID: u.ID,
+		Email:  u.Email,
 	}, nil
 }
 
-// VerifyEmail verifies a user's email using a raw token.
+// VerifyEmail marks user's email as verified if the provided token is valid.
+//
+// It returns the following domain errors:
+//   - ErrInvalidToken
+//   - ErrTokenExpired
+//   - ErrUserNotFound
+//   - ErrEmailAlreadyVerified
+//
+// All other errors are treated as internal and returned wrapped.
 func (s *Service) VerifyEmail(rawToken string) error {
 	tokenHash, err := getHashFromRawToken(rawToken)
 	if err != nil {
-		return err
+		return fmt.Errorf("cannot get hash from raw token: %w", err)
 	}
 
 	t, err := s.tokens.GetByHash(tokenHash)
 	if err != nil {
-		return ErrInvalidToken
+		if errors.Is(err, token.ErrTokenNotFound) {
+			return ErrInvalidToken
+		}
+		return fmt.Errorf("failed to get token by hash: %w", err)
 	}
 
 	if t.Used {
@@ -129,7 +158,10 @@ func (s *Service) VerifyEmail(rawToken string) error {
 
 	u, err := s.users.GetByID(t.UserID)
 	if err != nil {
-		return err
+		if errors.Is(err, user.ErrUserNotFound) {
+			return ErrUserNotFound
+		}
+		return fmt.Errorf("failed to get user by id: %w", err)
 	}
 
 	if u.EmailVerified {
@@ -137,11 +169,16 @@ func (s *Service) VerifyEmail(rawToken string) error {
 	}
 
 	if err = s.users.VerifyEmail(u.ID); err != nil {
-		return err
+		if errors.Is(err, user.ErrUserNotFound) {
+			return fmt.Errorf("failed to verify email: %w", ErrUserNotFound)
+		}
+		return fmt.Errorf("failed to verify email: %w", err)
 	}
 
 	if err = s.tokens.MarkUsed(tokenHash); err != nil {
-		return err
+		if errors.Is(err, token.ErrTokenNotFound) {
+			// TODO: логировать эту ошибку, но не возвращать её пользователю, так как верификация уже прошла успешно
+		}
 	}
 
 	return nil
