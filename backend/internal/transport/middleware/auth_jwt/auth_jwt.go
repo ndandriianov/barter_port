@@ -15,6 +15,12 @@ type ctxKey string
 
 const ctxUserID ctxKey = "userID"
 
+var (
+	errMissingToken      = errors.New("missing token")
+	errInvalidAuthHeader = errors.New("invalid auth header")
+	errInvalidToken      = errors.New("invalid token")
+)
+
 func UserIDFromContext(ctx context.Context) (string, bool) {
 	v := ctx.Value(ctxUserID)
 	s, ok := v.(string)
@@ -26,38 +32,38 @@ func Middleware(secret []byte) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			h := r.Header.Get("Authorization")
 			if h == "" {
-				helpers.WriteJSON(w, 401, map[string]string{"error": "missing token"})
+				helpers.HandleError(w, http.StatusUnauthorized, errMissingToken)
 				return
 			}
 
 			parts := strings.SplitN(h, " ", 2)
 			if len(parts) != 2 || parts[0] != "Bearer" {
-				helpers.WriteJSON(w, 401, map[string]string{"error": "invalid auth header"})
+				helpers.HandleError(w, http.StatusUnauthorized, errInvalidAuthHeader)
 				return
 			}
 
 			raw := parts[1]
 
 			token, err := jwt.ParseWithClaims(raw, &auth.Claims{}, func(t *jwt.Token) (any, error) {
-				if t.Method != jwt.SigningMethodHS256 {
+				if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
 					return nil, errors.New("unexpected signing method")
 				}
 				return secret, nil
 			})
 			if err != nil || !token.Valid {
-				helpers.WriteJSON(w, 401, map[string]string{"error": "invalid token"})
+				helpers.HandleError(w, http.StatusUnauthorized, errInvalidToken)
 				return
 			}
 
 			claims, ok := token.Claims.(*auth.Claims)
 			if !ok {
-				helpers.WriteJSON(w, 401, map[string]string{"error": "invalid token"})
+				helpers.HandleError(w, http.StatusUnauthorized, errInvalidToken)
 				return
 			}
 
 			userID := claims.Subject
 			if userID == "" {
-				helpers.WriteJSON(w, 401, map[string]string{"error": "invalid token"})
+				helpers.HandleError(w, http.StatusUnauthorized, errInvalidToken)
 				return
 			}
 
