@@ -26,7 +26,7 @@ func sha256Hex(s string) string {
 func getHashFromRawToken(rawToken string) (string, error) {
 	trimmedToken := strings.TrimSpace(rawToken)
 	if trimmedToken == "" {
-		return "", ErrInvalidToken
+		return "", ErrInvalidEmailToken
 	}
 	return sha256Hex(rawToken), nil
 }

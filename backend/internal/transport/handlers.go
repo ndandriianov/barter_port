@@ -110,13 +110,13 @@ func (h *Handlers) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.authService.VerifyEmail(req.Token); err != nil {
 		switch {
-		case errors.Is(err, auth.ErrInvalidToken):
+		case errors.Is(err, auth.ErrInvalidEmailToken):
 			logger.Info("invalid token in verify email request")
-			helpers.HandleError(w, logger, http.StatusBadRequest, auth.ErrInvalidToken)
+			helpers.HandleError(w, logger, http.StatusBadRequest, auth.ErrInvalidEmailToken)
 
-		case errors.Is(err, auth.ErrTokenExpired):
+		case errors.Is(err, auth.ErrInvalidEmailToken):
 			logger.Info("token expired in verify email request")
-			helpers.HandleError(w, logger, http.StatusBadRequest, auth.ErrTokenExpired)
+			helpers.HandleError(w, logger, http.StatusBadRequest, auth.ErrInvalidEmailToken)
 
 		case errors.Is(err, auth.ErrUserNotFound):
 			logger.Info("user not found in verify email request")
