@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/golang-jwt/jwt/v5"
 	"github.com/ndandriianov/barter_port/backend/internal/infrastructure/repository/user"
 	"github.com/ndandriianov/barter_port/backend/internal/model"
 	"github.com/ndandriianov/barter_port/backend/internal/service/auth"
@@ -123,29 +122,6 @@ func extractBearerToken(r *http.Request) (string, error) {
 	}
 
 	return parts[1], nil
-}
-
-func parseToken(raw string, secret []byte) (*auth.Claims, error) {
-	token, err := jwt.ParseWithClaims(raw, &auth.Claims{}, func(t *jwt.Token) (any, error) {
-		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
-			return nil, errUnexpectedSigningMethod
-		}
-		return secret, nil
-	})
-
-	if err != nil || !token.Valid {
-		if errors.Is(err, jwt.ErrTokenExpired) {
-			return nil, errTokenExpired
-		}
-		return nil, errInvalidToken
-	}
-
-	claims, ok := token.Claims.(*auth.Claims)
-	if !ok || claims.Subject == "" {
-		return nil, errInvalidToken
-	}
-
-	return claims, nil
 }
 
 // TODO: СДЕЛАТЬ КОРРЕКТНУЮ ЗАПИСЬ ИНФОРМАЦИИ О ПОЛЬЗОВАТЕЛЕ В КОНТЕКСТ, ЧТОБЫ В БУДУЩЕМ МОЖНО БЫЛО ИСПОЛЬЗОВАТЬ ЭТУ ИНФОРМАЦИЮ ДЛЯ РАЗЛИЧНЫХ ЦЕЛЕЙ (НАПРИМЕР, РАЗРЕШЕНИЯ). НАСТРОИТЬ ИНИЦИАЛИЗАЦИЮ MIDDLEWATR
