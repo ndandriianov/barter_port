@@ -144,6 +144,11 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 
 	var req loginReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		logger.Warn(
+			"error decoding login request",
+			slog.Any("request_body", r.Body),
+			slog.String("error", err.Error()),
+		)
 		helpers.HandleError(w, logger, http.StatusBadRequest, ErrInvalidRequest)
 		return
 	}
@@ -152,14 +157,31 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, auth.ErrInvalidCredentials):
+			logger.Info(
+				"invalid credentials in login request",
+				slog.String("email", req.Email),
+			)
 			helpers.HandleError(w, logger, http.StatusBadRequest, auth.ErrInvalidCredentials)
+
 		case errors.Is(err, auth.ErrEmailNotVerified):
+			logger.Info(
+				"email not verified in login request",
+				slog.String("email", req.Email),
+			)
 			helpers.HandleError(w, logger, http.StatusForbidden, auth.ErrEmailNotVerified)
+
 		default:
+			logger.Error(
+				"unexpected error in login request",
+				slog.String("error", err.Error()),
+				slog.String("email", req.Email),
+			)
 			helpers.HandleError(w, logger, http.StatusInternalServerError, ErrInternalServerError)
 		}
 		return
 	}
+
+	logger.Info("successfully logged in user", slog.String("email", req.Email))
 
 	helpers.WriteJSON(w, logger, http.StatusOK, loginResp{AccessToken: res.AccessToken})
 }
@@ -175,9 +197,12 @@ func (h *Handlers) Me(w http.ResponseWriter, r *http.Request) {
 
 	userID, ok := auth_jwt.UserIDFromContext(r.Context())
 	if !ok {
+		logger.Warn("user ID not found in context")
 		helpers.HandleError(w, logger, http.StatusUnauthorized, ErrUnauthorized)
 		return
 	}
+
+	logger.Info("successfully fetched user info")
 
 	helpers.WriteJSON(w, logger, http.StatusOK, meResp{UserID: userID})
 }
