@@ -49,19 +49,19 @@ func Middleware(logger *slog.Logger, secret []byte, users UserGetter) func(http.
 			if err != nil {
 				if errors.Is(err, errMissingToken) {
 					logger.Warn("missing token in request")
-					helpers.HandleError(w, http.StatusUnauthorized, errMissingToken)
+					helpers.HandleError(w, logger, http.StatusUnauthorized, errMissingToken)
 					return
 				}
 				if errors.Is(err, errInvalidAuthHeader) {
 					logger.Warn("invalid auth header format")
-					helpers.HandleError(w, http.StatusUnauthorized, errInvalidAuthHeader)
+					helpers.HandleError(w, logger, http.StatusUnauthorized, errInvalidAuthHeader)
 					return
 				}
 				logger.Error(
 					"unexpected error extracting token",
 					slog.String("error", err.Error()),
 				)
-				helpers.HandleError(w, http.StatusInternalServerError, errInternalServerError)
+				helpers.HandleError(w, logger, http.StatusInternalServerError, errInternalServerError)
 				return
 			}
 
@@ -69,16 +69,16 @@ func Middleware(logger *slog.Logger, secret []byte, users UserGetter) func(http.
 			if err != nil {
 				if errors.Is(err, errUnexpectedSigningMethod) {
 					logger.Warn("unexpected signing method in token")
-					helpers.HandleError(w, http.StatusUnauthorized, errInvalidToken)
+					helpers.HandleError(w, logger, http.StatusUnauthorized, errInvalidToken)
 					return
 				}
 				if errors.Is(err, errTokenExpired) {
 					logger.Info("token expired")
-					helpers.HandleError(w, http.StatusUnauthorized, errTokenExpired)
+					helpers.HandleError(w, logger, http.StatusUnauthorized, errTokenExpired)
 					return
 				}
 				logger.Warn("invalid token", slog.String("error", err.Error()))
-				helpers.HandleError(w, http.StatusUnauthorized, errInvalidToken)
+				helpers.HandleError(w, logger, http.StatusUnauthorized, errInvalidToken)
 				return
 			}
 
@@ -89,7 +89,7 @@ func Middleware(logger *slog.Logger, secret []byte, users UserGetter) func(http.
 						`user not found for token subject`,
 						slog.String("subject", claims.Subject),
 					)
-					helpers.HandleError(w, http.StatusUnauthorized, errInvalidToken)
+					helpers.HandleError(w, logger, http.StatusUnauthorized, errInvalidToken)
 					return
 				}
 				logger.Error(
@@ -97,7 +97,7 @@ func Middleware(logger *slog.Logger, secret []byte, users UserGetter) func(http.
 					slog.String("error", err.Error()),
 					slog.String("subject", claims.Subject),
 				)
-				helpers.HandleError(w, http.StatusInternalServerError, errInternalServerError)
+				helpers.HandleError(w, logger, http.StatusInternalServerError, errInternalServerError)
 				return
 			}
 

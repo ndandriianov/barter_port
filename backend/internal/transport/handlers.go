@@ -37,7 +37,12 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 
 	var req registerReq
 	if err := helpers.DecodeJSON(r, &req); err != nil {
-		helpers.HandleError(w, http.StatusBadRequest, ErrInvalidRequest)
+		logger.Warn(
+			"error decoding register request",
+			slog.Any("request_body", r.Body),
+			slog.String("error", err.Error()),
+		)
+		helpers.HandleError(w, logger, http.StatusBadRequest, ErrInvalidRequest)
 		return
 	}
 
@@ -45,18 +50,43 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, auth.ErrInvalidEmail):
-			helpers.HandleError(w, http.StatusBadRequest, auth.ErrInvalidEmail)
+			logger.Info(
+				"invalid email format in register request",
+				slog.String("email", req.Email),
+			)
+			helpers.HandleError(w, logger, http.StatusBadRequest, auth.ErrInvalidEmail)
+
 		case errors.Is(err, auth.ErrPasswordTooShort):
-			helpers.HandleError(w, http.StatusBadRequest, auth.ErrPasswordTooShort)
+			logger.Info(
+				"password too short in register request",
+				slog.Int("password_length", len(req.Password)),
+			)
+			helpers.HandleError(w, logger, http.StatusBadRequest, auth.ErrPasswordTooShort)
+
 		case errors.Is(err, auth.ErrEmailAlreadyInUse):
-			helpers.HandleError(w, http.StatusBadRequest, auth.ErrEmailAlreadyInUse)
+			logger.Info(
+				"email already in use in register request",
+				slog.String("email", req.Email),
+			)
+			helpers.HandleError(w, logger, http.StatusBadRequest, auth.ErrEmailAlreadyInUse)
+
 		default:
-			helpers.HandleError(w, http.StatusInternalServerError, ErrInternalServerError)
+			logger.Error(
+				"unexpected error in register request",
+				slog.String("error", err.Error()),
+			)
+			helpers.HandleError(w, logger, http.StatusInternalServerError, ErrInternalServerError)
 		}
 		return
 	}
 
-	helpers.WriteJSON(w, http.StatusOK, registerResp{
+	logger.Info(
+		"successfully registered user",
+		slog.String("user_id", res.UserID),
+		slog.String("email", res.Email),
+	)
+
+	helpers.WriteJSON(w, logger, http.StatusOK, registerResp{
 		UserID: res.UserID,
 		Email:  res.Email,
 	})
@@ -69,25 +99,25 @@ func (h *Handlers) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 
 	var req verifyEmailReq
 	if err := helpers.DecodeJSON(r, &req); err != nil {
-		helpers.HandleError(w, http.StatusBadRequest, ErrInvalidRequest)
+		helpers.HandleError(w, logger, http.StatusBadRequest, ErrInvalidRequest)
 		return
 	}
 
 	if err := h.authService.VerifyEmail(req.Token); err != nil {
 		switch {
 		case errors.Is(err, auth.ErrInvalidToken):
-			helpers.HandleError(w, http.StatusBadRequest, auth.ErrInvalidToken)
+			helpers.HandleError(w, logger, http.StatusBadRequest, auth.ErrInvalidToken)
 		case errors.Is(err, auth.ErrTokenExpired):
-			helpers.HandleError(w, http.StatusBadRequest, auth.ErrTokenExpired)
+			helpers.HandleError(w, logger, http.StatusBadRequest, auth.ErrTokenExpired)
 		case errors.Is(err, auth.ErrUserNotFound):
-			helpers.HandleError(w, http.StatusNotFound, auth.ErrUserNotFound)
+			helpers.HandleError(w, logger, http.StatusNotFound, auth.ErrUserNotFound)
 		default:
-			helpers.HandleError(w, http.StatusInternalServerError, ErrInternalServerError)
+			helpers.HandleError(w, logger, http.StatusInternalServerError, ErrInternalServerError)
 		}
 		return
 	}
 
-	helpers.WriteJSON(w, http.StatusOK, map[string]string{"status": "ok"})
+	helpers.WriteJSON(w, logger, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
@@ -97,7 +127,7 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 
 	var req loginReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		helpers.HandleError(w, http.StatusBadRequest, ErrInvalidRequest)
+		helpers.HandleError(w, logger, http.StatusBadRequest, ErrInvalidRequest)
 		return
 	}
 
@@ -105,16 +135,16 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		switch {
 		case errors.Is(err, auth.ErrInvalidCredentials):
-			helpers.HandleError(w, http.StatusBadRequest, auth.ErrInvalidCredentials)
+			helpers.HandleError(w, logger, http.StatusBadRequest, auth.ErrInvalidCredentials)
 		case errors.Is(err, auth.ErrEmailNotVerified):
-			helpers.HandleError(w, http.StatusForbidden, auth.ErrEmailNotVerified)
+			helpers.HandleError(w, logger, http.StatusForbidden, auth.ErrEmailNotVerified)
 		default:
-			helpers.HandleError(w, http.StatusInternalServerError, ErrInternalServerError)
+			helpers.HandleError(w, logger, http.StatusInternalServerError, ErrInternalServerError)
 		}
 		return
 	}
 
-	helpers.WriteJSON(w, http.StatusOK, loginResp{AccessToken: res.AccessToken})
+	helpers.WriteJSON(w, logger, http.StatusOK, loginResp{AccessToken: res.AccessToken})
 }
 
 type meResp struct {
@@ -128,9 +158,9 @@ func (h *Handlers) Me(w http.ResponseWriter, r *http.Request) {
 
 	userID, ok := auth_jwt.UserIDFromContext(r.Context())
 	if !ok {
-		helpers.HandleError(w, http.StatusUnauthorized, ErrUnauthorized)
+		helpers.HandleError(w, logger, http.StatusUnauthorized, ErrUnauthorized)
 		return
 	}
 
-	helpers.WriteJSON(w, http.StatusOK, meResp{UserID: userID})
+	helpers.WriteJSON(w, logger, http.StatusOK, meResp{UserID: userID})
 }
