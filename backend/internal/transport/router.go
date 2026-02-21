@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
 	"github.com/ndandriianov/barter_port/backend/internal/transport/middleware/auth_jwt"
 )
@@ -12,6 +13,7 @@ import (
 func NewRouter(logger *slog.Logger, h *Handlers, jwtSecret string, userGetter auth_jwt.UserGetter) http.Handler {
 	r := chi.NewRouter()
 
+	r.Use(middleware.RequestID)
 	r.Use(cors.Handler(cors.Options{
 		AllowedOrigins:   []string{"http://localhost:5173"},
 		AllowedMethods:   []string{"GET", "POST", "OPTIONS"},

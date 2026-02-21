@@ -3,8 +3,10 @@ package transport
 import (
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/ndandriianov/barter_port/backend/internal/service/auth"
 	"github.com/ndandriianov/barter_port/backend/internal/transport/helpers"
 	"github.com/ndandriianov/barter_port/backend/internal/transport/middleware/auth_jwt"
@@ -17,16 +19,22 @@ var (
 )
 
 type Handlers struct {
+	logger      *slog.Logger
 	authService *auth.Service
 }
 
-func NewHandlers(authService *auth.Service) *Handlers {
+func NewHandlers(logger *slog.Logger, authService *auth.Service) *Handlers {
 	return &Handlers{
+		logger:      logger,
 		authService: authService,
 	}
 }
 
 func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
+	requestID := middleware.GetReqID(r.Context())
+	logger := h.logger.With("request_id", requestID)
+	logger.Info("handling register request")
+
 	var req registerReq
 	if err := helpers.DecodeJSON(r, &req); err != nil {
 		helpers.HandleError(w, http.StatusBadRequest, ErrInvalidRequest)
@@ -55,6 +63,10 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) VerifyEmail(w http.ResponseWriter, r *http.Request) {
+	requestID := middleware.GetReqID(r.Context())
+	logger := h.logger.With("request_id", requestID)
+	logger.Info("handling verify email request")
+
 	var req verifyEmailReq
 	if err := helpers.DecodeJSON(r, &req); err != nil {
 		helpers.HandleError(w, http.StatusBadRequest, ErrInvalidRequest)
@@ -79,6 +91,10 @@ func (h *Handlers) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
+	requestID := middleware.GetReqID(r.Context())
+	logger := h.logger.With("request_id", requestID)
+	logger.Info("handling login request")
+
 	var req loginReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		helpers.HandleError(w, http.StatusBadRequest, ErrInvalidRequest)
@@ -106,6 +122,10 @@ type meResp struct {
 }
 
 func (h *Handlers) Me(w http.ResponseWriter, r *http.Request) {
+	requestID := middleware.GetReqID(r.Context())
+	logger := h.logger.With("request_id", requestID)
+	logger.Info("handling me request")
+
 	userID, ok := auth_jwt.UserIDFromContext(r.Context())
 	if !ok {
 		helpers.HandleError(w, http.StatusUnauthorized, ErrUnauthorized)
