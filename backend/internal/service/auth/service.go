@@ -29,9 +29,9 @@ var (
 	ErrPasswordTooShort  = errors.New("password too short")
 	ErrEmailAlreadyInUse = errors.New("email already in use")
 
-	ErrUserNotFound = errors.New("user not found")
-	ErrInvalidToken = errors.New("invalid token")
-	ErrTokenExpired = errors.New("token expired")
+	ErrUserNotFound      = errors.New("user not found")
+	ErrInvalidEmailToken = errors.New("invalid token")
+	ErrEmailTokenExpired = errors.New("token expired")
 
 	ErrInvalidCredentials = errors.New("invalid credentials")
 	ErrEmailNotVerified   = errors.New("email not verified")
@@ -152,8 +152,8 @@ func (s *Service) Register(email, password string) (RegisterResult, error) {
 // VerifyEmail marks user's email as verified if the provided token is valid.
 //
 // It returns the following domain errors:
-//   - ErrInvalidToken
-//   - ErrTokenExpired
+//   - ErrInvalidEmailToken
+//   - ErrEmailTokenExpired
 //   - ErrUserNotFound
 //
 // All other errors are treated as internal and returned wrapped.
@@ -166,7 +166,7 @@ func (s *Service) VerifyEmail(rawToken string) error {
 	t, err := s.tokens.GetByHash(tokenHash)
 	if err != nil {
 		if errors.Is(err, token.ErrTokenNotFound) {
-			return ErrInvalidToken
+			return ErrInvalidEmailToken
 		}
 		return fmt.Errorf("failed to get token by hash: %w", err)
 	}
@@ -175,7 +175,7 @@ func (s *Service) VerifyEmail(rawToken string) error {
 		return nil
 	}
 	if time.Now().After(t.ExpiresAt) {
-		return ErrTokenExpired
+		return ErrEmailTokenExpired
 	}
 
 	u, err := s.users.GetByID(t.UserID)
@@ -243,7 +243,7 @@ func (s *Service) Login(email, password string) (LoginResult, error) {
 		return LoginResult{}, ErrEmailNotVerified
 	}
 
-	jwtToken, err := s.jwtService.generateJWT(u)
+	jwtToken, err := s.jwtService.generateAccessToken(u)
 	if err != nil {
 		return LoginResult{}, fmt.Errorf("generate jwt: %w", err)
 	}

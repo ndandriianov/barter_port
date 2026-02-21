@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"errors"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -17,6 +18,12 @@ type JWTService struct {
 	jwtTTL    time.Duration
 }
 
+var (
+	ErrUnexpectedSigningMethod = errors.New("unexpected signing method")
+	ErrAccessJWTExpired        = errors.New("token expired")
+	ErrInvalidAccessJWT        = errors.New("invalid token")
+)
+
 func NewJWTService(secret []byte, ttl time.Duration) *JWTService {
 	return &JWTService{
 		jwtSecret: secret,
@@ -24,7 +31,7 @@ func NewJWTService(secret []byte, ttl time.Duration) *JWTService {
 	}
 }
 
-func (s *JWTService) generateJWT(u model.User) (string, error) {
+func (s *JWTService) generateAccessToken(u model.User) (string, error) {
 	now := time.Now()
 
 	claims := Claims{
@@ -38,4 +45,27 @@ func (s *JWTService) generateJWT(u model.User) (string, error) {
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 	return token.SignedString(s.jwtSecret)
+}
+
+func (s *JWTService) ParseToken(raw string) (*Claims, error) {
+	token, err := jwt.ParseWithClaims(raw, &Claims{}, func(t *jwt.Token) (any, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, ErrUnexpectedSigningMethod
+		}
+		return s.jwtSecret, nil
+	})
+
+	if err != nil || !token.Valid {
+		if errors.Is(err, jwt.ErrTokenExpired) {
+			return nil, ErrAccessJWTExpired
+		}
+		return nil, ErrInvalidAccessJWT
+	}
+
+	claims, ok := token.Claims.(*Claims)
+	if !ok || claims.Subject == "" {
+		return nil, ErrInvalidAccessJWT
+	}
+
+	return claims, nil
 }

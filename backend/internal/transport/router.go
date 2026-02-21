@@ -1,16 +1,28 @@
 package transport
 
 import (
+	"log"
 	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	"github.com/ndandriianov/barter_port/backend/internal/service/auth"
 	"github.com/ndandriianov/barter_port/backend/internal/transport/middleware/auth_jwt"
 )
 
-func NewRouter(logger *slog.Logger, h *Handlers, jwtSecret string, userGetter auth_jwt.UserGetter) http.Handler {
+func NewRouter(logger *slog.Logger, h *Handlers, jwtService *auth.JWTService, userGetter auth_jwt.UserGetter) http.Handler {
+	if logger == nil {
+		log.Fatal("logger is required")
+	}
+	if h == nil {
+		log.Fatal("handlers are required")
+	}
+	if jwtService == nil {
+		log.Fatal("jwt service is required")
+	}
+
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)
@@ -32,7 +44,7 @@ func NewRouter(logger *slog.Logger, h *Handlers, jwtSecret string, userGetter au
 		r.Post("/login", h.Login)
 
 		r.Group(func(r chi.Router) {
-			r.Use(auth_jwt.Middleware(logger, []byte(jwtSecret), userGetter))
+			r.Use(auth_jwt.Middleware(logger, jwtService, userGetter))
 			r.Get("/me", h.Me)
 		})
 	})

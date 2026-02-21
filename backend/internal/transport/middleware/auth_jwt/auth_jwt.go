@@ -39,7 +39,7 @@ func UserIDFromContext(ctx context.Context) (string, bool) {
 
 // TODO: добавить логирование ошибок для мониторинга и обнаружения потенциальных атак, но не логировать чувствительную информацию из токенов
 
-func Middleware(logger *slog.Logger, secret []byte, users UserGetter) func(http.Handler) http.Handler {
+func Middleware(logger *slog.Logger, jwtService *auth.JWTService, users UserGetter) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			requestID := middleware.GetReqID(r.Context())
@@ -65,14 +65,14 @@ func Middleware(logger *slog.Logger, secret []byte, users UserGetter) func(http.
 				return
 			}
 
-			claims, err := parseToken(raw, secret)
+			claims, err := jwtService.ParseToken(raw)
 			if err != nil {
-				if errors.Is(err, errUnexpectedSigningMethod) {
+				if errors.Is(err, auth.ErrUnexpectedSigningMethod) {
 					logger.Warn("unexpected signing method in token")
 					helpers.HandleError(w, logger, http.StatusUnauthorized, errInvalidToken)
 					return
 				}
-				if errors.Is(err, errTokenExpired) {
+				if errors.Is(err, auth.ErrAccessJWTExpired) {
 					logger.Info("token expired")
 					helpers.HandleError(w, logger, http.StatusUnauthorized, errTokenExpired)
 					return
