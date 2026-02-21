@@ -46,14 +46,16 @@ func main() {
 	logg := logger.NewJSONLogger(slog.LevelDebug, "auth-service", "")
 	infrastructureLogger := logger.NewJSONLogger(slog.LevelDebug, "", "infrastructure")
 
+	jwtService := auth.NewJWTService([]byte(jwtSecret), time.Duration(mustInt(jwtTTL))*time.Minute)
+
 	authService := auth.NewService(
 		userRepo,
 		tokenRepo,
 		m,
 		infrastructureLogger,
+
 		frontendURL,
-		jwtSecret,
-		time.Duration(mustInt(jwtTTL))*time.Minute,
+		jwtService,
 		re,
 	)
 

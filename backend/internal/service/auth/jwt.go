@@ -12,7 +12,19 @@ type Claims struct {
 	jwt.RegisteredClaims
 }
 
-func (s *Service) generateJWT(u model.User) (string, error) {
+type JWTService struct {
+	jwtSecret []byte
+	jwtTTL    time.Duration
+}
+
+func NewJWTService(secret []byte, ttl time.Duration) *JWTService {
+	return &JWTService{
+		jwtSecret: secret,
+		jwtTTL:    ttl,
+	}
+}
+
+func (s *JWTService) generateJWT(u model.User) (string, error) {
 	now := time.Now()
 
 	claims := Claims{

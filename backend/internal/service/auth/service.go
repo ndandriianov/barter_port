@@ -62,11 +62,8 @@ type Service struct {
 	logger *slog.Logger
 
 	frontendBaseURL string
-
-	jwtSecret []byte
-	jwtTTL    time.Duration
-
-	re *regexp.Regexp
+	jwtService      *JWTService
+	re              *regexp.Regexp
 }
 
 func NewService(
@@ -74,9 +71,9 @@ func NewService(
 	tokens TokenRepo,
 	mailer Mailer,
 	logger *slog.Logger,
+
 	frontendBaseURL string,
-	jwtSecret string,
-	jwtTTL time.Duration,
+	jwtService *JWTService,
 	re *regexp.Regexp,
 ) *Service {
 	if logger == nil {
@@ -90,11 +87,8 @@ func NewService(
 		logger: logger,
 
 		frontendBaseURL: strings.TrimRight(frontendBaseURL, "/"),
-
-		jwtSecret: []byte(jwtSecret),
-		jwtTTL:    jwtTTL,
-
-		re: re,
+		jwtService:      jwtService,
+		re:              re,
 	}
 }
 
@@ -249,7 +243,7 @@ func (s *Service) Login(email, password string) (LoginResult, error) {
 		return LoginResult{}, ErrEmailNotVerified
 	}
 
-	jwtToken, err := s.generateJWT(u)
+	jwtToken, err := s.jwtService.generateJWT(u)
 	if err != nil {
 		return LoginResult{}, fmt.Errorf("generate jwt: %w", err)
 	}
