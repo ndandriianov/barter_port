@@ -3,6 +3,8 @@ package auth
 import (
 	"errors"
 	"fmt"
+	"log"
+	"log/slog"
 	"regexp"
 	"strings"
 	"time"
@@ -57,6 +59,7 @@ type Service struct {
 	users  UserRepo
 	tokens TokenRepo
 	mailer Mailer
+	logger *slog.Logger
 
 	frontendBaseURL string
 
@@ -70,15 +73,21 @@ func NewService(
 	users UserRepo,
 	tokens TokenRepo,
 	mailer Mailer,
+	logger *slog.Logger,
 	frontendBaseURL string,
 	jwtSecret string,
 	jwtTTL time.Duration,
 	re *regexp.Regexp,
 ) *Service {
+	if logger == nil {
+		log.Fatal("logger is required")
+	}
+
 	return &Service{
 		users:  users,
 		tokens: tokens,
 		mailer: mailer,
+		logger: logger,
 
 		frontendBaseURL: strings.TrimRight(frontendBaseURL, "/"),
 
@@ -196,7 +205,7 @@ func (s *Service) VerifyEmail(rawToken string) error {
 
 	if err = s.tokens.MarkUsed(tokenHash); err != nil {
 		if errors.Is(err, token.ErrTokenNotFound) {
-			// TODO: логировать эту ошибку, но не возвращать её пользователю, так как верификация уже прошла успешно
+			s.logger.Warn("failed to mark used token as used")
 		}
 	}
 
