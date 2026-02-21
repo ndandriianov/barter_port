@@ -52,7 +52,7 @@ func main() {
 	)
 
 	handlers := transport.NewHandlers(authService)
-	router := transport.NewRouter(handlers, jwtSecret)
+	router := transport.NewRouter(handlers, jwtSecret, userRepo)
 
 	addr := ":8080"
 	log.Println("backend listening on", addr)
