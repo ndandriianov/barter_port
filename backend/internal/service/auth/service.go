@@ -7,10 +7,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ndandriianov/barter_port/backend/internal/infrastructure/repository/token"
+	"github.com/ndandriianov/barter_port/backend/internal/infrastructure/repository/user"
 	"github.com/ndandriianov/barter_port/backend/internal/model"
-	"github.com/ndandriianov/barter_port/backend/internal/repository/token"
-	"github.com/ndandriianov/barter_port/backend/internal/repository/user"
-
 	"golang.org/x/crypto/bcrypt"
 )
 

@@ -1,6 +1,7 @@
 package transport
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -8,7 +9,7 @@ import (
 	"github.com/ndandriianov/barter_port/backend/internal/transport/middleware/auth_jwt"
 )
 
-func NewRouter(h *Handlers, jwtSecret string, userGetter auth_jwt.UserGetter) http.Handler {
+func NewRouter(logger *slog.Logger, h *Handlers, jwtSecret string, userGetter auth_jwt.UserGetter) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(cors.Handler(cors.Options{
@@ -29,7 +30,7 @@ func NewRouter(h *Handlers, jwtSecret string, userGetter auth_jwt.UserGetter) ht
 		r.Post("/login", h.Login)
 
 		r.Group(func(r chi.Router) {
-			r.Use(auth_jwt.Middleware([]byte(jwtSecret), userGetter))
+			r.Use(auth_jwt.Middleware(logger, []byte(jwtSecret), userGetter))
 			r.Get("/me", h.Me)
 		})
 	})

@@ -1,14 +1,16 @@
 package main
 
 import (
+	"log/slog"
 	"regexp"
 	"strconv"
 	"time"
 
 	"github.com/joho/godotenv"
-	"github.com/ndandriianov/barter_port/backend/internal/mailer"
-	"github.com/ndandriianov/barter_port/backend/internal/repository/token"
-	"github.com/ndandriianov/barter_port/backend/internal/repository/user"
+	"github.com/ndandriianov/barter_port/backend/internal/infrastructure/logger"
+	"github.com/ndandriianov/barter_port/backend/internal/infrastructure/mailer"
+	"github.com/ndandriianov/barter_port/backend/internal/infrastructure/repository/token"
+	"github.com/ndandriianov/barter_port/backend/internal/infrastructure/repository/user"
 	"github.com/ndandriianov/barter_port/backend/internal/service/auth"
 	"github.com/ndandriianov/barter_port/backend/internal/transport"
 
@@ -51,8 +53,10 @@ func main() {
 		re,
 	)
 
+	logg := logger.NewJSONLogger(slog.LevelDebug, "auth-service")
+
 	handlers := transport.NewHandlers(authService)
-	router := transport.NewRouter(handlers, jwtSecret, userRepo)
+	router := transport.NewRouter(logg, handlers, jwtSecret, userRepo)
 
 	addr := ":8080"
 	log.Println("backend listening on", addr)
