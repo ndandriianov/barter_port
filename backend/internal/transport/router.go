@@ -8,7 +8,7 @@ import (
 	"github.com/ndandriianov/barter_port/backend/internal/transport/middleware/auth_jwt"
 )
 
-func NewRouter(h *Handlers, jwtSecret string) http.Handler {
+func NewRouter(h *Handlers, jwtSecret string, userGetter auth_jwt.UserGetter) http.Handler {
 	r := chi.NewRouter()
 
 	r.Use(cors.Handler(cors.Options{
@@ -29,7 +29,7 @@ func NewRouter(h *Handlers, jwtSecret string) http.Handler {
 		r.Post("/login", h.Login)
 
 		r.Group(func(r chi.Router) {
-			r.Use(auth_jwt.Middleware([]byte(jwtSecret)))
+			r.Use(auth_jwt.Middleware([]byte(jwtSecret), userGetter))
 			r.Get("/me", h.Me)
 		})
 	})
