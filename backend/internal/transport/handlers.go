@@ -99,6 +99,11 @@ func (h *Handlers) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 
 	var req verifyEmailReq
 	if err := helpers.DecodeJSON(r, &req); err != nil {
+		logger.Warn(
+			"error decoding verify email request",
+			slog.Any("request_body", r.Body),
+			slog.String("error", err.Error()),
+		)
 		helpers.HandleError(w, logger, http.StatusBadRequest, ErrInvalidRequest)
 		return
 	}
@@ -106,16 +111,28 @@ func (h *Handlers) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	if err := h.authService.VerifyEmail(req.Token); err != nil {
 		switch {
 		case errors.Is(err, auth.ErrInvalidToken):
+			logger.Info("invalid token in verify email request")
 			helpers.HandleError(w, logger, http.StatusBadRequest, auth.ErrInvalidToken)
+
 		case errors.Is(err, auth.ErrTokenExpired):
+			logger.Info("token expired in verify email request")
 			helpers.HandleError(w, logger, http.StatusBadRequest, auth.ErrTokenExpired)
+
 		case errors.Is(err, auth.ErrUserNotFound):
+			logger.Info("user not found in verify email request")
 			helpers.HandleError(w, logger, http.StatusNotFound, auth.ErrUserNotFound)
+
 		default:
+			logger.Error(
+				"unexpected error in verify email request",
+				slog.String("error", err.Error()),
+			)
 			helpers.HandleError(w, logger, http.StatusInternalServerError, ErrInternalServerError)
 		}
 		return
 	}
+
+	logger.Info("successfully verified email user")
 
 	helpers.WriteJSON(w, logger, http.StatusOK, map[string]string{"status": "ok"})
 }

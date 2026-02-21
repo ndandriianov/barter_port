@@ -43,17 +43,19 @@ func main() {
 
 	m := mailer.NewSMTPMailer(smtpHost, smtpPort, smtpUser, smtpPass, smtpFrom)
 
+	logg := logger.NewJSONLogger(slog.LevelDebug, "auth-service", "")
+	infrastructureLogger := logger.NewJSONLogger(slog.LevelDebug, "", "infrastructure")
+
 	authService := auth.NewService(
 		userRepo,
 		tokenRepo,
 		m,
+		infrastructureLogger,
 		frontendURL,
 		jwtSecret,
 		time.Duration(mustInt(jwtTTL))*time.Minute,
 		re,
 	)
-
-	logg := logger.NewJSONLogger(slog.LevelDebug, "auth-service")
 
 	handlers := transport.NewHandlers(logg, authService)
 	router := transport.NewRouter(logg, handlers, jwtSecret, userRepo)
