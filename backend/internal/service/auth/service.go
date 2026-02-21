@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ndandriianov/barter_port/backend/internal/infrastructure/repository/token"
+	"github.com/ndandriianov/barter_port/backend/internal/infrastructure/repository/email_token"
 	"github.com/ndandriianov/barter_port/backend/internal/infrastructure/repository/user"
 	"github.com/ndandriianov/barter_port/backend/internal/model"
 	"golang.org/x/crypto/bcrypt"
@@ -30,8 +30,8 @@ var (
 	ErrEmailAlreadyInUse = errors.New("email already in use")
 
 	ErrUserNotFound      = errors.New("user not found")
-	ErrInvalidEmailToken = errors.New("invalid token")
-	ErrEmailTokenExpired = errors.New("token expired")
+	ErrInvalidEmailToken = errors.New("invalid email_token")
+	ErrEmailTokenExpired = errors.New("email_token expired")
 
 	ErrInvalidCredentials = errors.New("invalid credentials")
 	ErrEmailNotVerified   = errors.New("email not verified")
@@ -129,14 +129,14 @@ func (s *Service) Register(email, password string) (RegisterResult, error) {
 
 	rawToken, err := generateToken(tokenLength)
 	if err != nil {
-		return RegisterResult{}, fmt.Errorf("failed to generate token: %w", err)
+		return RegisterResult{}, fmt.Errorf("failed to generate email_token: %w", err)
 	}
 
 	tokenHash := getHashFromToken(rawToken)
 	t := model.NewEmailVerificationToken(tokenHash, u.ID, time.Now().Add(tokenExpirationTime))
 
 	if err = s.tokens.Save(t); err != nil {
-		return RegisterResult{}, fmt.Errorf("failed to save token: %w", err)
+		return RegisterResult{}, fmt.Errorf("failed to save email_token: %w", err)
 	}
 
 	if err = s.mailer.Send(u.Email, subject, s.getEmailBody(rawToken)); err != nil {
@@ -160,15 +160,15 @@ func (s *Service) Register(email, password string) (RegisterResult, error) {
 func (s *Service) VerifyEmail(rawToken string) error {
 	tokenHash, err := getHashFromRawToken(rawToken)
 	if err != nil {
-		return fmt.Errorf("cannot get hash from raw token: %w", err)
+		return fmt.Errorf("cannot get hash from raw email_token: %w", err)
 	}
 
 	t, err := s.tokens.GetByHash(tokenHash)
 	if err != nil {
-		if errors.Is(err, token.ErrTokenNotFound) {
+		if errors.Is(err, email_token.ErrTokenNotFound) {
 			return ErrInvalidEmailToken
 		}
-		return fmt.Errorf("failed to get token by hash: %w", err)
+		return fmt.Errorf("failed to get email_token by hash: %w", err)
 	}
 
 	if t.Used {
@@ -198,8 +198,8 @@ func (s *Service) VerifyEmail(rawToken string) error {
 	}
 
 	if err = s.tokens.MarkUsed(tokenHash); err != nil {
-		if errors.Is(err, token.ErrTokenNotFound) {
-			s.logger.Warn("failed to mark used token as used")
+		if errors.Is(err, email_token.ErrTokenNotFound) {
+			s.logger.Warn("failed to mark used email_token as used")
 		}
 	}
 

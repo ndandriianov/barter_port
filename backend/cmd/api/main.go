@@ -9,7 +9,7 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/ndandriianov/barter_port/backend/internal/infrastructure/logger"
 	"github.com/ndandriianov/barter_port/backend/internal/infrastructure/mailer"
-	"github.com/ndandriianov/barter_port/backend/internal/infrastructure/repository/token"
+	"github.com/ndandriianov/barter_port/backend/internal/infrastructure/repository/email_token"
 	"github.com/ndandriianov/barter_port/backend/internal/infrastructure/repository/user"
 	"github.com/ndandriianov/barter_port/backend/internal/service/auth"
 	"github.com/ndandriianov/barter_port/backend/internal/transport"
@@ -29,7 +29,7 @@ func main() {
 	re := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 
 	userRepo := user.NewInMemoryUserRepo()
-	tokenRepo := token.NewInMemoryTokenRepo()
+	tokenRepo := email_token.NewInMemoryTokenRepo()
 
 	smtpHost := getEnv("SMTP_HOST", "")
 	smtpPort := mustInt(getEnv("SMTP_PORT", ""))
