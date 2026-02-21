@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/ndandriianov/barter_port/backend/internal/infrastructure/repository/user"
 	"github.com/ndandriianov/barter_port/backend/internal/model"
@@ -41,20 +42,22 @@ func UserIDFromContext(ctx context.Context) (string, bool) {
 func Middleware(logger *slog.Logger, secret []byte, users UserGetter) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			requestID := middleware.GetReqID(r.Context())
+			logger = logger.With("request_id", requestID)
 
 			raw, err := extractBearerToken(r)
 			if err != nil {
 				if errors.Is(err, errMissingToken) {
-					logger.Warn("missing token in request", "remote_addr", r.RemoteAddr)
+					logger.Warn("missing token in request")
 					helpers.HandleError(w, http.StatusUnauthorized, errMissingToken)
 					return
 				}
 				if errors.Is(err, errInvalidAuthHeader) {
-					logger.Warn("invalid auth header format", "remote_addr", r.RemoteAddr)
+					logger.Warn("invalid auth header format")
 					helpers.HandleError(w, http.StatusUnauthorized, errInvalidAuthHeader)
 					return
 				}
-				logger.Error("unexpected error extracting token", "error", err, "remote_addr", r.RemoteAddr)
+				logger.Error("unexpected error extracting token", "error", err)
 				helpers.HandleError(w, http.StatusInternalServerError, errInternalServerError)
 				return
 			}
@@ -62,16 +65,16 @@ func Middleware(logger *slog.Logger, secret []byte, users UserGetter) func(http.
 			claims, err := parseToken(raw, secret)
 			if err != nil {
 				if errors.Is(err, errUnexpectedSigningMethod) {
-					logger.Warn("unexpected signing method in token", "remote_addr", r.RemoteAddr)
+					logger.Warn("unexpected signing method in token")
 					helpers.HandleError(w, http.StatusUnauthorized, errInvalidToken)
 					return
 				}
 				if errors.Is(err, errTokenExpired) {
-					logger.Info("token expired", "remote_addr", r.RemoteAddr)
+					logger.Info("token expired")
 					helpers.HandleError(w, http.StatusUnauthorized, errTokenExpired)
 					return
 				}
-				logger.Warn("invalid token", "error", err, "remote_addr", r.RemoteAddr)
+				logger.Warn("invalid token", "error", err)
 				helpers.HandleError(w, http.StatusUnauthorized, errInvalidToken)
 				return
 			}
@@ -79,16 +82,16 @@ func Middleware(logger *slog.Logger, secret []byte, users UserGetter) func(http.
 			u, err := users.GetByID(claims.Subject)
 			if err != nil {
 				if errors.Is(err, user.ErrUserNotFound) {
-					logger.Warn("user not found for token subject", "subject", claims.Subject, "remote_addr", r.RemoteAddr)
+					logger.Warn("user not found for token subject", "subject", claims.Subject)
 					helpers.HandleError(w, http.StatusUnauthorized, errInvalidToken)
 					return
 				}
-				logger.Error("unexpected error fetching user", "error", err, "subject", claims.Subject, "remote_addr", r.RemoteAddr)
+				logger.Error("unexpected error fetching user", "error", err, "subject", claims.Subject)
 				helpers.HandleError(w, http.StatusInternalServerError, errInternalServerError)
 				return
 			}
 
-			logger.Info("user authenticated successfully", "user_id", u.ID, "remote_addr", r.RemoteAddr)
+			logger.Info("user authenticated successfully", "user_id", u.ID)
 			ctx := context.WithValue(r.Context(), userCtxKey, u.ID)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})

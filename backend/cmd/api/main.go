@@ -55,7 +55,7 @@ func main() {
 
 	logg := logger.NewJSONLogger(slog.LevelDebug, "auth-service")
 
-	handlers := transport.NewHandlers(authService)
+	handlers := transport.NewHandlers(logg, authService)
 	router := transport.NewRouter(logg, handlers, jwtSecret, userRepo)
 
 	addr := ":8080"
