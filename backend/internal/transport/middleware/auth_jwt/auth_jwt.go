@@ -43,7 +43,7 @@ func Middleware(logger *slog.Logger, secret []byte, users UserGetter) func(http.
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			requestID := middleware.GetReqID(r.Context())
-			logger = logger.With("request_id", requestID)
+			logger = logger.With(slog.String("request_id", requestID))
 
 			raw, err := extractBearerToken(r)
 			if err != nil {
@@ -57,7 +57,10 @@ func Middleware(logger *slog.Logger, secret []byte, users UserGetter) func(http.
 					helpers.HandleError(w, http.StatusUnauthorized, errInvalidAuthHeader)
 					return
 				}
-				logger.Error("unexpected error extracting token", "error", err)
+				logger.Error(
+					"unexpected error extracting token",
+					slog.String("error", err.Error()),
+				)
 				helpers.HandleError(w, http.StatusInternalServerError, errInternalServerError)
 				return
 			}
@@ -74,7 +77,7 @@ func Middleware(logger *slog.Logger, secret []byte, users UserGetter) func(http.
 					helpers.HandleError(w, http.StatusUnauthorized, errTokenExpired)
 					return
 				}
-				logger.Warn("invalid token", "error", err)
+				logger.Warn("invalid token", slog.String("error", err.Error()))
 				helpers.HandleError(w, http.StatusUnauthorized, errInvalidToken)
 				return
 			}
@@ -82,16 +85,26 @@ func Middleware(logger *slog.Logger, secret []byte, users UserGetter) func(http.
 			u, err := users.GetByID(claims.Subject)
 			if err != nil {
 				if errors.Is(err, user.ErrUserNotFound) {
-					logger.Warn("user not found for token subject", "subject", claims.Subject)
+					logger.Warn(
+						`user not found for token subject`,
+						slog.String("subject", claims.Subject),
+					)
 					helpers.HandleError(w, http.StatusUnauthorized, errInvalidToken)
 					return
 				}
-				logger.Error("unexpected error fetching user", "error", err, "subject", claims.Subject)
+				logger.Error(
+					"unexpected error fetching user",
+					slog.String("error", err.Error()),
+					slog.String("subject", claims.Subject),
+				)
 				helpers.HandleError(w, http.StatusInternalServerError, errInternalServerError)
 				return
 			}
 
-			logger.Info("user authenticated successfully", "user_id", u.ID)
+			logger.Info(
+				"user authenticated successfully",
+				slog.String("user_id", u.ID),
+			)
 			ctx := context.WithValue(r.Context(), userCtxKey, u.ID)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
