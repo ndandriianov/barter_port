@@ -32,7 +32,7 @@ func NewHandlers(logger *slog.Logger, authService *auth.Service) *Handlers {
 
 func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 	requestID := middleware.GetReqID(r.Context())
-	logger := h.logger.With("request_id", requestID)
+	logger := h.logger.With(slog.String("request_id", requestID))
 	logger.Info("handling register request")
 
 	var req registerReq
@@ -64,7 +64,7 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handlers) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	requestID := middleware.GetReqID(r.Context())
-	logger := h.logger.With("request_id", requestID)
+	logger := h.logger.With(slog.String("request_id", requestID))
 	logger.Info("handling verify email request")
 
 	var req verifyEmailReq
@@ -92,7 +92,7 @@ func (h *Handlers) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	requestID := middleware.GetReqID(r.Context())
-	logger := h.logger.With("request_id", requestID)
+	logger := h.logger.With(slog.String("request_id", requestID))
 	logger.Info("handling login request")
 
 	var req loginReq
@@ -123,7 +123,7 @@ type meResp struct {
 
 func (h *Handlers) Me(w http.ResponseWriter, r *http.Request) {
 	requestID := middleware.GetReqID(r.Context())
-	logger := h.logger.With("request_id", requestID)
+	logger := h.logger.With(slog.String("request_id", requestID))
 	logger.Info("handling me request")
 
 	userID, ok := auth_jwt.UserIDFromContext(r.Context())
