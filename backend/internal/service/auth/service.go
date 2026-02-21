@@ -108,7 +108,7 @@ func (s *Service) Register(email, password string) (RegisterResult, error) {
 		return RegisterResult{}, err
 	}
 
-	hash, err := bcrypt.GenerateFromPassword([]byte(password), 12) // TODO: заменить на константу
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcryptCost)
 	if err != nil {
 		return RegisterResult{}, fmt.Errorf("failed to hash password: %w", err)
 	}
