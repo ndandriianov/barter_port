@@ -1,4 +1,4 @@
-package token
+package email_token
 
 import (
 	"errors"
