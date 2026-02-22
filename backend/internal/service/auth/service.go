@@ -12,6 +12,7 @@ import (
 	"github.com/ndandriianov/barter_port/backend/internal/infrastructure/repository/email_token"
 	"github.com/ndandriianov/barter_port/backend/internal/infrastructure/repository/user"
 	"github.com/ndandriianov/barter_port/backend/internal/model"
+	"github.com/ndandriianov/barter_port/backend/internal/service/auth/jwt"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -62,7 +63,7 @@ type Service struct {
 	logger *slog.Logger
 
 	frontendBaseURL string
-	jwtService      *JWTService
+	jwtManager      *jwt.Manager
 	re              *regexp.Regexp
 }
 
@@ -73,7 +74,7 @@ func NewService(
 	logger *slog.Logger,
 
 	frontendBaseURL string,
-	jwtService *JWTService,
+	jwtManager *jwt.Manager,
 	re *regexp.Regexp,
 ) *Service {
 	if logger == nil {
@@ -87,7 +88,7 @@ func NewService(
 		logger: logger,
 
 		frontendBaseURL: strings.TrimRight(frontendBaseURL, "/"),
-		jwtService:      jwtService,
+		jwtManager:      jwtManager,
 		re:              re,
 	}
 }
@@ -243,7 +244,7 @@ func (s *Service) Login(email, password string) (LoginResult, error) {
 		return LoginResult{}, ErrEmailNotVerified
 	}
 
-	jwtToken, err := s.jwtService.generateAccessToken(u)
+	jwtToken, err := s.jwtManager.GenerateAccessToken(u.ID)
 	if err != nil {
 		return LoginResult{}, fmt.Errorf("generate jwt: %w", err)
 	}

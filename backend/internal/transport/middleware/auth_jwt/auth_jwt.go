@@ -11,6 +11,7 @@ import (
 	"github.com/ndandriianov/barter_port/backend/internal/infrastructure/repository/user"
 	"github.com/ndandriianov/barter_port/backend/internal/model"
 	"github.com/ndandriianov/barter_port/backend/internal/service/auth"
+	"github.com/ndandriianov/barter_port/backend/internal/service/auth/jwt"
 	"github.com/ndandriianov/barter_port/backend/internal/transport/helpers"
 )
 
@@ -19,12 +20,11 @@ type contextKey struct{}
 var userCtxKey contextKey
 
 var (
-	errMissingToken            = errors.New("missing token")
-	errInvalidAuthHeader       = errors.New("invalid auth header")
-	errUnexpectedSigningMethod = errors.New("unexpected signing method")
-	errInvalidToken            = errors.New("invalid token")
-	errTokenExpired            = errors.New("token expired")
-	errInternalServerError     = errors.New("internal server error")
+	errMissingToken        = errors.New("missing token")
+	errInvalidAuthHeader   = errors.New("invalid auth header")
+	errInvalidToken        = errors.New("invalid token")
+	errTokenExpired        = errors.New("token expired")
+	errInternalServerError = errors.New("internal server error")
 )
 
 type UserGetter interface {
@@ -66,7 +66,7 @@ func Middleware(logger *slog.Logger, jwtService *auth.JWTService, users UserGett
 
 			claims, err := jwtService.ParseToken(raw)
 			if err != nil {
-				if errors.Is(err, auth.ErrUnexpectedSigningMethod) {
+				if errors.Is(err, jwt.ErrUnexpectedSigningMethod) {
 					logger.Warn("unexpected signing method in token")
 					helpers.HandleError(w, logger, http.StatusUnauthorized, errInvalidToken)
 					return
