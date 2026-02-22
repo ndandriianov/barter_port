@@ -5,23 +5,22 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"strings"
 
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/ndandriianov/barter_port/backend/internal/infrastructure/repository/user"
 	"github.com/ndandriianov/barter_port/backend/internal/model"
-	"github.com/ndandriianov/barter_port/backend/internal/service/auth"
 	"github.com/ndandriianov/barter_port/backend/internal/service/auth/jwt"
 	"github.com/ndandriianov/barter_port/backend/internal/transport/helpers"
 )
 
-type contextKey struct{}
+const bearerPrefix = "Bearer "
 
-var userCtxKey contextKey
+type contextKey string
+
+const ContextKeyUser contextKey = "user"
 
 var (
 	errMissingToken        = errors.New("missing token")
-	errInvalidAuthHeader   = errors.New("invalid auth header")
 	errInvalidToken        = errors.New("invalid token")
 	errTokenExpired        = errors.New("token expired")
 	errInternalServerError = errors.New("internal server error")
@@ -31,18 +30,18 @@ type UserGetter interface {
 	GetByID(id string) (model.User, error)
 }
 
-func UserIDFromContext(ctx context.Context) (string, bool) {
-	u, ok := ctx.Value(userCtxKey).(string)
-	return u, ok
+// GetClaims retrieves the JWT claims from the context. It returns the claims and a boolean indicating whether the claims were found.
+func GetClaims(ctx context.Context) (*jwt.Claims, bool) {
+	c, ok := ctx.Value(ContextKeyUser).(*jwt.Claims)
+	return c, ok
 }
 
-// TODO: добавить логирование ошибок для мониторинга и обнаружения потенциальных атак, но не логировать чувствительную информацию из токенов
-
-func Middleware(logger *slog.Logger, jwtService *auth.JWTService, users UserGetter) func(http.Handler) http.Handler {
+func Middleware(logger *slog.Logger, jwtManager *jwt.Manager, users UserGetter) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			requestID := middleware.GetReqID(r.Context())
 			logger = logger.With(slog.String("request_id", requestID))
+			logger.Info("handling request with JWT authentication")
 
 			raw, err := extractBearerToken(r)
 			if err != nil {
@@ -51,27 +50,14 @@ func Middleware(logger *slog.Logger, jwtService *auth.JWTService, users UserGett
 					helpers.HandleError(w, logger, http.StatusUnauthorized, errMissingToken)
 					return
 				}
-				if errors.Is(err, errInvalidAuthHeader) {
-					logger.Warn("invalid auth header format")
-					helpers.HandleError(w, logger, http.StatusUnauthorized, errInvalidAuthHeader)
-					return
-				}
-				logger.Error(
-					"unexpected error extracting token",
-					slog.String("error", err.Error()),
-				)
+				logger.Error("unexpected error extracting token", slog.String("error", err.Error()))
 				helpers.HandleError(w, logger, http.StatusInternalServerError, errInternalServerError)
 				return
 			}
 
-			claims, err := jwtService.ParseToken(raw)
+			claims, err := jwtManager.ParseAccessToken(raw)
 			if err != nil {
-				if errors.Is(err, jwt.ErrUnexpectedSigningMethod) {
-					logger.Warn("unexpected signing method in token")
-					helpers.HandleError(w, logger, http.StatusUnauthorized, errInvalidToken)
-					return
-				}
-				if errors.Is(err, auth.ErrAccessJWTExpired) {
+				if errors.Is(err, jwt.ErrTokenExpired) {
 					logger.Info("token expired")
 					helpers.HandleError(w, logger, http.StatusUnauthorized, errTokenExpired)
 					return
@@ -81,12 +67,12 @@ func Middleware(logger *slog.Logger, jwtService *auth.JWTService, users UserGett
 				return
 			}
 
-			u, err := users.GetByID(claims.Subject)
+			u, err := users.GetByID(claims.UserID)
 			if err != nil {
 				if errors.Is(err, user.ErrUserNotFound) {
 					logger.Warn(
-						`user not found for token subject`,
-						slog.String("subject", claims.Subject),
+						`user not found for token UserID`,
+						slog.String("user_id", claims.UserID),
 					)
 					helpers.HandleError(w, logger, http.StatusUnauthorized, errInvalidToken)
 					return
@@ -94,7 +80,7 @@ func Middleware(logger *slog.Logger, jwtService *auth.JWTService, users UserGett
 				logger.Error(
 					"unexpected error fetching user",
 					slog.String("error", err.Error()),
-					slog.String("subject", claims.Subject),
+					slog.String("user_id", claims.UserID),
 				)
 				helpers.HandleError(w, logger, http.StatusInternalServerError, errInternalServerError)
 				return
@@ -104,24 +90,24 @@ func Middleware(logger *slog.Logger, jwtService *auth.JWTService, users UserGett
 				"user authenticated successfully",
 				slog.String("user_id", u.ID),
 			)
-			ctx := context.WithValue(r.Context(), userCtxKey, u.ID)
+			ctx := context.WithValue(r.Context(), ContextKeyUser, claims)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
 }
 
+// extractBearerToken extracts and cleans from bearerPrefix the token string from the Authorization header.
+//
+// It returns error errMissingToken if the header is missing.
 func extractBearerToken(r *http.Request) (string, error) {
-	h := r.Header.Get("Authorization")
-	if h == "" {
+	tokenStr := r.Header.Get("Authorization")
+	if tokenStr == "" {
 		return "", errMissingToken
 	}
 
-	parts := strings.SplitN(h, " ", 2)
-	if len(parts) != 2 || parts[0] != "Bearer" {
-		return "", errInvalidAuthHeader
+	if len(tokenStr) > len(bearerPrefix) && tokenStr[:len(bearerPrefix)] == bearerPrefix {
+		tokenStr = tokenStr[len(bearerPrefix):]
 	}
 
-	return parts[1], nil
+	return tokenStr, nil
 }
-
-// TODO: СДЕЛАТЬ КОРРЕКТНУЮ ЗАПИСЬ ИНФОРМАЦИИ О ПОЛЬЗОВАТЕЛЕ В КОНТЕКСТ, ЧТОБЫ В БУДУЩЕМ МОЖНО БЫЛО ИСПОЛЬЗОВАТЬ ЭТУ ИНФОРМАЦИЮ ДЛЯ РАЗЛИЧНЫХ ЦЕЛЕЙ (НАПРИМЕР, РАЗРЕШЕНИЯ). НАСТРОИТЬ ИНИЦИАЛИЗАЦИЮ MIDDLEWATR

@@ -12,6 +12,7 @@ import (
 	"github.com/ndandriianov/barter_port/backend/internal/infrastructure/repository/email_token"
 	"github.com/ndandriianov/barter_port/backend/internal/infrastructure/repository/user"
 	"github.com/ndandriianov/barter_port/backend/internal/service/auth"
+	"github.com/ndandriianov/barter_port/backend/internal/service/auth/jwt"
 	"github.com/ndandriianov/barter_port/backend/internal/transport"
 
 	"log"
@@ -46,7 +47,13 @@ func main() {
 	logg := logger.NewJSONLogger(slog.LevelDebug, "auth-service", "")
 	infrastructureLogger := logger.NewJSONLogger(slog.LevelDebug, "", "infrastructure")
 
-	jwtService := auth.NewJWTService([]byte(jwtSecret), time.Duration(mustInt(jwtTTL))*time.Minute)
+	// TODO: сделать нормальное управление TTL для access и refresh токенов, а не одинаковое для обоих, вынести парсинг
+	jwtManager := jwt.NewManager(jwt.Config{
+		AccessSecret:  jwtSecret,
+		RefreshSecret: jwtSecret,
+		AccessTTL:     time.Duration(mustInt(jwtTTL)) * time.Minute,
+		RefreshTTL:    time.Duration(mustInt(jwtTTL)) * time.Minute,
+	})
 
 	authService := auth.NewService(
 		userRepo,
@@ -55,12 +62,13 @@ func main() {
 		infrastructureLogger,
 
 		frontendURL,
-		jwtService,
+		jwtManager,
 		re,
 	)
 
-	handlers := transport.NewHandlers(logg, authService)
-	router := transport.NewRouter(logg, handlers, jwtService, userRepo)
+	// TODO: написать репозиторий и прокинуть его сюда
+	handlers := transport.NewHandlers(logg, authService, jwtManager)
+	router := transport.NewRouter(logg, handlers, jwtManager, userRepo)
 
 	addr := ":8080"
 	log.Println("backend listening on", addr)
