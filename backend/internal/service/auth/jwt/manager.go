@@ -51,17 +51,18 @@ func NewManager(cfg Config) *Manager {
 //
 
 func (m *Manager) GenerateAccessToken(userID string) (string, error) {
-	return m.generateToken(userID, AccessToken, m.cfg.AccessSecret, m.cfg.AccessTTL)
+	token, _, err := m.generateToken(userID, AccessToken, m.cfg.AccessSecret, m.cfg.AccessTTL)
+	return token, err
 }
 
-func (m *Manager) GenerateRefreshToken(userID string) (string, error) {
+func (m *Manager) GenerateRefreshToken(userID string) (string, Claims, error) {
 	return m.generateToken(userID, RefreshToken, m.cfg.RefreshSecret, m.cfg.RefreshTTL)
 }
 
-func (m *Manager) generateToken(userID string, tokenType TokenType, secret string, ttl time.Duration) (string, error) {
+func (m *Manager) generateToken(userID string, tokenType TokenType, secret string, ttl time.Duration) (string, Claims, error) {
 	id, err := generateGTI()
 	if err != nil {
-		return "", fmt.Errorf("failed to generate GTI: %w", err)
+		return "", Claims{}, fmt.Errorf("failed to generate GTI: %w", err)
 	}
 	now := time.Now()
 
@@ -78,7 +79,12 @@ func (m *Manager) generateToken(userID string, tokenType TokenType, secret strin
 
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
 
-	return token.SignedString([]byte(secret))
+	signedToken, err := token.SignedString([]byte(secret))
+	if err != nil {
+		return "", Claims{}, fmt.Errorf("failed to sign token: %w", err)
+	}
+
+	return signedToken, claims, nil
 }
 
 //

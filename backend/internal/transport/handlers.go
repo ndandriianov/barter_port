@@ -5,28 +5,49 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"time"
 
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/ndandriianov/barter_port/backend/internal/model"
 	"github.com/ndandriianov/barter_port/backend/internal/service/auth"
+	"github.com/ndandriianov/barter_port/backend/internal/service/auth/jwt"
 	"github.com/ndandriianov/barter_port/backend/internal/transport/helpers"
 	"github.com/ndandriianov/barter_port/backend/internal/transport/middleware/auth_jwt"
 )
 
+const RefreshCookieName = "refresh_token"
+
 var (
-	ErrInvalidRequest      = errors.New("invalid request")
-	ErrInternalServerError = errors.New("internal server error")
-	ErrUnauthorized        = errors.New("unauthorized")
+	ErrInvalidRequest       = errors.New("invalid request")
+	ErrInternalServerError  = errors.New("internal server error")
+	ErrUnauthorized         = errors.New("unauthorized")
+	ErrMissingRefreshCookie = errors.New("missing refresh token cookie")
 )
+
+type RefreshTokenRepository interface {
+	Save(token model.RefreshToken) error
+	GetByJTI(jti string) (*model.RefreshToken, error)
+	Revoke(jti string) error
+}
 
 type Handlers struct {
 	logger      *slog.Logger
 	authService *auth.Service
+	jwtManager  *jwt.Manager
+	refreshRepo RefreshTokenRepository
 }
 
-func NewHandlers(logger *slog.Logger, authService *auth.Service) *Handlers {
+func NewHandlers(
+	logger *slog.Logger,
+	authService *auth.Service,
+	jwtManager *jwt.Manager,
+	refreshRepo RefreshTokenRepository,
+) *Handlers {
 	return &Handlers{
 		logger:      logger,
 		authService: authService,
+		jwtManager:  jwtManager,
+		refreshRepo: refreshRepo,
 	}
 }
 
@@ -142,6 +163,7 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	logger := h.logger.With(slog.String("request_id", requestID))
 	logger.Info("handling login request")
 
+	// Парсинг email и password из тела запроса
 	var req loginReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		logger.Warn(
@@ -153,7 +175,8 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := h.authService.Login(req.Email, req.Password)
+	// Проверка учетных данных и получение userID
+	userID, err := h.authService.Login(req.Email, req.Password)
 	if err != nil {
 		switch {
 		case errors.Is(err, auth.ErrInvalidCredentials):
@@ -182,8 +205,188 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logger.Info("successfully logged in user", slog.String("email", req.Email))
+	logger.Info("generating JWT for logged in user", slog.String("email", req.Email))
 
-	helpers.WriteJSON(w, logger, http.StatusOK, loginResp{AccessToken: res.AccessToken})
+	// Генерация access и refresh токенов
+	access, err := h.jwtManager.GenerateAccessToken(userID)
+	if err != nil {
+		logger.Error(
+			"failed to generate access token for logged in user",
+			slog.String("error", err.Error()),
+			slog.String("email", req.Email),
+			slog.String("user_id", userID),
+		)
+		helpers.HandleError(w, logger, http.StatusInternalServerError, ErrInternalServerError)
+		return
+	}
+
+	refresh, claims, err := h.jwtManager.GenerateRefreshToken(userID)
+	if err != nil {
+		logger.Error(
+			"failed to generate refresh token for logged in user",
+			slog.String("error", err.Error()),
+			slog.String("email", req.Email),
+			slog.String("user_id", userID),
+		)
+		helpers.HandleError(w, logger, http.StatusInternalServerError, ErrInternalServerError)
+		return
+	}
+
+	// Сохранение refresh токена в репозитории
+	err = h.refreshRepo.Save(model.RefreshToken{
+		JTI:       claims.ID,
+		UserID:    claims.UserID,
+		ExpiresAt: claims.ExpiresAt.Time,
+		Revoked:   false,
+	})
+	if err != nil {
+		logger.Error(
+			"failed to save refresh token for logged in user",
+			slog.String("error", err.Error()),
+			slog.String("email", req.Email),
+			slog.String("refresh_token", refresh),
+		)
+		helpers.HandleError(w, logger, http.StatusInternalServerError, ErrInternalServerError)
+	}
+
+	// Установка refresh токена в cookie и отправка access токена в ответе
+	setRefreshCookie(w, refresh, claims.ExpiresAt.Time)
+	helpers.WriteJSON(w, logger, http.StatusOK, loginResp{AccessToken: access})
+
+	logger.Info(
+		"successfully generated tokens for logged in user",
+		slog.String("email", req.Email),
+		slog.String("user_id", userID),
+	)
+}
+
+func (h *Handlers) Refresh(w http.ResponseWriter, r *http.Request) {
+	requestID := middleware.GetReqID(r.Context())
+	logger := h.logger.With(slog.String("request_id", requestID))
+	logger.Info("handling refresh request")
+
+	// Парсинг refresh токена из тела запроса TODO сделать через cookie
+	cookie, err := r.Cookie(RefreshCookieName)
+	if err != nil {
+		logger.Warn("missing refresh token cookie", slog.String("error", err.Error()))
+		helpers.HandleError(w, logger, http.StatusUnauthorized, ErrMissingRefreshCookie)
+		return
+	}
+
+	oldRefreshClaims, err := h.jwtManager.ParseRefreshToken(cookie.Value)
+	if err != nil {
+		if errors.Is(err, jwt.ErrTokenExpired) {
+			logger.Info("refresh token expired", slog.String("error", err.Error()))
+			helpers.HandleError(w, logger, http.StatusUnauthorized, jwt.ErrTokenExpired)
+			return
+		}
+		logger.Warn("invalid refresh token", slog.String("error", err.Error()))
+		helpers.HandleError(w, logger, http.StatusUnauthorized, jwt.ErrInvalidToken)
+		return
+	}
+
+	// Получение и проверка хранимого refresh токена по JTI из claims
+	storedRefresh, err := h.refreshRepo.GetByJTI(oldRefreshClaims.ID)
+	if err != nil {
+		// TODO: distinguish between "not found" and other errors in the repository
+		logger.Error(
+			"error fetching refresh token from repository",
+			slog.String("error", err.Error()),
+			slog.String("jti", oldRefreshClaims.ID),
+			slog.String("user_id", oldRefreshClaims.UserID),
+		)
+		helpers.HandleError(w, logger, http.StatusInternalServerError, ErrInternalServerError)
+		return
+	}
+
+	if storedRefresh.Revoked || storedRefresh.ExpiresAt.Before(time.Now()) {
+		helpers.HandleError(w, logger, http.StatusUnauthorized, ErrUnauthorized)
+		return
+	}
+
+	// Создание новых токенов
+	access, err := h.jwtManager.GenerateAccessToken(oldRefreshClaims.UserID)
+	if err != nil {
+		logger.Error(
+			"failed to generate access token for logged in user",
+			slog.String("error", err.Error()),
+			slog.String("user_id", oldRefreshClaims.UserID),
+		)
+		helpers.HandleError(w, logger, http.StatusInternalServerError, ErrInternalServerError)
+		return
+	}
+
+	refresh, claims, err := h.jwtManager.GenerateRefreshToken(oldRefreshClaims.UserID)
+	if err != nil {
+		logger.Error(
+			"failed to generate refresh token for logged in user",
+			slog.String("error", err.Error()),
+			slog.String("user_id", oldRefreshClaims.UserID),
+		)
+		helpers.HandleError(w, logger, http.StatusInternalServerError, ErrInternalServerError)
+		return
+	}
+
+	// Сохранение нового refresh токена и удаление старого
+	err = h.refreshRepo.Save(model.RefreshToken{
+		JTI:       claims.ID,
+		UserID:    claims.UserID,
+		ExpiresAt: claims.ExpiresAt.Time,
+		Revoked:   false,
+	})
+	if err != nil {
+		logger.Error(
+			"failed to save new refresh token for user",
+			slog.String("error", err.Error()),
+			slog.String("user_id", oldRefreshClaims.UserID),
+			slog.String("new_jti", claims.ID),
+		)
+		helpers.HandleError(w, logger, http.StatusInternalServerError, ErrInternalServerError)
+		return
+	}
+
+	err = h.refreshRepo.Revoke(oldRefreshClaims.ID)
+	if err != nil {
+		logger.Error(
+			"failed to revoke old refresh token for user",
+			slog.String("error", err.Error()),
+			slog.String("user_id", oldRefreshClaims.UserID),
+			slog.String("old_jti", oldRefreshClaims.ID),
+		)
+		helpers.HandleError(w, logger, http.StatusInternalServerError, ErrInternalServerError)
+		return
+	}
+
+	// Установка нового refresh токена в cookie и отправка access токена в ответе
+	setRefreshCookie(w, refresh, claims.ExpiresAt.Time)
+	helpers.WriteJSON(w, logger, http.StatusOK, refreshResponse{AccessToken: access})
+
+	logger.Info("successfully refreshed tokens for user", slog.String("user_id", oldRefreshClaims.UserID))
+}
+
+func (h *Handlers) Logout(w http.ResponseWriter, r *http.Request) {
+	requestID := middleware.GetReqID(r.Context())
+	logger := h.logger.With(slog.String("request_id", requestID))
+	logger.Info("handling logout request")
+
+	cookie, err := r.Cookie(RefreshCookieName)
+	// Отзыв refresh токена, если он есть. Если куки нет или он невалидный - просто очищаем куки и возвращаем успех
+	if err == nil {
+		if claims, err := h.jwtManager.ParseRefreshToken(cookie.Value); err == nil {
+			if err := h.refreshRepo.Revoke(claims.ID); err != nil {
+				logger.Error(
+					"failed to revoke refresh token during logout",
+					slog.String("error", err.Error()),
+					slog.String("jti", claims.ID),
+				)
+				helpers.HandleError(w, logger, http.StatusInternalServerError, ErrInternalServerError)
+				return
+			}
+		}
+	}
+
+	clearRefreshCookie(w)
+	w.WriteHeader(http.StatusOK)
 }
 
 type meResp struct {
@@ -195,14 +398,41 @@ func (h *Handlers) Me(w http.ResponseWriter, r *http.Request) {
 	logger := h.logger.With(slog.String("request_id", requestID))
 	logger.Info("handling me request")
 
-	userID, ok := auth_jwt.UserIDFromContext(r.Context())
+	claims, ok := auth_jwt.GetClaims(r.Context())
 	if !ok {
-		logger.Warn("user ID not found in context")
-		helpers.HandleError(w, logger, http.StatusUnauthorized, ErrUnauthorized)
+		logger.Error("failed to fetch claims")
+		helpers.HandleError(w, logger, http.StatusInternalServerError, ErrInternalServerError)
 		return
 	}
 
 	logger.Info("successfully fetched user info")
+	helpers.WriteJSON(w, logger, http.StatusOK, meResp{UserID: claims.UserID})
+}
 
-	helpers.WriteJSON(w, logger, http.StatusOK, meResp{UserID: userID})
+//
+// === AUTH - SPECIFIC HELPERS ===
+//
+
+func setRefreshCookie(w http.ResponseWriter, token string, expires time.Time) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     RefreshCookieName,
+		Value:    token,
+		Path:     "/",
+		Expires:  expires,
+		HttpOnly: true,
+		Secure:   false, // TODO: В PROD ОБЯЗАТЕЛЬНО true (HTTPS)
+		SameSite: http.SameSiteStrictMode,
+	})
+}
+
+func clearRefreshCookie(w http.ResponseWriter) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     RefreshCookieName,
+		Value:    "",
+		Path:     "/",
+		Expires:  time.Unix(0, 0),
+		HttpOnly: true,
+		Secure:   false, // TODO: В PROD ОБЯЗАТЕЛЬНО true (HTTPS)
+		SameSite: http.SameSiteStrictMode,
+	})
 }

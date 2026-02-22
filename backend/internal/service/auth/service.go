@@ -218,36 +218,31 @@ type LoginResult struct {
 //   - ErrEmailNotVerified
 //
 // All other errors are treated as internal and returned wrapped.
-func (s *Service) Login(email, password string) (LoginResult, error) {
+func (s *Service) Login(email, password string) (string, error) {
 	email = strings.TrimSpace(strings.ToLower(email))
 
 	if !s.validateEmail(email) {
-		return LoginResult{}, fmt.Errorf("invalid email: %w", ErrInvalidCredentials)
+		return "", fmt.Errorf("invalid email: %w", ErrInvalidCredentials)
 	}
 	if !validatePassword(password) {
-		return LoginResult{}, fmt.Errorf("invalid password: %w", ErrInvalidCredentials)
+		return "", fmt.Errorf("invalid password: %w", ErrInvalidCredentials)
 	}
 
 	u, err := s.users.GetByEmail(email)
 	if err != nil {
 		if errors.Is(err, user.ErrUserNotFound) {
-			return LoginResult{}, fmt.Errorf("user not found: %w", ErrInvalidCredentials)
+			return "", fmt.Errorf("user not found: %w", ErrInvalidCredentials)
 		}
-		return LoginResult{}, fmt.Errorf("failed to get user by email: %w", err)
+		return "", fmt.Errorf("failed to get user by email: %w", err)
 	}
 
 	if err = bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password)); err != nil {
-		return LoginResult{}, fmt.Errorf("incorrect password: %w", err)
+		return "", fmt.Errorf("incorrect password: %w", err)
 	}
 
 	if !u.EmailVerified {
-		return LoginResult{}, ErrEmailNotVerified
+		return "", ErrEmailNotVerified
 	}
 
-	jwtToken, err := s.jwtManager.GenerateAccessToken(u.ID)
-	if err != nil {
-		return LoginResult{}, fmt.Errorf("generate jwt: %w", err)
-	}
-
-	return LoginResult{AccessToken: jwtToken}, nil
+	return u.ID, nil
 }
