@@ -9,53 +9,48 @@ import (
 
 var ErrRefreshNotFound = errors.New("refresh token not found")
 
-type RefreshTokenRepository interface {
-	Save(t model.RefreshToken) error
-	GetByHash(hash string) (model.RefreshToken, error)
-	Revoke(hash string) error
-	DeleteAllForUser(userID string) error
-}
-
 type InMemoryRefreshRepo struct {
-	mu     sync.RWMutex
-	byHash map[string]model.RefreshToken
+	mu    sync.RWMutex
+	byJTI map[string]model.RefreshToken
 }
 
 func NewInMemoryRefreshRepo() *InMemoryRefreshRepo {
 	return &InMemoryRefreshRepo{
-		byHash: make(map[string]model.RefreshToken),
+		byJTI: make(map[string]model.RefreshToken),
 	}
 }
 
-func (r *InMemoryRefreshRepo) Save(t model.RefreshToken) error {
+func (r *InMemoryRefreshRepo) Save(token model.RefreshToken) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	r.byHash[t.TokenHash] = t
+	r.byJTI[token.JTI] = token
 	return nil
 }
 
-func (r *InMemoryRefreshRepo) GetByHash(hash string) (model.RefreshToken, error) {
+func (r *InMemoryRefreshRepo) GetByJTI(jti string) (model.RefreshToken, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
-	t, ok := r.byHash[hash]
+	t, ok := r.byJTI[jti]
 	if !ok {
 		return model.RefreshToken{}, ErrRefreshNotFound
 	}
 	return t, nil
 }
 
-func (r *InMemoryRefreshRepo) Revoke(hash string) error {
+func (r *InMemoryRefreshRepo) Revoke(jti string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	t, ok := r.byHash[hash]
+	token, ok := r.byJTI[jti]
 	if !ok {
 		return ErrRefreshNotFound
 	}
-	t.Revoked = true
-	r.byHash[hash] = t
+
+	token.Revoked = true
+	r.byJTI[jti] = token
+
 	return nil
 }
 
@@ -63,9 +58,9 @@ func (r *InMemoryRefreshRepo) DeleteAllForUser(userID string) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
-	for k, v := range r.byHash {
+	for k, v := range r.byJTI {
 		if v.UserID == userID {
-			delete(r.byHash, k)
+			delete(r.byJTI, k)
 		}
 	}
 	return nil

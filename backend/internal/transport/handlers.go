@@ -26,7 +26,7 @@ var (
 
 type RefreshTokenRepository interface {
 	Save(token model.RefreshToken) error
-	GetByJTI(jti string) (*model.RefreshToken, error)
+	GetByJTI(jti string) (model.RefreshToken, error)
 	Revoke(jti string) error
 }
 
@@ -265,7 +265,7 @@ func (h *Handlers) Refresh(w http.ResponseWriter, r *http.Request) {
 	logger := h.logger.With(slog.String("request_id", requestID))
 	logger.Info("handling refresh request")
 
-	// Парсинг refresh токена из тела запроса TODO сделать через cookie
+	// Парсинг refresh токена из тела запроса
 	cookie, err := r.Cookie(RefreshCookieName)
 	if err != nil {
 		logger.Warn("missing refresh token cookie", slog.String("error", err.Error()))
