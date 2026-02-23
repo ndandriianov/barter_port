@@ -10,6 +10,7 @@ import (
 	"github.com/ndandriianov/barter_port/backend/internal/infrastructure/logger"
 	"github.com/ndandriianov/barter_port/backend/internal/infrastructure/mailer"
 	"github.com/ndandriianov/barter_port/backend/internal/infrastructure/repository/email_token"
+	"github.com/ndandriianov/barter_port/backend/internal/infrastructure/repository/refresh_token"
 	"github.com/ndandriianov/barter_port/backend/internal/infrastructure/repository/user"
 	"github.com/ndandriianov/barter_port/backend/internal/service/auth"
 	"github.com/ndandriianov/barter_port/backend/internal/service/auth/jwt"
@@ -30,7 +31,8 @@ func main() {
 	re := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 
 	userRepo := user.NewInMemoryUserRepo()
-	tokenRepo := email_token.NewInMemoryTokenRepo()
+	emailTokenRepo := email_token.NewInMemoryTokenRepo()
+	refreshTokenRepo := refresh_token.NewInMemoryRefreshRepo()
 
 	smtpHost := getEnv("SMTP_HOST", "")
 	smtpPort := mustInt(getEnv("SMTP_PORT", ""))
@@ -57,7 +59,7 @@ func main() {
 
 	authService := auth.NewService(
 		userRepo,
-		tokenRepo,
+		emailTokenRepo,
 		m,
 		infrastructureLogger,
 
@@ -66,8 +68,7 @@ func main() {
 		re,
 	)
 
-	// TODO: написать репозиторий и прокинуть его сюда
-	handlers := transport.NewHandlers(logg, authService, jwtManager)
+	handlers := transport.NewHandlers(logg, authService, jwtManager, refreshTokenRepo)
 	router := transport.NewRouter(logg, handlers, jwtManager, userRepo)
 
 	addr := ":8080"
