@@ -27,8 +27,13 @@ func main() {
 
 	frontendURL := getEnv("FRONTEND_URL", "http://localhost:5173")
 
-	jwtSecret := getEnv("JWT_SECRET", "")
-	jwtTTL := getEnv("JWT_TTL", "")
+	accessSecret := getEnv("ACCESS_SECRET", "")
+	refreshSecret := getEnv("REFRESH_SECRET", "")
+	accessTTL := getEnv("ACCESS_TTL", "")
+	refreshTTL := getEnv("REFRESH_TTL", "")
+	accessTTLMinutes := time.Duration(mustInt(accessTTL)) * time.Minute
+	refreshTTLMinutes := time.Duration(mustInt(refreshTTL)) * time.Minute
+
 	re := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 
 	userRepo := user.NewInMemoryUserRepo()
@@ -50,12 +55,11 @@ func main() {
 	logg := logger.NewJSONLogger(slog.LevelDebug, "auth-service", "")
 	infrastructureLogger := logger.NewJSONLogger(slog.LevelDebug, "", "infrastructure")
 
-	// TODO: сделать нормальное управление TTL для access и refresh токенов, а не одинаковое для обоих, вынести парсинг
 	jwtManager := jwt.NewManager(jwt.Config{
-		AccessSecret:  jwtSecret,
-		RefreshSecret: jwtSecret,
-		AccessTTL:     time.Duration(mustInt(jwtTTL)) * time.Minute,
-		RefreshTTL:    time.Duration(mustInt(jwtTTL)) * time.Minute,
+		AccessSecret:  accessSecret,
+		RefreshSecret: refreshSecret,
+		AccessTTL:     accessTTLMinutes,
+		RefreshTTL:    refreshTTLMinutes,
 	})
 
 	authService := auth.NewService(
