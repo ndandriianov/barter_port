@@ -6,6 +6,15 @@ import (
 	"net/http"
 )
 
+// ErrorResponse represents the structure of an error response.
+type ErrorResponse struct {
+	Error string `json:"error"` // The error message
+}
+
+func newErrorResponse(err error) ErrorResponse {
+	return ErrorResponse{Error: err.Error()}
+}
+
 func WriteJSON(w http.ResponseWriter, logger *slog.Logger, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
@@ -20,5 +29,5 @@ func DecodeJSON(r *http.Request, v any) error {
 }
 
 func HandleError(w http.ResponseWriter, logger *slog.Logger, status int, err error) {
-	WriteJSON(w, logger, status, map[string]string{"error": err.Error()})
+	WriteJSON(w, logger, status, newErrorResponse(err))
 }

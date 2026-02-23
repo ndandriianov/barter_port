@@ -36,6 +36,7 @@ var (
 
 	ErrInvalidCredentials = errors.New("invalid credentials")
 	ErrEmailNotVerified   = errors.New("email not verified")
+	ErrIncorrectPassword  = errors.New("incorrect password")
 )
 
 type UserRepo interface {
@@ -216,6 +217,7 @@ type LoginResult struct {
 // It returns the following domain errors:
 //   - ErrInvalidCredentials
 //   - ErrEmailNotVerified
+//   - ErrIncorrectPassword
 //
 // All other errors are treated as internal and returned wrapped.
 func (s *Service) Login(email, password string) (string, error) {
@@ -237,7 +239,7 @@ func (s *Service) Login(email, password string) (string, error) {
 	}
 
 	if err = bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password)); err != nil {
-		return "", fmt.Errorf("incorrect password: %w", err)
+		return "", ErrIncorrectPassword
 	}
 
 	if !u.EmailVerified {

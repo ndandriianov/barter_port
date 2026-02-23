@@ -21,6 +21,7 @@ import (
 	"os"
 )
 
+//go:generate sh -c "cd ../.. && swag init -g cmd/api/main.go --parseInternal --parseDependency"
 func main() {
 	_ = godotenv.Load()
 
