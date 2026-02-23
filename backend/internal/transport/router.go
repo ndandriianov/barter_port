@@ -8,8 +8,10 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
+	_ "github.com/ndandriianov/barter_port/backend/docs"
 	"github.com/ndandriianov/barter_port/backend/internal/service/auth/jwt"
 	"github.com/ndandriianov/barter_port/backend/internal/transport/middleware/auth_jwt"
+	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 func NewRouter(logger *slog.Logger, h *Handlers, jwtManager *jwt.Manager, userGetter auth_jwt.UserGetter) http.Handler {
@@ -37,6 +39,7 @@ func NewRouter(logger *slog.Logger, h *Handlers, jwtManager *jwt.Manager, userGe
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Write([]byte("ok"))
 	})
+	r.Get("/swagger/*", httpSwagger.WrapHandler)
 
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/register", h.Register)

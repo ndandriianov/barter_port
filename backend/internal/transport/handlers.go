@@ -51,6 +51,17 @@ func NewHandlers(
 	}
 }
 
+// Register godoc
+// @Summary Register a new user
+// @Description Registers a new user with email and password
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param registerReq body registerReq true "Register request"
+// @Success 200 {object} registerResp
+// @Failure 400 {object} helpers.ErrorResponse "Invalid request"
+// @Failure 500 {object} helpers.ErrorResponse "Internal server error"
+// @Router /auth/register [post]
 func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 	requestID := middleware.GetReqID(r.Context())
 	logger := h.logger.With(slog.String("request_id", requestID))
@@ -113,6 +124,18 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// VerifyEmail godoc
+// @Summary Verify email
+// @Description Verifies a user's email using a token
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param verifyEmailReq body verifyEmailReq true "Verify email request"
+// @Success 200 {object} map[string]string "status: ok"
+// @Failure 400 {object} helpers.ErrorResponse "Invalid request or token"
+// @Failure 404 {object} helpers.ErrorResponse "User not found"
+// @Failure 500 {object} helpers.ErrorResponse "Internal server error"
+// @Router /auth/verify-email [post]
 func (h *Handlers) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	requestID := middleware.GetReqID(r.Context())
 	logger := h.logger.With(slog.String("request_id", requestID))
@@ -158,6 +181,19 @@ func (h *Handlers) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	helpers.WriteJSON(w, logger, http.StatusOK, map[string]string{"status": "ok"})
 }
 
+// Login godoc
+// @Summary Login user
+// @Description Logs in a user and returns access and refresh tokens
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param loginReq body loginReq true "Login request"
+// @Success 200 {object} loginResp
+// @Failure 400 {object} helpers.ErrorResponse "Invalid request or credentials"
+// @Failure 401 {object} helpers.ErrorResponse "Incorrect password"
+// @Failure 403 {object} helpers.ErrorResponse "Email not verified"
+// @Failure 500 {object} helpers.ErrorResponse "Internal server error"
+// @Router /auth/login [post]
 func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	requestID := middleware.GetReqID(r.Context())
 	logger := h.logger.With(slog.String("request_id", requestID))
@@ -185,6 +221,13 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 				slog.String("email", req.Email),
 			)
 			helpers.HandleError(w, logger, http.StatusBadRequest, auth.ErrInvalidCredentials)
+
+		case errors.Is(err, auth.ErrIncorrectPassword):
+			logger.Info(
+				"incorrect password in login request",
+				slog.String("email", req.Email),
+			)
+			helpers.HandleError(w, logger, http.StatusUnauthorized, auth.ErrIncorrectPassword)
 
 		case errors.Is(err, auth.ErrEmailNotVerified):
 			logger.Info(
@@ -260,6 +303,16 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	)
 }
 
+// Refresh godoc
+// @Summary Refresh tokens
+// @Description Refreshes access and refresh tokens using the refresh token
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Success 200 {object} refreshResponse
+// @Failure 401 {object} helpers.ErrorResponse "Unauthorized or invalid token"
+// @Failure 500 {object} helpers.ErrorResponse "Internal server error"
+// @Router /auth/refresh [post]
 func (h *Handlers) Refresh(w http.ResponseWriter, r *http.Request) {
 	requestID := middleware.GetReqID(r.Context())
 	logger := h.logger.With(slog.String("request_id", requestID))
@@ -364,6 +417,14 @@ func (h *Handlers) Refresh(w http.ResponseWriter, r *http.Request) {
 	logger.Info("successfully refreshed tokens for user", slog.String("user_id", oldRefreshClaims.UserID))
 }
 
+// Logout godoc
+// @Summary Logout user
+// @Description Logs out a user by revoking the refresh token
+// @Tags auth
+// @Produce json
+// @Success 200 "Logout successful"
+// @Failure 500 {object} helpers.ErrorResponse "Internal server error"
+// @Router /auth/logout [post]
 func (h *Handlers) Logout(w http.ResponseWriter, r *http.Request) {
 	requestID := middleware.GetReqID(r.Context())
 	logger := h.logger.With(slog.String("request_id", requestID))
@@ -393,6 +454,14 @@ type meResp struct {
 	UserID string `json:"userId"`
 }
 
+// Me godoc
+// @Summary Get user info
+// @Description Retrieves information about the authenticated user
+// @Tags auth
+// @Produce json
+// @Success 200 {object} meResp
+// @Failure 500 {object} helpers.ErrorResponse "Internal server error"
+// @Router /auth/me [get]
 func (h *Handlers) Me(w http.ResponseWriter, r *http.Request) {
 	requestID := middleware.GetReqID(r.Context())
 	logger := h.logger.With(slog.String("request_id", requestID))

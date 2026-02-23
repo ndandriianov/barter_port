@@ -1,0 +1,211 @@
+definitions:
+  github_com_ndandriianov_barter_port_backend_internal_transport_helpers.ErrorResponse:
+    properties:
+      error:
+        description: The error message
+        type: string
+    type: object
+  internal_transport.loginReq:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  internal_transport.loginResp:
+    properties:
+      accessToken:
+        type: string
+    type: object
+  internal_transport.meResp:
+    properties:
+      userId:
+        type: string
+    type: object
+  internal_transport.refreshResponse:
+    properties:
+      access_token:
+        type: string
+    type: object
+  internal_transport.registerReq:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  internal_transport.registerResp:
+    properties:
+      email:
+        type: string
+      userId:
+        type: string
+    type: object
+  internal_transport.verifyEmailReq:
+    properties:
+      token:
+        type: string
+    type: object
+info:
+  contact: {}
+paths:
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: Logs in a user and returns access and refresh tokens
+      parameters:
+      - description: Login request
+        in: body
+        name: loginReq
+        required: true
+        schema:
+          $ref: '#/definitions/internal_transport.loginReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_transport.loginResp'
+        "400":
+          description: Invalid request or credentials
+          schema:
+            $ref: '#/definitions/github_com_ndandriianov_barter_port_backend_internal_transport_helpers.ErrorResponse'
+        "401":
+          description: Incorrect password
+          schema:
+            $ref: '#/definitions/github_com_ndandriianov_barter_port_backend_internal_transport_helpers.ErrorResponse'
+        "403":
+          description: Email not verified
+          schema:
+            $ref: '#/definitions/github_com_ndandriianov_barter_port_backend_internal_transport_helpers.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_ndandriianov_barter_port_backend_internal_transport_helpers.ErrorResponse'
+      summary: Login user
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      description: Logs out a user by revoking the refresh token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Logout successful
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_ndandriianov_barter_port_backend_internal_transport_helpers.ErrorResponse'
+      summary: Logout user
+      tags:
+      - auth
+  /auth/me:
+    get:
+      description: Retrieves information about the authenticated user
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_transport.meResp'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_ndandriianov_barter_port_backend_internal_transport_helpers.ErrorResponse'
+      summary: Get user info
+      tags:
+      - auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Refreshes access and refresh tokens using the refresh token
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_transport.refreshResponse'
+        "401":
+          description: Unauthorized or invalid token
+          schema:
+            $ref: '#/definitions/github_com_ndandriianov_barter_port_backend_internal_transport_helpers.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_ndandriianov_barter_port_backend_internal_transport_helpers.ErrorResponse'
+      summary: Refresh tokens
+      tags:
+      - auth
+  /auth/register:
+    post:
+      consumes:
+      - application/json
+      description: Registers a new user with email and password
+      parameters:
+      - description: Register request
+        in: body
+        name: registerReq
+        required: true
+        schema:
+          $ref: '#/definitions/internal_transport.registerReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_transport.registerResp'
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/github_com_ndandriianov_barter_port_backend_internal_transport_helpers.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_ndandriianov_barter_port_backend_internal_transport_helpers.ErrorResponse'
+      summary: Register a new user
+      tags:
+      - auth
+  /auth/verify-email:
+    post:
+      consumes:
+      - application/json
+      description: Verifies a user's email using a token
+      parameters:
+      - description: Verify email request
+        in: body
+        name: verifyEmailReq
+        required: true
+        schema:
+          $ref: '#/definitions/internal_transport.verifyEmailReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'status: ok'
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Invalid request or token
+          schema:
+            $ref: '#/definitions/github_com_ndandriianov_barter_port_backend_internal_transport_helpers.ErrorResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/github_com_ndandriianov_barter_port_backend_internal_transport_helpers.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/github_com_ndandriianov_barter_port_backend_internal_transport_helpers.ErrorResponse'
+      summary: Verify email
+      tags:
+      - auth
+swagger: "2.0"
