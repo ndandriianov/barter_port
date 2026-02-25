@@ -129,9 +129,8 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 // @Description Verifies a user's email using a token
 // @Tags auth
 // @Accept json
-// @Produce json
-// @Param verifyEmailReq body verifyEmailReq true "Verify email request"
-// @Success 200 {object} map[string]string "status: ok"
+// @Produce plain
+// @Success 200 "status: ok"
 // @Failure 400 {object} helpers.ErrorResponse "Invalid request or token"
 // @Failure 404 {object} helpers.ErrorResponse "User not found"
 // @Failure 500 {object} helpers.ErrorResponse "Internal server error"
@@ -178,7 +177,7 @@ func (h *Handlers) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 
 	logger.Info("successfully verified email user")
 
-	helpers.WriteJSON(w, logger, http.StatusOK, map[string]string{"status": "ok"})
+	w.WriteHeader(http.StatusOK)
 }
 
 // Login godoc

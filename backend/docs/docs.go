@@ -210,32 +210,15 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "produces": [
-                    "application/json"
+                    "text/plain"
                 ],
                 "tags": [
                     "auth"
                 ],
                 "summary": "Verify email",
-                "parameters": [
-                    {
-                        "description": "Verify email request",
-                        "name": "verifyEmailReq",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/internal_transport.verifyEmailReq"
-                        }
-                    }
-                ],
                 "responses": {
                     "200": {
-                        "description": "status: ok",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
+                        "description": "status: ok"
                     },
                     "400": {
                         "description": "Invalid request or token",
@@ -322,14 +305,6 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "userId": {
-                    "type": "string"
-                }
-            }
-        },
-        "internal_transport.verifyEmailReq": {
-            "type": "object",
-            "properties": {
-                "token": {
                     "type": "string"
                 }
             }
