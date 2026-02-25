@@ -8,6 +8,7 @@ import (
 	"barter-port/internal/model"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/net/context"
 )
@@ -54,43 +55,64 @@ func (r *InMemoryTokenRepo) Save(ctx context.Context, t model.EmailVerificationT
 // GetByHash retrieves an email verification token by its hash.
 // Errors:
 //   - errors.ErrTokenNotFound: Occurs if no token is found with the given hash.
-func (r *InMemoryTokenRepo) GetByHash(tokenHash string) (model.EmailVerificationToken, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+func (r *InMemoryTokenRepo) GetByHash(ctx context.Context, tokenHash string) (model.EmailVerificationToken, error) {
+	query := `
+		SELECT token_hash, user_id, expires_at, used, created_at
+		FROM email_tokens
+		WHERE token_hash = $1
+	`
 
-	t, ok := r.byHash[tokenHash]
-	if !ok {
-		return model.EmailVerificationToken{}, ErrTokenNotFound
+	rows, err := r.db.Query(ctx, query, tokenHash)
+	if err != nil {
+		return model.EmailVerificationToken{}, err
 	}
-	return t, nil
+	defer rows.Close()
+
+	token, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[model.EmailVerificationToken])
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return model.EmailVerificationToken{}, ErrTokenNotFound
+		}
+		return model.EmailVerificationToken{}, err
+	}
+
+	return token, nil
 }
 
 // MarkUsed marks an email verification token as used.
 // Errors:
 //   - errors.ErrTokenNotFound: Occurs if no token is found with the given hash.
-func (r *InMemoryTokenRepo) MarkUsed(tokenHash string) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+func (r *InMemoryTokenRepo) MarkUsed(ctx context.Context, tokenHash string) error {
+	query := `
+		UPDATE email_tokens
+		SET used = true
+		WHERE token_hash = $1
+	`
 
-	t, ok := r.byHash[tokenHash]
-	if !ok {
+	cmdTag, err := r.db.Exec(ctx, query, tokenHash)
+	if err != nil {
+		return err
+	}
+
+	if cmdTag.RowsAffected() == 0 {
 		return ErrTokenNotFound
 	}
 
-	t.Used = true
-	r.byHash[tokenHash] = t
 	return nil
 }
 
 // DeleteAllForUser removes all tokens associated with a specific user.
-// Errors: None.
-func (r *InMemoryTokenRepo) DeleteAllForUser(userID uuid.UUID) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+// Errors: only internal db errors.
+func (r *InMemoryTokenRepo) DeleteAllForUser(ctx context.Context, userID uuid.UUID) error {
+	query := `
+		DELETE FROM email_tokens
+		WHERE user_id = $1
+	`
 
-	for k, v := range r.byHash {
-		if v.UserID == userID {
-			delete(r.byHash, k)
-		}
+	_, err := r.db.Exec(ctx, query, userID)
+	if err != nil {
+		return err
 	}
+
+	return nil
 }

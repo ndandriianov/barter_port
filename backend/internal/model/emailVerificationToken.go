@@ -7,11 +7,11 @@ import (
 )
 
 type EmailVerificationToken struct {
-	TokenHash string
-	UserID    uuid.UUID
-	ExpiresAt time.Time
-	Used      bool
-	CreatedAt time.Time
+	TokenHash string    `db:"token_hash"`
+	UserID    uuid.UUID `db:"user_id"`
+	ExpiresAt time.Time `db:"expires_at"`
+	Used      bool      `db:"used"`
+	CreatedAt time.Time `db:"created_at"`
 }
 
 func NewEmailVerificationToken(tokenHash string, userID uuid.UUID, expiresAt time.Time) EmailVerificationToken {

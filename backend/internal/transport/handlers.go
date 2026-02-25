@@ -153,7 +153,7 @@ func (h *Handlers) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := h.authService.VerifyEmail(req.Token); err != nil {
+	if err := h.authService.VerifyEmail(r.Context(), req.Token); err != nil {
 		switch {
 		case errors.Is(err, auth.ErrInvalidEmailToken):
 			logger.Info("invalid email_token in verify email request")
