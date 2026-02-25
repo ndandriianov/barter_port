@@ -43,10 +43,10 @@ var (
 )
 
 type UserRepo interface {
-	Create(user model.User) error
-	GetByEmail(email string) (model.User, error)
-	GetByID(id uuid.UUID) (model.User, error)
-	VerifyEmail(userID uuid.UUID) error
+	Create(ctx context.Context, user model.User) error
+	GetByEmail(ctx context.Context, email string) (model.User, error)
+	GetByID(ctx context.Context, id uuid.UUID) (model.User, error)
+	VerifyEmail(ctx context.Context, userID uuid.UUID) error
 }
 
 type TokenRepo interface {
@@ -122,7 +122,7 @@ func (s *Service) Register(ctx context.Context, email, password string) (Registe
 	}
 
 	u := model.NewUser(uuid.New(), email, string(hash))
-	if err := s.users.Create(u); err != nil {
+	if err := s.users.Create(ctx, u); err != nil {
 		if errors.Is(err, user.ErrEmailAlreadyInUse) {
 			return RegisterResult{}, ErrEmailAlreadyInUse
 		}
@@ -186,7 +186,7 @@ func (s *Service) VerifyEmail(ctx context.Context, rawToken string) error {
 		return ErrEmailTokenExpired
 	}
 
-	u, err := s.users.GetByID(t.UserID)
+	u, err := s.users.GetByID(ctx, t.UserID)
 	if err != nil {
 		if errors.Is(err, user.ErrUserNotFound) {
 			return ErrUserNotFound
@@ -198,7 +198,7 @@ func (s *Service) VerifyEmail(ctx context.Context, rawToken string) error {
 		return nil
 	}
 
-	if err = s.users.VerifyEmail(u.ID); err != nil {
+	if err = s.users.VerifyEmail(ctx, u.ID); err != nil {
 		if errors.Is(err, user.ErrUserNotFound) {
 			return fmt.Errorf("failed to verify email: %w", ErrUserNotFound)
 		}
@@ -226,7 +226,7 @@ type LoginResult struct {
 //   - ErrIncorrectPassword
 //
 // All other errors are treated as internal and returned wrapped.
-func (s *Service) Login(email, password string) (uuid.UUID, error) {
+func (s *Service) Login(ctx context.Context, email, password string) (uuid.UUID, error) {
 	email = strings.TrimSpace(strings.ToLower(email))
 
 	if !s.validateEmail(email) {
@@ -236,7 +236,7 @@ func (s *Service) Login(email, password string) (uuid.UUID, error) {
 		return uuid.Nil, fmt.Errorf("invalid password: %w", ErrInvalidCredentials)
 	}
 
-	u, err := s.users.GetByEmail(email)
+	u, err := s.users.GetByEmail(ctx, email)
 	if err != nil {
 		if errors.Is(err, user.ErrUserNotFound) {
 			return uuid.Nil, fmt.Errorf("user not found: %w", ErrInvalidCredentials)
