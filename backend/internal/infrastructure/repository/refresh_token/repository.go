@@ -1,69 +1,97 @@
 package refresh_token
 
 import (
-	"errors"
-	"sync"
-
+	"barter-port/internal/infrastructure/repository"
 	"barter-port/internal/model"
+	"errors"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"golang.org/x/net/context"
 )
 
-var ErrRefreshNotFound = errors.New("refresh token not found")
+var (
+	ErrRefreshNotFound      = errors.New("refresh token not found")
+	ErrRefreshAlreadyExists = errors.New("refresh token with this JTI already exists")
+)
 
-type InMemoryRefreshRepo struct {
-	mu    sync.RWMutex
-	byJTI map[string]model.RefreshToken
+type Repository struct {
+	db *pgxpool.Pool
 }
 
-func NewInMemoryRefreshRepo() *InMemoryRefreshRepo {
-	return &InMemoryRefreshRepo{
-		byJTI: make(map[string]model.RefreshToken),
+func NewRepository(db *pgxpool.Pool) *Repository {
+	return &Repository{
+		db: db,
 	}
 }
 
-func (r *InMemoryRefreshRepo) Save(token model.RefreshToken) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+func (r *Repository) Save(ctx context.Context, token model.RefreshToken) error {
+	query := `
+		INSERT INTO refresh_tokens (jti, user_id, expires_at, revoked)
+		VALUES ($1, $2, $3, $4)
+	`
 
-	r.byJTI[token.JTI] = token
+	_, err := r.db.Exec(ctx, query, token.JTI, token.UserID, token.ExpiresAt, token.Revoked)
+	if err != nil {
+		if repository.IsUniqueViolation(err) {
+			return ErrRefreshAlreadyExists
+		}
+		return err
+	}
+
 	return nil
 }
 
-func (r *InMemoryRefreshRepo) GetByJTI(jti string) (model.RefreshToken, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+func (r *Repository) GetByJTI(ctx context.Context, jti string) (model.RefreshToken, error) {
+	query := `
+		SELECT jti, user_id, expires_at, revoked
+		FROM refresh_tokens
+		WHERE jti = $1
+	`
 
-	t, ok := r.byJTI[jti]
-	if !ok {
-		return model.RefreshToken{}, ErrRefreshNotFound
+	rows, err := r.db.Query(ctx, query, jti)
+	if err != nil {
+		return model.RefreshToken{}, err
 	}
-	return t, nil
+	defer rows.Close()
+
+	token, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[model.RefreshToken])
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return model.RefreshToken{}, ErrRefreshNotFound
+		}
+		return model.RefreshToken{}, err
+	}
+
+	return token, nil
 }
 
-func (r *InMemoryRefreshRepo) Revoke(jti string) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+func (r *Repository) Revoke(ctx context.Context, jti string) error {
+	query := `
+		UPDATE refresh_tokens
+		SET revoked = true
+		WHERE jti = $1
+	`
 
-	token, ok := r.byJTI[jti]
-	if !ok {
+	cmdTag, err := r.db.Exec(ctx, query, jti)
+	if err != nil {
+		return err
+	}
+
+	if cmdTag.RowsAffected() == 0 {
 		return ErrRefreshNotFound
 	}
 
-	token.Revoked = true
-	r.byJTI[jti] = token
-
 	return nil
 }
 
-func (r *InMemoryRefreshRepo) DeleteAllForUser(userID uuid.UUID) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+func (r *Repository) DeleteAllForUser(ctx context.Context, userID uuid.UUID) error {
+	query := `
+		DELETE FROM refresh_tokens
+		WHERE user_id = $1
+	`
 
-	for k, v := range r.byJTI {
-		if v.UserID == userID {
-			delete(r.byJTI, k)
-		}
-	}
-	return nil
+	_, err := r.db.Exec(ctx, query, userID)
+	return err
 }

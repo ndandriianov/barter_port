@@ -48,7 +48,7 @@ func main() {
 
 	userRepo := user.NewRepository(db)
 	emailTokenRepo := email_token.NewRepository(db)
-	refreshTokenRepo := refresh_token.NewInMemoryRefreshRepo()
+	refreshTokenRepo := refresh_token.NewRepository(db)
 
 	smtpHost := getEnv("SMTP_HOST", "")
 	smtpPort := mustInt(getEnv("SMTP_PORT", ""))

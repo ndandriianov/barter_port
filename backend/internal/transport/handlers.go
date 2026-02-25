@@ -15,6 +15,7 @@ import (
 
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/google/uuid"
+	"golang.org/x/net/context"
 )
 
 const RefreshCookieName = "refresh_token"
@@ -27,9 +28,10 @@ var (
 )
 
 type RefreshTokenRepository interface {
-	Save(token model.RefreshToken) error
-	GetByJTI(jti string) (model.RefreshToken, error)
-	Revoke(jti string) error
+	Save(ctx context.Context, token model.RefreshToken) error
+	GetByJTI(ctx context.Context, jti string) (model.RefreshToken, error)
+	Revoke(ctx context.Context, jti string) error
+	DeleteAllForUser(ctx context.Context, userID uuid.UUID) error
 }
 
 type Handlers struct {
@@ -277,7 +279,7 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Сохранение refresh токена в репозитории
-	err = h.refreshRepo.Save(model.RefreshToken{
+	err = h.refreshRepo.Save(r.Context(), model.RefreshToken{
 		JTI:       claims.ID,
 		UserID:    claims.UserID,
 		ExpiresAt: claims.ExpiresAt.Time,
@@ -340,7 +342,7 @@ func (h *Handlers) Refresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Получение и проверка хранимого refresh токена по JTI из claims
-	storedRefresh, err := h.refreshRepo.GetByJTI(oldRefreshClaims.ID)
+	storedRefresh, err := h.refreshRepo.GetByJTI(r.Context(), oldRefreshClaims.ID)
 	if err != nil {
 		// TODO: distinguish between "not found" and other errors in the repository
 		logger.Error(
@@ -382,7 +384,7 @@ func (h *Handlers) Refresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Сохранение нового refresh токена и удаление старого
-	err = h.refreshRepo.Save(model.RefreshToken{
+	err = h.refreshRepo.Save(r.Context(), model.RefreshToken{
 		JTI:       claims.ID,
 		UserID:    claims.UserID,
 		ExpiresAt: claims.ExpiresAt.Time,
@@ -399,7 +401,7 @@ func (h *Handlers) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.refreshRepo.Revoke(oldRefreshClaims.ID)
+	err = h.refreshRepo.Revoke(r.Context(), oldRefreshClaims.ID)
 	if err != nil {
 		logger.Error(
 			"failed to revoke old refresh token for user",
@@ -435,7 +437,7 @@ func (h *Handlers) Logout(w http.ResponseWriter, r *http.Request) {
 	// Отзыв refresh токена, если он есть. Если куки нет или он невалидный - просто очищаем куки и возвращаем успех
 	if err == nil {
 		if claims, err := h.jwtManager.ParseRefreshToken(cookie.Value); err == nil {
-			if err := h.refreshRepo.Revoke(claims.ID); err != nil {
+			if err := h.refreshRepo.Revoke(r.Context(), claims.ID); err != nil {
 				logger.Error(
 					"failed to revoke refresh token during logout",
 					slog.String("error", err.Error()),

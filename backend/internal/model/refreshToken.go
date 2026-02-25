@@ -7,8 +7,8 @@ import (
 )
 
 type RefreshToken struct {
-	JTI       string
-	UserID    uuid.UUID
-	ExpiresAt time.Time
-	Revoked   bool
+	JTI       string    `db:"jti"`
+	UserID    uuid.UUID `db:"user_id"`
+	ExpiresAt time.Time `db:"expires_at"`
+	Revoked   bool      `db:"revoked"`
 }
