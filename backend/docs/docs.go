@@ -49,25 +49,25 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid request or credentials",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ndandriianov_barter_port_backend_internal_transport_helpers.ErrorResponse"
+                            "$ref": "#/definitions/barter-port_internal_transport_helpers.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Incorrect password",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ndandriianov_barter_port_backend_internal_transport_helpers.ErrorResponse"
+                            "$ref": "#/definitions/barter-port_internal_transport_helpers.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Email not verified",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ndandriianov_barter_port_backend_internal_transport_helpers.ErrorResponse"
+                            "$ref": "#/definitions/barter-port_internal_transport_helpers.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ndandriianov_barter_port_backend_internal_transport_helpers.ErrorResponse"
+                            "$ref": "#/definitions/barter-port_internal_transport_helpers.ErrorResponse"
                         }
                     }
                 }
@@ -90,7 +90,7 @@ const docTemplate = `{
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ndandriianov_barter_port_backend_internal_transport_helpers.ErrorResponse"
+                            "$ref": "#/definitions/barter-port_internal_transport_helpers.ErrorResponse"
                         }
                     }
                 }
@@ -116,7 +116,7 @@ const docTemplate = `{
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ndandriianov_barter_port_backend_internal_transport_helpers.ErrorResponse"
+                            "$ref": "#/definitions/barter-port_internal_transport_helpers.ErrorResponse"
                         }
                     }
                 }
@@ -145,13 +145,13 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized or invalid token",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ndandriianov_barter_port_backend_internal_transport_helpers.ErrorResponse"
+                            "$ref": "#/definitions/barter-port_internal_transport_helpers.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ndandriianov_barter_port_backend_internal_transport_helpers.ErrorResponse"
+                            "$ref": "#/definitions/barter-port_internal_transport_helpers.ErrorResponse"
                         }
                     }
                 }
@@ -191,13 +191,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid request",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ndandriianov_barter_port_backend_internal_transport_helpers.ErrorResponse"
+                            "$ref": "#/definitions/barter-port_internal_transport_helpers.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ndandriianov_barter_port_backend_internal_transport_helpers.ErrorResponse"
+                            "$ref": "#/definitions/barter-port_internal_transport_helpers.ErrorResponse"
                         }
                     }
                 }
@@ -223,19 +223,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid request or token",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ndandriianov_barter_port_backend_internal_transport_helpers.ErrorResponse"
+                            "$ref": "#/definitions/barter-port_internal_transport_helpers.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "User not found",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ndandriianov_barter_port_backend_internal_transport_helpers.ErrorResponse"
+                            "$ref": "#/definitions/barter-port_internal_transport_helpers.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ndandriianov_barter_port_backend_internal_transport_helpers.ErrorResponse"
+                            "$ref": "#/definitions/barter-port_internal_transport_helpers.ErrorResponse"
                         }
                     }
                 }
@@ -243,7 +243,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "github_com_ndandriianov_barter_port_backend_internal_transport_helpers.ErrorResponse": {
+        "barter-port_internal_transport_helpers.ErrorResponse": {
             "type": "object",
             "properties": {
                 "error": {

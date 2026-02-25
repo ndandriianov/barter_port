@@ -5,12 +5,13 @@ import (
 	"log/slog"
 	"net/http"
 
+	_ "barter-port/docs"
+	"barter-port/internal/service/auth/jwt"
+	"barter-port/internal/transport/middleware/auth_jwt"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
-	_ "github.com/ndandriianov/barter_port/backend/docs"
-	"github.com/ndandriianov/barter_port/backend/internal/service/auth/jwt"
-	"github.com/ndandriianov/barter_port/backend/internal/transport/middleware/auth_jwt"
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 

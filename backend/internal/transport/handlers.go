@@ -7,12 +7,13 @@ import (
 	"net/http"
 	"time"
 
+	"barter-port/internal/model"
+	"barter-port/internal/service/auth"
+	"barter-port/internal/service/auth/jwt"
+	"barter-port/internal/transport/helpers"
+	"barter-port/internal/transport/middleware/auth_jwt"
+
 	"github.com/go-chi/chi/v5/middleware"
-	"github.com/ndandriianov/barter_port/backend/internal/model"
-	"github.com/ndandriianov/barter_port/backend/internal/service/auth"
-	"github.com/ndandriianov/barter_port/backend/internal/service/auth/jwt"
-	"github.com/ndandriianov/barter_port/backend/internal/transport/helpers"
-	"github.com/ndandriianov/barter_port/backend/internal/transport/middleware/auth_jwt"
 )
 
 const RefreshCookieName = "refresh_token"

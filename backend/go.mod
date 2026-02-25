@@ -1,4 +1,4 @@
-module github.com/ndandriianov/barter_port/backend
+module barter-port
 
 go 1.25
 
