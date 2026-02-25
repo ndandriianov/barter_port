@@ -1,14 +1,17 @@
 import { useState } from "react";
 import { useLoginMutation } from "@/features/auth/api/authApi";
+import {useNavigate} from "react-router-dom";
 
 function LoginForm() {
   const [login, { isLoading, error }] = useLoginMutation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const navigate = useNavigate();
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     await login({ email, password });
+    navigate("/");
   };
 
   return (
