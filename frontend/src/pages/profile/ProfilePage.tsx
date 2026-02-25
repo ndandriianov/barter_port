@@ -1,6 +1,6 @@
 import { useMeQuery, useLogoutMutation } from "@/features/auth/api/authApi";
 
-export const ProfilePage = () => {
+function ProfilePage() {
   const { data, isLoading } = useMeQuery();
   const [logout] = useLogoutMutation();
 
@@ -13,4 +13,6 @@ export const ProfilePage = () => {
       <button onClick={() => logout()}>Logout</button>
     </div>
   );
-};
+}
+
+export default ProfilePage;
