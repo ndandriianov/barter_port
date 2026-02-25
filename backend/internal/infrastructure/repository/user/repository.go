@@ -4,7 +4,7 @@ import (
 	"errors"
 	"sync"
 
-	"github.com/ndandriianov/barter_port/backend/internal/model"
+	"barter-port/internal/model"
 )
 
 var (

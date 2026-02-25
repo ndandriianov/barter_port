@@ -9,10 +9,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ndandriianov/barter_port/backend/internal/infrastructure/repository/email_token"
-	"github.com/ndandriianov/barter_port/backend/internal/infrastructure/repository/user"
-	"github.com/ndandriianov/barter_port/backend/internal/model"
-	"github.com/ndandriianov/barter_port/backend/internal/service/auth/jwt"
+	"barter-port/internal/infrastructure/repository/email_token"
+	"barter-port/internal/infrastructure/repository/user"
+	"barter-port/internal/model"
+	"barter-port/internal/service/auth/jwt"
+
 	"golang.org/x/crypto/bcrypt"
 )
 
