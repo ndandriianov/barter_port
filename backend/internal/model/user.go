@@ -1,16 +1,20 @@
 package model
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type User struct {
-	ID            string
+	ID            uuid.UUID
 	Email         string
 	PasswordHash  string
 	EmailVerified bool
 	CreatedAt     time.Time
 }
 
-func NewUser(id, email, passwordHash string) User {
+func NewUser(id uuid.UUID, email string, passwordHash string) User {
 	return User{
 		ID:            id,
 		Email:         email,

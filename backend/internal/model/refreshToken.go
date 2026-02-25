@@ -1,10 +1,14 @@
 package model
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type RefreshToken struct {
 	JTI       string
-	UserID    string
+	UserID    uuid.UUID
 	ExpiresAt time.Time
 	Revoked   bool
 }

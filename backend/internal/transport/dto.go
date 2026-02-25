@@ -1,13 +1,15 @@
 package transport
 
+import "github.com/google/uuid"
+
 type registerReq struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
 type registerResp struct {
-	UserID string `json:"userId"`
-	Email  string `json:"email"`
+	UserID uuid.UUID `json:"userId"`
+	Email  string    `json:"email"`
 }
 
 type verifyEmailReq struct {

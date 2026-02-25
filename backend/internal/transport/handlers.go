@@ -14,6 +14,7 @@ import (
 	"barter-port/internal/transport/middleware/auth_jwt"
 
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/google/uuid"
 )
 
 const RefreshCookieName = "refresh_token"
@@ -79,7 +80,7 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := h.authService.Register(req.Email, req.Password)
+	res, err := h.authService.Register(r.Context(), req.Email, req.Password)
 	if err != nil {
 		switch {
 		case errors.Is(err, auth.ErrInvalidEmail):
@@ -115,7 +116,7 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 
 	logger.Info(
 		"successfully registered user",
-		slog.String("user_id", res.UserID),
+		slog.String("user_id", res.UserID.String()),
 		slog.String("email", res.Email),
 	)
 
@@ -257,7 +258,7 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 			"failed to generate access token for logged in user",
 			slog.String("error", err.Error()),
 			slog.String("email", req.Email),
-			slog.String("user_id", userID),
+			slog.String("user_id", userID.String()),
 		)
 		helpers.HandleError(w, logger, http.StatusInternalServerError, ErrInternalServerError)
 		return
@@ -269,7 +270,7 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 			"failed to generate refresh token for logged in user",
 			slog.String("error", err.Error()),
 			slog.String("email", req.Email),
-			slog.String("user_id", userID),
+			slog.String("user_id", userID.String()),
 		)
 		helpers.HandleError(w, logger, http.StatusInternalServerError, ErrInternalServerError)
 		return
@@ -299,7 +300,7 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	logger.Info(
 		"successfully generated tokens for logged in user",
 		slog.String("email", req.Email),
-		slog.String("user_id", userID),
+		slog.String("user_id", userID.String()),
 	)
 }
 
@@ -346,7 +347,7 @@ func (h *Handlers) Refresh(w http.ResponseWriter, r *http.Request) {
 			"error fetching refresh token from repository",
 			slog.String("error", err.Error()),
 			slog.String("jti", oldRefreshClaims.ID),
-			slog.String("user_id", oldRefreshClaims.UserID),
+			slog.String("user_id", oldRefreshClaims.UserID.String()),
 		)
 		helpers.HandleError(w, logger, http.StatusInternalServerError, ErrInternalServerError)
 		return
@@ -363,7 +364,7 @@ func (h *Handlers) Refresh(w http.ResponseWriter, r *http.Request) {
 		logger.Error(
 			"failed to generate access token for logged in user",
 			slog.String("error", err.Error()),
-			slog.String("user_id", oldRefreshClaims.UserID),
+			slog.String("user_id", oldRefreshClaims.UserID.String()),
 		)
 		helpers.HandleError(w, logger, http.StatusInternalServerError, ErrInternalServerError)
 		return
@@ -374,7 +375,7 @@ func (h *Handlers) Refresh(w http.ResponseWriter, r *http.Request) {
 		logger.Error(
 			"failed to generate refresh token for logged in user",
 			slog.String("error", err.Error()),
-			slog.String("user_id", oldRefreshClaims.UserID),
+			slog.String("user_id", oldRefreshClaims.UserID.String()),
 		)
 		helpers.HandleError(w, logger, http.StatusInternalServerError, ErrInternalServerError)
 		return
@@ -391,7 +392,7 @@ func (h *Handlers) Refresh(w http.ResponseWriter, r *http.Request) {
 		logger.Error(
 			"failed to save new refresh token for user",
 			slog.String("error", err.Error()),
-			slog.String("user_id", oldRefreshClaims.UserID),
+			slog.String("user_id", oldRefreshClaims.UserID.String()),
 			slog.String("new_jti", claims.ID),
 		)
 		helpers.HandleError(w, logger, http.StatusInternalServerError, ErrInternalServerError)
@@ -403,7 +404,7 @@ func (h *Handlers) Refresh(w http.ResponseWriter, r *http.Request) {
 		logger.Error(
 			"failed to revoke old refresh token for user",
 			slog.String("error", err.Error()),
-			slog.String("user_id", oldRefreshClaims.UserID),
+			slog.String("user_id", oldRefreshClaims.UserID.String()),
 			slog.String("old_jti", oldRefreshClaims.ID),
 		)
 		helpers.HandleError(w, logger, http.StatusInternalServerError, ErrInternalServerError)
@@ -414,7 +415,7 @@ func (h *Handlers) Refresh(w http.ResponseWriter, r *http.Request) {
 	setRefreshCookie(w, refresh, claims.ExpiresAt.Time)
 	helpers.WriteJSON(w, logger, http.StatusOK, refreshResponse{AccessToken: access})
 
-	logger.Info("successfully refreshed tokens for user", slog.String("user_id", oldRefreshClaims.UserID))
+	logger.Info("successfully refreshed tokens for user", slog.String("user_id", oldRefreshClaims.UserID.String()))
 }
 
 // Logout godoc
@@ -451,7 +452,7 @@ func (h *Handlers) Logout(w http.ResponseWriter, r *http.Request) {
 }
 
 type meResp struct {
-	UserID string `json:"userId"`
+	UserID uuid.UUID `json:"userId"`
 }
 
 // Me godoc

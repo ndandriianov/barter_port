@@ -14,7 +14,9 @@ import (
 	"barter-port/internal/model"
 	"barter-port/internal/service/auth/jwt"
 
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
+	"golang.org/x/net/context"
 )
 
 const (
@@ -43,15 +45,15 @@ var (
 type UserRepo interface {
 	Create(user model.User) error
 	GetByEmail(email string) (model.User, error)
-	GetByID(id string) (model.User, error)
-	VerifyEmail(userID string) error
+	GetByID(id uuid.UUID) (model.User, error)
+	VerifyEmail(userID uuid.UUID) error
 }
 
 type TokenRepo interface {
-	Save(t model.EmailVerificationToken) error
+	Save(ctx context.Context, t model.EmailVerificationToken) error
 	GetByHash(tokenHash string) (model.EmailVerificationToken, error)
 	MarkUsed(tokenHash string) error
-	DeleteAllForUser(userID string)
+	DeleteAllForUser(userID uuid.UUID)
 }
 
 type Mailer interface {
@@ -96,7 +98,7 @@ func NewService(
 }
 
 type RegisterResult struct {
-	UserID string
+	UserID uuid.UUID
 	Email  string
 }
 
@@ -109,7 +111,7 @@ type RegisterResult struct {
 //   - ErrEmailAlreadyInUse
 //
 // All other errors are treated as internal and returned wrapped.
-func (s *Service) Register(email, password string) (RegisterResult, error) {
+func (s *Service) Register(ctx context.Context, email, password string) (RegisterResult, error) {
 	if err := s.validateCredentials(email, password); err != nil {
 		return RegisterResult{}, err
 	}
@@ -119,7 +121,7 @@ func (s *Service) Register(email, password string) (RegisterResult, error) {
 		return RegisterResult{}, fmt.Errorf("failed to hash password: %w", err)
 	}
 
-	u := model.NewUser(newID(), email, string(hash))
+	u := model.NewUser(uuid.New(), email, string(hash))
 	if err := s.users.Create(u); err != nil {
 		if errors.Is(err, user.ErrEmailAlreadyInUse) {
 			return RegisterResult{}, ErrEmailAlreadyInUse
@@ -138,7 +140,7 @@ func (s *Service) Register(email, password string) (RegisterResult, error) {
 	tokenHash := getHashFromToken(rawToken)
 	t := model.NewEmailVerificationToken(tokenHash, u.ID, time.Now().Add(tokenExpirationTime))
 
-	if err = s.tokens.Save(t); err != nil {
+	if err = s.tokens.Save(ctx, t); err != nil {
 		return RegisterResult{}, fmt.Errorf("failed to save email_token: %w", err)
 	}
 
@@ -221,30 +223,30 @@ type LoginResult struct {
 //   - ErrIncorrectPassword
 //
 // All other errors are treated as internal and returned wrapped.
-func (s *Service) Login(email, password string) (string, error) {
+func (s *Service) Login(email, password string) (uuid.UUID, error) {
 	email = strings.TrimSpace(strings.ToLower(email))
 
 	if !s.validateEmail(email) {
-		return "", fmt.Errorf("invalid email: %w", ErrInvalidCredentials)
+		return uuid.Nil, fmt.Errorf("invalid email: %w", ErrInvalidCredentials)
 	}
 	if !validatePassword(password) {
-		return "", fmt.Errorf("invalid password: %w", ErrInvalidCredentials)
+		return uuid.Nil, fmt.Errorf("invalid password: %w", ErrInvalidCredentials)
 	}
 
 	u, err := s.users.GetByEmail(email)
 	if err != nil {
 		if errors.Is(err, user.ErrUserNotFound) {
-			return "", fmt.Errorf("user not found: %w", ErrInvalidCredentials)
+			return uuid.Nil, fmt.Errorf("user not found: %w", ErrInvalidCredentials)
 		}
-		return "", fmt.Errorf("failed to get user by email: %w", err)
+		return uuid.Nil, fmt.Errorf("failed to get user by email: %w", err)
 	}
 
 	if err = bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password)); err != nil {
-		return "", ErrIncorrectPassword
+		return uuid.Nil, ErrIncorrectPassword
 	}
 
 	if !u.EmailVerified {
-		return "", ErrEmailNotVerified
+		return uuid.Nil, ErrEmailNotVerified
 	}
 
 	return u.ID, nil

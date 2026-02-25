@@ -1,16 +1,20 @@
 package model
 
-import "time"
+import (
+	"time"
+
+	"github.com/google/uuid"
+)
 
 type EmailVerificationToken struct {
 	TokenHash string
-	UserID    string
+	UserID    uuid.UUID
 	ExpiresAt time.Time
 	Used      bool
 	CreatedAt time.Time
 }
 
-func NewEmailVerificationToken(tokenHash, userID string, expiresAt time.Time) EmailVerificationToken {
+func NewEmailVerificationToken(tokenHash string, userID uuid.UUID, expiresAt time.Time) EmailVerificationToken {
 	return EmailVerificationToken{
 		TokenHash: tokenHash,
 		UserID:    userID,

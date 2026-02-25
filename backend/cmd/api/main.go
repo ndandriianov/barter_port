@@ -1,6 +1,7 @@
 package main
 
 import (
+	"barter-port/internal/infrastructure/database"
 	"log/slog"
 	"regexp"
 	"strconv"
@@ -26,6 +27,14 @@ import (
 func main() {
 	_ = godotenv.Load()
 
+	DbConfigPath := getEnv("DB_CONFIG_PATH", "")
+	dbConfig := database.MustLoad(DbConfigPath)
+	db, err := database.NewPostgres(dbConfig)
+	if err != nil {
+		log.Fatal("failed to connect to database:", err)
+	}
+	defer db.Close()
+
 	frontendURL := getEnv("FRONTEND_URL", "http://localhost:5173")
 
 	accessSecret := getEnv("ACCESS_SECRET", "")
@@ -38,7 +47,7 @@ func main() {
 	re := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 
 	userRepo := user.NewInMemoryUserRepo()
-	emailTokenRepo := email_token.NewInMemoryTokenRepo()
+	emailTokenRepo := email_token.NewInMemoryTokenRepo(db)
 	refreshTokenRepo := refresh_token.NewInMemoryRefreshRepo()
 
 	smtpHost := getEnv("SMTP_HOST", "")
