@@ -1,14 +1,14 @@
-import { useState } from "react";
-import { useLoginMutation } from "@/features/auth/api/authApi";
+import {useState} from "react";
+import {useRegisterMutation} from "@/features/auth/api/authApi";
 
-function LoginForm() {
-  const [login, { isLoading, error }] = useLoginMutation();
+function RegisterForm() {
+  const [register, { isLoading, error }] = useRegisterMutation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await login({ email, password });
+    await register({ email, password });
   };
 
   return (
@@ -25,11 +25,11 @@ function LoginForm() {
         onChange={(e) => setPassword(e.target.value)}
       />
       <button type="submit" disabled={isLoading}>
-        Login
+        Register
       </button>
       {error && <div>Login error</div>}
     </form>
   );
 }
 
-export default LoginForm;
+export default RegisterForm;
