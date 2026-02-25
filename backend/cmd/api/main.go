@@ -47,7 +47,7 @@ func main() {
 	re := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 
 	userRepo := user.NewRepository(db)
-	emailTokenRepo := email_token.NewInMemoryTokenRepo(db)
+	emailTokenRepo := email_token.NewRepository(db)
 	refreshTokenRepo := refresh_token.NewInMemoryRefreshRepo()
 
 	smtpHost := getEnv("SMTP_HOST", "")
