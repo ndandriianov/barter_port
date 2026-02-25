@@ -45,6 +45,7 @@ func NewRouter(logger *slog.Logger, h *Handlers, jwtManager *jwt.Manager, userGe
 		r.Post("/register", h.Register)
 		r.Post("/verify-email", h.VerifyEmail)
 		r.Post("/login", h.Login)
+		r.Post("/refresh", h.Refresh)
 
 		r.Group(func(r chi.Router) {
 			r.Use(auth_jwt.Middleware(logger, jwtManager, userGetter))
