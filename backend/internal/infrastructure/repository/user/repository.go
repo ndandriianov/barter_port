@@ -1,12 +1,14 @@
 package user
 
 import (
-	"errors"
-	"sync"
-
+	"barter-port/internal/infrastructure/repository"
 	"barter-port/internal/model"
+	"errors"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"golang.org/x/net/context"
 )
 
 var (
@@ -14,82 +16,108 @@ var (
 	ErrEmailAlreadyInUse = errors.New("email already in use")
 )
 
-type InMemoryUserRepo struct {
-	mu      sync.RWMutex
-	byID    map[uuid.UUID]model.User
-	byEmail map[string]uuid.UUID // email -> userID
+type Repository struct {
+	db *pgxpool.Pool
 }
 
-func NewInMemoryUserRepo() *InMemoryUserRepo {
-	return &InMemoryUserRepo{
-		byID:    make(map[uuid.UUID]model.User),
-		byEmail: make(map[string]uuid.UUID),
+func NewRepository(db *pgxpool.Pool) *Repository {
+	return &Repository{
+		db: db,
 	}
 }
 
 // Create adds a new user to the repository.
 // Errors:
 //   - errors.ErrEmailAlreadyInUse - email already exists
-func (r *InMemoryUserRepo) Create(u model.User) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+func (r *Repository) Create(ctx context.Context, u model.User) error {
+	query := `
+		INSERT INTO users
+		VALUES ($1, $2, $3, $4, $5)
+	`
 
-	if _, ok := r.byEmail[u.Email]; ok {
-		return ErrEmailAlreadyInUse
+	_, err := r.db.Exec(ctx, query, u.ID, u.Email, u.PasswordHash, u.EmailVerified, u.CreatedAt)
+	if err != nil {
+		if repository.IsUniqueViolation(err) {
+			return ErrEmailAlreadyInUse
+		}
+		return err
 	}
 
-	r.byID[u.ID] = u
-	r.byEmail[u.Email] = u.ID
 	return nil
 }
 
 // GetByEmail retrieves a user by their email address.
 // Errors:
 //   - errors.ErrUserNotFound: Occurs if no user is found with the given email address.
-func (r *InMemoryUserRepo) GetByEmail(email string) (model.User, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+func (r *Repository) GetByEmail(ctx context.Context, email string) (model.User, error) {
+	query := `
+		SELECT id, email, password_hash, email_verified, created_at
+		FROM users
+		WHERE email = $1
+	`
 
-	id, ok := r.byEmail[email]
-	if !ok {
-		return model.User{}, ErrUserNotFound
+	rows, err := r.db.Query(ctx, query, email)
+	if err != nil {
+		return model.User{}, err
+	}
+	defer rows.Close()
+
+	user, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[model.User])
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return model.User{}, ErrUserNotFound
+		}
+		return model.User{}, err
 	}
 
-	u, ok := r.byID[id]
-	if !ok {
-		return model.User{}, ErrUserNotFound
-	}
-
-	return u, nil
+	return user, nil
 }
 
 // GetByID retrieves a user by their unique ID.
 // Errors:
 //   - errors.ErrUserNotFound: Occurs if no user is found with the given ID.
-func (r *InMemoryUserRepo) GetByID(id uuid.UUID) (model.User, error) {
-	r.mu.RLock()
-	defer r.mu.RUnlock()
+func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (model.User, error) {
+	query := `
+		SELECT id, email, password_hash, email_verified, created_at
+		FROM users
+		WHERE id = $1
+	`
 
-	u, ok := r.byID[id]
-	if !ok {
-		return model.User{}, ErrUserNotFound
+	rows, err := r.db.Query(ctx, query, id)
+	if err != nil {
+		return model.User{}, err
 	}
-	return u, nil
+	defer rows.Close()
+
+	user, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[model.User])
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return model.User{}, ErrUserNotFound
+		}
+		return model.User{}, err
+	}
+
+	return user, nil
 }
 
 // VerifyEmail marks a user's email as verified.
 // Errors:
 //   - errors.ErrUserNotFound: Occurs if no user is found with the given userID.
-func (r *InMemoryUserRepo) VerifyEmail(userID uuid.UUID) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+func (r *Repository) VerifyEmail(ctx context.Context, userID uuid.UUID) error {
+	query := `
+		UPDATE users
+		SET email_verified = true
+		WHERE id = $1
+	`
 
-	u, ok := r.byID[userID]
-	if !ok {
+	cmdTag, err := r.db.Exec(ctx, query, userID)
+	if err != nil {
+		return err
+	}
+
+	if cmdTag.RowsAffected() == 0 {
 		return ErrUserNotFound
 	}
 
-	u.EmailVerified = true
-	r.byID[userID] = u
 	return nil
 }

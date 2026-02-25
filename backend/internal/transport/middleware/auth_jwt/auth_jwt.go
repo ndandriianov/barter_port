@@ -29,7 +29,7 @@ var (
 )
 
 type UserGetter interface {
-	GetByID(id uuid.UUID) (model.User, error)
+	GetByID(ctx context.Context, id uuid.UUID) (model.User, error)
 }
 
 // GetClaims retrieves the JWT claims from the context. It returns the claims and a boolean indicating whether the claims were found.
@@ -69,7 +69,7 @@ func Middleware(logger *slog.Logger, jwtManager *jwt.Manager, users UserGetter) 
 				return
 			}
 
-			u, err := users.GetByID(claims.UserID)
+			u, err := users.GetByID(r.Context(), claims.UserID)
 			if err != nil {
 				if errors.Is(err, user.ErrUserNotFound) {
 					logger.Warn(

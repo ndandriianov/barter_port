@@ -213,7 +213,7 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Проверка учетных данных и получение userID
-	userID, err := h.authService.Login(req.Email, req.Password)
+	userID, err := h.authService.Login(r.Context(), req.Email, req.Password)
 	if err != nil {
 		switch {
 		case errors.Is(err, auth.ErrInvalidCredentials):
