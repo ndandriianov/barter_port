@@ -1,6 +1,6 @@
-import { createApi } from "@reduxjs/toolkit/query/react";
+import {createApi} from "@reduxjs/toolkit/query/react";
 
-import { setCredentials } from "../model/authSlice";
+import {setCredentials} from "../model/authSlice";
 import {baseQueryWithReauth} from "@/shared/api/baseApi.ts";
 
 export const authApi = createApi({
@@ -16,8 +16,8 @@ export const authApi = createApi({
         method: "POST",
         body,
       }),
-      async onQueryStarted(_, { dispatch, queryFulfilled }) {
-        const { data } = await queryFulfilled;
+      async onQueryStarted(_, {dispatch, queryFulfilled}) {
+        const {data} = await queryFulfilled;
         dispatch(setCredentials(data.accessToken));
       },
     }),
@@ -43,6 +43,14 @@ export const authApi = createApi({
         method: "POST",
       }),
     }),
+
+    verifyEmail: builder.mutation<{ status: string }, { token: string }>({
+      query: ({token}) => ({
+        url: "/auth/verify-email",
+        method: "POST",
+        body: {token},
+      }),
+    }),
   }),
 });
 
@@ -51,4 +59,5 @@ export const {
   useRegisterMutation,
   useMeQuery,
   useLogoutMutation,
+  useVerifyEmailMutation,
 } = authApi;
