@@ -51,9 +51,9 @@ type UserRepo interface {
 
 type TokenRepo interface {
 	Save(ctx context.Context, t model.EmailVerificationToken) error
-	GetByHash(tokenHash string) (model.EmailVerificationToken, error)
-	MarkUsed(tokenHash string) error
-	DeleteAllForUser(userID uuid.UUID)
+	GetByHash(ctx context.Context, tokenHash string) (model.EmailVerificationToken, error)
+	MarkUsed(ctx context.Context, tokenHash string) error
+	DeleteAllForUser(ctx context.Context, userID uuid.UUID) error
 }
 
 type Mailer interface {
@@ -130,7 +130,10 @@ func (s *Service) Register(ctx context.Context, email, password string) (Registe
 	}
 
 	// на всякий случай удаляются все старые токены для этого юзера, если они были
-	s.tokens.DeleteAllForUser(u.ID)
+	err = s.tokens.DeleteAllForUser(ctx, u.ID)
+	if err != nil {
+		return RegisterResult{}, fmt.Errorf("failed to delete old email_tokens: %w", err)
+	}
 
 	rawToken, err := generateToken(tokenLength)
 	if err != nil {
@@ -162,13 +165,13 @@ func (s *Service) Register(ctx context.Context, email, password string) (Registe
 //   - ErrUserNotFound
 //
 // All other errors are treated as internal and returned wrapped.
-func (s *Service) VerifyEmail(rawToken string) error {
+func (s *Service) VerifyEmail(ctx context.Context, rawToken string) error {
 	tokenHash, err := getHashFromRawToken(rawToken)
 	if err != nil {
 		return fmt.Errorf("cannot get hash from raw email_token: %w", err)
 	}
 
-	t, err := s.tokens.GetByHash(tokenHash)
+	t, err := s.tokens.GetByHash(ctx, tokenHash)
 	if err != nil {
 		if errors.Is(err, email_token.ErrTokenNotFound) {
 			return ErrInvalidEmailToken
@@ -202,7 +205,7 @@ func (s *Service) VerifyEmail(rawToken string) error {
 		return fmt.Errorf("failed to verify email: %w", err)
 	}
 
-	if err = s.tokens.MarkUsed(tokenHash); err != nil {
+	if err = s.tokens.MarkUsed(ctx, tokenHash); err != nil {
 		if errors.Is(err, email_token.ErrTokenNotFound) {
 			s.logger.Warn("failed to mark used email_token as used")
 		}
