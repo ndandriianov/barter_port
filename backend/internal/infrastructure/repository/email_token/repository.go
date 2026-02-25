@@ -18,15 +18,15 @@ var (
 	ErrTokenAlreadyExists = errors.New("token already exists")
 )
 
-type InMemoryTokenRepo struct {
+type Repository struct {
 	mu     sync.RWMutex
 	byHash map[string]model.EmailVerificationToken
 
 	db *pgxpool.Pool
 }
 
-func NewInMemoryTokenRepo(db *pgxpool.Pool) *InMemoryTokenRepo {
-	return &InMemoryTokenRepo{
+func NewRepository(db *pgxpool.Pool) *Repository {
+	return &Repository{
 		byHash: make(map[string]model.EmailVerificationToken),
 		db:     db,
 	}
@@ -35,7 +35,7 @@ func NewInMemoryTokenRepo(db *pgxpool.Pool) *InMemoryTokenRepo {
 // Save stores a new email verification token in the repository.
 // Errors:
 //   - errors.ErrTokenAlreadyExists: Occurs if a token with the same hash already exists in the repository.
-func (r *InMemoryTokenRepo) Save(ctx context.Context, t model.EmailVerificationToken) error {
+func (r *Repository) Save(ctx context.Context, t model.EmailVerificationToken) error {
 	query := `
 		INSERT INTO email_tokens
 		VALUES ($1, $2, $3, $4, $5)
@@ -55,7 +55,7 @@ func (r *InMemoryTokenRepo) Save(ctx context.Context, t model.EmailVerificationT
 // GetByHash retrieves an email verification token by its hash.
 // Errors:
 //   - errors.ErrTokenNotFound: Occurs if no token is found with the given hash.
-func (r *InMemoryTokenRepo) GetByHash(ctx context.Context, tokenHash string) (model.EmailVerificationToken, error) {
+func (r *Repository) GetByHash(ctx context.Context, tokenHash string) (model.EmailVerificationToken, error) {
 	query := `
 		SELECT token_hash, user_id, expires_at, used, created_at
 		FROM email_tokens
@@ -82,7 +82,7 @@ func (r *InMemoryTokenRepo) GetByHash(ctx context.Context, tokenHash string) (mo
 // MarkUsed marks an email verification token as used.
 // Errors:
 //   - errors.ErrTokenNotFound: Occurs if no token is found with the given hash.
-func (r *InMemoryTokenRepo) MarkUsed(ctx context.Context, tokenHash string) error {
+func (r *Repository) MarkUsed(ctx context.Context, tokenHash string) error {
 	query := `
 		UPDATE email_tokens
 		SET used = true
@@ -103,7 +103,7 @@ func (r *InMemoryTokenRepo) MarkUsed(ctx context.Context, tokenHash string) erro
 
 // DeleteAllForUser removes all tokens associated with a specific user.
 // Errors: only internal db errors.
-func (r *InMemoryTokenRepo) DeleteAllForUser(ctx context.Context, userID uuid.UUID) error {
+func (r *Repository) DeleteAllForUser(ctx context.Context, userID uuid.UUID) error {
 	query := `
 		DELETE FROM email_tokens
 		WHERE user_id = $1
