@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/google/uuid"
 )
 
 type TokenType string
@@ -33,7 +34,7 @@ type Config struct {
 }
 
 type Claims struct {
-	UserID string    `json:"user_id"`
+	UserID uuid.UUID `json:"user_id"`
 	Type   TokenType `json:"type"`
 	jwt.RegisteredClaims
 }
@@ -50,16 +51,16 @@ func NewManager(cfg Config) *Manager {
 // === GENERATE TOKENS ===
 //
 
-func (m *Manager) GenerateAccessToken(userID string) (string, error) {
+func (m *Manager) GenerateAccessToken(userID uuid.UUID) (string, error) {
 	token, _, err := m.generateToken(userID, AccessToken, m.cfg.AccessSecret, m.cfg.AccessTTL)
 	return token, err
 }
 
-func (m *Manager) GenerateRefreshToken(userID string) (string, Claims, error) {
+func (m *Manager) GenerateRefreshToken(userID uuid.UUID) (string, Claims, error) {
 	return m.generateToken(userID, RefreshToken, m.cfg.RefreshSecret, m.cfg.RefreshTTL)
 }
 
-func (m *Manager) generateToken(userID string, tokenType TokenType, secret string, ttl time.Duration) (string, Claims, error) {
+func (m *Manager) generateToken(userID uuid.UUID, tokenType TokenType, secret string, ttl time.Duration) (string, Claims, error) {
 	id, err := generateGTI()
 	if err != nil {
 		return "", Claims{}, fmt.Errorf("failed to generate GTI: %w", err)
@@ -70,7 +71,7 @@ func (m *Manager) generateToken(userID string, tokenType TokenType, secret strin
 		UserID: userID,
 		Type:   tokenType,
 		RegisteredClaims: jwt.RegisteredClaims{
-			Subject:   userID,
+			Subject:   userID.String(),
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(now.Add(ttl)),
 			ID:        id,

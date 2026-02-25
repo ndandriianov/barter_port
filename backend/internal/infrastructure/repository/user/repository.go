@@ -5,6 +5,8 @@ import (
 	"sync"
 
 	"barter-port/internal/model"
+
+	"github.com/google/uuid"
 )
 
 var (
@@ -14,14 +16,14 @@ var (
 
 type InMemoryUserRepo struct {
 	mu      sync.RWMutex
-	byID    map[string]model.User
-	byEmail map[string]string // email -> userID
+	byID    map[uuid.UUID]model.User
+	byEmail map[string]uuid.UUID // email -> userID
 }
 
 func NewInMemoryUserRepo() *InMemoryUserRepo {
 	return &InMemoryUserRepo{
-		byID:    make(map[string]model.User),
-		byEmail: make(map[string]string),
+		byID:    make(map[uuid.UUID]model.User),
+		byEmail: make(map[string]uuid.UUID),
 	}
 }
 
@@ -64,7 +66,7 @@ func (r *InMemoryUserRepo) GetByEmail(email string) (model.User, error) {
 // GetByID retrieves a user by their unique ID.
 // Errors:
 //   - errors.ErrUserNotFound: Occurs if no user is found with the given ID.
-func (r *InMemoryUserRepo) GetByID(id string) (model.User, error) {
+func (r *InMemoryUserRepo) GetByID(id uuid.UUID) (model.User, error) {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 
@@ -78,7 +80,7 @@ func (r *InMemoryUserRepo) GetByID(id string) (model.User, error) {
 // VerifyEmail marks a user's email as verified.
 // Errors:
 //   - errors.ErrUserNotFound: Occurs if no user is found with the given userID.
-func (r *InMemoryUserRepo) VerifyEmail(userID string) error {
+func (r *InMemoryUserRepo) VerifyEmail(userID uuid.UUID) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 

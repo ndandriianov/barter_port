@@ -35,14 +35,6 @@ func getHashFromToken(token string) string {
 	return sha256Hex(token)
 }
 
-// --- ID ---
-
-func newID() string {
-	// максимально простая заглушка
-	raw, _ := generateToken(bcryptCost)
-	return raw
-}
-
 // --- CREDENTIAL VALIDATION ---
 
 func (s *Service) validateEmail(email string) bool {

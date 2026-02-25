@@ -11,3 +11,15 @@ services:
       - ServerOptions__AuthenticationRequired=true
       - ServerOptions__Users__0__Username=user
       - ServerOptions__Users__0__Password=password
+
+  db:
+    image: postgres:16
+    container_name: barter-port-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql

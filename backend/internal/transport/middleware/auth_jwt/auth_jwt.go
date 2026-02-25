@@ -12,6 +12,7 @@ import (
 	"barter-port/internal/transport/helpers"
 
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/google/uuid"
 )
 
 const bearerPrefix = "Bearer "
@@ -28,7 +29,7 @@ var (
 )
 
 type UserGetter interface {
-	GetByID(id string) (model.User, error)
+	GetByID(id uuid.UUID) (model.User, error)
 }
 
 // GetClaims retrieves the JWT claims from the context. It returns the claims and a boolean indicating whether the claims were found.
@@ -73,7 +74,7 @@ func Middleware(logger *slog.Logger, jwtManager *jwt.Manager, users UserGetter) 
 				if errors.Is(err, user.ErrUserNotFound) {
 					logger.Warn(
 						`user not found for token UserID`,
-						slog.String("user_id", claims.UserID),
+						slog.String("user_id", claims.UserID.String()),
 					)
 					helpers.HandleError(w, logger, http.StatusUnauthorized, errInvalidToken)
 					return
@@ -81,7 +82,7 @@ func Middleware(logger *slog.Logger, jwtManager *jwt.Manager, users UserGetter) 
 				logger.Error(
 					"unexpected error fetching user",
 					slog.String("error", err.Error()),
-					slog.String("user_id", claims.UserID),
+					slog.String("user_id", claims.UserID.String()),
 				)
 				helpers.HandleError(w, logger, http.StatusInternalServerError, errInternalServerError)
 				return
@@ -89,7 +90,7 @@ func Middleware(logger *slog.Logger, jwtManager *jwt.Manager, users UserGetter) 
 
 			logger.Info(
 				"user authenticated successfully",
-				slog.String("user_id", u.ID),
+				slog.String("user_id", u.ID.String()),
 			)
 			ctx := context.WithValue(r.Context(), ContextKeyUser, claims)
 			next.ServeHTTP(w, r.WithContext(ctx))

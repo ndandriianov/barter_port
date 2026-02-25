@@ -5,6 +5,8 @@ import (
 	"sync"
 
 	"barter-port/internal/model"
+
+	"github.com/google/uuid"
 )
 
 var ErrRefreshNotFound = errors.New("refresh token not found")
@@ -54,7 +56,7 @@ func (r *InMemoryRefreshRepo) Revoke(jti string) error {
 	return nil
 }
 
-func (r *InMemoryRefreshRepo) DeleteAllForUser(userID string) error {
+func (r *InMemoryRefreshRepo) DeleteAllForUser(userID uuid.UUID) error {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 

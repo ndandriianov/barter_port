@@ -1,10 +1,15 @@
 package email_token
 
 import (
+	"barter-port/internal/infrastructure/repository"
 	"errors"
 	"sync"
 
 	"barter-port/internal/model"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
+	"golang.org/x/net/context"
 )
 
 var (
@@ -15,26 +20,34 @@ var (
 type InMemoryTokenRepo struct {
 	mu     sync.RWMutex
 	byHash map[string]model.EmailVerificationToken
+
+	db *pgxpool.Pool
 }
 
-func NewInMemoryTokenRepo() *InMemoryTokenRepo {
+func NewInMemoryTokenRepo(db *pgxpool.Pool) *InMemoryTokenRepo {
 	return &InMemoryTokenRepo{
 		byHash: make(map[string]model.EmailVerificationToken),
+		db:     db,
 	}
 }
 
 // Save stores a new email verification token in the repository.
 // Errors:
 //   - errors.ErrTokenAlreadyExists: Occurs if a token with the same hash already exists in the repository.
-func (r *InMemoryTokenRepo) Save(t model.EmailVerificationToken) error {
-	r.mu.Lock()
-	defer r.mu.Unlock()
+func (r *InMemoryTokenRepo) Save(ctx context.Context, t model.EmailVerificationToken) error {
+	query := `
+		INSERT INTO email_tokens
+		VALUES ($1, $2, $3, $4, $5)
+	`
 
-	if _, exists := r.byHash[t.TokenHash]; exists {
-		return ErrTokenAlreadyExists
+	_, err := r.db.Exec(ctx, query, t.TokenHash, t.UserID, t.ExpiresAt, t.Used, t.CreatedAt)
+	if err != nil {
+		if repository.IsUniqueViolation(err) {
+			return ErrTokenAlreadyExists
+		}
+		return err
 	}
 
-	r.byHash[t.TokenHash] = t
 	return nil
 }
 
@@ -71,7 +84,7 @@ func (r *InMemoryTokenRepo) MarkUsed(tokenHash string) error {
 
 // DeleteAllForUser removes all tokens associated with a specific user.
 // Errors: None.
-func (r *InMemoryTokenRepo) DeleteAllForUser(userID string) {
+func (r *InMemoryTokenRepo) DeleteAllForUser(userID uuid.UUID) {
 	r.mu.Lock()
 	defer r.mu.Unlock()
 
