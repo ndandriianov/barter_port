@@ -7,11 +7,11 @@ import (
 )
 
 type User struct {
-	ID            uuid.UUID
-	Email         string
-	PasswordHash  string
-	EmailVerified bool
-	CreatedAt     time.Time
+	ID            uuid.UUID `db:"id"`
+	Email         string    `db:"email"`
+	PasswordHash  string    `db:"password_hash"`
+	EmailVerified bool      `db:"email_verified"`
+	CreatedAt     time.Time `db:"created_at"`
 }
 
 func NewUser(id uuid.UUID, email string, passwordHash string) User {

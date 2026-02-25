@@ -15,3 +15,11 @@ CREATE TABLE users
     email_verified BOOLEAN     NOT NULL,
     created_at     TIMESTAMPTZ NOT NULL
 );
+
+CREATE TABLE refresh_tokens
+(
+    jti        TEXT PRIMARY KEY,
+    user_id    UUID        NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    revoked    BOOLEAN     NOT NULL
+);
