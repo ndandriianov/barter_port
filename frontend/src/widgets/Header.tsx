@@ -1,5 +1,5 @@
 import {Link, useNavigate} from "react-router-dom";
-import {authApi} from "@/features/auth/api/authApi.ts";
+import authApi from "@/features/auth/api/authApi.ts";
 
 function Header() {
   const [logout] = authApi.useLogoutMutation()

@@ -1,5 +1,5 @@
 import {useSearchParams} from "react-router-dom";
-import {authApi} from "@/features/auth/api/authApi.ts";
+import authApi from "@/features/auth/api/authApi.ts";
 import {useEffect, useState} from "react";
 
 type verifyStatus = "pending" | "success" | "error"
