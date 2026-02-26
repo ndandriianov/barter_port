@@ -1,7 +1,7 @@
 import authApi from "@/features/auth/api/authApi";
 
 function ProfilePage() {
-  const { data, isLoading } = authApi.useMeQuery();
+  const { data, isLoading, refetch } = authApi.useMeQuery();
   const [logout] = authApi.useLogoutMutation();
 
   if (isLoading) return <div>Loading...</div>;
@@ -11,6 +11,7 @@ function ProfilePage() {
     <div>
       <div>UserID: {data.userId}</div>
       <button onClick={() => logout()}>Logout</button>
+      <button onClick={() => refetch()}>Refetch</button>
     </div>
   );
 }
