@@ -1,0 +1,17 @@
+:80 {
+# Логи в консоль контейнера
+    log {
+            output stdout
+            format console
+        }
+
+# Auth service по префиксу /auth/*
+    handle_path /auth/* {
+                            reverse_proxy localhost:8081
+                        }
+
+# Всё остальное — основной backend
+    handle {
+               reverse_proxy localhost:8080
+           }
+}

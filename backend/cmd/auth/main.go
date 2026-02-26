@@ -1,20 +1,19 @@
 package main
 
 import (
-	"barter-port/internal/infrastructure/database"
+	"barter-port/internal/auth/repository/email_token"
+	"barter-port/internal/auth/repository/refresh_token"
+	"barter-port/internal/auth/repository/user"
+	"barter-port/internal/auth/service"
+	"barter-port/internal/auth/service/jwt"
+	transport2 "barter-port/internal/auth/transport"
+	"barter-port/internal/shared/database"
+	"barter-port/internal/shared/logger"
+	"barter-port/internal/shared/mailer"
 	"log/slog"
 	"regexp"
 	"strconv"
 	"time"
-
-	"barter-port/internal/infrastructure/logger"
-	"barter-port/internal/infrastructure/mailer"
-	"barter-port/internal/infrastructure/repository/email_token"
-	"barter-port/internal/infrastructure/repository/refresh_token"
-	"barter-port/internal/infrastructure/repository/user"
-	"barter-port/internal/service/auth"
-	"barter-port/internal/service/auth/jwt"
-	"barter-port/internal/transport"
 
 	"github.com/joho/godotenv"
 
@@ -72,7 +71,7 @@ func main() {
 		RefreshTTL:    refreshTTLMinutes,
 	})
 
-	authService := auth.NewService(
+	authService := service.NewService(
 		userRepo,
 		emailTokenRepo,
 		m,
@@ -83,8 +82,8 @@ func main() {
 		re,
 	)
 
-	handlers := transport.NewHandlers(logg, authService, jwtManager, refreshTokenRepo)
-	router := transport.NewRouter(logg, handlers, jwtManager, userRepo)
+	handlers := transport2.NewHandlers(logg, authService, jwtManager, refreshTokenRepo)
+	router := transport2.NewRouter(logg, handlers, jwtManager, userRepo)
 
 	addr := ":8080"
 	log.Println("backend listening on", addr)

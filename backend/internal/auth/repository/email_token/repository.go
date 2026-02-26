@@ -1,11 +1,10 @@
 package email_token
 
 import (
-	"barter-port/internal/infrastructure/repository"
+	"barter-port/internal/auth/model"
+	"barter-port/internal/auth/repository"
 	"errors"
 	"sync"
-
-	"barter-port/internal/model"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"

@@ -1,17 +1,16 @@
 package transport
 
 import (
+	"barter-port/internal/auth/model"
+	"barter-port/internal/auth/service"
+	"barter-port/internal/auth/service/jwt"
+	"barter-port/internal/auth/transport/helpers"
+	"barter-port/internal/auth/transport/middleware/auth_jwt"
 	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
 	"time"
-
-	"barter-port/internal/model"
-	"barter-port/internal/service/auth"
-	"barter-port/internal/service/auth/jwt"
-	"barter-port/internal/transport/helpers"
-	"barter-port/internal/transport/middleware/auth_jwt"
 
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/google/uuid"
@@ -36,14 +35,14 @@ type RefreshTokenRepository interface {
 
 type Handlers struct {
 	logger      *slog.Logger
-	authService *auth.Service
+	authService *service.Service
 	jwtManager  *jwt.Manager
 	refreshRepo RefreshTokenRepository
 }
 
 func NewHandlers(
 	logger *slog.Logger,
-	authService *auth.Service,
+	authService *service.Service,
 	jwtManager *jwt.Manager,
 	refreshRepo RefreshTokenRepository,
 ) *Handlers {
@@ -85,26 +84,26 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 	res, err := h.authService.Register(r.Context(), req.Email, req.Password)
 	if err != nil {
 		switch {
-		case errors.Is(err, auth.ErrInvalidEmail):
+		case errors.Is(err, service.ErrInvalidEmail):
 			logger.Info(
 				"invalid email format in register request",
 				slog.String("email", req.Email),
 			)
-			helpers.HandleError(w, logger, http.StatusBadRequest, auth.ErrInvalidEmail)
+			helpers.HandleError(w, logger, http.StatusBadRequest, service.ErrInvalidEmail)
 
-		case errors.Is(err, auth.ErrPasswordTooShort):
+		case errors.Is(err, service.ErrPasswordTooShort):
 			logger.Info(
 				"password too short in register request",
 				slog.Int("password_length", len(req.Password)),
 			)
-			helpers.HandleError(w, logger, http.StatusBadRequest, auth.ErrPasswordTooShort)
+			helpers.HandleError(w, logger, http.StatusBadRequest, service.ErrPasswordTooShort)
 
-		case errors.Is(err, auth.ErrEmailAlreadyInUse):
+		case errors.Is(err, service.ErrEmailAlreadyInUse):
 			logger.Info(
 				"email already in use in register request",
 				slog.String("email", req.Email),
 			)
-			helpers.HandleError(w, logger, http.StatusBadRequest, auth.ErrEmailAlreadyInUse)
+			helpers.HandleError(w, logger, http.StatusBadRequest, service.ErrEmailAlreadyInUse)
 
 		default:
 			logger.Error(
@@ -157,17 +156,17 @@ func (h *Handlers) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.authService.VerifyEmail(r.Context(), req.Token); err != nil {
 		switch {
-		case errors.Is(err, auth.ErrInvalidEmailToken):
+		case errors.Is(err, service.ErrInvalidEmailToken):
 			logger.Info("invalid email_token in verify email request")
-			helpers.HandleError(w, logger, http.StatusBadRequest, auth.ErrInvalidEmailToken)
+			helpers.HandleError(w, logger, http.StatusBadRequest, service.ErrInvalidEmailToken)
 
-		case errors.Is(err, auth.ErrInvalidEmailToken):
+		case errors.Is(err, service.ErrInvalidEmailToken):
 			logger.Info("email_token expired in verify email request")
-			helpers.HandleError(w, logger, http.StatusBadRequest, auth.ErrInvalidEmailToken)
+			helpers.HandleError(w, logger, http.StatusBadRequest, service.ErrInvalidEmailToken)
 
-		case errors.Is(err, auth.ErrUserNotFound):
+		case errors.Is(err, service.ErrUserNotFound):
 			logger.Info("user not found in verify email request")
-			helpers.HandleError(w, logger, http.StatusNotFound, auth.ErrUserNotFound)
+			helpers.HandleError(w, logger, http.StatusNotFound, service.ErrUserNotFound)
 
 		default:
 			logger.Error(
@@ -218,26 +217,26 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	userID, err := h.authService.Login(r.Context(), req.Email, req.Password)
 	if err != nil {
 		switch {
-		case errors.Is(err, auth.ErrInvalidCredentials):
+		case errors.Is(err, service.ErrInvalidCredentials):
 			logger.Info(
 				"invalid credentials in login request",
 				slog.String("email", req.Email),
 			)
-			helpers.HandleError(w, logger, http.StatusBadRequest, auth.ErrInvalidCredentials)
+			helpers.HandleError(w, logger, http.StatusBadRequest, service.ErrInvalidCredentials)
 
-		case errors.Is(err, auth.ErrIncorrectPassword):
+		case errors.Is(err, service.ErrIncorrectPassword):
 			logger.Info(
 				"incorrect password in login request",
 				slog.String("email", req.Email),
 			)
-			helpers.HandleError(w, logger, http.StatusUnauthorized, auth.ErrIncorrectPassword)
+			helpers.HandleError(w, logger, http.StatusUnauthorized, service.ErrIncorrectPassword)
 
-		case errors.Is(err, auth.ErrEmailNotVerified):
+		case errors.Is(err, service.ErrEmailNotVerified):
 			logger.Info(
 				"email not verified in login request",
 				slog.String("email", req.Email),
 			)
-			helpers.HandleError(w, logger, http.StatusForbidden, auth.ErrEmailNotVerified)
+			helpers.HandleError(w, logger, http.StatusForbidden, service.ErrEmailNotVerified)
 
 		default:
 			logger.Error(
