@@ -1,8 +1,8 @@
 package refresh_token
 
 import (
-	"barter-port/internal/infrastructure/repository"
-	"barter-port/internal/model"
+	"barter-port/internal/auth/model"
+	"barter-port/internal/auth/repository"
 	"errors"
 
 	"github.com/google/uuid"

@@ -1,13 +1,13 @@
 package transport
 
 import (
+	"barter-port/internal/auth/service/jwt"
+	"barter-port/internal/auth/transport/middleware/auth_jwt"
 	"log"
 	"log/slog"
 	"net/http"
 
 	_ "barter-port/docs"
-	"barter-port/internal/service/auth/jwt"
-	"barter-port/internal/transport/middleware/auth_jwt"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"

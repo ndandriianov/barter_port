@@ -1,15 +1,14 @@
 package auth_jwt
 
 import (
+	"barter-port/internal/auth/model"
+	"barter-port/internal/auth/repository/user"
+	"barter-port/internal/auth/service/jwt"
+	"barter-port/internal/auth/transport/helpers"
 	"context"
 	"errors"
 	"log/slog"
 	"net/http"
-
-	"barter-port/internal/infrastructure/repository/user"
-	"barter-port/internal/model"
-	"barter-port/internal/service/auth/jwt"
-	"barter-port/internal/transport/helpers"
 
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/google/uuid"
