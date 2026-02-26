@@ -1,11 +1,10 @@
 import authApi from "@/features/auth/api/authApi";
 import {useAppDispatch} from "@/hooks/redux.ts";
-import {logout} from "@/features/auth/model/authSlice.ts";
 import {useNavigate} from "react-router-dom";
+import {performLogout} from "@/features/auth/model/logoutThunk.ts";
 
 function ProfilePage() {
-  const { data, isLoading, refetch } = authApi.useMeQuery();
-  const [apiLogout] = authApi.useLogoutMutation();
+  const {data, isLoading, refetch} = authApi.useMeQuery();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
 
@@ -13,8 +12,7 @@ function ProfilePage() {
   if (!data) return <div>Not authorized</div>;
 
   async function handleLogout() {
-    await apiLogout();
-    dispatch(logout());
+    await dispatch(performLogout());
     navigate("/login");
   }
 
