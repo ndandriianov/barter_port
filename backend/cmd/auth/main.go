@@ -85,7 +85,7 @@ func main() {
 	handlers := transport2.NewHandlers(logg, authService, jwtManager, refreshTokenRepo)
 	router := transport2.NewRouter(logg, handlers, jwtManager, userRepo)
 
-	addr := ":8080"
+	addr := ":8081"
 	log.Println("backend listening on", addr)
 	log.Fatal(http.ListenAndServe(addr, router))
 }
