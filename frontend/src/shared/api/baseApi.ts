@@ -1,7 +1,6 @@
 import {fetchBaseQuery} from "@reduxjs/toolkit/query/react";
 import type {BaseQueryFn} from "@reduxjs/toolkit/query";
 import type {FetchArgs, FetchBaseQueryError} from "@reduxjs/toolkit/query";
-import {type RootState} from "@/app/store/store";
 import {setCredentials, logout} from "@/features/auth/model/authSlice";
 
 type RefreshResponse = {
@@ -12,7 +11,7 @@ const rawBaseQuery = fetchBaseQuery({
   baseUrl: "http://localhost:8080",
   credentials: "include", // для refresh cookie
   prepareHeaders: (headers, {getState}) => {
-    const token = (getState() as RootState).auth.accessToken;
+    const token = (getState() as { auth: { accessToken: string | null } }).auth.accessToken;
     console.log("token", token);
     if (token) {
       headers.set("Authorization", `Bearer ${token}`);
