@@ -3,6 +3,7 @@ import type {BaseQueryFn} from "@reduxjs/toolkit/query";
 import type {FetchArgs, FetchBaseQueryError} from "@reduxjs/toolkit/query";
 import {setCredentials, logout} from "@/features/auth/model/authSlice";
 import type {RootState} from "@/app/store/rootReducer.ts";
+import authApi from "@/features/auth/api/authApi.ts";
 
 type RefreshResponse = {
   access_token: string;
@@ -45,6 +46,7 @@ export const baseQueryWithReauth: BaseQueryFn<string | FetchArgs, unknown, Fetch
       result = await rawBaseQuery(args, api, extraOptions);
     } else {
       api.dispatch(logout());
+      authApi.util.resetApiState();
     }
   }
 
