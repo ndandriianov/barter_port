@@ -3,7 +3,7 @@ import {createApi} from "@reduxjs/toolkit/query/react";
 import {setCredentials} from "../model/authSlice";
 import {baseQueryWithReauth} from "@/shared/api/baseApi.ts";
 
-export const authApi = createApi({
+const authApi = createApi({
   reducerPath: "authApi",
   baseQuery: baseQueryWithReauth,
   endpoints: (builder) => ({
@@ -54,10 +54,4 @@ export const authApi = createApi({
   }),
 });
 
-export const {
-  useLoginMutation,
-  useRegisterMutation,
-  useMeQuery,
-  useLogoutMutation,
-  useVerifyEmailMutation,
-} = authApi;
+export default authApi;

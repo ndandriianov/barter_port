@@ -1,14 +1,14 @@
 import {useState} from "react";
-import {useRegisterMutation} from "@/features/auth/api/authApi";
+import authApi from "@/features/auth/api/authApi";
 
 function RegisterForm() {
-  const [register, { isLoading, error }] = useRegisterMutation();
+  const [register, {isLoading, error}] = authApi.useRegisterMutation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    await register({ email, password });
+    await register({email, password});
   };
 
   return (

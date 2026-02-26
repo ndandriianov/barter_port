@@ -1,8 +1,8 @@
-import { useMeQuery, useLogoutMutation } from "@/features/auth/api/authApi";
+import authApi from "@/features/auth/api/authApi";
 
 function ProfilePage() {
-  const { data, isLoading } = useMeQuery();
-  const [logout] = useLogoutMutation();
+  const { data, isLoading } = authApi.useMeQuery();
+  const [logout] = authApi.useLogoutMutation();
 
   if (isLoading) return <div>Loading...</div>;
   if (!data) return <div>Not authorized</div>;
