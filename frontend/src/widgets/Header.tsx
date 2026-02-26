@@ -1,12 +1,16 @@
 import {Link, useNavigate} from "react-router-dom";
 import authApi from "@/features/auth/api/authApi.ts";
+import {useAppDispatch} from "@/hooks/redux.ts";
+import {logout} from "@/features/auth/model/authSlice.ts";
 
 function Header() {
-  const [logout] = authApi.useLogoutMutation()
+  const [apiLogout] = authApi.useLogoutMutation()
   const navigate = useNavigate()
+  const dispatch = useAppDispatch();
 
   async function handleLogout() {
-    await logout();
+    await apiLogout();
+    dispatch(logout());
     navigate("/login");
   }
 
