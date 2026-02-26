@@ -10,7 +10,7 @@ type RefreshResponse = {
 };
 
 const rawBaseQuery = fetchBaseQuery({
-  baseUrl: "http://localhost:8080",
+  baseUrl: "http://localhost:80",
   credentials: "include", // для refresh cookie
   prepareHeaders: (headers, {getState}) => {
     const token = (getState() as RootState).auth.accessToken;
