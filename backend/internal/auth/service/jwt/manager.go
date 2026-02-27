@@ -61,7 +61,7 @@ func (m *Manager) GenerateRefreshToken(userID uuid.UUID) (string, Claims, error)
 }
 
 func (m *Manager) generateToken(userID uuid.UUID, tokenType TokenType, secret string, ttl time.Duration) (string, Claims, error) {
-	id, err := generateGTI()
+	id, err := generateJTI()
 	if err != nil {
 		return "", Claims{}, fmt.Errorf("failed to generate GTI: %w", err)
 	}
@@ -135,7 +135,7 @@ func (m *Manager) parseToken(tokenStr string, expectedType TokenType, secret str
 // === HELPERS ===
 //
 
-func generateGTI() (string, error) {
+func generateJTI() (string, error) {
 	b := make([]byte, GTILength)
 
 	if _, err := rand.Read(b); err != nil {
