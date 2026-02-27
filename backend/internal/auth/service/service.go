@@ -4,7 +4,6 @@ import (
 	model2 "barter-port/internal/auth/model"
 	"barter-port/internal/auth/repository/email_token"
 	"barter-port/internal/auth/repository/user"
-	"barter-port/internal/auth/service/jwt"
 	"errors"
 	"fmt"
 	"log"
@@ -66,7 +65,6 @@ type Service struct {
 	logger *slog.Logger
 
 	frontendBaseURL string
-	jwtManager      *jwt.Manager
 	re              *regexp.Regexp
 }
 
@@ -77,7 +75,6 @@ func NewService(
 	logger *slog.Logger,
 
 	frontendBaseURL string,
-	jwtManager *jwt.Manager,
 	re *regexp.Regexp,
 ) *Service {
 	if logger == nil {
@@ -91,7 +88,6 @@ func NewService(
 		logger: logger,
 
 		frontendBaseURL: strings.TrimRight(frontendBaseURL, "/"),
-		jwtManager:      jwtManager,
 		re:              re,
 	}
 }

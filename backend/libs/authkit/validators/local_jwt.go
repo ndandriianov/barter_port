@@ -1,8 +1,8 @@
 package validators
 
 import (
-	"barter-port/internal/auth/service/jwt"
-	"barter-port/internal/authkit"
+	authkit2 "barter-port/libs/authkit"
+	"barter-port/libs/jwt"
 	"errors"
 
 	"golang.org/x/net/context"
@@ -16,13 +16,13 @@ func NewLocalJWT(manager *jwt.Manager) *LocalJWT {
 	return &LocalJWT{manager: manager}
 }
 
-func (v *LocalJWT) ValidateAccess(_ context.Context, token string) (authkit.Principal, error) {
+func (v *LocalJWT) ValidateAccess(_ context.Context, token string) (authkit2.Principal, error) {
 	claims, err := v.manager.ParseAccessToken(token)
 	if err != nil {
-		return authkit.Principal{}, mapJWTError(err)
+		return authkit2.Principal{}, mapJWTError(err)
 	}
 
-	p := authkit.Principal{
+	p := authkit2.Principal{
 		UserID:  claims.UserID,
 		Type:    claims.Type,
 		Subject: claims.Subject,
@@ -45,12 +45,12 @@ func (v *LocalJWT) ValidateAccess(_ context.Context, token string) (authkit.Prin
 func mapJWTError(err error) error {
 	switch {
 	case errors.Is(err, jwt.ErrTokenExpired):
-		return errors.Join(authkit.ErrTokenExpired, err)
+		return errors.Join(authkit2.ErrTokenExpired, err)
 
 	case errors.Is(err, jwt.ErrInvalidToken),
 		errors.Is(err, jwt.ErrInvalidTokenType),
 		errors.Is(err, jwt.ErrUnexpectedSigningMethod):
-		return errors.Join(authkit.ErrInvalidToken, err)
+		return errors.Join(authkit2.ErrInvalidToken, err)
 
 	default:
 		return err
