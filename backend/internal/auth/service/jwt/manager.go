@@ -1,6 +1,7 @@
 package jwt
 
 import (
+	"barter-port/internal/authkit"
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
@@ -11,12 +12,8 @@ import (
 	"github.com/google/uuid"
 )
 
-type TokenType string
-
 const (
-	AccessToken  TokenType = "access"
-	RefreshToken TokenType = "refresh"
-	GTILength    int       = 16
+	GTILength int = 16
 )
 
 var (
@@ -34,8 +31,8 @@ type Config struct {
 }
 
 type Claims struct {
-	UserID uuid.UUID `json:"user_id"`
-	Type   TokenType `json:"type"`
+	UserID uuid.UUID         `json:"user_id"`
+	Type   authkit.TokenType `json:"type"`
 	jwt.RegisteredClaims
 }
 
@@ -51,16 +48,36 @@ func NewManager(cfg Config) *Manager {
 // === GENERATE TOKENS ===
 //
 
+// GenerateAccessToken generates a signed JWT access token for the given user ID.
+//
+// Errors: it returns only internal errors related to token generation and signing,
+// as the input parameters are controlled by the application logic.
 func (m *Manager) GenerateAccessToken(userID uuid.UUID) (string, error) {
-	token, _, err := m.generateToken(userID, AccessToken, m.cfg.AccessSecret, m.cfg.AccessTTL)
+	token, _, err := m.generateToken(userID, authkit.AccessToken, m.cfg.AccessSecret, m.cfg.AccessTTL)
 	return token, err
 }
 
+// GenerateRefreshToken generates a signed JWT refresh token for the given user ID
+// and returns both the token string and its claims.
+//
+// Errors: it returns only internal errors related to token generation and signing,
+// as the input parameters are controlled by the application logic.
 func (m *Manager) GenerateRefreshToken(userID uuid.UUID) (string, Claims, error) {
-	return m.generateToken(userID, RefreshToken, m.cfg.RefreshSecret, m.cfg.RefreshTTL)
+	return m.generateToken(userID, authkit.RefreshToken, m.cfg.RefreshSecret, m.cfg.RefreshTTL)
 }
 
-func (m *Manager) generateToken(userID uuid.UUID, tokenType TokenType, secret string, ttl time.Duration) (string, Claims, error) {
+// generateToken is a helper method to create a JWT token with the specified user ID,
+// token type, secret, and time-to-live (TTL).
+// It generates a unique JTI, sets the issued and expiration times, and signs the token using HS256.
+//
+// Errors: it returns only internal errors related to token generation and signing,
+// as the input parameters are controlled by the application logic.
+func (m *Manager) generateToken(
+	userID uuid.UUID,
+	tokenType authkit.TokenType,
+	secret string,
+	ttl time.Duration,
+) (string, Claims, error) {
 	id, err := generateJTI()
 	if err != nil {
 		return "", Claims{}, fmt.Errorf("failed to generate GTI: %w", err)
@@ -92,15 +109,37 @@ func (m *Manager) generateToken(userID uuid.UUID, tokenType TokenType, secret st
 // === PARSE TOKENS ===
 //
 
+// ParseAccessToken parses and validates an access token string, returning the claims if valid.
+//
+// Errors:
+//   - ErrUnexpectedSigningMethod: if the token's signing method is not HS256.
+//   - ErrTokenExpired: if the token has expired.
+//   - ErrInvalidToken: if the token is invalid for any reason (e.g., malformed, signature mismatch).
+//   - ErrInvalidTokenType: if the token's type does not match "access".
 func (m *Manager) ParseAccessToken(tokenStr string) (*Claims, error) {
-	return m.parseToken(tokenStr, AccessToken, m.cfg.AccessSecret)
+	return m.parseToken(tokenStr, authkit.AccessToken, m.cfg.AccessSecret)
 }
 
+// ParseRefreshToken parses and validates a refresh token string, returning the claims if valid.
+//
+// Errors:
+//   - ErrUnexpectedSigningMethod: if the token's signing method is not HS256.
+//   - ErrTokenExpired: if the token has expired.
+//   - ErrInvalidToken: if the token is invalid for any reason (e.g., malformed, signature mismatch).
+//   - ErrInvalidTokenType: if the token's type does not match "refresh".
 func (m *Manager) ParseRefreshToken(tokenStr string) (*Claims, error) {
-	return m.parseToken(tokenStr, RefreshToken, m.cfg.RefreshSecret)
+	return m.parseToken(tokenStr, authkit.RefreshToken, m.cfg.RefreshSecret)
 }
 
-func (m *Manager) parseToken(tokenStr string, expectedType TokenType, secret string) (*Claims, error) {
+// parseToken is a helper method to parse and validate a JWT token.
+// It checks the signing method, validates the token, and ensures the token type matches the expected type.
+//
+// Errors:
+//   - ErrUnexpectedSigningMethod: if the token's signing method is not HS256.
+//   - ErrTokenExpired: if the token has expired.
+//   - ErrInvalidToken: if the token is invalid for any reason (e.g., malformed, signature mismatch).
+//   - ErrInvalidTokenType: if the token's type does not match the expected type.
+func (m *Manager) parseToken(tokenStr string, expectedType authkit.TokenType, secret string) (*Claims, error) {
 	token, err := jwt.ParseWithClaims(
 		tokenStr,
 		&Claims{},

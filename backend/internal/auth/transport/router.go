@@ -2,7 +2,8 @@ package transport
 
 import (
 	"barter-port/internal/auth/service/jwt"
-	"barter-port/internal/auth/transport/middleware/auth_jwt"
+	"barter-port/internal/authkit"
+	"barter-port/internal/authkit/validators"
 	"log"
 	"log/slog"
 	"net/http"
@@ -14,7 +15,7 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
-func NewRouter(logger *slog.Logger, h *Handlers, jwtManager *jwt.Manager, userGetter auth_jwt.UserGetter) http.Handler {
+func NewRouter(logger *slog.Logger, h *Handlers, jwtManager *jwt.Manager) http.Handler {
 	if logger == nil {
 		log.Fatal("logger is required")
 	}
@@ -24,6 +25,8 @@ func NewRouter(logger *slog.Logger, h *Handlers, jwtManager *jwt.Manager, userGe
 	if jwtManager == nil {
 		log.Fatal("jwt service is required")
 	}
+
+	validator := validators.NewLocalJWT(jwtManager)
 
 	r := chi.NewRouter()
 
@@ -42,7 +45,7 @@ func NewRouter(logger *slog.Logger, h *Handlers, jwtManager *jwt.Manager, userGe
 		r.Post("/logout", h.Logout)
 
 		r.Group(func(r chi.Router) {
-			r.Use(auth_jwt.Middleware(logger, jwtManager, userGetter))
+			r.Use(authkit.Middleware(validator, nil))
 			r.Get("/me", h.Me)
 		})
 	})
