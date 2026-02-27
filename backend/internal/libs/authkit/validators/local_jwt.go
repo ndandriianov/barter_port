@@ -1,8 +1,8 @@
 package validators
 
 import (
-	"barter-port/libs/authkit"
-	"barter-port/libs/jwt"
+	"barter-port/internal/libs/authkit"
+	"barter-port/internal/libs/jwt"
 	"errors"
 
 	"golang.org/x/net/context"

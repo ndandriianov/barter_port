@@ -1,7 +1,7 @@
 package jwt
 
 import (
-	"barter-port/libs/authkit"
+	"barter-port/internal/libs/authkit"
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
