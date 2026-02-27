@@ -45,7 +45,7 @@ func NewRouter(logger *slog.Logger, h *Handlers, jwtManager *jwt.Manager) http.H
 		r.Post("/logout", h.Logout)
 
 		r.Group(func(r chi.Router) {
-			r.Use(authkit.Middleware(validator, nil))
+			r.Use(authkit.Middleware(logger, validator, nil))
 			r.Get("/me", h.Me)
 		})
 	})
