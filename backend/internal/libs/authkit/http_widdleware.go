@@ -26,8 +26,8 @@ func Middleware(logger *slog.Logger, v Validator, onError ErrorResponder) func(h
 
 			token, err := extractBearerToken(r)
 			if err != nil {
-				reqLogger.Warn("failed to extract bearer token")
-				onError(w, r, http.StatusInternalServerError, err)
+				reqLogger.Warn("failed to extract bearer token", slog.String("error", err.Error()))
+				onError(w, r, http.StatusUnauthorized, err)
 				return
 			}
 
