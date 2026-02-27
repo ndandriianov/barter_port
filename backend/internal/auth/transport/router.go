@@ -1,9 +1,9 @@
 package transport
 
 import (
-	"barter-port/libs/authkit"
-	"barter-port/libs/authkit/validators"
-	"barter-port/libs/jwt"
+	"barter-port/internal/libs/authkit"
+	"barter-port/internal/libs/authkit/validators"
+	"barter-port/internal/libs/jwt"
 	"log"
 	"log/slog"
 	"net/http"
