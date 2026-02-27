@@ -5,11 +5,11 @@ import (
 	"barter-port/internal/auth/repository/refresh_token"
 	"barter-port/internal/auth/repository/user"
 	"barter-port/internal/auth/service"
-	"barter-port/internal/auth/service/jwt"
 	transport2 "barter-port/internal/auth/transport"
 	"barter-port/internal/platform/database"
 	"barter-port/internal/platform/logger"
 	"barter-port/internal/platform/mailer"
+	"barter-port/libs/jwt"
 	"log/slog"
 	"regexp"
 	"strconv"
@@ -71,17 +71,7 @@ func main() {
 		RefreshTTL:    refreshTTLMinutes,
 	})
 
-	authService := service.NewService(
-		userRepo,
-		emailTokenRepo,
-		m,
-		infrastructureLogger,
-
-		frontendURL,
-		jwtManager,
-		re,
-	)
-
+	authService := service.NewService(userRepo, emailTokenRepo, m, infrastructureLogger, frontendURL, re)
 	handlers := transport2.NewHandlers(logg, authService, jwtManager, refreshTokenRepo)
 	router := transport2.NewRouter(logg, handlers, jwtManager)
 

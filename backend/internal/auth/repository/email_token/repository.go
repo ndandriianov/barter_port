@@ -4,7 +4,6 @@ import (
 	"barter-port/internal/auth/model"
 	"barter-port/internal/auth/repository"
 	"errors"
-	"sync"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -18,17 +17,11 @@ var (
 )
 
 type Repository struct {
-	mu     sync.RWMutex
-	byHash map[string]model.EmailVerificationToken
-
 	db *pgxpool.Pool
 }
 
 func NewRepository(db *pgxpool.Pool) *Repository {
-	return &Repository{
-		byHash: make(map[string]model.EmailVerificationToken),
-		db:     db,
-	}
+	return &Repository{db: db}
 }
 
 // Save stores a new email verification token in the repository.

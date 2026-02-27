@@ -21,9 +21,7 @@ type Repository struct {
 }
 
 func NewRepository(db *pgxpool.Pool) *Repository {
-	return &Repository{
-		db: db,
-	}
+	return &Repository{db: db}
 }
 
 func (r *Repository) Save(ctx context.Context, token model.RefreshToken) error {

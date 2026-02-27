@@ -21,9 +21,7 @@ type Repository struct {
 }
 
 func NewRepository(db *pgxpool.Pool) *Repository {
-	return &Repository{
-		db: db,
-	}
+	return &Repository{db: db}
 }
 
 // Create adds a new user to the repository.

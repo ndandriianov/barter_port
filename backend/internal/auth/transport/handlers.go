@@ -3,10 +3,10 @@ package transport
 import (
 	"barter-port/internal/auth/model"
 	"barter-port/internal/auth/service"
-	"barter-port/internal/auth/service/jwt"
 	"barter-port/internal/platform/http_api"
+	"barter-port/libs/authkit"
+	"barter-port/libs/jwt"
 
-	"barter-port/internal/authkit"
 	"encoding/json"
 	"errors"
 	"log/slog"
