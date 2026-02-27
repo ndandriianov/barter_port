@@ -24,6 +24,10 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 	return &Repository{db: db}
 }
 
+// Save adds a new refresh token to the repository.
+//
+// Errors:
+//   - ErrRefreshAlreadyExists: Occurs if a refresh token with the same JTI already exists in the repository.
 func (r *Repository) Save(ctx context.Context, token model.RefreshToken) error {
 	query := `
 		INSERT INTO refresh_tokens (jti, user_id, expires_at, revoked)
@@ -41,6 +45,10 @@ func (r *Repository) Save(ctx context.Context, token model.RefreshToken) error {
 	return nil
 }
 
+// GetByJTI retrieves a refresh token by its JTI.
+//
+// Errors:
+//   - ErrRefreshNotFound: Occurs if no refresh token is found with the given JTI.
 func (r *Repository) GetByJTI(ctx context.Context, jti string) (model.RefreshToken, error) {
 	query := `
 		SELECT jti, user_id, expires_at, revoked
@@ -65,6 +73,10 @@ func (r *Repository) GetByJTI(ctx context.Context, jti string) (model.RefreshTok
 	return token, nil
 }
 
+// Revoke marks a refresh token as revoked by its JTI.
+//
+// Errors:
+//   - ErrRefreshNotFound: Occurs if no refresh token is found with the given JTI.
 func (r *Repository) Revoke(ctx context.Context, jti string) error {
 	query := `
 		UPDATE refresh_tokens
@@ -84,6 +96,9 @@ func (r *Repository) Revoke(ctx context.Context, jti string) error {
 	return nil
 }
 
+// DeleteAllForUser removes all refresh tokens associated with a specific user.
+//
+// Errors: returns only internal errors, as the operation is idempotent and does not fail if no tokens are found for the user.
 func (r *Repository) DeleteAllForUser(ctx context.Context, userID uuid.UUID) error {
 	query := `
 		DELETE FROM refresh_tokens

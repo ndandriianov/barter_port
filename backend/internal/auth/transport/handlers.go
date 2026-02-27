@@ -2,6 +2,7 @@ package transport
 
 import (
 	"barter-port/internal/auth/model"
+	"barter-port/internal/auth/repository/refresh_token"
 	"barter-port/internal/auth/service"
 	"barter-port/internal/platform/http_api"
 	"barter-port/libs/authkit"
@@ -344,12 +345,19 @@ func (h *Handlers) Refresh(w http.ResponseWriter, r *http.Request) {
 	// Получение и проверка хранимого refresh токена по JTI из claims
 	storedRefresh, err := h.refreshRepo.GetByJTI(r.Context(), oldRefreshClaims.ID)
 	if err != nil {
-		// TODO: distinguish between "not found" and other errors in the repository
-		logger.Error(
-			"error fetching refresh token from repository",
-			slog.String("error", err.Error()),
+		storedRefreshFailedLogger := logger.With(
 			slog.String("jti", oldRefreshClaims.ID),
 			slog.String("user_id", oldRefreshClaims.UserID.String()),
+		)
+
+		if errors.Is(err, refresh_token.ErrRefreshNotFound) {
+			storedRefreshFailedLogger.Info("refresh token not found in repository")
+			http_api.HandleError(w, logger, http.StatusUnauthorized, ErrUnauthorized)
+			return
+		}
+
+		storedRefreshFailedLogger.Error("error fetching refresh token from repository",
+			slog.String("error", err.Error()),
 		)
 		http_api.HandleError(w, logger, http.StatusInternalServerError, ErrInternalServerError)
 		return
