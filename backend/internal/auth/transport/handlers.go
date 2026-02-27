@@ -5,7 +5,7 @@ import (
 	"barter-port/internal/auth/service"
 	"barter-port/internal/auth/service/jwt"
 	"barter-port/internal/auth/transport/helpers"
-	"barter-port/internal/auth/transport/middleware/auth_jwt"
+	"barter-port/internal/authkit"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -469,15 +469,15 @@ func (h *Handlers) Me(w http.ResponseWriter, r *http.Request) {
 	logger := h.logger.With(slog.String("request_id", requestID))
 	logger.Info("handling me request")
 
-	claims, ok := auth_jwt.GetClaims(r.Context())
+	principal, ok := authkit.PrincipalFromContext(r.Context())
 	if !ok {
-		logger.Error("failed to fetch claims")
+		logger.Error("failed to fetch principal")
 		helpers.HandleError(w, logger, http.StatusInternalServerError, ErrInternalServerError)
 		return
 	}
 
 	logger.Info("successfully fetched user info")
-	helpers.WriteJSON(w, logger, http.StatusOK, meResp{UserID: claims.UserID})
+	helpers.WriteJSON(w, logger, http.StatusOK, meResp{UserID: principal.UserID})
 }
 
 //
