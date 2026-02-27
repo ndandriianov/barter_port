@@ -1,4 +1,4 @@
-package helpers
+package http_api
 
 import (
 	"encoding/json"
@@ -22,10 +22,6 @@ func WriteJSON(w http.ResponseWriter, logger *slog.Logger, status int, v any) {
 	if err != nil && logger != nil {
 		logger.Error("failed to write JSON response", slog.String("error", err.Error()))
 	}
-}
-
-func DecodeJSON(r *http.Request, v any) error {
-	return json.NewDecoder(r.Body).Decode(v)
 }
 
 func HandleError(w http.ResponseWriter, logger *slog.Logger, status int, err error) {
