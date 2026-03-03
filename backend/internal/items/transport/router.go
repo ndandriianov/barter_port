@@ -26,7 +26,8 @@ func NewRouter(logger *slog.Logger, validator *validators.LocalJWT, h *Handlers)
 	r.Group(func(r chi.Router) {
 		r.Use(authkit.Middleware(logger, validator, nil))
 		r.Route("/items", func(r chi.Router) {
-			r.Post("/create", h.HandleCreateItem)
+			r.Post("/", h.HandleCreateItem)
+			r.Get("/", h.HandleGetItems)
 		})
 	})
 

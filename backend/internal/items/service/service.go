@@ -56,12 +56,23 @@ func (s *ItemService) CreateItem(
 	return nil
 }
 
-func (s *ItemService) GetItems(ctx context.Context, query model.ItemQuery) ([]model.Item, error) {
-	switch query.SortType {
+// GetItems retrieves items based on the provided query parameters.
+// It supports pagination through the nextCursor and limit parameters, and sorting based on the sortType.
+//
+// Errors:
+// - ErrInvalidSortType: returned when an unsupported sort type is provided.
+func (s *ItemService) GetItems(
+	ctx context.Context,
+	nextCursor uuid.UUID,
+	limit int,
+	sortType model.SortType,
+) ([]model.Item, error) {
+
+	switch sortType {
 	case model.ByTime:
-		return s.repo.GetItemsOrderByTime(ctx, query.NextCursor, query.Limit)
+		return s.repo.GetItemsOrderByTime(ctx, nextCursor, limit)
 	case model.ByPopularity:
-		return s.repo.GetItemsOrderByPopularity(ctx, query.NextCursor, query.Limit)
+		return s.repo.GetItemsOrderByPopularity(ctx, nextCursor, limit)
 	default:
 		return nil, ErrInvalidSortType
 	}
