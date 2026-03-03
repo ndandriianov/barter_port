@@ -40,6 +40,10 @@ func (h *Handlers) HandleCreateItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Debug("decoded create item request",
+		slog.Any("req", req),
+	)
+
 	err := h.itemService.CreateItem(r.Context(), req.Name, req.Type, req.Action, req.Description)
 	if err != nil {
 		if errors.Is(err, item.ErrInvalidItemName) {
