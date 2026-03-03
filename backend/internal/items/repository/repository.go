@@ -1,4 +1,4 @@
-package item
+package repository
 
 import (
 	"barter-port/internal/items/model"
@@ -10,15 +10,15 @@ import (
 	"golang.org/x/net/context"
 )
 
-type Repository struct {
+type ItemRepository struct {
 	db *pgxpool.Pool
 }
 
-func NewRepository(db *pgxpool.Pool) *Repository {
-	return &Repository{db: db}
+func NewItemRepository(db *pgxpool.Pool) *ItemRepository {
+	return &ItemRepository{db: db}
 }
 
-func (r Repository) AddItem(ctx context.Context, item model.Item) error {
+func (r ItemRepository) AddItem(ctx context.Context, item model.Item) error {
 	query := `
 		INSERT INTO items (id, name, type, action, description, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6)
@@ -28,7 +28,7 @@ func (r Repository) AddItem(ctx context.Context, item model.Item) error {
 	return err
 }
 
-func (r Repository) GetItemsOrderByTime(ctx context.Context, nextCursor uuid.UUID, limit int) ([]model.Item, error) {
+func (r ItemRepository) GetItemsOrderByTime(ctx context.Context, nextCursor uuid.UUID, limit int) ([]model.Item, error) {
 	query := `
 		SELECT id, name, type, action, description, created_at
 		FROM items
@@ -54,7 +54,7 @@ func (r Repository) GetItemsOrderByTime(ctx context.Context, nextCursor uuid.UUI
 	return items, nil
 }
 
-func (r Repository) GetItemsOrderByPopularity(ctx context.Context, nextCursor uuid.UUID, limit int) ([]model.Item, error) {
+func (r ItemRepository) GetItemsOrderByPopularity(ctx context.Context, nextCursor uuid.UUID, limit int) ([]model.Item, error) {
 	query := `
 		SELECT id, name, type, action, description, created_at
 		FROM items

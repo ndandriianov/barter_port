@@ -1,8 +1,8 @@
 package main
 
 import (
-	"barter-port/internal/items/repository/item"
-	item2 "barter-port/internal/items/service/item"
+	"barter-port/internal/items/repository"
+	"barter-port/internal/items/service"
 	"barter-port/internal/items/transport"
 	"barter-port/internal/libs/jwt"
 	"barter-port/internal/libs/platform/database"
@@ -35,7 +35,7 @@ func main() {
 	accessTTLMinutes := time.Duration(mustInt(accessTTL)) * time.Minute
 	refreshTTLMinutes := time.Duration(mustInt(refreshTTL)) * time.Minute
 
-	itemRepo := item.NewRepository(db)
+	itemRepo := repository.NewItemRepository(db)
 
 	jwtManager := jwt.NewManager(jwt.Config{
 		AccessSecret:  accessSecret,
@@ -46,7 +46,7 @@ func main() {
 
 	logg := logger.NewJSONLogger(slog.LevelDebug, "items-service", "")
 
-	itemService := item2.New(itemRepo)
+	itemService := service.NewItemService(itemRepo)
 	handlers := transport.NewHandlers(itemService)
 	router := transport.NewRouter(logg, jwtManager, handlers)
 
