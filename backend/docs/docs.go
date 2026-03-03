@@ -35,7 +35,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_transport.loginReq"
+                            "$ref": "#/definitions/internal_auth_transport.loginReq"
                         }
                     }
                 ],
@@ -43,31 +43,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_transport.loginResp"
+                            "$ref": "#/definitions/internal_auth_transport.loginResp"
                         }
                     },
                     "400": {
                         "description": "Invalid request or credentials",
                         "schema": {
-                            "$ref": "#/definitions/barter-port_internal_transport_helpers.ErrorResponse"
+                            "$ref": "#/definitions/barter-port_internal_libs_platform_http_api.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Incorrect password",
                         "schema": {
-                            "$ref": "#/definitions/barter-port_internal_transport_helpers.ErrorResponse"
+                            "$ref": "#/definitions/barter-port_internal_libs_platform_http_api.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Email not verified",
                         "schema": {
-                            "$ref": "#/definitions/barter-port_internal_transport_helpers.ErrorResponse"
+                            "$ref": "#/definitions/barter-port_internal_libs_platform_http_api.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/barter-port_internal_transport_helpers.ErrorResponse"
+                            "$ref": "#/definitions/barter-port_internal_libs_platform_http_api.ErrorResponse"
                         }
                     }
                 }
@@ -90,7 +90,7 @@ const docTemplate = `{
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/barter-port_internal_transport_helpers.ErrorResponse"
+                            "$ref": "#/definitions/barter-port_internal_libs_platform_http_api.ErrorResponse"
                         }
                     }
                 }
@@ -110,13 +110,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_transport.meResp"
+                            "$ref": "#/definitions/internal_auth_transport.meResp"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/barter-port_internal_transport_helpers.ErrorResponse"
+                            "$ref": "#/definitions/barter-port_internal_libs_platform_http_api.ErrorResponse"
                         }
                     }
                 }
@@ -139,19 +139,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_transport.refreshResponse"
+                            "$ref": "#/definitions/internal_auth_transport.refreshResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized or invalid token",
                         "schema": {
-                            "$ref": "#/definitions/barter-port_internal_transport_helpers.ErrorResponse"
+                            "$ref": "#/definitions/barter-port_internal_libs_platform_http_api.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/barter-port_internal_transport_helpers.ErrorResponse"
+                            "$ref": "#/definitions/barter-port_internal_libs_platform_http_api.ErrorResponse"
                         }
                     }
                 }
@@ -177,7 +177,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/internal_transport.registerReq"
+                            "$ref": "#/definitions/internal_auth_transport.registerReq"
                         }
                     }
                 ],
@@ -185,19 +185,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/internal_transport.registerResp"
+                            "$ref": "#/definitions/internal_auth_transport.registerResp"
                         }
                     },
                     "400": {
                         "description": "Invalid request",
                         "schema": {
-                            "$ref": "#/definitions/barter-port_internal_transport_helpers.ErrorResponse"
+                            "$ref": "#/definitions/barter-port_internal_libs_platform_http_api.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/barter-port_internal_transport_helpers.ErrorResponse"
+                            "$ref": "#/definitions/barter-port_internal_libs_platform_http_api.ErrorResponse"
                         }
                     }
                 }
@@ -223,19 +223,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid request or token",
                         "schema": {
-                            "$ref": "#/definitions/barter-port_internal_transport_helpers.ErrorResponse"
+                            "$ref": "#/definitions/barter-port_internal_libs_platform_http_api.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "User not found",
                         "schema": {
-                            "$ref": "#/definitions/barter-port_internal_transport_helpers.ErrorResponse"
+                            "$ref": "#/definitions/barter-port_internal_libs_platform_http_api.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal server error",
                         "schema": {
-                            "$ref": "#/definitions/barter-port_internal_transport_helpers.ErrorResponse"
+                            "$ref": "#/definitions/barter-port_internal_libs_platform_http_api.ErrorResponse"
                         }
                     }
                 }
@@ -243,7 +243,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "barter-port_internal_transport_helpers.ErrorResponse": {
+        "barter-port_internal_libs_platform_http_api.ErrorResponse": {
             "type": "object",
             "properties": {
                 "error": {
@@ -252,7 +252,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_transport.loginReq": {
+        "internal_auth_transport.loginReq": {
             "type": "object",
             "properties": {
                 "email": {
@@ -263,7 +263,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_transport.loginResp": {
+        "internal_auth_transport.loginResp": {
             "type": "object",
             "properties": {
                 "accessToken": {
@@ -271,7 +271,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_transport.meResp": {
+        "internal_auth_transport.meResp": {
             "type": "object",
             "properties": {
                 "userId": {
@@ -279,7 +279,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_transport.refreshResponse": {
+        "internal_auth_transport.refreshResponse": {
             "type": "object",
             "properties": {
                 "access_token": {
@@ -287,7 +287,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_transport.registerReq": {
+        "internal_auth_transport.registerReq": {
             "type": "object",
             "properties": {
                 "email": {
@@ -298,7 +298,7 @@ const docTemplate = `{
                 }
             }
         },
-        "internal_transport.registerResp": {
+        "internal_auth_transport.registerResp": {
             "type": "object",
             "properties": {
                 "email": {
@@ -314,12 +314,12 @@ const docTemplate = `{
 
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
-	Version:          "",
+	Version:          "1.0.0",
 	Host:             "",
-	BasePath:         "",
-	Schemes:          []string{},
-	Title:            "",
-	Description:      "",
+	BasePath:         "/",
+	Schemes:          []string{"http", "https"},
+	Title:            "Barter Port API",
+	Description:      "API for Barter Port",
 	InfoInstanceName: "swagger",
 	SwaggerTemplate:  docTemplate,
 	LeftDelim:        "{{",
