@@ -44,10 +44,11 @@ func main() {
 	infrastructureLogger := logger.NewJSONLogger(slog.LevelDebug, "", "infrastructure")
 
 	jwtManager := bootstrap.InitJWTManager()
+	validator := bootstrap.InitLocalJWT()
 
 	authService := service.NewService(userRepo, emailTokenRepo, m, infrastructureLogger, frontendURL, re)
 	handlers := transport.NewHandlers(logg, authService, jwtManager, refreshTokenRepo)
-	router := transport.NewRouter(logg, handlers, jwtManager)
+	router := transport.NewRouter(logg, validator, handlers)
 
 	addr := ":8081"
 	log.Println("backend listening on", addr)

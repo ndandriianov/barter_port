@@ -23,10 +23,10 @@ func main() {
 	itemService := service.NewItemService(itemRepo)
 
 	logg := logger.NewJSONLogger(slog.LevelDebug, "items-service", "")
-	jwtManager := bootstrap.InitJWTManager()
+	validator := bootstrap.InitLocalJWT()
 	handlers := transport.NewHandlers(itemService)
 
-	router := transport.NewRouter(logg, jwtManager, handlers)
+	router := transport.NewRouter(logg, validator, handlers)
 
 	addr := ":8080"
 	log.Println("backend listening on", addr)

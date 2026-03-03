@@ -3,7 +3,6 @@ package transport
 import (
 	"barter-port/internal/libs/authkit"
 	"barter-port/internal/libs/authkit/validators"
-	"barter-port/internal/libs/jwt"
 	"log"
 	"log/slog"
 	"net/http"
@@ -15,18 +14,13 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger"
 )
 
-func NewRouter(logger *slog.Logger, h *Handlers, jwtManager *jwt.Manager) http.Handler {
+func NewRouter(logger *slog.Logger, validator *validators.LocalJWT, h *Handlers) http.Handler {
 	if logger == nil {
 		log.Fatal("logger is required")
 	}
 	if h == nil {
 		log.Fatal("handlers are required")
 	}
-	if jwtManager == nil {
-		log.Fatal("jwt service is required")
-	}
-
-	validator := validators.NewLocalJWT(jwtManager)
 
 	r := chi.NewRouter()
 
