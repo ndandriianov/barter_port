@@ -24,7 +24,7 @@ func (r Repository) AddItem(ctx context.Context, item model.Item) error {
 		VALUES ($1, $2, $3, $4, $5, $6)
 	`
 
-	_, err := r.db.Exec(ctx, query, item.ID, item.Name, item.Type, item.Action, item.Description, item.CreatedAt)
+	_, err := r.db.Exec(ctx, query, item.ID, item.Name, item.Type.String(), item.Action.String(), item.Description, item.CreatedAt)
 	return err
 }
 

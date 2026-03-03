@@ -6,7 +6,7 @@ import (
 	"github.com/google/uuid"
 )
 
-//go:generate enumer -type=ItemType -json -text -sql
+//go:generate enumer -type=ItemType -json -text -sql -transform=lower
 type ItemType int
 
 const (
@@ -14,7 +14,7 @@ const (
 	Service
 )
 
-//go:generate enumer -type=ItemAction -json -text -sql
+//go:generate enumer -type=ItemAction -json -text -sql -transform=lower
 type ItemAction int
 
 const (
