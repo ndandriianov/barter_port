@@ -1,0 +1,40 @@
+package transport
+
+import (
+	"barter-port/internal/libs/authkit"
+	"barter-port/internal/libs/authkit/validators"
+	"barter-port/internal/libs/jwt"
+	"log"
+	"log/slog"
+	"net/http"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
+)
+
+func NewRouter(logger *slog.Logger, jwtManager *jwt.Manager, h *Handlers) http.Handler {
+	if logger == nil {
+		log.Fatal("logger is required")
+	}
+	if jwtManager == nil {
+		log.Fatal("jwt service is required")
+	}
+	if h == nil {
+		log.Fatal("handlers are required")
+	}
+
+	validator := validators.NewLocalJWT(jwtManager)
+
+	r := chi.NewRouter()
+
+	r.Use(middleware.RequestID)
+
+	r.Group(func(r chi.Router) {
+		r.Use(authkit.Middleware(logger, validator, nil))
+		r.Route("/items", func(r chi.Router) {
+			r.Post("/create", h.HandleCreateItem)
+		})
+	})
+
+	return r
+}

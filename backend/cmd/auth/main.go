@@ -22,7 +22,14 @@ import (
 	"os"
 )
 
-//go:generate sh -c "cd ../.. && swag init -g cmd/api/main.go --parseInternal --parseDependency"
+//go:generate sh -c "cd ../.. && swag init -g cmd/auth/main.go --parseInternal --parseDependency"
+//go:generate sh -c "cd ../.. && npx -y openapi-to-postmanv2 -s docs/swagger.json -o docs/postman.json -p"
+
+// @title Barter Port API
+// @version 1.0.0
+// @description API for Barter Port
+// @BasePath /
+// @schemes http https
 func main() {
 	_ = godotenv.Load()
 
