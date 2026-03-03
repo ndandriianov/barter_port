@@ -49,8 +49,8 @@ func Middleware(logger *slog.Logger, v Validator, onError ErrorResponder) func(h
 				default:
 					reqLogger.Error("unexpected error validating token", slog.String("error", err.Error()))
 					onError(w, r, http.StatusInternalServerError, err)
-					return
 				}
+				return
 			}
 
 			reqLogger.Debug("user authenticated successfully",

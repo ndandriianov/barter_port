@@ -3,6 +3,7 @@ package transport
 import (
 	"barter-port/internal/libs/authkit"
 	"barter-port/internal/libs/authkit/validators"
+	"barter-port/internal/libs/platform/http_api"
 	"log"
 	"log/slog"
 	"net/http"
@@ -24,6 +25,7 @@ func NewRouter(logger *slog.Logger, validator *validators.LocalJWT, h *Handlers)
 	r.Use(middleware.RequestID)
 
 	r.Group(func(r chi.Router) {
+		r.Use(http_api.LoggerMiddleware(logger))
 		r.Use(authkit.Middleware(logger, validator, nil))
 		r.Route("/items", func(r chi.Router) {
 			r.Post("/", h.HandleCreateItem)
