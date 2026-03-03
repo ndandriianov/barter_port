@@ -2,7 +2,7 @@ package transport
 
 import (
 	"barter-port/internal/items/model"
-	"barter-port/internal/items/service/item"
+	"barter-port/internal/items/service"
 	"barter-port/internal/libs/platform/http_api"
 	"errors"
 	"log/slog"
@@ -46,7 +46,7 @@ func (h *Handlers) HandleCreateItem(w http.ResponseWriter, r *http.Request) {
 
 	err := h.itemService.CreateItem(r.Context(), req.Name, req.Type, req.Action, req.Description)
 	if err != nil {
-		if errors.Is(err, item.ErrInvalidItemName) {
+		if errors.Is(err, service.ErrInvalidItemName) {
 			log.Warn("invalid item name",
 				slog.String("error", err.Error()),
 				slog.String("name", req.Name),

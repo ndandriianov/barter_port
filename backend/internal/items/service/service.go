@@ -1,4 +1,4 @@
-package item
+package service
 
 import (
 	"barter-port/internal/items/model"
@@ -20,15 +20,15 @@ type Repository interface {
 	GetItemsOrderByPopularity(ctx context.Context, nextCursor uuid.UUID, limit int) ([]model.Item, error)
 }
 
-type Service struct {
+type ItemService struct {
 	repo Repository
 }
 
-func New(itemRepository Repository) *Service {
-	return &Service{repo: itemRepository}
+func NewItemService(itemRepository Repository) *ItemService {
+	return &ItemService{repo: itemRepository}
 }
 
-func (s *Service) CreateItem(
+func (s *ItemService) CreateItem(
 	ctx context.Context,
 	name string,
 	itemType model.ItemType,
@@ -56,7 +56,7 @@ func (s *Service) CreateItem(
 	return nil
 }
 
-func (s *Service) GetItems(ctx context.Context, query model.ItemQuery) ([]model.Item, error) {
+func (s *ItemService) GetItems(ctx context.Context, query model.ItemQuery) ([]model.Item, error) {
 	switch query.SortType {
 	case model.ByTime:
 		return s.repo.GetItemsOrderByTime(ctx, query.NextCursor, query.Limit)
