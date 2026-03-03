@@ -331,13 +331,13 @@ func (h *Handlers) Refresh(w http.ResponseWriter, r *http.Request) {
 
 	oldRefreshClaims, err := h.jwtManager.ParseRefreshToken(cookie.Value)
 	if err != nil {
-		if errors.Is(err, jwt.ErrTokenExpired) {
+		if errors.Is(err, authkit.ErrTokenExpired) {
 			logger.Info("refresh token expired", slog.String("error", err.Error()))
-			http_api.HandleError(w, logger, http.StatusUnauthorized, jwt.ErrTokenExpired)
+			http_api.HandleError(w, logger, http.StatusUnauthorized, authkit.ErrTokenExpired)
 			return
 		}
 		logger.Warn("invalid refresh token", slog.String("error", err.Error()))
-		http_api.HandleError(w, logger, http.StatusUnauthorized, jwt.ErrInvalidToken)
+		http_api.HandleError(w, logger, http.StatusUnauthorized, authkit.ErrInvalidToken)
 		return
 	}
 

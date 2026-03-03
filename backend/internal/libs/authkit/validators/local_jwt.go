@@ -2,22 +2,27 @@ package validators
 
 import (
 	"barter-port/internal/libs/authkit"
-	"barter-port/internal/libs/jwt"
 	"errors"
+	"fmt"
 
 	"golang.org/x/net/context"
 )
 
 type LocalJWT struct {
-	manager *jwt.Manager
+	secret string
 }
 
-func NewLocalJWT(manager *jwt.Manager) *LocalJWT {
-	return &LocalJWT{manager: manager}
+func NewLocalJWT(secret string) *LocalJWT {
+	return &LocalJWT{secret: secret}
 }
 
+// ValidateAccess validates the access token and returns the principal if valid.
+//
+// Errors: it returns
+//   - authkit.ErrTokenExpired if the token is expired
+//   - authkit.ErrInvalidToken if the token is invalid for any reason, also wrapping the original error for more context
 func (v *LocalJWT) ValidateAccess(_ context.Context, token string) (authkit.Principal, error) {
-	claims, err := v.manager.ParseAccessToken(token)
+	claims, err := authkit.ParseToken(token, authkit.AccessToken, v.secret)
 	if err != nil {
 		return authkit.Principal{}, mapJWTError(err)
 	}
@@ -44,13 +49,13 @@ func (v *LocalJWT) ValidateAccess(_ context.Context, token string) (authkit.Prin
 
 func mapJWTError(err error) error {
 	switch {
-	case errors.Is(err, jwt.ErrTokenExpired):
-		return errors.Join(authkit.ErrTokenExpired, err)
+	case errors.Is(err, authkit.ErrTokenExpired):
+		return err
 
-	case errors.Is(err, jwt.ErrInvalidToken),
-		errors.Is(err, jwt.ErrInvalidTokenType),
-		errors.Is(err, jwt.ErrUnexpectedSigningMethod):
-		return errors.Join(authkit.ErrInvalidToken, err)
+	case errors.Is(err, authkit.ErrInvalidToken),
+		errors.Is(err, authkit.ErrInvalidTokenType),
+		errors.Is(err, authkit.ErrUnexpectedSigningMethod):
+		return fmt.Errorf("%w: %v", authkit.ErrInvalidToken, err)
 
 	default:
 		return err
