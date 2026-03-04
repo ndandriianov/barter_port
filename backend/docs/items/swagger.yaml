@@ -1,0 +1,170 @@
+basePath: /
+definitions:
+  http_api.ErrorResponse:
+    properties:
+      error:
+        description: The error message
+        type: string
+    type: object
+  model.Item:
+    properties:
+      action:
+        $ref: '#/definitions/model.ItemAction'
+      createdAt:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      type:
+        $ref: '#/definitions/model.ItemType'
+      views:
+        type: integer
+    type: object
+  model.ItemAction:
+    enum:
+    - 0
+    - 1
+    type: integer
+    x-enum-varnames:
+    - Give
+    - Take
+  model.ItemType:
+    enum:
+    - 0
+    - 1
+    type: integer
+    x-enum-varnames:
+    - Good
+    - Service
+  model.SortType:
+    enum:
+    - 0
+    - 1
+    type: integer
+    x-enum-varnames:
+    - ByTime
+    - ByPopularity
+  model.UniversalCursor:
+    properties:
+      createdAt:
+        type: string
+      id:
+        type: string
+      views:
+        type: integer
+    type: object
+  transport.CreateItemRequest:
+    properties:
+      action:
+        allOf:
+        - $ref: '#/definitions/model.ItemAction'
+        description: Action associated with the item
+      description:
+        description: Description of the item
+        type: string
+      name:
+        description: Name of the item
+        type: string
+      type:
+        allOf:
+        - $ref: '#/definitions/model.ItemType'
+        description: Type of the item
+    type: object
+  transport.GetItemRequest:
+    properties:
+      cursor:
+        allOf:
+        - $ref: '#/definitions/model.UniversalCursor'
+        description: Cursor for pagination
+      limit:
+        description: Maximum number of items to fetch
+        type: integer
+      sort_type:
+        allOf:
+        - $ref: '#/definitions/model.SortType'
+        description: Sorting type for items
+    type: object
+  transport.GetItemResponse:
+    properties:
+      cursor:
+        allOf:
+        - $ref: '#/definitions/model.UniversalCursor'
+        description: Cursor for the next page
+      items:
+        description: List of items
+        items:
+          $ref: '#/definitions/model.Item'
+        type: array
+    type: object
+info:
+  contact: {}
+  description: API for Barter Port
+  title: Barter Port API
+  version: 1.0.0
+paths:
+  /items:
+    get:
+      consumes:
+      - application/json
+      description: Fetch a list of items with optional sorting and pagination
+      parameters:
+      - description: Get Items Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/transport.GetItemRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: List of items
+          schema:
+            $ref: '#/definitions/transport.GetItemResponse'
+        "400":
+          description: Invalid input
+          schema:
+            $ref: '#/definitions/http_api.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/http_api.ErrorResponse'
+      summary: Get a list of items
+      tags:
+      - items
+    post:
+      consumes:
+      - application/json
+      description: Create a new item with the provided details
+      parameters:
+      - description: Create Item Request
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/transport.CreateItemRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            type: string
+        "400":
+          description: Invalid input
+          schema:
+            $ref: '#/definitions/http_api.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/http_api.ErrorResponse'
+      summary: Create a new item
+      tags:
+      - items
+schemes:
+- http
+- https
+swagger: "2.0"

@@ -1,41 +1,41 @@
 basePath: /
 definitions:
-  barter-port_internal_libs_platform_http_api.ErrorResponse:
+  http_api.ErrorResponse:
     properties:
       error:
         description: The error message
         type: string
     type: object
-  internal_auth_transport.loginReq:
+  transport.loginReq:
     properties:
       email:
         type: string
       password:
         type: string
     type: object
-  internal_auth_transport.loginResp:
+  transport.loginResp:
     properties:
       accessToken:
         type: string
     type: object
-  internal_auth_transport.meResp:
+  transport.meResp:
     properties:
       userId:
         type: string
     type: object
-  internal_auth_transport.refreshResponse:
+  transport.refreshResponse:
     properties:
       access_token:
         type: string
     type: object
-  internal_auth_transport.registerReq:
+  transport.registerReq:
     properties:
       email:
         type: string
       password:
         type: string
     type: object
-  internal_auth_transport.registerResp:
+  transport.registerResp:
     properties:
       email:
         type: string
@@ -59,30 +59,30 @@ paths:
         name: loginReq
         required: true
         schema:
-          $ref: '#/definitions/internal_auth_transport.loginReq'
+          $ref: '#/definitions/transport.loginReq'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_auth_transport.loginResp'
+            $ref: '#/definitions/transport.loginResp'
         "400":
           description: Invalid request or credentials
           schema:
-            $ref: '#/definitions/barter-port_internal_libs_platform_http_api.ErrorResponse'
+            $ref: '#/definitions/http_api.ErrorResponse'
         "401":
           description: Incorrect password
           schema:
-            $ref: '#/definitions/barter-port_internal_libs_platform_http_api.ErrorResponse'
+            $ref: '#/definitions/http_api.ErrorResponse'
         "403":
           description: Email not verified
           schema:
-            $ref: '#/definitions/barter-port_internal_libs_platform_http_api.ErrorResponse'
+            $ref: '#/definitions/http_api.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/barter-port_internal_libs_platform_http_api.ErrorResponse'
+            $ref: '#/definitions/http_api.ErrorResponse'
       summary: Login user
       tags:
       - auth
@@ -97,7 +97,7 @@ paths:
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/barter-port_internal_libs_platform_http_api.ErrorResponse'
+            $ref: '#/definitions/http_api.ErrorResponse'
       summary: Logout user
       tags:
       - auth
@@ -110,11 +110,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_auth_transport.meResp'
+            $ref: '#/definitions/transport.meResp'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/barter-port_internal_libs_platform_http_api.ErrorResponse'
+            $ref: '#/definitions/http_api.ErrorResponse'
       summary: Get user info
       tags:
       - auth
@@ -129,15 +129,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_auth_transport.refreshResponse'
+            $ref: '#/definitions/transport.refreshResponse'
         "401":
           description: Unauthorized or invalid token
           schema:
-            $ref: '#/definitions/barter-port_internal_libs_platform_http_api.ErrorResponse'
+            $ref: '#/definitions/http_api.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/barter-port_internal_libs_platform_http_api.ErrorResponse'
+            $ref: '#/definitions/http_api.ErrorResponse'
       summary: Refresh tokens
       tags:
       - auth
@@ -152,22 +152,22 @@ paths:
         name: registerReq
         required: true
         schema:
-          $ref: '#/definitions/internal_auth_transport.registerReq'
+          $ref: '#/definitions/transport.registerReq'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/internal_auth_transport.registerResp'
+            $ref: '#/definitions/transport.registerResp'
         "400":
           description: Invalid request
           schema:
-            $ref: '#/definitions/barter-port_internal_libs_platform_http_api.ErrorResponse'
+            $ref: '#/definitions/http_api.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/barter-port_internal_libs_platform_http_api.ErrorResponse'
+            $ref: '#/definitions/http_api.ErrorResponse'
       summary: Register a new user
       tags:
       - auth
@@ -184,15 +184,15 @@ paths:
         "400":
           description: Invalid request or token
           schema:
-            $ref: '#/definitions/barter-port_internal_libs_platform_http_api.ErrorResponse'
+            $ref: '#/definitions/http_api.ErrorResponse'
         "404":
           description: User not found
           schema:
-            $ref: '#/definitions/barter-port_internal_libs_platform_http_api.ErrorResponse'
+            $ref: '#/definitions/http_api.ErrorResponse'
         "500":
           description: Internal server error
           schema:
-            $ref: '#/definitions/barter-port_internal_libs_platform_http_api.ErrorResponse'
+            $ref: '#/definitions/http_api.ErrorResponse'
       summary: Verify email
       tags:
       - auth

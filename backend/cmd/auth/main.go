@@ -17,8 +17,7 @@ import (
 	"net/http"
 )
 
-//go:generate sh -c "cd ../.. && swag init -g cmd/auth/main.go --parseInternal --parseDependency"
-//go:generate sh -c "cd ../.. && npx -y openapi-to-postmanv2 -s docs/swagger.json -o docs/postman.json -p"
+//go:generate bash ../../scripts/generate-swagger-auth.sh
 
 // @title Barter Port API
 // @version 1.0.0
