@@ -19,10 +19,11 @@ func main() {
 	db := bootstrap.InitDatabase()
 	defer db.Close()
 
-	itemRepo := repository.NewItemRepository(db)
-	itemService := service.NewItemService(itemRepo)
-
 	logg := logger.NewJSONLogger(slog.LevelDebug, "items-service", "")
+
+	itemRepo := repository.NewItemRepository(db)
+	itemService := service.NewItemService(itemRepo, logg)
+
 	validator := bootstrap.InitLocalJWT()
 	handlers := transport.NewHandlers(itemService)
 
