@@ -9,8 +9,10 @@ definitions:
   transport.loginReq:
     properties:
       email:
+        example: user@email.com
         type: string
       password:
+        example: password
         type: string
     type: object
   transport.loginResp:
@@ -31,8 +33,10 @@ definitions:
   transport.registerReq:
     properties:
       email:
+        example: user@email.com
         type: string
       password:
+        example: password
         type: string
     type: object
   transport.registerResp:
@@ -42,6 +46,13 @@ definitions:
       userId:
         type: string
     type: object
+  transport.verifyEmailReq:
+    properties:
+      token:
+        example: iT1VWZWO1apO2GGoXG1ahOKuHlo8WA6ESwA86WMOTiI
+        type: string
+    type: object
+host: localhost:8081
 info:
   contact: {}
   description: API for Barter Port
@@ -115,6 +126,8 @@ paths:
           description: Internal server error
           schema:
             $ref: '#/definitions/http_api.ErrorResponse'
+      security:
+      - BearerAuth: []
       summary: Get user info
       tags:
       - auth
@@ -123,6 +136,12 @@ paths:
       consumes:
       - application/json
       description: Refreshes access and refresh tokens using the refresh token
+      parameters:
+      - description: refresh_token=<JWT refresh token>
+        in: header
+        name: Cookie
+        required: true
+        type: string
       produces:
       - application/json
       responses:
@@ -176,6 +195,13 @@ paths:
       consumes:
       - application/json
       description: Verifies a user's email using a token
+      parameters:
+      - description: Verify email request
+        in: body
+        name: verifyEmailReq
+        required: true
+        schema:
+          $ref: '#/definitions/transport.verifyEmailReq'
       produces:
       - text/plain
       responses:
@@ -199,4 +225,9 @@ paths:
 schemes:
 - http
 - https
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"

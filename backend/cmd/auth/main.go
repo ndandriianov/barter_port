@@ -22,8 +22,12 @@ import (
 // @title Barter Port API
 // @version 1.0.0
 // @description API for Barter Port
+// @host localhost:8081
 // @BasePath /
 // @schemes http https
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 func main() {
 	_ = godotenv.Load()
 

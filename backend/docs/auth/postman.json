@@ -9,7 +9,7 @@
                     "description": "",
                     "item": [
                         {
-                            "id": "b5db0ca2-a753-43b7-866e-5759da959933",
+                            "id": "a14490ce-8503-4b1b-843c-aa1f540f5655",
                             "name": "Login user",
                             "request": {
                                 "name": "Login user",
@@ -53,7 +53,7 @@
                             },
                             "response": [
                                 {
-                                    "id": "337df41a-fbfb-4092-ad5e-4da07332b2fd",
+                                    "id": "4e417317-5dfa-46e2-91bf-86d7a9565f51",
                                     "name": "OK",
                                     "originalRequest": {
                                         "url": {
@@ -102,7 +102,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "6dad3266-bb58-41e0-89ee-a49788714ffe",
+                                    "id": "936d3645-44b9-4be2-b36e-e648cdbddc1d",
                                     "name": "Invalid request or credentials",
                                     "originalRequest": {
                                         "url": {
@@ -151,7 +151,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "825bb58e-88b1-435e-830b-df45288de0aa",
+                                    "id": "b643a66b-e2d7-4c0a-9722-a412d6b21bff",
                                     "name": "Incorrect password",
                                     "originalRequest": {
                                         "url": {
@@ -200,7 +200,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "973d93d2-8193-4f99-a4a2-47bb666efa80",
+                                    "id": "edcc4c19-6546-42ec-a5ac-69a3785b441d",
                                     "name": "Email not verified",
                                     "originalRequest": {
                                         "url": {
@@ -249,7 +249,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "e4ffa188-e148-417c-83ff-d717b2682b75",
+                                    "id": "97af919f-c3c0-4440-b7fb-ef5111a1674b",
                                     "name": "Internal server error",
                                     "originalRequest": {
                                         "url": {
@@ -310,7 +310,7 @@
                     "description": "",
                     "item": [
                         {
-                            "id": "85d3bb79-704c-4d85-8ecb-87189eac7f0b",
+                            "id": "ffc6ff52-ff58-4ace-be0e-8c369900ac5d",
                             "name": "Logout user",
                             "request": {
                                 "name": "Logout user",
@@ -341,7 +341,7 @@
                             },
                             "response": [
                                 {
-                                    "id": "674acbfe-107f-4bf1-9331-dd4ad29eb573",
+                                    "id": "7826d780-deac-4653-b246-be7935726288",
                                     "name": "Logout successful",
                                     "originalRequest": {
                                         "url": {
@@ -365,7 +365,7 @@
                                     "_postman_previewlanguage": "text"
                                 },
                                 {
-                                    "id": "0824fde1-b490-43d7-889a-2259af143c10",
+                                    "id": "104e3124-0f6c-4b63-88d0-7387d41decce",
                                     "name": "Internal server error",
                                     "originalRequest": {
                                         "url": {
@@ -413,7 +413,7 @@
                     "description": "",
                     "item": [
                         {
-                            "id": "5423969e-ad39-4879-910e-6b4d22769706",
+                            "id": "5dc4101f-92cb-48c8-8545-a3981c537e2e",
                             "name": "Get user info",
                             "request": {
                                 "name": "Get user info",
@@ -440,11 +440,27 @@
                                 ],
                                 "method": "GET",
                                 "body": {},
-                                "auth": null
+                                "auth": {
+                                    "type": "apikey",
+                                    "apikey": [
+                                        {
+                                            "key": "key",
+                                            "value": "Authorization"
+                                        },
+                                        {
+                                            "key": "value",
+                                            "value": "{{apiKey}}"
+                                        },
+                                        {
+                                            "key": "in",
+                                            "value": "header"
+                                        }
+                                    ]
+                                }
                             },
                             "response": [
                                 {
-                                    "id": "63b6079b-9339-4887-a5ed-f42e68d2d0e4",
+                                    "id": "da14dce5-70cf-4ec5-ac57-9115f760a766",
                                     "name": "OK",
                                     "originalRequest": {
                                         "url": {
@@ -462,6 +478,14 @@
                                             {
                                                 "key": "Accept",
                                                 "value": "application/json"
+                                            },
+                                            {
+                                                "description": {
+                                                    "content": "Added as a part of security scheme: apikey",
+                                                    "type": "text/plain"
+                                                },
+                                                "key": "Authorization",
+                                                "value": "<API Key>"
                                             }
                                         ],
                                         "method": "GET",
@@ -480,7 +504,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "f589615a-63ef-4802-9bc8-cd1b9d08f1df",
+                                    "id": "628be68e-f22e-4ed5-8189-11c7474d5192",
                                     "name": "Internal server error",
                                     "originalRequest": {
                                         "url": {
@@ -498,6 +522,14 @@
                                             {
                                                 "key": "Accept",
                                                 "value": "application/json"
+                                            },
+                                            {
+                                                "description": {
+                                                    "content": "Added as a part of security scheme: apikey",
+                                                    "type": "text/plain"
+                                                },
+                                                "key": "Authorization",
+                                                "value": "<API Key>"
                                             }
                                         ],
                                         "method": "GET",
@@ -528,7 +560,7 @@
                     "description": "",
                     "item": [
                         {
-                            "id": "564f7065-c757-4048-9c6b-13d5dc37478e",
+                            "id": "d55ed70d-71ff-408d-9c14-9ac2af0c0383",
                             "name": "Refresh tokens",
                             "request": {
                                 "name": "Refresh tokens",
@@ -549,6 +581,15 @@
                                 },
                                 "header": [
                                     {
+                                        "disabled": false,
+                                        "description": {
+                                            "content": "(Required) refresh_token=<JWT refresh token>",
+                                            "type": "text/plain"
+                                        },
+                                        "key": "Cookie",
+                                        "value": "<string>"
+                                    },
+                                    {
                                         "key": "Accept",
                                         "value": "application/json"
                                     }
@@ -559,7 +600,7 @@
                             },
                             "response": [
                                 {
-                                    "id": "d1c55a7f-ce0b-4ac2-b8a1-59a34c8988ff",
+                                    "id": "141c2b91-b341-4d74-8506-31cb67ca81a4",
                                     "name": "OK",
                                     "originalRequest": {
                                         "url": {
@@ -574,6 +615,15 @@
                                             "variable": []
                                         },
                                         "header": [
+                                            {
+                                                "disabled": false,
+                                                "description": {
+                                                    "content": "(Required) refresh_token=<JWT refresh token>",
+                                                    "type": "text/plain"
+                                                },
+                                                "key": "Cookie",
+                                                "value": "<string>"
+                                            },
                                             {
                                                 "key": "Accept",
                                                 "value": "application/json"
@@ -595,7 +645,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "9bd75e83-d8f0-4849-951b-5d1f0a08ae5a",
+                                    "id": "9ce26a6d-d45f-4c9d-98a3-6862c11f0029",
                                     "name": "Unauthorized or invalid token",
                                     "originalRequest": {
                                         "url": {
@@ -610,6 +660,15 @@
                                             "variable": []
                                         },
                                         "header": [
+                                            {
+                                                "disabled": false,
+                                                "description": {
+                                                    "content": "(Required) refresh_token=<JWT refresh token>",
+                                                    "type": "text/plain"
+                                                },
+                                                "key": "Cookie",
+                                                "value": "<string>"
+                                            },
                                             {
                                                 "key": "Accept",
                                                 "value": "application/json"
@@ -631,7 +690,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "3d1afb2c-62d7-4f27-a8e7-18d433e1f542",
+                                    "id": "fe902c59-288f-4e8d-895d-676606592c78",
                                     "name": "Internal server error",
                                     "originalRequest": {
                                         "url": {
@@ -646,6 +705,15 @@
                                             "variable": []
                                         },
                                         "header": [
+                                            {
+                                                "disabled": false,
+                                                "description": {
+                                                    "content": "(Required) refresh_token=<JWT refresh token>",
+                                                    "type": "text/plain"
+                                                },
+                                                "key": "Cookie",
+                                                "value": "<string>"
+                                            },
                                             {
                                                 "key": "Accept",
                                                 "value": "application/json"
@@ -679,7 +747,7 @@
                     "description": "",
                     "item": [
                         {
-                            "id": "254d4087-0343-480a-ade3-8e7c8fae1e3b",
+                            "id": "38f38d18-a562-4ed9-9b57-913dd55aa02b",
                             "name": "Register a new user",
                             "request": {
                                 "name": "Register a new user",
@@ -723,7 +791,7 @@
                             },
                             "response": [
                                 {
-                                    "id": "384d89ec-ce72-4469-a1d0-ddb09ad943b0",
+                                    "id": "e1d3222a-8d8e-4b14-9739-a1251e521bab",
                                     "name": "OK",
                                     "originalRequest": {
                                         "url": {
@@ -772,7 +840,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "f3a6fdf9-da42-4bd2-9949-64f4e5fac087",
+                                    "id": "ffc13649-eabf-4d00-ae76-1480d127299e",
                                     "name": "Invalid request",
                                     "originalRequest": {
                                         "url": {
@@ -821,7 +889,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "c674c1d4-3f46-4930-bf19-fddfc6316746",
+                                    "id": "f04c7545-5689-4e06-a046-7df899ca1812",
                                     "name": "Internal server error",
                                     "originalRequest": {
                                         "url": {
@@ -882,7 +950,7 @@
                     "description": "",
                     "item": [
                         {
-                            "id": "10c24823-93f4-4ad6-88cb-74633e109b74",
+                            "id": "ff6b1a70-c32a-442f-a528-75ef325d7ab4",
                             "name": "Verify email",
                             "request": {
                                 "name": "Verify email",
@@ -903,17 +971,30 @@
                                 },
                                 "header": [
                                     {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
                                         "key": "Accept",
                                         "value": "text/plain"
                                     }
                                 ],
                                 "method": "POST",
-                                "body": {},
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"token\": \"<string>\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "headerFamily": "json",
+                                            "language": "json"
+                                        }
+                                    }
+                                },
                                 "auth": null
                             },
                             "response": [
                                 {
-                                    "id": "37359db3-b36a-451b-b9c2-5f99db0c3897",
+                                    "id": "ad8c54e6-a58b-4e62-966f-85f319f650dd",
                                     "name": "status: ok",
                                     "originalRequest": {
                                         "url": {
@@ -927,8 +1008,23 @@
                                             "query": [],
                                             "variable": []
                                         },
+                                        "header": [
+                                            {
+                                                "key": "Content-Type",
+                                                "value": "application/json"
+                                            }
+                                        ],
                                         "method": "POST",
-                                        "body": {}
+                                        "body": {
+                                            "mode": "raw",
+                                            "raw": "{\n  \"token\": \"<string>\"\n}",
+                                            "options": {
+                                                "raw": {
+                                                    "headerFamily": "json",
+                                                    "language": "json"
+                                                }
+                                            }
+                                        }
                                     },
                                     "status": "OK",
                                     "code": 200,
@@ -937,7 +1033,7 @@
                                     "_postman_previewlanguage": "text"
                                 },
                                 {
-                                    "id": "79a90ec3-ceb8-4f1d-b610-3c16ec83a93e",
+                                    "id": "1d29f741-8ee2-49cb-80c5-4c9e42b781b8",
                                     "name": "Invalid request or token",
                                     "originalRequest": {
                                         "url": {
@@ -953,12 +1049,25 @@
                                         },
                                         "header": [
                                             {
+                                                "key": "Content-Type",
+                                                "value": "application/json"
+                                            },
+                                            {
                                                 "key": "Accept",
                                                 "value": "text/plain"
                                             }
                                         ],
                                         "method": "POST",
-                                        "body": {}
+                                        "body": {
+                                            "mode": "raw",
+                                            "raw": "{\n  \"token\": \"<string>\"\n}",
+                                            "options": {
+                                                "raw": {
+                                                    "headerFamily": "json",
+                                                    "language": "json"
+                                                }
+                                            }
+                                        }
                                     },
                                     "status": "Bad Request",
                                     "code": 400,
@@ -973,7 +1082,7 @@
                                     "_postman_previewlanguage": "text"
                                 },
                                 {
-                                    "id": "7a4b7805-e348-4c68-92e2-d539fb6b89ed",
+                                    "id": "29170d94-e1fb-4430-95be-364266dfd877",
                                     "name": "User not found",
                                     "originalRequest": {
                                         "url": {
@@ -989,12 +1098,25 @@
                                         },
                                         "header": [
                                             {
+                                                "key": "Content-Type",
+                                                "value": "application/json"
+                                            },
+                                            {
                                                 "key": "Accept",
                                                 "value": "text/plain"
                                             }
                                         ],
                                         "method": "POST",
-                                        "body": {}
+                                        "body": {
+                                            "mode": "raw",
+                                            "raw": "{\n  \"token\": \"<string>\"\n}",
+                                            "options": {
+                                                "raw": {
+                                                    "headerFamily": "json",
+                                                    "language": "json"
+                                                }
+                                            }
+                                        }
                                     },
                                     "status": "Not Found",
                                     "code": 404,
@@ -1009,7 +1131,7 @@
                                     "_postman_previewlanguage": "text"
                                 },
                                 {
-                                    "id": "27ec854a-48f2-4e2e-89d2-934b853622b5",
+                                    "id": "9c541e51-7611-47e9-8cb8-146ea09bd6f0",
                                     "name": "Internal server error",
                                     "originalRequest": {
                                         "url": {
@@ -1025,12 +1147,25 @@
                                         },
                                         "header": [
                                             {
+                                                "key": "Content-Type",
+                                                "value": "application/json"
+                                            },
+                                            {
                                                 "key": "Accept",
                                                 "value": "text/plain"
                                             }
                                         ],
                                         "method": "POST",
-                                        "body": {}
+                                        "body": {
+                                            "mode": "raw",
+                                            "raw": "{\n  \"token\": \"<string>\"\n}",
+                                            "options": {
+                                                "raw": {
+                                                    "headerFamily": "json",
+                                                    "language": "json"
+                                                }
+                                            }
+                                        }
                                     },
                                     "status": "Internal Server Error",
                                     "code": 500,
@@ -1059,11 +1194,11 @@
     "variable": [
         {
             "key": "baseUrl",
-            "value": "/"
+            "value": "http://localhost:8081"
         }
     ],
     "info": {
-        "_postman_id": "6fa04d0c-4bab-48e3-a351-769425ef1339",
+        "_postman_id": "f17855f9-6b67-432b-9995-a9db7cd676fe",
         "name": "Barter Port API",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
         "description": {

@@ -98,6 +98,11 @@ const docTemplate = `{
         },
         "/auth/me": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Retrieves information about the authenticated user",
                 "produces": [
                     "application/json"
@@ -135,6 +140,15 @@ const docTemplate = `{
                     "auth"
                 ],
                 "summary": "Refresh tokens",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "refresh_token=\u003cJWT refresh token\u003e",
+                        "name": "Cookie",
+                        "in": "header",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -216,6 +230,17 @@ const docTemplate = `{
                     "auth"
                 ],
                 "summary": "Verify email",
+                "parameters": [
+                    {
+                        "description": "Verify email request",
+                        "name": "verifyEmailReq",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/transport.verifyEmailReq"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "status: ok"
@@ -256,10 +281,12 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "user@email.com"
                 },
                 "password": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "password"
                 }
             }
         },
@@ -291,10 +318,12 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "email": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "user@email.com"
                 },
                 "password": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "password"
                 }
             }
         },
@@ -308,6 +337,22 @@ const docTemplate = `{
                     "type": "string"
                 }
             }
+        },
+        "transport.verifyEmailReq": {
+            "type": "object",
+            "properties": {
+                "token": {
+                    "type": "string",
+                    "example": "iT1VWZWO1apO2GGoXG1ahOKuHlo8WA6ESwA86WMOTiI"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
         }
     }
 }`
@@ -315,7 +360,7 @@ const docTemplate = `{
 // SwaggerInfo holds exported Swagger Info so clients can modify it
 var SwaggerInfo = &swag.Spec{
 	Version:          "1.0.0",
-	Host:             "",
+	Host:             "localhost:8081",
 	BasePath:         "/",
 	Schemes:          []string{"http", "https"},
 	Title:            "Barter Port API",
