@@ -1,0 +1,264 @@
+{
+    "schemes": [
+        "http",
+        "https"
+    ],
+    "swagger": "2.0",
+    "info": {
+        "description": "API for Barter Port",
+        "title": "Barter Port API",
+        "contact": {},
+        "version": "1.0.0"
+    },
+    "basePath": "/",
+    "paths": {
+        "/items": {
+            "get": {
+                "description": "Fetch a list of items with optional sorting and pagination",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "items"
+                ],
+                "summary": "Get a list of items",
+                "parameters": [
+                    {
+                        "description": "Get Items Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/transport.GetItemRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "List of items",
+                        "schema": {
+                            "$ref": "#/definitions/transport.GetItemResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input",
+                        "schema": {
+                            "$ref": "#/definitions/http_api.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/http_api.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Create a new item with the provided details",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "items"
+                ],
+                "summary": "Create a new item",
+                "parameters": [
+                    {
+                        "description": "Create Item Request",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/transport.CreateItemRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid input",
+                        "schema": {
+                            "$ref": "#/definitions/http_api.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/http_api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "http_api.ErrorResponse": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "description": "The error message",
+                    "type": "string"
+                }
+            }
+        },
+        "model.Item": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "$ref": "#/definitions/model.ItemAction"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "type": {
+                    "$ref": "#/definitions/model.ItemType"
+                },
+                "views": {
+                    "type": "integer"
+                }
+            }
+        },
+        "model.ItemAction": {
+            "type": "integer",
+            "enum": [
+                0,
+                1
+            ],
+            "x-enum-varnames": [
+                "Give",
+                "Take"
+            ]
+        },
+        "model.ItemType": {
+            "type": "integer",
+            "enum": [
+                0,
+                1
+            ],
+            "x-enum-varnames": [
+                "Good",
+                "Service"
+            ]
+        },
+        "model.SortType": {
+            "type": "integer",
+            "enum": [
+                0,
+                1
+            ],
+            "x-enum-varnames": [
+                "ByTime",
+                "ByPopularity"
+            ]
+        },
+        "model.UniversalCursor": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "views": {
+                    "type": "integer"
+                }
+            }
+        },
+        "transport.CreateItemRequest": {
+            "type": "object",
+            "properties": {
+                "action": {
+                    "description": "Action associated with the item",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.ItemAction"
+                        }
+                    ]
+                },
+                "description": {
+                    "description": "Description of the item",
+                    "type": "string"
+                },
+                "name": {
+                    "description": "Name of the item",
+                    "type": "string"
+                },
+                "type": {
+                    "description": "Type of the item",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.ItemType"
+                        }
+                    ]
+                }
+            }
+        },
+        "transport.GetItemRequest": {
+            "type": "object",
+            "properties": {
+                "cursor": {
+                    "description": "Cursor for pagination",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.UniversalCursor"
+                        }
+                    ]
+                },
+                "limit": {
+                    "description": "Maximum number of items to fetch",
+                    "type": "integer"
+                },
+                "sort_type": {
+                    "description": "Sorting type for items",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.SortType"
+                        }
+                    ]
+                }
+            }
+        },
+        "transport.GetItemResponse": {
+            "type": "object",
+            "properties": {
+                "cursor": {
+                    "description": "Cursor for the next page",
+                    "allOf": [
+                        {
+                            "$ref": "#/definitions/model.UniversalCursor"
+                        }
+                    ]
+                },
+                "items": {
+                    "description": "List of items",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Item"
+                    }
+                }
+            }
+        }
+    }
+}

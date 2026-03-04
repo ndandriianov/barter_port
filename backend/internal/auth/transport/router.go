@@ -7,7 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	_ "barter-port/docs"
+	_ "barter-port/docs/auth"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"

@@ -13,6 +13,13 @@ import (
 	"github.com/joho/godotenv"
 )
 
+//go:generate bash ../../scripts/generate-swagger-items.sh
+
+// @title Barter Port API
+// @version 1.0.0
+// @description API for Barter Port
+// @BasePath /
+// @schemes http https
 func main() {
 	_ = godotenv.Load()
 

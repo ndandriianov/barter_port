@@ -29,13 +29,26 @@ func NewHandlers(itemService itemService) *Handlers {
 // CREATE_ITEM request and response structures and handler
 //
 
+// CreateItemRequest represents the request payload for creating an item.
+// swagger:model CreateItemRequest
 type CreateItemRequest struct {
-	Name        string           `json:"name"`
-	Type        model.ItemType   `json:"type"`
-	Action      model.ItemAction `json:"action"`
-	Description string           `json:"description"`
+	Name        string           `json:"name"`        // Name of the item
+	Type        model.ItemType   `json:"type"`        // Type of the item
+	Action      model.ItemAction `json:"action"`      // Action associated with the item
+	Description string           `json:"description"` // Description of the item
 }
 
+// HandleCreateItem handles the creation of a new item.
+// @Summary Create a new item
+// @Description Create a new item with the provided details
+// @Tags items
+// @Accept json
+// @Produce json
+// @Param request body CreateItemRequest true "Create Item Request"
+// @Success 201 {string} string "Created"
+// @Failure 400 {object} http_api.ErrorResponse "Invalid input"
+// @Failure 500 {object} http_api.ErrorResponse "Internal server error"
+// @Router /items [post]
 func (h *Handlers) HandleCreateItem(w http.ResponseWriter, r *http.Request) {
 	log := logger.LogFrom(r.Context(), slog.Default())
 	log.Info("handling register request")
@@ -71,17 +84,32 @@ func (h *Handlers) HandleCreateItem(w http.ResponseWriter, r *http.Request) {
 // GET_ITEMS request and response structures and handler
 //
 
+// GetItemRequest represents the request payload for fetching items.
+// swagger:model GetItemRequest
 type GetItemRequest struct {
-	SortType model.SortType        `json:"sort_type"`
-	Cursor   model.UniversalCursor `json:"cursor"`
-	Limit    int                   `json:"limit"`
+	SortType model.SortType        `json:"sort_type"` // Sorting type for items
+	Cursor   model.UniversalCursor `json:"cursor"`    // Cursor for pagination
+	Limit    int                   `json:"limit"`     // Maximum number of items to fetch
 }
 
+// GetItemResponse represents the response payload for fetching items.
+// swagger:model GetItemResponse
 type GetItemResponse struct {
-	Items  []model.Item          `json:"items"`
-	Cursor model.UniversalCursor `json:"cursor"`
+	Items  []model.Item          `json:"items"`  // List of items
+	Cursor model.UniversalCursor `json:"cursor"` // Cursor for the next page
 }
 
+// HandleGetItems handles fetching a list of items.
+// @Summary Get a list of items
+// @Description Fetch a list of items with optional sorting and pagination
+// @Tags items
+// @Accept json
+// @Produce json
+// @Param request body GetItemRequest true "Get Items Request"
+// @Success 200 {object} GetItemResponse "List of items"
+// @Failure 400 {object} http_api.ErrorResponse "Invalid input"
+// @Failure 500 {object} http_api.ErrorResponse "Internal server error"
+// @Router /items [get]
 func (h *Handlers) HandleGetItems(w http.ResponseWriter, r *http.Request) {
 	log := logger.LogFrom(r.Context(), slog.Default())
 	log.Info("handling get items request")
