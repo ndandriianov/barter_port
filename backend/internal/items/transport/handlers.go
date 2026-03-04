@@ -4,17 +4,17 @@ import (
 	"barter-port/internal/items/model"
 	"barter-port/internal/items/service"
 	"barter-port/internal/libs/platform/http_api"
+	"barter-port/internal/libs/platform/logger"
 	"errors"
 	"log/slog"
 	"net/http"
 
-	"github.com/google/uuid"
 	"golang.org/x/net/context"
 )
 
 type itemService interface {
 	CreateItem(ctx context.Context, name string, itemType model.ItemType, action model.ItemAction, description string) error
-	GetItems(ctx context.Context, nextCursor uuid.UUID, limit int, sortType model.SortType) ([]model.Item, error)
+	GetItems(ctx context.Context, sortType model.SortType, cursor model.UniversalCursor, limit int) ([]model.Item, model.UniversalCursor, error)
 }
 
 type Handlers struct {
@@ -25,6 +25,10 @@ func NewHandlers(itemService itemService) *Handlers {
 	return &Handlers{itemService: itemService}
 }
 
+//
+// CREATE_ITEM request and response structures and handler
+//
+
 type CreateItemRequest struct {
 	Name        string           `json:"name"`
 	Type        model.ItemType   `json:"type"`
@@ -33,7 +37,7 @@ type CreateItemRequest struct {
 }
 
 func (h *Handlers) HandleCreateItem(w http.ResponseWriter, r *http.Request) {
-	log := http_api.LogFrom(r.Context(), slog.Default())
+	log := logger.LogFrom(r.Context(), slog.Default())
 	log.Info("handling register request")
 
 	var req CreateItemRequest
@@ -63,14 +67,23 @@ func (h *Handlers) HandleCreateItem(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 }
 
+//
+// GET_ITEMS request and response structures and handler
+//
+
 type GetItemRequest struct {
-	NextCursor uuid.UUID      `json:"next_cursor"`
-	Limit      int            `json:"limit"`
-	SortType   model.SortType `json:"sort_type"`
+	SortType model.SortType        `json:"sort_type"`
+	Cursor   model.UniversalCursor `json:"cursor"`
+	Limit    int                   `json:"limit"`
+}
+
+type GetItemResponse struct {
+	Items  []model.Item          `json:"items"`
+	Cursor model.UniversalCursor `json:"cursor"`
 }
 
 func (h *Handlers) HandleGetItems(w http.ResponseWriter, r *http.Request) {
-	log := http_api.LogFrom(r.Context(), slog.Default())
+	log := logger.LogFrom(r.Context(), slog.Default())
 	log.Info("handling get items request")
 
 	var req GetItemRequest
@@ -82,7 +95,7 @@ func (h *Handlers) HandleGetItems(w http.ResponseWriter, r *http.Request) {
 		slog.Any("req", req),
 	)
 
-	items, err := h.itemService.GetItems(r.Context(), req.NextCursor, req.Limit, req.SortType)
+	items, cursor, err := h.itemService.GetItems(r.Context(), req.SortType, req.Cursor, req.Limit)
 	if err != nil {
 		if errors.Is(err, service.ErrInvalidSortType) {
 			log.Warn("invalid sort type",
@@ -97,5 +110,5 @@ func (h *Handlers) HandleGetItems(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http_api.WriteJSON(w, log, http.StatusOK, items)
+	http_api.WriteJSON(w, log, http.StatusOK, GetItemResponse{Items: items, Cursor: cursor})
 }

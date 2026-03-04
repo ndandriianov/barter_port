@@ -29,4 +29,5 @@ type Item struct {
 	Action      ItemAction
 	Description string
 	CreatedAt   time.Time
+	Views       int
 }

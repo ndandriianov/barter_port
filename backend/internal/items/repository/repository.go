@@ -2,10 +2,8 @@ package repository
 
 import (
 	"barter-port/internal/items/model"
-	"errors"
+	"barter-port/internal/libs/repox"
 
-	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/net/context"
 )
@@ -18,7 +16,9 @@ func NewItemRepository(db *pgxpool.Pool) *ItemRepository {
 	return &ItemRepository{db: db}
 }
 
-func (r ItemRepository) AddItem(ctx context.Context, item model.Item) error {
+// AddItem inserts a new item into the database.
+// Returns an error if the insertion fails.
+func (r *ItemRepository) AddItem(ctx context.Context, item model.Item) error {
 	query := `
 		INSERT INTO items (id, name, type, action, description, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6)
@@ -28,54 +28,102 @@ func (r ItemRepository) AddItem(ctx context.Context, item model.Item) error {
 	return err
 }
 
-func (r ItemRepository) GetItemsOrderByTime(ctx context.Context, nextCursor uuid.UUID, limit int) ([]model.Item, error) {
-	query := `
-		SELECT id, name, type, action, description, created_at
+// GetItemsOrderByTime retrieves items from the database ordered by creation time.
+// It supports cursor-based pagination using a TimeCursor.
+// If the cursor is nil, it retrieves the most recent items.
+// Returns a slice of items, a new TimeCursor for the next page, and an error if the query fails.
+func (r *ItemRepository) GetItemsOrderByTime(
+	ctx context.Context,
+	cursor *model.TimeCursor,
+	limit int,
+) ([]model.Item, *model.TimeCursor, error) {
+
+	var query string
+	var args []interface{}
+
+	if cursor == nil {
+		query = `
+		SELECT id, name, type, action, description, created_at, views
 		FROM items
-		WHERE id > $1
+		ORDER BY created_at DESC
+		LIMIT $1
+		`
+		args = append(args, limit)
+	} else {
+		query = `
+		SELECT id, name, type, action, description, created_at, views
+		FROM items
+		WHERE (created_at, id) < ($1, $2)
 		ORDER BY created_at DESC 
-		LIMIT $2
-	`
-
-	rows, err := r.db.Query(ctx, query, nextCursor, limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	items, err := pgx.CollectRows(rows, pgx.RowToStructByName[model.Item])
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return []model.Item{}, nil
-		}
-		return nil, err
+		LIMIT $3
+		`
+		args = append(args, cursor.CreatedAt, cursor.Id, limit)
 	}
 
-	return items, nil
+	items, err := repox.FetchStructs[model.Item](ctx, r.db, query, limit)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if len(items) == 0 {
+		return items, nil, nil
+	}
+
+	lastItem := items[len(items)-1]
+	newCursor := model.TimeCursor{
+		CreatedAt: lastItem.CreatedAt,
+		Id:        lastItem.ID,
+	}
+
+	return items, &newCursor, nil
 }
 
-func (r ItemRepository) GetItemsOrderByPopularity(ctx context.Context, nextCursor uuid.UUID, limit int) ([]model.Item, error) {
-	query := `
-		SELECT id, name, type, action, description, created_at
+// GetItemsOrderByPopularity retrieves items from the database ordered by popularity (views).
+// It supports cursor-based pagination using a PopularityCursor.
+// If the cursor is nil, it retrieves the most popular items.
+// Returns a slice of items, a new PopularityCursor for the next page, and an error if the query fails.
+func (r *ItemRepository) GetItemsOrderByPopularity(
+	ctx context.Context,
+	cursor *model.PopularityCursor,
+	limit int,
+) ([]model.Item, *model.PopularityCursor, error) {
+
+	var query string
+	var args []interface{}
+
+	if cursor == nil {
+		query = `
+		SELECT id, name, type, action, description, created_at, views
 		FROM items
-		WHERE id > $1
+		ORDER BY created_at DESC
+		LIMIT $1
+		`
+		args = append(args, limit)
+	} else {
+		query = `
+		SELECT id, name, type, action, description, created_at, views
+		FROM items
+		WHERE (views, id) < ($1, $2) 
 		ORDER BY views DESC 
-		LIMIT $2
-	`
-
-	rows, err := r.db.Query(ctx, query, nextCursor, limit)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	items, err := pgx.CollectRows(rows, pgx.RowToStructByName[model.Item])
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return []model.Item{}, nil
-		}
-		return nil, err
+		LIMIT $3
+		`
+		args = append(args, cursor.Views, cursor.Id, limit)
 	}
 
-	return items, nil
+	items, err := repox.FetchStructs[model.Item](ctx, r.db, query, args)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if len(items) == 0 {
+		return items, nil, nil
+	}
+
+	lastItem := items[len(items)-1]
+	newCursor := model.PopularityCursor{
+		Views: lastItem.Views,
+		Id:    lastItem.ID,
+	}
+
+	return items, &newCursor, nil
 }

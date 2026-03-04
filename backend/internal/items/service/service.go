@@ -2,7 +2,9 @@ package service
 
 import (
 	"barter-port/internal/items/model"
+	"barter-port/internal/libs/platform/logger"
 	"errors"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
@@ -16,16 +18,27 @@ var (
 
 type Repository interface {
 	AddItem(ctx context.Context, item model.Item) error
-	GetItemsOrderByTime(ctx context.Context, nextCursor uuid.UUID, limit int) ([]model.Item, error)
-	GetItemsOrderByPopularity(ctx context.Context, nextCursor uuid.UUID, limit int) ([]model.Item, error)
+
+	GetItemsOrderByTime(
+		ctx context.Context,
+		cursor *model.TimeCursor,
+		limit int,
+	) ([]model.Item, *model.TimeCursor, error)
+
+	GetItemsOrderByPopularity(
+		ctx context.Context,
+		cursor *model.PopularityCursor,
+		limit int,
+	) ([]model.Item, *model.PopularityCursor, error)
 }
 
 type ItemService struct {
-	repo Repository
+	repo           Repository
+	fallbackLogger *slog.Logger
 }
 
-func NewItemService(itemRepository Repository) *ItemService {
-	return &ItemService{repo: itemRepository}
+func NewItemService(itemRepository Repository, fallbackLogger *slog.Logger) *ItemService {
+	return &ItemService{repo: itemRepository, fallbackLogger: fallbackLogger}
 }
 
 func (s *ItemService) CreateItem(
@@ -46,6 +59,7 @@ func (s *ItemService) CreateItem(
 		Action:      action,
 		Description: description,
 		CreatedAt:   time.Now(),
+		Views:       0,
 	}
 
 	err := s.repo.AddItem(ctx, item)
@@ -63,18 +77,48 @@ func (s *ItemService) CreateItem(
 // - ErrInvalidSortType: returned when an unsupported sort type is provided.
 func (s *ItemService) GetItems(
 	ctx context.Context,
-	nextCursor uuid.UUID,
-	limit int,
 	sortType model.SortType,
-) ([]model.Item, error) {
+	cursor model.UniversalCursor,
+	limit int,
+) ([]model.Item, model.UniversalCursor, error) {
+
+	log := logger.LogFrom(ctx, s.fallbackLogger)
 
 	switch sortType {
 	case model.ByTime:
-		return s.repo.GetItemsOrderByTime(ctx, nextCursor, limit)
+		timeCursor, err := cursor.ToTimeCursor()
+		if err != nil {
+			log.Debug(
+				"time cursor is not specified, starting from the beginning",
+				slog.String("error", err.Error()),
+			)
+		}
+
+		items, newCursor, err := s.repo.GetItemsOrderByTime(ctx, timeCursor, limit)
+		if err != nil {
+			return nil, model.UniversalCursor{}, err
+		}
+
+		return items, *newCursor.ToUniversalCursor(), nil
+
 	case model.ByPopularity:
-		return s.repo.GetItemsOrderByPopularity(ctx, nextCursor, limit)
+		popularityCursor, err := cursor.ToPopularityCursor()
+		if err != nil {
+			log.Debug(
+				"popularity cursor is not specified, starting from the beginning",
+				slog.String("error", err.Error()),
+			)
+		}
+
+		items, newCursor, err := s.repo.GetItemsOrderByPopularity(ctx, popularityCursor, limit)
+		if err != nil {
+			return nil, model.UniversalCursor{}, err
+		}
+
+		return items, *newCursor.ToUniversalCursor(), nil
+
 	default:
-		return nil, ErrInvalidSortType
+		return nil, model.UniversalCursor{}, ErrInvalidSortType
 	}
 }
 

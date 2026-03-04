@@ -1,4 +1,4 @@
-package http_api
+package logger
 
 import (
 	"log/slog"
@@ -10,7 +10,7 @@ import (
 
 type ctxKeyLogger struct{}
 
-func LoggerMiddleware(base *slog.Logger) func(http.Handler) http.Handler {
+func Middleware(base *slog.Logger) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			reqID := middleware.GetReqID(r.Context())

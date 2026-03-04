@@ -17,7 +17,7 @@ func DecodeJSONWithLogs[T any](w http.ResponseWriter, r *http.Request, log *slog
 			slog.Any("request_body", r.Body),
 			slog.Any("destination_struct", dst),
 		)
-		HandleError(w, log, http.StatusBadRequest, ErrInvalidRequest)
+		w.WriteHeader(http.StatusBadRequest)
 		return false
 	}
 	return true
