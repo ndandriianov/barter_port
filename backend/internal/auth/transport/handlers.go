@@ -133,6 +133,7 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 // @Description Verifies a user's email using a token
 // @Tags auth
 // @Accept json
+// @Param verifyEmailReq body verifyEmailReq true "Verify email request"
 // @Produce plain
 // @Success 200 "status: ok"
 // @Failure 400 {object} http_api.ErrorResponse "Invalid request or token"
@@ -311,6 +312,7 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 // @Description Refreshes access and refresh tokens using the refresh token
 // @Tags auth
 // @Accept json
+// @Param Cookie header string true "refresh_token=<JWT refresh token>"
 // @Produce json
 // @Success 200 {object} refreshResponse
 // @Failure 401 {object} http_api.ErrorResponse "Unauthorized or invalid token"
@@ -465,6 +467,7 @@ type meResp struct {
 }
 
 // Me godoc
+// @Security BearerAuth
 // @Summary Get user info
 // @Description Retrieves information about the authenticated user
 // @Tags auth
