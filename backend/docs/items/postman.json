@@ -5,7 +5,7 @@
             "description": "",
             "item": [
                 {
-                    "id": "18f7347e-f324-4a42-b496-7b83e51d883b",
+                    "id": "5ed34a2b-f71e-4872-84aa-0bfb686b2159",
                     "name": "Get a list of items",
                     "request": {
                         "name": "Get a list of items",
@@ -36,7 +36,7 @@
                         "method": "GET",
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"cursor\": {\n    \"createdAt\": \"<string>\",\n    \"id\": \"<string>\",\n    \"views\": \"<integer>\"\n  },\n  \"limit\": \"<integer>\",\n  \"sort_type\": 1\n}",
+                            "raw": "{\n  \"cursor\": {\n    \"createdAt\": \"<string>\",\n    \"id\": \"<string>\",\n    \"views\": \"<integer>\"\n  },\n  \"limit\": \"<integer>\",\n  \"sort_type\": 0\n}",
                             "options": {
                                 "raw": {
                                     "headerFamily": "json",
@@ -44,12 +44,28 @@
                                 }
                             }
                         },
-                        "auth": null
+                        "auth": {
+                            "type": "apikey",
+                            "apikey": [
+                                {
+                                    "key": "key",
+                                    "value": "Authorization"
+                                },
+                                {
+                                    "key": "value",
+                                    "value": "{{apiKey}}"
+                                },
+                                {
+                                    "key": "in",
+                                    "value": "header"
+                                }
+                            ]
+                        }
                     },
                     "response": [
                         {
-                            "id": "52db9a60-c23d-4a8e-8e1b-976525483e82",
-                            "name": "List of items",
+                            "id": "7406f952-0cdf-493e-9d23-67fdb6897b8c",
+                            "name": "List of items and pagination cursor",
                             "originalRequest": {
                                 "url": {
                                     "path": [
@@ -69,12 +85,20 @@
                                     {
                                         "key": "Accept",
                                         "value": "application/json"
+                                    },
+                                    {
+                                        "description": {
+                                            "content": "Added as a part of security scheme: apikey",
+                                            "type": "text/plain"
+                                        },
+                                        "key": "Authorization",
+                                        "value": "<API Key>"
                                     }
                                 ],
                                 "method": "GET",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n  \"cursor\": {\n    \"createdAt\": \"<string>\",\n    \"id\": \"<string>\",\n    \"views\": \"<integer>\"\n  },\n  \"limit\": \"<integer>\",\n  \"sort_type\": 1\n}",
+                                    "raw": "{\n  \"cursor\": {\n    \"createdAt\": \"<string>\",\n    \"id\": \"<string>\",\n    \"views\": \"<integer>\"\n  },\n  \"limit\": \"<integer>\",\n  \"sort_type\": 0\n}",
                                     "options": {
                                         "raw": {
                                             "headerFamily": "json",
@@ -91,13 +115,13 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{\n  \"cursor\": {\n    \"createdAt\": \"<string>\",\n    \"id\": \"<string>\",\n    \"views\": \"<integer>\"\n  },\n  \"items\": [\n    {\n      \"action\": 1,\n      \"createdAt\": \"<string>\",\n      \"description\": \"<string>\",\n      \"id\": \"<string>\",\n      \"name\": \"<string>\",\n      \"type\": 1,\n      \"views\": \"<integer>\"\n    },\n    {\n      \"action\": 0,\n      \"createdAt\": \"<string>\",\n      \"description\": \"<string>\",\n      \"id\": \"<string>\",\n      \"name\": \"<string>\",\n      \"type\": 1,\n      \"views\": \"<integer>\"\n    }\n  ]\n}",
+                            "body": "{\n  \"cursor\": {\n    \"createdAt\": \"<string>\",\n    \"id\": \"<string>\",\n    \"views\": \"<integer>\"\n  },\n  \"items\": [\n    {\n      \"action\": 1,\n      \"createdAt\": \"<string>\",\n      \"description\": \"<string>\",\n      \"id\": \"<string>\",\n      \"name\": \"<string>\",\n      \"type\": 1,\n      \"views\": \"<integer>\"\n    },\n    {\n      \"action\": 1,\n      \"createdAt\": \"<string>\",\n      \"description\": \"<string>\",\n      \"id\": \"<string>\",\n      \"name\": \"<string>\",\n      \"type\": 0,\n      \"views\": \"<integer>\"\n    }\n  ]\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "6601f9da-2305-4c30-b968-e11c142eaf72",
-                            "name": "Invalid input",
+                            "id": "a9194a5e-7281-4b39-930c-470bf4cbc8fc",
+                            "name": "Invalid input: invalid sort type",
                             "originalRequest": {
                                 "url": {
                                     "path": [
@@ -117,12 +141,20 @@
                                     {
                                         "key": "Accept",
                                         "value": "application/json"
+                                    },
+                                    {
+                                        "description": {
+                                            "content": "Added as a part of security scheme: apikey",
+                                            "type": "text/plain"
+                                        },
+                                        "key": "Authorization",
+                                        "value": "<API Key>"
                                     }
                                 ],
                                 "method": "GET",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n  \"cursor\": {\n    \"createdAt\": \"<string>\",\n    \"id\": \"<string>\",\n    \"views\": \"<integer>\"\n  },\n  \"limit\": \"<integer>\",\n  \"sort_type\": 1\n}",
+                                    "raw": "{\n  \"cursor\": {\n    \"createdAt\": \"<string>\",\n    \"id\": \"<string>\",\n    \"views\": \"<integer>\"\n  },\n  \"limit\": \"<integer>\",\n  \"sort_type\": 0\n}",
                                     "options": {
                                         "raw": {
                                             "headerFamily": "json",
@@ -144,8 +176,8 @@
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "ed1b3738-e408-47a7-983f-288b00374798",
-                            "name": "Internal server error",
+                            "id": "79914ff2-680c-4ad8-b5e4-486b9f87d621",
+                            "name": "Internal Server Error",
                             "originalRequest": {
                                 "url": {
                                     "path": [
@@ -163,14 +195,18 @@
                                         "value": "application/json"
                                     },
                                     {
-                                        "key": "Accept",
-                                        "value": "application/json"
+                                        "description": {
+                                            "content": "Added as a part of security scheme: apikey",
+                                            "type": "text/plain"
+                                        },
+                                        "key": "Authorization",
+                                        "value": "<API Key>"
                                     }
                                 ],
                                 "method": "GET",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n  \"cursor\": {\n    \"createdAt\": \"<string>\",\n    \"id\": \"<string>\",\n    \"views\": \"<integer>\"\n  },\n  \"limit\": \"<integer>\",\n  \"sort_type\": 1\n}",
+                                    "raw": "{\n  \"cursor\": {\n    \"createdAt\": \"<string>\",\n    \"id\": \"<string>\",\n    \"views\": \"<integer>\"\n  },\n  \"limit\": \"<integer>\",\n  \"sort_type\": 0\n}",
                                     "options": {
                                         "raw": {
                                             "headerFamily": "json",
@@ -181,15 +217,9 @@
                             },
                             "status": "Internal Server Error",
                             "code": 500,
-                            "header": [
-                                {
-                                    "key": "Content-Type",
-                                    "value": "application/json"
-                                }
-                            ],
-                            "body": "{\n  \"error\": \"<string>\"\n}",
+                            "header": [],
                             "cookie": [],
-                            "_postman_previewlanguage": "json"
+                            "_postman_previewlanguage": "text"
                         }
                     ],
                     "event": [],
@@ -198,7 +228,7 @@
                     }
                 },
                 {
-                    "id": "261d6b11-61d8-4968-8f4a-b560d84509dc",
+                    "id": "f72752e4-773e-455d-af37-bdd0d9d2ce08",
                     "name": "Create a new item",
                     "request": {
                         "name": "Create a new item",
@@ -220,16 +250,12 @@
                             {
                                 "key": "Content-Type",
                                 "value": "application/json"
-                            },
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
                             }
                         ],
                         "method": "POST",
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"action\": 0,\n  \"description\": \"<string>\",\n  \"name\": \"<string>\",\n  \"type\": 0\n}",
+                            "raw": "{\n  \"action\": \"give\",\n  \"description\": \"<string>\",\n  \"name\": \"<string>\",\n  \"type\": \"good\"\n}",
                             "options": {
                                 "raw": {
                                     "headerFamily": "json",
@@ -237,11 +263,27 @@
                                 }
                             }
                         },
-                        "auth": null
+                        "auth": {
+                            "type": "apikey",
+                            "apikey": [
+                                {
+                                    "key": "key",
+                                    "value": "Authorization"
+                                },
+                                {
+                                    "key": "value",
+                                    "value": "{{apiKey}}"
+                                },
+                                {
+                                    "key": "in",
+                                    "value": "header"
+                                }
+                            ]
+                        }
                     },
                     "response": [
                         {
-                            "id": "f949425b-9b07-4f9f-aa9b-2563a2a1a9d7",
+                            "id": "a70c226c-58f8-4942-b746-ad2da44d95db",
                             "name": "Created",
                             "originalRequest": {
                                 "url": {
@@ -260,14 +302,18 @@
                                         "value": "application/json"
                                     },
                                     {
-                                        "key": "Accept",
-                                        "value": "application/json"
+                                        "description": {
+                                            "content": "Added as a part of security scheme: apikey",
+                                            "type": "text/plain"
+                                        },
+                                        "key": "Authorization",
+                                        "value": "<API Key>"
                                     }
                                 ],
                                 "method": "POST",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n  \"action\": 0,\n  \"description\": \"<string>\",\n  \"name\": \"<string>\",\n  \"type\": 0\n}",
+                                    "raw": "{\n  \"action\": \"give\",\n  \"description\": \"<string>\",\n  \"name\": \"<string>\",\n  \"type\": \"good\"\n}",
                                     "options": {
                                         "raw": {
                                             "headerFamily": "json",
@@ -278,19 +324,13 @@
                             },
                             "status": "Created",
                             "code": 201,
-                            "header": [
-                                {
-                                    "key": "Content-Type",
-                                    "value": "application/json"
-                                }
-                            ],
-                            "body": "<string>",
+                            "header": [],
                             "cookie": [],
-                            "_postman_previewlanguage": "json"
+                            "_postman_previewlanguage": "text"
                         },
                         {
-                            "id": "abe591ba-a00c-4597-bcca-a5f7f4aaebfb",
-                            "name": "Invalid input",
+                            "id": "d14fd506-1ed3-448e-bf62-5b1eab8a270f",
+                            "name": "Bad Request",
                             "originalRequest": {
                                 "url": {
                                     "path": [
@@ -308,14 +348,18 @@
                                         "value": "application/json"
                                     },
                                     {
-                                        "key": "Accept",
-                                        "value": "application/json"
+                                        "description": {
+                                            "content": "Added as a part of security scheme: apikey",
+                                            "type": "text/plain"
+                                        },
+                                        "key": "Authorization",
+                                        "value": "<API Key>"
                                     }
                                 ],
                                 "method": "POST",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n  \"action\": 0,\n  \"description\": \"<string>\",\n  \"name\": \"<string>\",\n  \"type\": 0\n}",
+                                    "raw": "{\n  \"action\": \"give\",\n  \"description\": \"<string>\",\n  \"name\": \"<string>\",\n  \"type\": \"good\"\n}",
                                     "options": {
                                         "raw": {
                                             "headerFamily": "json",
@@ -326,19 +370,13 @@
                             },
                             "status": "Bad Request",
                             "code": 400,
-                            "header": [
-                                {
-                                    "key": "Content-Type",
-                                    "value": "application/json"
-                                }
-                            ],
-                            "body": "{\n  \"error\": \"<string>\"\n}",
+                            "header": [],
                             "cookie": [],
-                            "_postman_previewlanguage": "json"
+                            "_postman_previewlanguage": "text"
                         },
                         {
-                            "id": "efcea07b-2bd3-40b9-893b-8c26a77d3317",
-                            "name": "Internal server error",
+                            "id": "62a3bc35-064f-40d2-991b-5eb4983fbe5f",
+                            "name": "Internal Server Error",
                             "originalRequest": {
                                 "url": {
                                     "path": [
@@ -356,14 +394,18 @@
                                         "value": "application/json"
                                     },
                                     {
-                                        "key": "Accept",
-                                        "value": "application/json"
+                                        "description": {
+                                            "content": "Added as a part of security scheme: apikey",
+                                            "type": "text/plain"
+                                        },
+                                        "key": "Authorization",
+                                        "value": "<API Key>"
                                     }
                                 ],
                                 "method": "POST",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n  \"action\": 0,\n  \"description\": \"<string>\",\n  \"name\": \"<string>\",\n  \"type\": 0\n}",
+                                    "raw": "{\n  \"action\": \"give\",\n  \"description\": \"<string>\",\n  \"name\": \"<string>\",\n  \"type\": \"good\"\n}",
                                     "options": {
                                         "raw": {
                                             "headerFamily": "json",
@@ -374,15 +416,9 @@
                             },
                             "status": "Internal Server Error",
                             "code": 500,
-                            "header": [
-                                {
-                                    "key": "Content-Type",
-                                    "value": "application/json"
-                                }
-                            ],
-                            "body": "{\n  \"error\": \"<string>\"\n}",
+                            "header": [],
                             "cookie": [],
-                            "_postman_previewlanguage": "json"
+                            "_postman_previewlanguage": "text"
                         }
                     ],
                     "event": [],
@@ -401,7 +437,7 @@
         }
     ],
     "info": {
-        "_postman_id": "a53a691c-8574-4f39-82d4-91494f0b140d",
+        "_postman_id": "23819d96-6288-4d67-892e-e6a3c2eafdff",
         "name": "Barter Port API",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
         "description": {

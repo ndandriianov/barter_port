@@ -13,9 +13,9 @@ var (
 )
 
 type UniversalCursor struct {
-	CreatedAt *time.Time `json:"createdAt"`
-	Views     *int       `json:"views"`
-	Id        uuid.UUID  `json:"id"`
+	CreatedAt *time.Time `json:"createdAt" example:"2026-03-04T12:00:00Z"`
+	Views     *int       `json:"views"  example:"120"`
+	Id        uuid.UUID  `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
 }
 
 type TimeCursor struct {

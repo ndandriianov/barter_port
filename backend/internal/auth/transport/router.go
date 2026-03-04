@@ -27,7 +27,10 @@ func NewRouter(logger *slog.Logger, validator *validators.LocalJWT, h *Handlers)
 	r.Use(middleware.RequestID)
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.Write([]byte("ok"))
+		_, err := w.Write([]byte("ok"))
+		if err != nil {
+			logger.Error("failed to write health response", slog.String("error", err.Error()))
+		}
 	})
 	r.Get("/swagger/*", httpSwagger.WrapHandler)
 
