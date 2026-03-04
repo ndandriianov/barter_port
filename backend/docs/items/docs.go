@@ -17,6 +17,11 @@ const docTemplate = `{
     "paths": {
         "/items": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Fetch a list of items with optional sorting and pagination",
                 "consumes": [
                     "application/json"
@@ -41,31 +46,30 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "List of items",
+                        "description": "List of items and pagination cursor",
                         "schema": {
                             "$ref": "#/definitions/transport.GetItemResponse"
                         }
                     },
                     "400": {
-                        "description": "Invalid input",
+                        "description": "Invalid input: invalid sort type",
                         "schema": {
                             "$ref": "#/definitions/http_api.ErrorResponse"
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/http_api.ErrorResponse"
-                        }
+                        "description": "Internal Server Error"
                     }
                 }
             },
             "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Create a new item with the provided details",
                 "consumes": [
-                    "application/json"
-                ],
-                "produces": [
                     "application/json"
                 ],
                 "tags": [
@@ -85,22 +89,13 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "201": {
-                        "description": "Created",
-                        "schema": {
-                            "type": "string"
-                        }
+                        "description": "Created"
                     },
                     "400": {
-                        "description": "Invalid input",
-                        "schema": {
-                            "$ref": "#/definitions/http_api.ErrorResponse"
-                        }
+                        "description": "Bad Request"
                     },
                     "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/http_api.ErrorResponse"
-                        }
+                        "description": "Internal Server Error"
                     }
                 }
             }
@@ -179,13 +174,16 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "createdAt": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "2026-03-04T12:00:00Z"
                 },
                 "id": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
                 },
                 "views": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 120
                 }
             }
         },
@@ -193,27 +191,25 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "action": {
-                    "description": "Action associated with the item",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/model.ItemAction"
-                        }
+                    "type": "string",
+                    "enum": [
+                        "give",
+                        "take"
                     ]
                 },
                 "description": {
-                    "description": "Description of the item",
-                    "type": "string"
+                    "type": "string",
+                    "example": "description"
                 },
                 "name": {
-                    "description": "Name of the item",
-                    "type": "string"
+                    "type": "string",
+                    "example": "name"
                 },
                 "type": {
-                    "description": "Type of the item",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/model.ItemType"
-                        }
+                    "type": "string",
+                    "enum": [
+                        "good",
+                        "service"
                     ]
                 }
             }
@@ -231,7 +227,8 @@ const docTemplate = `{
                 },
                 "limit": {
                     "description": "Maximum number of items to fetch",
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 10
                 },
                 "sort_type": {
                     "description": "Sorting type for items",
@@ -262,6 +259,13 @@ const docTemplate = `{
                     }
                 }
             }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
         }
     }
 }`

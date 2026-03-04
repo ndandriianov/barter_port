@@ -50,28 +50,33 @@ definitions:
   model.UniversalCursor:
     properties:
       createdAt:
+        example: "2026-03-04T12:00:00Z"
         type: string
       id:
+        example: 550e8400-e29b-41d4-a716-446655440000
         type: string
       views:
+        example: 120
         type: integer
     type: object
   transport.CreateItemRequest:
     properties:
       action:
-        allOf:
-        - $ref: '#/definitions/model.ItemAction'
-        description: Action associated with the item
+        enum:
+        - give
+        - take
+        type: string
       description:
-        description: Description of the item
+        example: description
         type: string
       name:
-        description: Name of the item
+        example: name
         type: string
       type:
-        allOf:
-        - $ref: '#/definitions/model.ItemType'
-        description: Type of the item
+        enum:
+        - good
+        - service
+        type: string
     type: object
   transport.GetItemRequest:
     properties:
@@ -81,6 +86,7 @@ definitions:
         description: Cursor for pagination
       limit:
         description: Maximum number of items to fetch
+        example: 10
         type: integer
       sort_type:
         allOf:
@@ -121,17 +127,17 @@ paths:
       - application/json
       responses:
         "200":
-          description: List of items
+          description: List of items and pagination cursor
           schema:
             $ref: '#/definitions/transport.GetItemResponse'
         "400":
-          description: Invalid input
+          description: 'Invalid input: invalid sort type'
           schema:
             $ref: '#/definitions/http_api.ErrorResponse'
         "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/http_api.ErrorResponse'
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
       summary: Get a list of items
       tags:
       - items
@@ -146,25 +152,24 @@ paths:
         required: true
         schema:
           $ref: '#/definitions/transport.CreateItemRequest'
-      produces:
-      - application/json
       responses:
         "201":
           description: Created
-          schema:
-            type: string
         "400":
-          description: Invalid input
-          schema:
-            $ref: '#/definitions/http_api.ErrorResponse'
+          description: Bad Request
         "500":
-          description: Internal server error
-          schema:
-            $ref: '#/definitions/http_api.ErrorResponse'
+          description: Internal Server Error
+      security:
+      - BearerAuth: []
       summary: Create a new item
       tags:
       - items
 schemes:
 - http
 - https
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
 swagger: "2.0"
