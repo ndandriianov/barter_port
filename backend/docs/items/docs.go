@@ -23,9 +23,6 @@ const docTemplate = `{
                     }
                 ],
                 "description": "Fetch a list of items with optional sorting and pagination",
-                "consumes": [
-                    "application/json"
-                ],
                 "produces": [
                     "application/json"
                 ],
@@ -35,13 +32,35 @@ const docTemplate = `{
                 "summary": "Get a list of items",
                 "parameters": [
                     {
-                        "description": "Get Items Request",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/transport.GetItemRequest"
-                        }
+                        "type": "string",
+                        "description": "Sort type (ByTime, ByPopularity)",
+                        "name": "sort_type",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Creation time for cursor (ISO 8601 format)",
+                        "name": "created_at",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Views for cursor",
+                        "name": "views",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "UUID for cursor",
+                        "name": "id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Maximum number of items to fetch",
+                        "name": "limit",
+                        "in": "query"
                     }
                 ],
                 "responses": {
@@ -52,7 +71,7 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Invalid input: invalid sort type",
+                        "description": "Invalid input",
                         "schema": {
                             "$ref": "#/definitions/http_api.ErrorResponse"
                         }
@@ -159,17 +178,6 @@ const docTemplate = `{
                 "Service"
             ]
         },
-        "model.SortType": {
-            "type": "integer",
-            "enum": [
-                0,
-                1
-            ],
-            "x-enum-varnames": [
-                "ByTime",
-                "ByPopularity"
-            ]
-        },
         "model.UniversalCursor": {
             "type": "object",
             "properties": {
@@ -210,32 +218,6 @@ const docTemplate = `{
                     "enum": [
                         "good",
                         "service"
-                    ]
-                }
-            }
-        },
-        "transport.GetItemRequest": {
-            "type": "object",
-            "properties": {
-                "cursor": {
-                    "description": "Cursor for pagination",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/model.UniversalCursor"
-                        }
-                    ]
-                },
-                "limit": {
-                    "description": "Maximum number of items to fetch",
-                    "type": "integer",
-                    "example": 10
-                },
-                "sort_type": {
-                    "description": "Sorting type for items",
-                    "allOf": [
-                        {
-                            "$ref": "#/definitions/model.SortType"
-                        }
                     ]
                 }
             }

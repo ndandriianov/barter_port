@@ -5,7 +5,7 @@
             "description": "",
             "item": [
                 {
-                    "id": "5ed34a2b-f71e-4872-84aa-0bfb686b2159",
+                    "id": "ea5bb952-4820-4e66-8794-51753a1ab247",
                     "name": "Get a list of items",
                     "request": {
                         "name": "Get a list of items",
@@ -20,30 +20,63 @@
                             "host": [
                                 "{{baseUrl}}"
                             ],
-                            "query": [],
+                            "query": [
+                                {
+                                    "disabled": false,
+                                    "description": {
+                                        "content": "(Required) Sort type (ByTime, ByPopularity)",
+                                        "type": "text/plain"
+                                    },
+                                    "key": "sort_type",
+                                    "value": "<string>"
+                                },
+                                {
+                                    "disabled": false,
+                                    "description": {
+                                        "content": "Creation time for cursor (ISO 8601 format)",
+                                        "type": "text/plain"
+                                    },
+                                    "key": "created_at",
+                                    "value": "<string>"
+                                },
+                                {
+                                    "disabled": false,
+                                    "description": {
+                                        "content": "Views for cursor",
+                                        "type": "text/plain"
+                                    },
+                                    "key": "views",
+                                    "value": "<integer>"
+                                },
+                                {
+                                    "disabled": false,
+                                    "description": {
+                                        "content": "UUID for cursor",
+                                        "type": "text/plain"
+                                    },
+                                    "key": "id",
+                                    "value": "<string>"
+                                },
+                                {
+                                    "disabled": false,
+                                    "description": {
+                                        "content": "Maximum number of items to fetch",
+                                        "type": "text/plain"
+                                    },
+                                    "key": "limit",
+                                    "value": "<integer>"
+                                }
+                            ],
                             "variable": []
                         },
                         "header": [
-                            {
-                                "key": "Content-Type",
-                                "value": "application/json"
-                            },
                             {
                                 "key": "Accept",
                                 "value": "application/json"
                             }
                         ],
                         "method": "GET",
-                        "body": {
-                            "mode": "raw",
-                            "raw": "{\n  \"cursor\": {\n    \"createdAt\": \"<string>\",\n    \"id\": \"<string>\",\n    \"views\": \"<integer>\"\n  },\n  \"limit\": \"<integer>\",\n  \"sort_type\": 0\n}",
-                            "options": {
-                                "raw": {
-                                    "headerFamily": "json",
-                                    "language": "json"
-                                }
-                            }
-                        },
+                        "body": {},
                         "auth": {
                             "type": "apikey",
                             "apikey": [
@@ -64,7 +97,7 @@
                     },
                     "response": [
                         {
-                            "id": "7406f952-0cdf-493e-9d23-67fdb6897b8c",
+                            "id": "07b1f9c4-3407-4a7f-b87f-e4befe4efa8a",
                             "name": "List of items and pagination cursor",
                             "originalRequest": {
                                 "url": {
@@ -74,14 +107,56 @@
                                     "host": [
                                         "{{baseUrl}}"
                                     ],
-                                    "query": [],
+                                    "query": [
+                                        {
+                                            "disabled": false,
+                                            "description": {
+                                                "content": "(Required) Sort type (ByTime, ByPopularity)",
+                                                "type": "text/plain"
+                                            },
+                                            "key": "sort_type",
+                                            "value": "<string>"
+                                        },
+                                        {
+                                            "disabled": false,
+                                            "description": {
+                                                "content": "Creation time for cursor (ISO 8601 format)",
+                                                "type": "text/plain"
+                                            },
+                                            "key": "created_at",
+                                            "value": "<string>"
+                                        },
+                                        {
+                                            "disabled": false,
+                                            "description": {
+                                                "content": "Views for cursor",
+                                                "type": "text/plain"
+                                            },
+                                            "key": "views",
+                                            "value": "<integer>"
+                                        },
+                                        {
+                                            "disabled": false,
+                                            "description": {
+                                                "content": "UUID for cursor",
+                                                "type": "text/plain"
+                                            },
+                                            "key": "id",
+                                            "value": "<string>"
+                                        },
+                                        {
+                                            "disabled": false,
+                                            "description": {
+                                                "content": "Maximum number of items to fetch",
+                                                "type": "text/plain"
+                                            },
+                                            "key": "limit",
+                                            "value": "<integer>"
+                                        }
+                                    ],
                                     "variable": []
                                 },
                                 "header": [
-                                    {
-                                        "key": "Content-Type",
-                                        "value": "application/json"
-                                    },
                                     {
                                         "key": "Accept",
                                         "value": "application/json"
@@ -96,16 +171,7 @@
                                     }
                                 ],
                                 "method": "GET",
-                                "body": {
-                                    "mode": "raw",
-                                    "raw": "{\n  \"cursor\": {\n    \"createdAt\": \"<string>\",\n    \"id\": \"<string>\",\n    \"views\": \"<integer>\"\n  },\n  \"limit\": \"<integer>\",\n  \"sort_type\": 0\n}",
-                                    "options": {
-                                        "raw": {
-                                            "headerFamily": "json",
-                                            "language": "json"
-                                        }
-                                    }
-                                }
+                                "body": {}
                             },
                             "status": "OK",
                             "code": 200,
@@ -115,13 +181,13 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{\n  \"cursor\": {\n    \"createdAt\": \"<string>\",\n    \"id\": \"<string>\",\n    \"views\": \"<integer>\"\n  },\n  \"items\": [\n    {\n      \"action\": 1,\n      \"createdAt\": \"<string>\",\n      \"description\": \"<string>\",\n      \"id\": \"<string>\",\n      \"name\": \"<string>\",\n      \"type\": 1,\n      \"views\": \"<integer>\"\n    },\n    {\n      \"action\": 1,\n      \"createdAt\": \"<string>\",\n      \"description\": \"<string>\",\n      \"id\": \"<string>\",\n      \"name\": \"<string>\",\n      \"type\": 0,\n      \"views\": \"<integer>\"\n    }\n  ]\n}",
+                            "body": "{\n  \"cursor\": {\n    \"createdAt\": \"<string>\",\n    \"id\": \"<string>\",\n    \"views\": \"<integer>\"\n  },\n  \"items\": [\n    {\n      \"action\": 1,\n      \"createdAt\": \"<string>\",\n      \"description\": \"<string>\",\n      \"id\": \"<string>\",\n      \"name\": \"<string>\",\n      \"type\": 0,\n      \"views\": \"<integer>\"\n    },\n    {\n      \"action\": 0,\n      \"createdAt\": \"<string>\",\n      \"description\": \"<string>\",\n      \"id\": \"<string>\",\n      \"name\": \"<string>\",\n      \"type\": 1,\n      \"views\": \"<integer>\"\n    }\n  ]\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "a9194a5e-7281-4b39-930c-470bf4cbc8fc",
-                            "name": "Invalid input: invalid sort type",
+                            "id": "6b5d3494-1c9b-400a-aa0f-94db4fbfcf4d",
+                            "name": "Invalid input",
                             "originalRequest": {
                                 "url": {
                                     "path": [
@@ -130,14 +196,56 @@
                                     "host": [
                                         "{{baseUrl}}"
                                     ],
-                                    "query": [],
+                                    "query": [
+                                        {
+                                            "disabled": false,
+                                            "description": {
+                                                "content": "(Required) Sort type (ByTime, ByPopularity)",
+                                                "type": "text/plain"
+                                            },
+                                            "key": "sort_type",
+                                            "value": "<string>"
+                                        },
+                                        {
+                                            "disabled": false,
+                                            "description": {
+                                                "content": "Creation time for cursor (ISO 8601 format)",
+                                                "type": "text/plain"
+                                            },
+                                            "key": "created_at",
+                                            "value": "<string>"
+                                        },
+                                        {
+                                            "disabled": false,
+                                            "description": {
+                                                "content": "Views for cursor",
+                                                "type": "text/plain"
+                                            },
+                                            "key": "views",
+                                            "value": "<integer>"
+                                        },
+                                        {
+                                            "disabled": false,
+                                            "description": {
+                                                "content": "UUID for cursor",
+                                                "type": "text/plain"
+                                            },
+                                            "key": "id",
+                                            "value": "<string>"
+                                        },
+                                        {
+                                            "disabled": false,
+                                            "description": {
+                                                "content": "Maximum number of items to fetch",
+                                                "type": "text/plain"
+                                            },
+                                            "key": "limit",
+                                            "value": "<integer>"
+                                        }
+                                    ],
                                     "variable": []
                                 },
                                 "header": [
-                                    {
-                                        "key": "Content-Type",
-                                        "value": "application/json"
-                                    },
                                     {
                                         "key": "Accept",
                                         "value": "application/json"
@@ -152,16 +260,7 @@
                                     }
                                 ],
                                 "method": "GET",
-                                "body": {
-                                    "mode": "raw",
-                                    "raw": "{\n  \"cursor\": {\n    \"createdAt\": \"<string>\",\n    \"id\": \"<string>\",\n    \"views\": \"<integer>\"\n  },\n  \"limit\": \"<integer>\",\n  \"sort_type\": 0\n}",
-                                    "options": {
-                                        "raw": {
-                                            "headerFamily": "json",
-                                            "language": "json"
-                                        }
-                                    }
-                                }
+                                "body": {}
                             },
                             "status": "Bad Request",
                             "code": 400,
@@ -176,7 +275,7 @@
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "79914ff2-680c-4ad8-b5e4-486b9f87d621",
+                            "id": "620fa566-008b-4c4e-9811-2642956280d6",
                             "name": "Internal Server Error",
                             "originalRequest": {
                                 "url": {
@@ -186,14 +285,56 @@
                                     "host": [
                                         "{{baseUrl}}"
                                     ],
-                                    "query": [],
+                                    "query": [
+                                        {
+                                            "disabled": false,
+                                            "description": {
+                                                "content": "(Required) Sort type (ByTime, ByPopularity)",
+                                                "type": "text/plain"
+                                            },
+                                            "key": "sort_type",
+                                            "value": "<string>"
+                                        },
+                                        {
+                                            "disabled": false,
+                                            "description": {
+                                                "content": "Creation time for cursor (ISO 8601 format)",
+                                                "type": "text/plain"
+                                            },
+                                            "key": "created_at",
+                                            "value": "<string>"
+                                        },
+                                        {
+                                            "disabled": false,
+                                            "description": {
+                                                "content": "Views for cursor",
+                                                "type": "text/plain"
+                                            },
+                                            "key": "views",
+                                            "value": "<integer>"
+                                        },
+                                        {
+                                            "disabled": false,
+                                            "description": {
+                                                "content": "UUID for cursor",
+                                                "type": "text/plain"
+                                            },
+                                            "key": "id",
+                                            "value": "<string>"
+                                        },
+                                        {
+                                            "disabled": false,
+                                            "description": {
+                                                "content": "Maximum number of items to fetch",
+                                                "type": "text/plain"
+                                            },
+                                            "key": "limit",
+                                            "value": "<integer>"
+                                        }
+                                    ],
                                     "variable": []
                                 },
                                 "header": [
-                                    {
-                                        "key": "Content-Type",
-                                        "value": "application/json"
-                                    },
                                     {
                                         "description": {
                                             "content": "Added as a part of security scheme: apikey",
@@ -204,16 +345,7 @@
                                     }
                                 ],
                                 "method": "GET",
-                                "body": {
-                                    "mode": "raw",
-                                    "raw": "{\n  \"cursor\": {\n    \"createdAt\": \"<string>\",\n    \"id\": \"<string>\",\n    \"views\": \"<integer>\"\n  },\n  \"limit\": \"<integer>\",\n  \"sort_type\": 0\n}",
-                                    "options": {
-                                        "raw": {
-                                            "headerFamily": "json",
-                                            "language": "json"
-                                        }
-                                    }
-                                }
+                                "body": {}
                             },
                             "status": "Internal Server Error",
                             "code": 500,
@@ -228,7 +360,7 @@
                     }
                 },
                 {
-                    "id": "f72752e4-773e-455d-af37-bdd0d9d2ce08",
+                    "id": "cd08c847-aea6-45ab-beec-28fd15c8b45d",
                     "name": "Create a new item",
                     "request": {
                         "name": "Create a new item",
@@ -255,7 +387,7 @@
                         "method": "POST",
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"action\": \"give\",\n  \"description\": \"<string>\",\n  \"name\": \"<string>\",\n  \"type\": \"good\"\n}",
+                            "raw": "{\n  \"action\": \"give\",\n  \"description\": \"<string>\",\n  \"name\": \"<string>\",\n  \"type\": \"service\"\n}",
                             "options": {
                                 "raw": {
                                     "headerFamily": "json",
@@ -283,7 +415,7 @@
                     },
                     "response": [
                         {
-                            "id": "a70c226c-58f8-4942-b746-ad2da44d95db",
+                            "id": "d50bf440-7dde-425e-b786-30549121236f",
                             "name": "Created",
                             "originalRequest": {
                                 "url": {
@@ -313,7 +445,7 @@
                                 "method": "POST",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n  \"action\": \"give\",\n  \"description\": \"<string>\",\n  \"name\": \"<string>\",\n  \"type\": \"good\"\n}",
+                                    "raw": "{\n  \"action\": \"give\",\n  \"description\": \"<string>\",\n  \"name\": \"<string>\",\n  \"type\": \"service\"\n}",
                                     "options": {
                                         "raw": {
                                             "headerFamily": "json",
@@ -329,7 +461,7 @@
                             "_postman_previewlanguage": "text"
                         },
                         {
-                            "id": "d14fd506-1ed3-448e-bf62-5b1eab8a270f",
+                            "id": "069180b8-c123-4b03-87ea-7eb8252ef079",
                             "name": "Bad Request",
                             "originalRequest": {
                                 "url": {
@@ -359,7 +491,7 @@
                                 "method": "POST",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n  \"action\": \"give\",\n  \"description\": \"<string>\",\n  \"name\": \"<string>\",\n  \"type\": \"good\"\n}",
+                                    "raw": "{\n  \"action\": \"give\",\n  \"description\": \"<string>\",\n  \"name\": \"<string>\",\n  \"type\": \"service\"\n}",
                                     "options": {
                                         "raw": {
                                             "headerFamily": "json",
@@ -375,7 +507,7 @@
                             "_postman_previewlanguage": "text"
                         },
                         {
-                            "id": "62a3bc35-064f-40d2-991b-5eb4983fbe5f",
+                            "id": "6f310d62-4cbd-4139-92bb-1f21b4b1750e",
                             "name": "Internal Server Error",
                             "originalRequest": {
                                 "url": {
@@ -405,7 +537,7 @@
                                 "method": "POST",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n  \"action\": \"give\",\n  \"description\": \"<string>\",\n  \"name\": \"<string>\",\n  \"type\": \"good\"\n}",
+                                    "raw": "{\n  \"action\": \"give\",\n  \"description\": \"<string>\",\n  \"name\": \"<string>\",\n  \"type\": \"service\"\n}",
                                     "options": {
                                         "raw": {
                                             "headerFamily": "json",
@@ -437,7 +569,7 @@
         }
     ],
     "info": {
-        "_postman_id": "23819d96-6288-4d67-892e-e6a3c2eafdff",
+        "_postman_id": "08c023ba-d2f0-4377-b4f8-53847cab6e15",
         "name": "Barter Port API",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
         "description": {
