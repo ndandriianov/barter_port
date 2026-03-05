@@ -36,7 +36,7 @@ func MustLoad(configPath string) *Config {
 	return &cfg
 }
 
-func NewPostgres(config *Config) (*pgxpool.Pool, error) {
+func NewPostgres(config Config) (*pgxpool.Pool, error) {
 	dsn := fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s",
 		config.DBUser,

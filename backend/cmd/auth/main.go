@@ -9,6 +9,7 @@ import (
 	"barter-port/internal/libs/bootstrap"
 	"barter-port/internal/libs/platform/logger"
 	"log/slog"
+	"os"
 	"regexp"
 
 	"github.com/joho/godotenv"
@@ -31,17 +32,32 @@ import (
 func main() {
 	_ = godotenv.Load()
 
-	db := bootstrap.InitDatabase()
+	cfg, err := bootstrap.LoadConfig(bootstrap.ConfigOptions{
+		CommonPath:  os.Getenv("CONFIG_COMMON"),
+		ServicePath: os.Getenv("CONFIG_SERVICE"),
+		AppEnv:      os.Getenv("APP_ENV"),
+	})
+	if err != nil {
+		log.Fatal("failed to load config:", err)
+	}
+
+	db, err := bootstrap.InitDatabaseFromConfig(cfg)
+	if err != nil {
+		log.Fatal("failed to initialize database:", err)
+	}
 	defer db.Close()
 
-	frontendURL := bootstrap.GetEnv("FRONTEND_URL", "http://localhost:5173")
+	frontendURL := cfg.Frontend.URL
 	re := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 
 	userRepo := user.NewRepository(db)
 	emailTokenRepo := email_token.NewRepository(db)
 	refreshTokenRepo := refresh_token.NewRepository(db)
 
-	m := bootstrap.InitMailer()
+	m, err := bootstrap.InitMailerFromConfig(cfg)
+	if err != nil {
+		log.Fatal("failed to initialize mailer:", err)
+	}
 
 	logg := logger.NewJSONLogger(slog.LevelDebug, "auth-service", "")
 	infrastructureLogger := logger.NewJSONLogger(slog.LevelDebug, "", "infrastructure")
