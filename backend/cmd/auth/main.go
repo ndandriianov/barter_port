@@ -62,8 +62,15 @@ func main() {
 	logg := logger.NewJSONLogger(slog.LevelDebug, "auth-service", "")
 	infrastructureLogger := logger.NewJSONLogger(slog.LevelDebug, "", "infrastructure")
 
-	jwtManager := bootstrap.InitJWTManager()
-	validator := bootstrap.InitLocalJWT()
+	jwtManager, err := bootstrap.InitJWTManagerFromConfig(cfg)
+	if err != nil {
+		log.Fatal("failed to initialize JWT manager:", err)
+	}
+
+	validator, err := bootstrap.InitLocalJWTFromConfig(cfg)
+	if err != nil {
+		log.Fatal("failed to initialize JWT validator:", err)
+	}
 
 	authService := service.NewService(userRepo, emailTokenRepo, m, infrastructureLogger, frontendURL, re)
 	handlers := transport.NewHandlers(logg, authService, jwtManager, refreshTokenRepo)

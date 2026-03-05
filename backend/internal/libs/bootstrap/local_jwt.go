@@ -1,8 +1,13 @@
 package bootstrap
 
-import "barter-port/internal/libs/authkit/validators"
+import (
+	"barter-port/internal/libs/authkit/validators"
+	"fmt"
+)
 
-func InitLocalJWT() *validators.LocalJWT {
-	accessSecret := GetEnv("ACCESS_SECRET", "")
-	return validators.NewLocalJWT(accessSecret)
+func InitLocalJWTFromConfig(cfg Config) (*validators.LocalJWT, error) {
+	if cfg.JWT.AccessSecret == "" {
+		return nil, fmt.Errorf("jwt access secret is empty")
+	}
+	return validators.NewLocalJWT(cfg.JWT.AccessSecret), nil
 }

@@ -13,3 +13,7 @@ mailer:
   user: "user"
   password: "password"
   from: "no-reply@local.test"
+
+jwt:
+  access_ttl: 10m
+  refresh_ttl: 30m

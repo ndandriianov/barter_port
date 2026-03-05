@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/spf13/viper"
 )
@@ -28,6 +29,13 @@ type Config struct {
 		Password string `mapstructure:"password"`
 		From     string `mapstructure:"from"`
 	} `mapstructure:"mailer"`
+
+	JWT struct {
+		AccessSecret  string        `mapstructure:"access_secret"`
+		RefreshSecret string        `mapstructure:"refresh_secret"`
+		AccessTTL     time.Duration `mapstructure:"access_ttl"`  // В минутах
+		RefreshTTL    time.Duration `mapstructure:"refresh_ttl"` // В минутах
+	} `mapstructure:"jwt"`
 }
 
 type ConfigOptions struct {
@@ -71,6 +79,8 @@ func LoadConfig(options ConfigOptions) (Config, error) {
 
 	// переопределение через переменные окружения
 	bindEnv(v, "db.password")
+	bindEnv(v, "jwt.access_secret")
+	bindEnv(v, "jwt.refresh_secret")
 
 	// десериализация в структуру
 	var config Config
