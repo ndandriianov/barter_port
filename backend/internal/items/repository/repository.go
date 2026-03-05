@@ -60,7 +60,7 @@ func (r *ItemRepository) GetItemsOrderByTime(
 		args = append(args, cursor.CreatedAt, cursor.Id, limit)
 	}
 
-	items, err := repox.FetchStructs[model.Item](ctx, r.db, query, limit)
+	items, err := repox.FetchStructs[model.Item](ctx, r.db, query, args...)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -110,7 +110,7 @@ func (r *ItemRepository) GetItemsOrderByPopularity(
 		args = append(args, cursor.Views, cursor.Id, limit)
 	}
 
-	items, err := repox.FetchStructs[model.Item](ctx, r.db, query, args)
+	items, err := repox.FetchStructs[model.Item](ctx, r.db, query, args...)
 	if err != nil {
 		return nil, nil, err
 	}
