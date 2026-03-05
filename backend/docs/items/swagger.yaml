@@ -39,14 +39,6 @@ definitions:
     x-enum-varnames:
     - Good
     - Service
-  model.SortType:
-    enum:
-    - 0
-    - 1
-    type: integer
-    x-enum-varnames:
-    - ByTime
-    - ByPopularity
   model.UniversalCursor:
     properties:
       createdAt:
@@ -78,21 +70,6 @@ definitions:
         - service
         type: string
     type: object
-  transport.GetItemRequest:
-    properties:
-      cursor:
-        allOf:
-        - $ref: '#/definitions/model.UniversalCursor'
-        description: Cursor for pagination
-      limit:
-        description: Maximum number of items to fetch
-        example: 10
-        type: integer
-      sort_type:
-        allOf:
-        - $ref: '#/definitions/model.SortType'
-        description: Sorting type for items
-    type: object
   transport.GetItemResponse:
     properties:
       cursor:
@@ -113,16 +90,29 @@ info:
 paths:
   /items:
     get:
-      consumes:
-      - application/json
       description: Fetch a list of items with optional sorting and pagination
       parameters:
-      - description: Get Items Request
-        in: body
-        name: request
+      - description: Sort type (ByTime, ByPopularity)
+        in: query
+        name: sort_type
         required: true
-        schema:
-          $ref: '#/definitions/transport.GetItemRequest'
+        type: string
+      - description: Creation time for cursor (ISO 8601 format)
+        in: query
+        name: created_at
+        type: string
+      - description: Views for cursor
+        in: query
+        name: views
+        type: integer
+      - description: UUID for cursor
+        in: query
+        name: id
+        type: string
+      - description: Maximum number of items to fetch
+        in: query
+        name: limit
+        type: integer
       produces:
       - application/json
       responses:
@@ -131,7 +121,7 @@ paths:
           schema:
             $ref: '#/definitions/transport.GetItemResponse'
         "400":
-          description: 'Invalid input: invalid sort type'
+          description: Invalid input
           schema:
             $ref: '#/definitions/http_api.ErrorResponse'
         "500":

@@ -8,7 +8,10 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strconv"
+	"time"
 
+	"github.com/google/uuid"
 	"golang.org/x/net/context"
 )
 
@@ -104,32 +107,110 @@ type GetItemResponse struct {
 // @Summary Get a list of items
 // @Description Fetch a list of items with optional sorting and pagination
 // @Tags items
-// @Accept json
 // @Produce json
-// @Param request body GetItemRequest true "Get Items Request"
+// @Param sort_type query string true "Sort type (ByTime, ByPopularity)"
+// @Param created_at query string false "Creation time for cursor (ISO 8601 format)"
+// @Param views query int false "Views for cursor"
+// @Param id query string false "UUID for cursor"
+// @Param limit query int false "Maximum number of items to fetch"
 // @Success 200 {object} GetItemResponse "List of items and pagination cursor"
-// @Failure 400 {object} http_api.ErrorResponse "Invalid input: invalid sort type"
+// @Failure 400 {object} http_api.ErrorResponse "Invalid input"
 // @Failure 500
 // @Router /items [get]
 func (h *Handlers) HandleGetItems(w http.ResponseWriter, r *http.Request) {
 	log := logger.LogFrom(r.Context(), slog.Default())
 	log.Info("handling get items request")
 
-	var req GetItemRequest
-	if ok := http_api.DecodeJSONWithLogs(w, r, log, &req); !ok {
-		return
+	// Parse query parameters
+
+	sortTypeStr := r.URL.Query().Get("sort_type")
+	createdAtStr := r.URL.Query().Get("created_at")
+	viewsStr := r.URL.Query().Get("views")
+	idStr := r.URL.Query().Get("id")
+	limitStr := r.URL.Query().Get("limit")
+
+	var sortType model.SortType
+	if sortTypeStr != "" {
+		var err error
+		sortType, err = model.SortTypeString(sortTypeStr)
+		if err != nil {
+			log.Warn("invalid sort type",
+				slog.String("error", err.Error()),
+				slog.String("sort_type", sortTypeStr),
+			)
+			http_api.HandleError(w, log, http.StatusBadRequest, errors.New("invalid sort type"))
+			return
+		}
 	}
 
-	log.Debug("decoded get items request",
-		slog.Any("req", req),
+	var cursor model.UniversalCursor
+	if createdAtStr != "" {
+		createdAt, err := time.Parse(time.RFC3339, createdAtStr)
+		if err != nil {
+			log.Warn("invalid created_at",
+				slog.String("error", err.Error()),
+				slog.String("created_at", createdAtStr),
+			)
+			http_api.HandleError(w, log, http.StatusBadRequest, errors.New("invalid created_at"))
+			return
+		}
+		cursor.CreatedAt = &createdAt
+	}
+
+	if viewsStr != "" {
+		views, err := strconv.Atoi(viewsStr)
+		if err != nil {
+			log.Warn("invalid views",
+				slog.String("error", err.Error()),
+				slog.String("views", viewsStr),
+			)
+			http_api.HandleError(w, log, http.StatusBadRequest, errors.New("invalid views"))
+			return
+		}
+		cursor.Views = &views
+	}
+
+	if idStr != "" {
+		id, err := uuid.Parse(idStr)
+		if err != nil {
+			log.Warn("invalid id",
+				slog.String("error", err.Error()),
+				slog.String("id", idStr),
+			)
+			http_api.HandleError(w, log, http.StatusBadRequest, errors.New("invalid id"))
+			return
+		}
+		cursor.Id = id
+	}
+
+	limit := 10 // Default limit
+	if limitStr != "" {
+		var err error
+		limit, err = strconv.Atoi(limitStr)
+		if err != nil || limit <= 0 {
+			log.Warn("invalid limit",
+				slog.String("error", err.Error()),
+				slog.String("limit", limitStr),
+			)
+			http_api.HandleError(w, log, http.StatusBadRequest, errors.New("invalid limit"))
+			return
+		}
+	}
+
+	log.Debug("parsed get items request",
+		slog.String("sort_type", sortType.String()),
+		slog.Any("cursor", cursor),
+		slog.Int("limit", limit),
 	)
 
-	items, cursor, err := h.itemService.GetItems(r.Context(), req.SortType, req.Cursor, req.Limit)
+	// Fetch items from the service
+
+	items, nextCursor, err := h.itemService.GetItems(r.Context(), sortType, cursor, limit)
 	if err != nil {
 		if errors.Is(err, service.ErrInvalidSortType) {
 			log.Warn("invalid sort type",
 				slog.String("error", err.Error()),
-				slog.Any("sort_type", req.SortType),
+				slog.Any("sort_type", sortType),
 			)
 			http_api.HandleError(w, log, http.StatusBadRequest, service.ErrInvalidSortType)
 			return
@@ -139,5 +220,5 @@ func (h *Handlers) HandleGetItems(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http_api.WriteJSON(w, log, http.StatusOK, GetItemResponse{Items: items, Cursor: cursor})
+	http_api.WriteJSON(w, log, http.StatusOK, GetItemResponse{Items: items, Cursor: nextCursor})
 }
