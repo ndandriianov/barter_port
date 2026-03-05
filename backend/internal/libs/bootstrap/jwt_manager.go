@@ -2,21 +2,27 @@ package bootstrap
 
 import (
 	"barter-port/internal/libs/jwt"
-	"time"
+	"fmt"
 )
 
-func InitJWTManager() *jwt.Manager {
-	accessSecret := GetEnv("ACCESS_SECRET", "")
-	refreshSecret := GetEnv("REFRESH_SECRET", "")
-	accessTTL := GetEnv("ACCESS_TTL", "")
-	refreshTTL := GetEnv("REFRESH_TTL", "")
-	accessTTLMinutes := time.Duration(mustInt(accessTTL)) * time.Minute
-	refreshTTLMinutes := time.Duration(mustInt(refreshTTL)) * time.Minute
+func InitJWTManagerFromConfig(cfg Config) (*jwt.Manager, error) {
+	if cfg.JWT.AccessSecret == "" {
+		return nil, fmt.Errorf("jwt access secret is empty")
+	}
+	if cfg.JWT.RefreshSecret == "" {
+		return nil, fmt.Errorf("jwt refresh secret is empty")
+	}
+	if cfg.JWT.AccessTTL <= 0 {
+		return nil, fmt.Errorf("jwt access ttl must be greater than 0")
+	}
+	if cfg.JWT.RefreshTTL <= 0 {
+		return nil, fmt.Errorf("jwt refresh ttl must be greater than 0")
+	}
 
 	return jwt.NewManager(jwt.Config{
-		AccessSecret:  accessSecret,
-		RefreshSecret: refreshSecret,
-		AccessTTL:     accessTTLMinutes,
-		RefreshTTL:    refreshTTLMinutes,
-	})
+		AccessSecret:  cfg.JWT.AccessSecret,
+		RefreshSecret: cfg.JWT.RefreshSecret,
+		AccessTTL:     cfg.JWT.AccessTTL,
+		RefreshTTL:    cfg.JWT.RefreshTTL,
+	}), nil
 }
