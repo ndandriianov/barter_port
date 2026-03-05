@@ -9,6 +9,7 @@ import (
 	"log"
 	"log/slog"
 	"net/http"
+	"os"
 
 	"github.com/joho/godotenv"
 )
@@ -26,7 +27,19 @@ import (
 func main() {
 	_ = godotenv.Load()
 
-	db := bootstrap.InitDatabaseFromConfig()
+	cfg, err := bootstrap.LoadConfig(bootstrap.ConfigOptions{
+		CommonPath:  os.Getenv("CONFIG_COMMON"),
+		ServicePath: os.Getenv("CONFIG_SERVICE"),
+		AppEnv:      os.Getenv("APP_ENV"),
+	})
+	if err != nil {
+		log.Fatal("failed to load config:", err)
+	}
+
+	db, err := bootstrap.InitDatabaseFromConfig(cfg)
+	if err != nil {
+		log.Fatal("failed to initialize database:", err)
+	}
 	defer db.Close()
 
 	logg := logger.NewJSONLogger(slog.LevelDebug, "items-service", "")
@@ -34,9 +47,12 @@ func main() {
 	itemRepo := repository.NewItemRepository(db)
 	itemService := service.NewItemService(itemRepo, logg)
 
-	validator := bootstrap.InitLocalJWT()
-	handlers := transport.NewHandlers(itemService)
+	validator, err := bootstrap.InitLocalJWTFromConfig(cfg)
+	if err != nil {
+		log.Fatal("failed to initialize JWT validator:", err)
+	}
 
+	handlers := transport.NewHandlers(itemService)
 	router := transport.NewRouter(logg, validator, handlers)
 
 	addr := ":8080"
