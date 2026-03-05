@@ -2,17 +2,22 @@ package bootstrap
 
 import (
 	"barter-port/internal/libs/platform/database"
-	"log"
+	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func InitDatabase() *pgxpool.Pool {
-	DbConfigPath := GetEnv("DB_CONFIG_PATH", "")
-	dbConfig := database.MustLoad(DbConfigPath)
+func InitDatabaseFromConfig(cfg Config) (*pgxpool.Pool, error) {
+	dbConfig := database.Config{
+		DBUser:     cfg.DB.User,
+		DBPassword: cfg.DB.Password,
+		DBHost:     cfg.DB.Host,
+		DBPort:     cfg.DB.Port,
+		DBName:     cfg.DB.Name,
+	}
 	db, err := database.NewPostgres(dbConfig)
 	if err != nil {
-		log.Fatal("failed to connect to database:", err)
+		return nil, fmt.Errorf("failed to connect to database: %w", err)
 	}
-	return db
+	return db, nil
 }

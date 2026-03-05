@@ -1,0 +1,86 @@
+package bootstrap
+
+import (
+	"fmt"
+	"os"
+	"strings"
+
+	"github.com/spf13/viper"
+)
+
+type Config struct {
+	DB struct {
+		User     string `mapstructure:"user"`
+		Password string `mapstructure:"password"`
+		Host     string `mapstructure:"host"`
+		Port     string `mapstructure:"port"`
+		Name     string `mapstructure:"name"`
+	} `mapstructure:"db"`
+
+	Frontend struct {
+		URL string `mapstructure:"url"`
+	} `mapstructure:"frontend"`
+
+	Mailer struct {
+		Host     string `mapstructure:"host"`
+		Port     int    `mapstructure:"port"`
+		User     string `mapstructure:"user"`
+		Password string `mapstructure:"password"`
+		From     string `mapstructure:"from"`
+	} `mapstructure:"mailer"`
+}
+
+type ConfigOptions struct {
+	CommonPath  string
+	ServicePath string
+	AppEnv      string // local|docker
+}
+
+// LoadConfig загружает конфигурацию из нескольких источников с приоритетом: общий конфиг -> сервисный конфиг ->
+// конфиг для окружения -> переменные окружения
+func LoadConfig(options ConfigOptions) (Config, error) {
+	v := viper.New()
+
+	// общий конфиг, обязательный для всех сервисов
+	if options.CommonPath == "" {
+		return Config{}, fmt.Errorf("common config path is not set")
+	}
+	v.SetConfigFile(options.CommonPath)
+	if err := v.ReadInConfig(); err != nil {
+		return Config{}, fmt.Errorf("failed to read config file: %v", err)
+	}
+
+	// конфиг конкретного сервиса, может быть не указан, тогда будет использоваться только общий
+	if options.ServicePath != "" {
+		v.SetConfigFile(options.ServicePath)
+		if err := v.MergeInConfig(); err != nil {
+			return Config{}, fmt.Errorf("failed to merge service conflict: %v", err)
+		}
+	}
+
+	// конфиг для конкретного окружения, может быть не указан, тогда будет использоваться только общий и сервисный
+	if options.AppEnv != "" {
+		overridePath := "./config/" + options.AppEnv + ".yaml"
+		if _, err := os.Stat(overridePath); err == nil {
+			v.SetConfigFile(overridePath)
+			if err := v.MergeInConfig(); err != nil {
+				return Config{}, fmt.Errorf("failed to merge env override conflict: %v", err)
+			}
+		}
+	}
+
+	// переопределение через переменные окружения
+	bindEnv(v, "db.password")
+
+	// десериализация в структуру
+	var config Config
+	if err := v.Unmarshal(&config); err != nil {
+		return Config{}, fmt.Errorf("failed to unmarshal config: %v", err)
+	}
+
+	return config, nil
+}
+
+func bindEnv(v *viper.Viper, key string) {
+	_ = v.BindEnv(key, strings.ToUpper(strings.ReplaceAll(key, ".", "_")))
+}

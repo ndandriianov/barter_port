@@ -2,19 +2,19 @@ package bootstrap
 
 import (
 	"barter-port/internal/libs/platform/mailer"
-	"log"
+	"fmt"
 )
 
-func InitMailer() *mailer.SMTPMailer {
-	smtpHost := GetEnv("SMTP_HOST", "")
-	smtpPort := mustInt(GetEnv("SMTP_PORT", ""))
-	smtpUser := GetEnv("SMTP_USER", "")
-	smtpPass := GetEnv("SMTP_PASS", "")
-	smtpFrom := GetEnv("SMTP_FROM", smtpUser)
-
-	if smtpHost == "" {
-		log.Fatal("SMTP_HOST is required")
+func InitMailerFromConfig(cfg Config) (*mailer.SMTPMailer, error) {
+	if cfg.Mailer.Host == "" {
+		return nil, fmt.Errorf("MAILER_HOST is required")
 	}
 
-	return mailer.NewSMTPMailer(smtpHost, smtpPort, smtpUser, smtpPass, smtpFrom)
+	return mailer.NewSMTPMailer(
+		cfg.Mailer.Host,
+		cfg.Mailer.Port,
+		cfg.Mailer.User,
+		cfg.Mailer.Password,
+		cfg.Mailer.From,
+	), nil
 }

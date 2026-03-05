@@ -26,7 +26,7 @@ import (
 func main() {
 	_ = godotenv.Load()
 
-	db := bootstrap.InitDatabase()
+	db := bootstrap.InitDatabaseFromConfig()
 	defer db.Close()
 
 	logg := logger.NewJSONLogger(slog.LevelDebug, "items-service", "")
