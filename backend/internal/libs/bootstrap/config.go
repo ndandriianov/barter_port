@@ -23,11 +23,13 @@ type Config struct {
 	} `mapstructure:"frontend"`
 
 	Mailer struct {
-		Host     string `mapstructure:"host"`
-		Port     int    `mapstructure:"port"`
-		User     string `mapstructure:"user"`
-		Password string `mapstructure:"password"`
-		From     string `mapstructure:"from"`
+		Host               string `mapstructure:"host"`
+		Port               int    `mapstructure:"port"`
+		User               string `mapstructure:"user"`
+		Password           string `mapstructure:"password"`
+		From               string `mapstructure:"from"`
+		TLSMode            string `mapstructure:"tls_mode"`
+		InsecureSkipVerify bool   `mapstructure:"insecure_skip_verify"`
 	} `mapstructure:"mailer"`
 
 	JWT struct {
