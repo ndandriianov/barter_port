@@ -38,6 +38,8 @@ type Config struct {
 		AccessTTL     time.Duration `mapstructure:"access_ttl"`  // В минутах
 		RefreshTTL    time.Duration `mapstructure:"refresh_ttl"` // В минутах
 	} `mapstructure:"jwt"`
+
+	Port int `mapstructure:"port"`
 }
 
 type ConfigOptions struct {
