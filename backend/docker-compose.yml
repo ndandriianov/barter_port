@@ -80,5 +80,20 @@ services:
     volumes:
       - ./config:/app/config:ro
 
+  swagger-ui:
+    image: swaggerapi/swagger-ui:latest
+    container_name: barter-port-swagger-ui
+    restart: unless-stopped
+    environment:
+      URLS: |
+        [
+          { "url": "/swagger-specs/auth.json", "name": "Auth API" },
+          { "url": "/swagger-specs/items.json", "name": "Items API" }
+        ]
+      BASE_URL: /docs
+    depends_on:
+      - auth
+      - items
+
 volumes:
   db_data:
