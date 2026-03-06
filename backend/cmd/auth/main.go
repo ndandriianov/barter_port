@@ -57,8 +57,8 @@ func main() {
 	emailTokenRepo := email_token.NewRepository(db)
 	refreshTokenRepo := refresh_token.NewRepository(db)
 
-	m, err := bootstrap.InitMailerFromConfig(cfg)
-	if err != nil {
+	m := bootstrap.InitMailerFromConfig(cfg)
+	if err = bootstrap.ValidateMailConfig(cfg); err != nil {
 		log.Fatal("failed to initialize mailer:", err)
 	}
 
