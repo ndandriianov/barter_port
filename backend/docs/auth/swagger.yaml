@@ -52,7 +52,7 @@ definitions:
         example: iT1VWZWO1apO2GGoXG1ahOKuHlo8WA6ESwA86WMOTiI
         type: string
     type: object
-host: localhost:8081
+host: localhost:80
 info:
   contact: {}
   description: API for Barter Port

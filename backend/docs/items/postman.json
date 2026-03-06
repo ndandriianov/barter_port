@@ -5,7 +5,7 @@
             "description": "",
             "item": [
                 {
-                    "id": "ea5bb952-4820-4e66-8794-51753a1ab247",
+                    "id": "f0cc0e57-1c1c-4c33-82c8-e8b163c4e64e",
                     "name": "Get a list of items",
                     "request": {
                         "name": "Get a list of items",
@@ -97,7 +97,7 @@
                     },
                     "response": [
                         {
-                            "id": "07b1f9c4-3407-4a7f-b87f-e4befe4efa8a",
+                            "id": "4d54c971-c222-449d-a4bf-25f19244439b",
                             "name": "List of items and pagination cursor",
                             "originalRequest": {
                                 "url": {
@@ -181,12 +181,12 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{\n  \"cursor\": {\n    \"createdAt\": \"<string>\",\n    \"id\": \"<string>\",\n    \"views\": \"<integer>\"\n  },\n  \"items\": [\n    {\n      \"action\": 1,\n      \"createdAt\": \"<string>\",\n      \"description\": \"<string>\",\n      \"id\": \"<string>\",\n      \"name\": \"<string>\",\n      \"type\": 0,\n      \"views\": \"<integer>\"\n    },\n    {\n      \"action\": 0,\n      \"createdAt\": \"<string>\",\n      \"description\": \"<string>\",\n      \"id\": \"<string>\",\n      \"name\": \"<string>\",\n      \"type\": 1,\n      \"views\": \"<integer>\"\n    }\n  ]\n}",
+                            "body": "{\n  \"cursor\": {\n    \"createdAt\": \"<string>\",\n    \"id\": \"<string>\",\n    \"views\": \"<integer>\"\n  },\n  \"items\": [\n    {\n      \"action\": 0,\n      \"createdAt\": \"<string>\",\n      \"description\": \"<string>\",\n      \"id\": \"<string>\",\n      \"name\": \"<string>\",\n      \"type\": 1,\n      \"views\": \"<integer>\"\n    },\n    {\n      \"action\": 0,\n      \"createdAt\": \"<string>\",\n      \"description\": \"<string>\",\n      \"id\": \"<string>\",\n      \"name\": \"<string>\",\n      \"type\": 0,\n      \"views\": \"<integer>\"\n    }\n  ]\n}",
                             "cookie": [],
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "6b5d3494-1c9b-400a-aa0f-94db4fbfcf4d",
+                            "id": "5daee578-f4d8-4626-8719-cd71bb711c57",
                             "name": "Invalid input",
                             "originalRequest": {
                                 "url": {
@@ -275,7 +275,7 @@
                             "_postman_previewlanguage": "json"
                         },
                         {
-                            "id": "620fa566-008b-4c4e-9811-2642956280d6",
+                            "id": "58f455fd-7e4a-4492-b3be-a9fabfedd3d1",
                             "name": "Internal Server Error",
                             "originalRequest": {
                                 "url": {
@@ -360,7 +360,7 @@
                     }
                 },
                 {
-                    "id": "cd08c847-aea6-45ab-beec-28fd15c8b45d",
+                    "id": "cad4ea77-16cc-4fe7-96da-32f5962d4ee9",
                     "name": "Create a new item",
                     "request": {
                         "name": "Create a new item",
@@ -387,7 +387,7 @@
                         "method": "POST",
                         "body": {
                             "mode": "raw",
-                            "raw": "{\n  \"action\": \"give\",\n  \"description\": \"<string>\",\n  \"name\": \"<string>\",\n  \"type\": \"service\"\n}",
+                            "raw": "{\n  \"action\": \"give\",\n  \"description\": \"<string>\",\n  \"name\": \"<string>\",\n  \"type\": \"good\"\n}",
                             "options": {
                                 "raw": {
                                     "headerFamily": "json",
@@ -415,7 +415,7 @@
                     },
                     "response": [
                         {
-                            "id": "d50bf440-7dde-425e-b786-30549121236f",
+                            "id": "79e95938-8ffe-4e46-af4d-9e1a21146263",
                             "name": "Created",
                             "originalRequest": {
                                 "url": {
@@ -445,7 +445,7 @@
                                 "method": "POST",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n  \"action\": \"give\",\n  \"description\": \"<string>\",\n  \"name\": \"<string>\",\n  \"type\": \"service\"\n}",
+                                    "raw": "{\n  \"action\": \"give\",\n  \"description\": \"<string>\",\n  \"name\": \"<string>\",\n  \"type\": \"good\"\n}",
                                     "options": {
                                         "raw": {
                                             "headerFamily": "json",
@@ -461,7 +461,7 @@
                             "_postman_previewlanguage": "text"
                         },
                         {
-                            "id": "069180b8-c123-4b03-87ea-7eb8252ef079",
+                            "id": "ac5d7aaa-9314-4d57-b1f3-d6f21c63bb79",
                             "name": "Bad Request",
                             "originalRequest": {
                                 "url": {
@@ -491,7 +491,7 @@
                                 "method": "POST",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n  \"action\": \"give\",\n  \"description\": \"<string>\",\n  \"name\": \"<string>\",\n  \"type\": \"service\"\n}",
+                                    "raw": "{\n  \"action\": \"give\",\n  \"description\": \"<string>\",\n  \"name\": \"<string>\",\n  \"type\": \"good\"\n}",
                                     "options": {
                                         "raw": {
                                             "headerFamily": "json",
@@ -507,7 +507,7 @@
                             "_postman_previewlanguage": "text"
                         },
                         {
-                            "id": "6f310d62-4cbd-4139-92bb-1f21b4b1750e",
+                            "id": "2d74eaa0-8e2c-4ef0-bdd6-d4673322a7da",
                             "name": "Internal Server Error",
                             "originalRequest": {
                                 "url": {
@@ -537,7 +537,7 @@
                                 "method": "POST",
                                 "body": {
                                     "mode": "raw",
-                                    "raw": "{\n  \"action\": \"give\",\n  \"description\": \"<string>\",\n  \"name\": \"<string>\",\n  \"type\": \"service\"\n}",
+                                    "raw": "{\n  \"action\": \"give\",\n  \"description\": \"<string>\",\n  \"name\": \"<string>\",\n  \"type\": \"good\"\n}",
                                     "options": {
                                         "raw": {
                                             "headerFamily": "json",
@@ -565,11 +565,11 @@
     "variable": [
         {
             "key": "baseUrl",
-            "value": "/"
+            "value": "http://localhost:80"
         }
     ],
     "info": {
-        "_postman_id": "08c023ba-d2f0-4377-b4f8-53847cab6e15",
+        "_postman_id": "5c2cf83e-1aa4-4dac-b9ae-f55b07433469",
         "name": "Barter Port API",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
         "description": {
