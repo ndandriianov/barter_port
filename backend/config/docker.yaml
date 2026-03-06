@@ -4,3 +4,6 @@ db:
 mailer:
   host: "smtp4dev"
   port: 25
+
+port:
+  8080
