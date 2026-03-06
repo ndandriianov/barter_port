@@ -23,6 +23,23 @@
 		Vary "Origin"
 	}
 
+    # swagger
+	handle /docs* {
+		reverse_proxy swagger-ui:8080
+	}
+
+	handle /swagger-specs/auth.json {
+		reverse_proxy auth:8080 {
+			rewrite /swagger/doc.json
+		}
+	}
+
+	handle /swagger-specs/items.json {
+		reverse_proxy items:8080 {
+			rewrite /swagger/doc.json
+		}
+	}
+
 	# Auth service по префиксу /auth/*
 	handle /auth/* {
 		reverse_proxy auth:8080 # локально host.docker.internal:8081
