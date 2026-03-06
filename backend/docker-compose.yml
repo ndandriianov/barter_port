@@ -7,10 +7,13 @@ services:
       - "5005:80"   # Web UI
       - "2525:25"   # SMTP
     environment:
-      - ServerOptions__HostName=localhost
+      - ServerOptions__HostName=smtp4dev
       - ServerOptions__AuthenticationRequired=true
       - ServerOptions__Users__0__Username=user
       - ServerOptions__Users__0__Password=password
+      # Note: For development, we can use StartTls without a certificate, but in production, you should provide a valid TLS certificate.
+      - ServerOptions__TlsMode=StartTls
+      - ServerOptions__TlsCertificate=
 
   db:
     image: postgres:16
@@ -22,7 +25,13 @@ services:
     ports:
       - "5432:5432"
     volumes:
+      - db_data:/var/lib/postgresql/data
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d postgres" ]
+      interval: 5s
+      timeout: 3s
+      retries: 30
 
   caddy:
     image: caddy:2
@@ -34,3 +43,46 @@ services:
       - "80:80"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
+
+  auth:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: auth
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - ./.env
+    environment:
+      APP_ENV: docker
+      CONFIG_COMMON: /app/config/common.yaml
+      CONFIG_SERVICE: # /app/config/auth.yaml
+    volumes:
+      - ./config:/app/config:ro
+    ports:
+      - "8081:8081"
+
+  items:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: items
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - ./.env
+    environment:
+      APP_ENV: docker
+      CONFIG_COMMON: /app/config/common.yaml
+      CONFIG_SERVICE: # /app/config/items.yaml
+    volumes:
+      - ./config:/app/config:ro
+    ports:
+      - "8080:8080"
+
+volumes:
+  db_data:

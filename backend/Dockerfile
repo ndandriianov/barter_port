@@ -16,7 +16,7 @@ FROM alpine:3.20
 WORKDIR /app
 
 COPY --from=builder /out/app /app/app
-COPY config /app/config
+#COPY config /app/config
 
 EXPOSE 8080
 ENTRYPOINT ["/app/app"]

@@ -6,3 +6,14 @@ db:
 
 jwt:
   access_ttl: 10m
+  refresh_ttl: 30m
+
+frontend:
+  url: "http://localhost:5173"
+
+mailer:
+  host: "localhost"
+  port: 2525
+  user: "user"
+  password: "password"
+  from: "no-reply@local.test"

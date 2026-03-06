@@ -8,7 +8,6 @@ import (
 	"barter-port/internal/auth/transport"
 	"barter-port/internal/libs/bootstrap"
 	"barter-port/internal/libs/platform/logger"
-	"fmt"
 	"log/slog"
 	"os"
 	"regexp"
@@ -33,8 +32,8 @@ import (
 func main() {
 	_ = godotenv.Load()
 
-	serviceName := bootstrap.GetEnv("SERVICE_NAME", "auth")
-	serviceConfigPath := fmt.Sprintf("./config/%s.yaml", serviceName)
+	//serviceName := bootstrap.GetEnv("SERVICE_NAME", "auth")
+	serviceConfigPath := "" //fmt.Sprintf("./config/%s.yaml", serviceName)
 
 	cfg, err := bootstrap.LoadConfig(bootstrap.ConfigOptions{
 		CommonPath:  os.Getenv("CONFIG_COMMON"),
