@@ -79,7 +79,7 @@ func main() {
 	handlers := transport.NewHandlers(logg, authService, jwtManager, refreshTokenRepo)
 	router := transport.NewRouter(logg, validator, handlers)
 
-	addr := ":8081"
-	log.Println("backend listening on", addr)
-	log.Fatal(http.ListenAndServe(addr, router))
+	port := bootstrap.InitPortStringFromConfig(cfg, 8081)
+	log.Println("backend listening on", port)
+	log.Fatal(http.ListenAndServe(port, router))
 }

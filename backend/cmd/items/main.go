@@ -55,7 +55,7 @@ func main() {
 	handlers := transport.NewHandlers(itemService)
 	router := transport.NewRouter(logg, validator, handlers)
 
-	addr := ":8080"
-	log.Println("backend listening on", addr)
-	log.Fatal(http.ListenAndServe(addr, router))
+	port := bootstrap.InitPortStringFromConfig(cfg, 8080)
+	log.Println("backend listening on", port)
+	log.Fatal(http.ListenAndServe(port, router))
 }
