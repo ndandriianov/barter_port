@@ -19,6 +19,7 @@ import (
 // @title Barter Port API
 // @version 1.0.0
 // @description API for Barter Port
+// @host localhost:80
 // @BasePath /
 // @schemes http https
 // @securityDefinitions.apikey BearerAuth

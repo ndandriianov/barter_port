@@ -9,7 +9,7 @@
                     "description": "",
                     "item": [
                         {
-                            "id": "a14490ce-8503-4b1b-843c-aa1f540f5655",
+                            "id": "7f13aea6-4027-488f-8207-41fbbdcc091e",
                             "name": "Login user",
                             "request": {
                                 "name": "Login user",
@@ -53,7 +53,7 @@
                             },
                             "response": [
                                 {
-                                    "id": "4e417317-5dfa-46e2-91bf-86d7a9565f51",
+                                    "id": "e435fd18-51f8-4b7f-8ca4-5d87c3ab0b9a",
                                     "name": "OK",
                                     "originalRequest": {
                                         "url": {
@@ -102,7 +102,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "936d3645-44b9-4be2-b36e-e648cdbddc1d",
+                                    "id": "70e30775-583d-45c9-a55c-9753ba477113",
                                     "name": "Invalid request or credentials",
                                     "originalRequest": {
                                         "url": {
@@ -151,7 +151,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "b643a66b-e2d7-4c0a-9722-a412d6b21bff",
+                                    "id": "d47bc30a-b00c-490a-8257-945ed8b5e3ab",
                                     "name": "Incorrect password",
                                     "originalRequest": {
                                         "url": {
@@ -200,7 +200,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "edcc4c19-6546-42ec-a5ac-69a3785b441d",
+                                    "id": "4f62574e-2352-428e-9444-e70a5b6f0942",
                                     "name": "Email not verified",
                                     "originalRequest": {
                                         "url": {
@@ -249,7 +249,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "97af919f-c3c0-4440-b7fb-ef5111a1674b",
+                                    "id": "17ce7a84-e06e-4777-9c61-18b0820b70d4",
                                     "name": "Internal server error",
                                     "originalRequest": {
                                         "url": {
@@ -310,7 +310,7 @@
                     "description": "",
                     "item": [
                         {
-                            "id": "ffc6ff52-ff58-4ace-be0e-8c369900ac5d",
+                            "id": "97e99b45-5680-4565-be9a-b3ad82154843",
                             "name": "Logout user",
                             "request": {
                                 "name": "Logout user",
@@ -341,7 +341,7 @@
                             },
                             "response": [
                                 {
-                                    "id": "7826d780-deac-4653-b246-be7935726288",
+                                    "id": "00a397fb-0141-47a0-af36-5c1d24040832",
                                     "name": "Logout successful",
                                     "originalRequest": {
                                         "url": {
@@ -365,7 +365,7 @@
                                     "_postman_previewlanguage": "text"
                                 },
                                 {
-                                    "id": "104e3124-0f6c-4b63-88d0-7387d41decce",
+                                    "id": "de367308-54b3-4f36-b2d4-94117a58522b",
                                     "name": "Internal server error",
                                     "originalRequest": {
                                         "url": {
@@ -413,7 +413,7 @@
                     "description": "",
                     "item": [
                         {
-                            "id": "5dc4101f-92cb-48c8-8545-a3981c537e2e",
+                            "id": "2697ee7e-15ee-42d6-a336-438892a39012",
                             "name": "Get user info",
                             "request": {
                                 "name": "Get user info",
@@ -460,7 +460,7 @@
                             },
                             "response": [
                                 {
-                                    "id": "da14dce5-70cf-4ec5-ac57-9115f760a766",
+                                    "id": "26dd0e0e-3cde-4ccb-abae-706d539be459",
                                     "name": "OK",
                                     "originalRequest": {
                                         "url": {
@@ -504,7 +504,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "628be68e-f22e-4ed5-8189-11c7474d5192",
+                                    "id": "d430db50-37c3-4784-88c6-ad6f5f277863",
                                     "name": "Internal server error",
                                     "originalRequest": {
                                         "url": {
@@ -560,7 +560,7 @@
                     "description": "",
                     "item": [
                         {
-                            "id": "d55ed70d-71ff-408d-9c14-9ac2af0c0383",
+                            "id": "56959d89-daa7-48ed-bc29-5967b8784d3d",
                             "name": "Refresh tokens",
                             "request": {
                                 "name": "Refresh tokens",
@@ -600,7 +600,7 @@
                             },
                             "response": [
                                 {
-                                    "id": "141c2b91-b341-4d74-8506-31cb67ca81a4",
+                                    "id": "6b1450f7-7325-4ce9-a23d-50fa58b31197",
                                     "name": "OK",
                                     "originalRequest": {
                                         "url": {
@@ -645,7 +645,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "9ce26a6d-d45f-4c9d-98a3-6862c11f0029",
+                                    "id": "31a10cf5-4692-4373-8542-38d0bd0a9198",
                                     "name": "Unauthorized or invalid token",
                                     "originalRequest": {
                                         "url": {
@@ -690,7 +690,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "fe902c59-288f-4e8d-895d-676606592c78",
+                                    "id": "45ed5271-8459-48df-8588-bd4167eafebb",
                                     "name": "Internal server error",
                                     "originalRequest": {
                                         "url": {
@@ -747,7 +747,7 @@
                     "description": "",
                     "item": [
                         {
-                            "id": "38f38d18-a562-4ed9-9b57-913dd55aa02b",
+                            "id": "ed9532ba-309e-4ec5-8a56-e0383084c9b4",
                             "name": "Register a new user",
                             "request": {
                                 "name": "Register a new user",
@@ -791,7 +791,7 @@
                             },
                             "response": [
                                 {
-                                    "id": "e1d3222a-8d8e-4b14-9739-a1251e521bab",
+                                    "id": "2d3b1401-b7f7-4e2e-8670-d90db6169b79",
                                     "name": "OK",
                                     "originalRequest": {
                                         "url": {
@@ -840,7 +840,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "ffc13649-eabf-4d00-ae76-1480d127299e",
+                                    "id": "ed1bca09-0099-425a-b553-88cbcbc6ba60",
                                     "name": "Invalid request",
                                     "originalRequest": {
                                         "url": {
@@ -889,7 +889,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "f04c7545-5689-4e06-a046-7df899ca1812",
+                                    "id": "c7a5fe83-c59c-415f-9849-e0f5041545af",
                                     "name": "Internal server error",
                                     "originalRequest": {
                                         "url": {
@@ -950,7 +950,7 @@
                     "description": "",
                     "item": [
                         {
-                            "id": "ff6b1a70-c32a-442f-a528-75ef325d7ab4",
+                            "id": "e8af377e-2d9c-4402-b124-843020b2e2d0",
                             "name": "Verify email",
                             "request": {
                                 "name": "Verify email",
@@ -994,7 +994,7 @@
                             },
                             "response": [
                                 {
-                                    "id": "ad8c54e6-a58b-4e62-966f-85f319f650dd",
+                                    "id": "2fa52964-b2c4-4a16-ac4f-9aac56a7eb9c",
                                     "name": "status: ok",
                                     "originalRequest": {
                                         "url": {
@@ -1033,7 +1033,7 @@
                                     "_postman_previewlanguage": "text"
                                 },
                                 {
-                                    "id": "1d29f741-8ee2-49cb-80c5-4c9e42b781b8",
+                                    "id": "1e15b528-6991-4e60-90d0-58ceb88f547a",
                                     "name": "Invalid request or token",
                                     "originalRequest": {
                                         "url": {
@@ -1082,7 +1082,7 @@
                                     "_postman_previewlanguage": "text"
                                 },
                                 {
-                                    "id": "29170d94-e1fb-4430-95be-364266dfd877",
+                                    "id": "92c5f18a-dc02-4695-902c-5af3ce47c910",
                                     "name": "User not found",
                                     "originalRequest": {
                                         "url": {
@@ -1131,7 +1131,7 @@
                                     "_postman_previewlanguage": "text"
                                 },
                                 {
-                                    "id": "9c541e51-7611-47e9-8cb8-146ea09bd6f0",
+                                    "id": "bfef7563-d88f-4aa8-a2f0-db3e313c2330",
                                     "name": "Internal server error",
                                     "originalRequest": {
                                         "url": {
@@ -1194,11 +1194,11 @@
     "variable": [
         {
             "key": "baseUrl",
-            "value": "http://localhost:8081"
+            "value": "http://localhost:80"
         }
     ],
     "info": {
-        "_postman_id": "f17855f9-6b67-432b-9995-a9db7cd676fe",
+        "_postman_id": "f413a1b3-8bcd-4e9a-8a04-2fdae4e4bfc7",
         "name": "Barter Port API",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
         "description": {

@@ -10,6 +10,7 @@
         "contact": {},
         "version": "1.0.0"
     },
+    "host": "localhost:80",
     "basePath": "/",
     "paths": {
         "/items": {
