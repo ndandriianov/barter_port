@@ -17,7 +17,7 @@ import (
 
 type itemService interface {
 	CreateItem(ctx context.Context, name string, itemType model.ItemType, action model.ItemAction, description string) (*model.Item, error)
-	GetItems(ctx context.Context, sortType model.SortType, cursor *model.UniversalCursor, limit int) ([]model.Item, model.UniversalCursor, error)
+	GetItems(ctx context.Context, sortType model.SortType, cursor *model.UniversalCursor, limit int) ([]model.Item, *model.UniversalCursor, error)
 }
 
 type Handlers struct {
@@ -161,19 +161,21 @@ func (h *Handlers) HandleGetItems(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var viewsPtr *int64 = nil
-	if nextCursor.Views != nil {
-		viewsPtr = new(int64(*nextCursor.Views))
-	}
-
-	respCursor := types.ItemsCursor{
-		CreatedAt: nextCursor.CreatedAt,
-		Id:        nextCursor.Id,
-		Views:     viewsPtr,
+	var respCursor *types.ItemsCursor
+	if nextCursor != nil {
+		var viewsPtr *int64 = nil // нужно для соответствия типов
+		if nextCursor.Views != nil {
+			viewsPtr = new(int64(*nextCursor.Views))
+		}
+		respCursor = &types.ItemsCursor{
+			CreatedAt: nextCursor.CreatedAt,
+			Id:        nextCursor.Id,
+			Views:     viewsPtr,
+		}
 	}
 
 	http_api.WriteJSONWithLogs(w, log, http.StatusOK, types.ListItemsResponse{
 		Items:      respItems,
-		NextCursor: &respCursor,
+		NextCursor: respCursor,
 	})
 }
