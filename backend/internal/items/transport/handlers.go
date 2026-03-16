@@ -15,8 +15,8 @@ import (
 )
 
 type itemService interface {
-	CreateItem(ctx context.Context, name string, itemType model.ItemType, action model.ItemAction, description string) (model.Item, error)
-	GetItems(ctx context.Context, sortType model.SortType, cursor model.UniversalCursor, limit int) ([]model.Item, model.UniversalCursor, error)
+	CreateItem(ctx context.Context, name string, itemType model.ItemType, action model.ItemAction, description string) (*model.Item, error)
+	GetItems(ctx context.Context, sortType model.SortType, cursor *model.UniversalCursor, limit int) ([]model.Item, model.UniversalCursor, error)
 }
 
 type Handlers struct {
@@ -113,14 +113,17 @@ func (h *Handlers) HandleGetItems(w http.ResponseWriter, r *http.Request) {
 	sortType, err := model.SortTypeString(sortTypeStr)
 	if err != nil {
 		log.Error("invalid sort type", slog.Any("error", err))
-		http_api.HandleError(w, log, http.StatusBadRequest, errors.New("invalid sort type"))
+		http_api.WriteJSON(w, http.StatusBadRequest, types.ErrorResponse{
+			Code:    "INVALID_SORT_TYPE",
+			Message: "Вы указали несуществующий тип сортировки",
+		})
 		return
 	}
 
 	cursor, err := model.NewUniversalCursor(createdAtStr, viewsStr, idStr)
 	if err != nil {
 		log.Error("failed to create items cursor", slog.Any("error", err))
-		http_api.HandleError(w, log, http.StatusBadRequest, errors.New("failed to create items cursor"))
+		cursor = nil
 	}
 
 	limit, err := strconv.Atoi(limitStr)
@@ -132,18 +135,13 @@ func (h *Handlers) HandleGetItems(w http.ResponseWriter, r *http.Request) {
 	log.Debug("parsing finished", slog.Any("cursor", cursor), slog.Int("limit", limit))
 
 	// Fetch items from the service
-	items, nextCursor, err := h.itemService.GetItems(r.Context(), sortType, *cursor, limit)
+	items, nextCursor, err := h.itemService.GetItems(r.Context(), sortType, cursor, limit)
 	if err != nil {
-		if errors.Is(err, service.ErrInvalidSortType) {
-			log.Warn("invalid sort type",
-				slog.String("error", err.Error()),
-				slog.Any("sort_type", sortType),
-			)
-			http_api.HandleError(w, log, http.StatusBadRequest, service.ErrInvalidSortType)
-			return
-		}
 		log.Error("failed to get items", slog.String("error", err.Error()))
-		w.WriteHeader(http.StatusInternalServerError)
+		http_api.WriteJSON(w, http.StatusInternalServerError, types.ErrorResponse{
+			Code:    "INTERNAL",
+			Message: "Произошла ошибка, повторите ошибку позднее",
+		})
 		return
 	}
 
