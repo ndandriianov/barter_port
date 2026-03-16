@@ -39,7 +39,7 @@ func (h *Handlers) HandleCreateItem(w http.ResponseWriter, r *http.Request) {
 	if err := http_api.DecodeJSON(r, &req); err != nil {
 		log.Error("error decoding request", slog.Any("error", err))
 		http_api.WriteJSON(w, http.StatusBadRequest, types.ErrorResponse{
-			Code:    "INVALID_REQUEST",
+			Code:    types.ErrorCodeInvalidRequest,
 			Message: "Вы отправили некорректный запрос",
 		})
 		return
@@ -52,18 +52,20 @@ func (h *Handlers) HandleCreateItem(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Error("invalid item type", slog.String("type", string(req.Type)), slog.Any("error", err))
 		http_api.WriteJSON(w, http.StatusBadRequest, types.ErrorResponse{
-			Code:    "INVALID_ITEM_TYPE",
+			Code:    types.ErrorCodeInvalidItemType,
 			Message: "Невозможно создать объявление с таким типом",
 		})
+		return
 	}
 
 	action, err := model.ItemActionString(string(req.Action))
 	if err != nil {
 		log.Error("invalid item action", slog.String("action", string(req.Action)), slog.Any("error", err))
 		http_api.WriteJSON(w, http.StatusBadRequest, types.ErrorResponse{
-			Code:    "INVALID_ITEM_ACTION",
+			Code:    types.ErrorCodeInvalidItemAction,
 			Message: "Невозможно создать объявление с таким действием",
 		})
+		return
 	}
 
 	item, err := h.itemService.CreateItem(r.Context(), req.Name, itemType, action, req.Description)
@@ -71,14 +73,14 @@ func (h *Handlers) HandleCreateItem(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, service.ErrInvalidItemName) {
 			log.Warn("invalid item name", slog.String("error", err.Error()))
 			http_api.WriteJSON(w, http.StatusBadRequest, types.ErrorResponse{
-				Code:    "INVALID_ITEM_NAME",
+				Code:    types.ErrorCodeInvalidItemName,
 				Message: "Некорректное название объявления",
 			})
 			return
 		}
 		log.Error("failed to create item", slog.String("error", err.Error()))
 		http_api.WriteJSON(w, http.StatusInternalServerError, types.ErrorResponse{
-			Code:    "INTERNAL",
+			Code:    types.ErrorCodeInternal,
 			Message: "Произошла ошибка, повторите ошибку позднее",
 		})
 		return
@@ -114,7 +116,7 @@ func (h *Handlers) HandleGetItems(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Error("invalid sort type", slog.Any("error", err))
 		http_api.WriteJSON(w, http.StatusBadRequest, types.ErrorResponse{
-			Code:    "INVALID_SORT_TYPE",
+			Code:    types.ErrorCodeInvalidSortType,
 			Message: "Вы указали несуществующий тип сортировки",
 		})
 		return
@@ -139,7 +141,7 @@ func (h *Handlers) HandleGetItems(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Error("failed to get items", slog.String("error", err.Error()))
 		http_api.WriteJSON(w, http.StatusInternalServerError, types.ErrorResponse{
-			Code:    "INTERNAL",
+			Code:    types.ErrorCodeInternal,
 			Message: "Произошла ошибка, повторите ошибку позднее",
 		})
 		return

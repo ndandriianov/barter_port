@@ -13,6 +13,36 @@ const (
 	BearerAuthScopes = "bearerAuth.Scopes"
 )
 
+// Defines values for ErrorCode.
+const (
+	ErrorCodeInternal          ErrorCode = "INTERNAL"
+	ErrorCodeInvalidItemAction ErrorCode = "INVALID_ITEM_ACTION"
+	ErrorCodeInvalidItemName   ErrorCode = "INVALID_ITEM_NAME"
+	ErrorCodeInvalidItemType   ErrorCode = "INVALID_ITEM_TYPE"
+	ErrorCodeInvalidRequest    ErrorCode = "INVALID_REQUEST"
+	ErrorCodeInvalidSortType   ErrorCode = "INVALID_SORT_TYPE"
+)
+
+// Valid indicates whether the value is a known member of the ErrorCode enum.
+func (e ErrorCode) Valid() bool {
+	switch e {
+	case ErrorCodeInternal:
+		return true
+	case ErrorCodeInvalidItemAction:
+		return true
+	case ErrorCodeInvalidItemName:
+		return true
+	case ErrorCodeInvalidItemType:
+		return true
+	case ErrorCodeInvalidRequest:
+		return true
+	case ErrorCodeInvalidSortType:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ItemAction.
 const (
 	Give ItemAction = "give"
@@ -96,10 +126,13 @@ type CreateItemRequest struct {
 	Type ItemType `json:"type"`
 }
 
+// ErrorCode defines model for ErrorCode.
+type ErrorCode string
+
 // ErrorResponse defines model for ErrorResponse.
 type ErrorResponse struct {
-	Code    string `json:"code"`
-	Message string `json:"message"`
+	Code    ErrorCode `json:"code"`
+	Message string    `json:"message"`
 }
 
 // Item defines model for Item.
