@@ -15,8 +15,8 @@ const typeLabels: Record<ItemType, string> = {
 function ItemsList() {
   const [sortType, setSortType] = useState<SortType>("ByTime");
   const {data, isLoading, isFetching, error, refetch} = itemsApi.useGetItemsQuery({
-    sort_type: sortType,
-    limit: 20,
+    sort: sortType,
+    cursor_limit: 20,
   });
 
   if (isLoading) return <div>Загрузка объявлений...</div>;

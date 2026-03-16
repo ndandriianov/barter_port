@@ -16,11 +16,11 @@ export type UniversalCursor = z.Infer<typeof universalCursorSchema>
 export type SortType = "ByTime" | "ByPopularity";
 
 export interface GetItemsParams {
-  sort_type: SortType;
-  created_at?: string;
-  views?: number;
-  id?: string;
-  limit?: number;
+  sort: SortType;
+  cursor_created_at?: string;
+  cursor_views?: number;
+  cursor_id?: string;
+  cursor_limit?: number;
 }
 
 export type GetItemsResponse = z.Infer<typeof getItemsResponseSchema>;
