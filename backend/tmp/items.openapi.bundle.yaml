@@ -150,7 +150,7 @@ components:
         type: integer
         minimum: 1
         maximum: 100
-        default: 20
+        default: 10
   schemas:
     ItemType:
       type: string
@@ -205,6 +205,8 @@ components:
     ItemsCursor:
       type: object
       description: Cursor for stable pagination
+      required:
+        - id
       properties:
         createdAt:
           type: string

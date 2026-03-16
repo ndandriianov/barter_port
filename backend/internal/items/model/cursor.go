@@ -2,6 +2,7 @@ package model
 
 import (
 	"errors"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -10,12 +11,42 @@ import (
 var (
 	ErrCreatedAtIsNil = errors.New("createdAt is nil")
 	ErrViewsIsNil     = errors.New("views is nil")
+	ErrInvalidId      = errors.New("invalid id")
 )
 
 type UniversalCursor struct {
 	CreatedAt *time.Time `json:"createdAt" example:"2026-03-04T12:00:00Z"`
 	Views     *int       `json:"views"  example:"120"`
 	Id        uuid.UUID  `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
+}
+
+func NewUniversalCursor(createdAtStr, viewsStr, idStr string) (*UniversalCursor, error) {
+	var createdAtPtr *time.Time
+	createdAt, err := time.Parse(time.RFC3339, createdAtStr)
+	if err != nil {
+		createdAtPtr = nil
+	} else {
+		createdAtPtr = &createdAt
+	}
+
+	var viewsPtr *int
+	views, err := strconv.Atoi(viewsStr)
+	if err != nil {
+		viewsPtr = nil
+	} else {
+		viewsPtr = &views
+	}
+
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		return nil, ErrInvalidId
+	}
+
+	return &UniversalCursor{
+		CreatedAt: createdAtPtr,
+		Views:     viewsPtr,
+		Id:        id,
+	}, nil
 }
 
 type TimeCursor struct {

@@ -89,6 +89,8 @@ ListItemsResponse:
 ItemsCursor:
   type: object
   description: Cursor for stable pagination
+  required:
+    - id
   properties:
     createdAt:
       type: string
