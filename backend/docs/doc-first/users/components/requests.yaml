@@ -1,0 +1,7 @@
+UpdateUserRequest:
+  type: object
+  properties:
+    name:
+      $ref: './properties.yaml#/Name'
+    bio:
+      $ref: './properties.yaml#/Bio'

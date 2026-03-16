@@ -1,0 +1,5 @@
+GetMeResponse:
+  $ref: './schemas.yaml#/Me'
+
+GetUserResponse:
+  $ref: './schemas.yaml#/User'
