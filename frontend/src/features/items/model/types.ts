@@ -1,28 +1,17 @@
-export enum ItemAction {
-  Give = 0,
-  Take = 1,
-}
+import {z} from "zod";
+import {
+  getItemsResponseSchema,
+  itemActionSchema,
+  itemSchema,
+  itemTypeSchema,
+  universalCursorSchema
+} from "@/features/items/model/schemas.ts";
 
-export enum ItemType {
-  Good = 0,
-  Service = 1,
-}
+export type ItemAction = z.Infer<typeof itemActionSchema>
+export type ItemType = z.Infer<typeof itemTypeSchema>;
 
-export interface Item {
-  id: string;
-  name: string;
-  description: string;
-  action: ItemAction;
-  type: ItemType;
-  views: number;
-  createdAt: string;
-}
-
-export interface UniversalCursor {
-  id: string;
-  createdAt: string;
-  views: number;
-}
+export type Item = z.Infer<typeof itemSchema>;
+export type UniversalCursor = z.Infer<typeof universalCursorSchema>
 
 export type SortType = "ByTime" | "ByPopularity";
 
@@ -34,18 +23,12 @@ export interface GetItemsParams {
   limit?: number;
 }
 
-export interface GetItemsResponse {
-  items: Item[];
-  cursor: UniversalCursor;
-}
-
-export type CreateItemAction = "give" | "take";
-export type CreateItemType = "good" | "service";
+export type GetItemsResponse = z.Infer<typeof getItemsResponseSchema>;
 
 export interface CreateItemRequest {
   name: string;
   description: string;
-  action: CreateItemAction;
-  type: CreateItemType;
+  action: ItemAction;
+  type: ItemType;
 }
 

@@ -1,15 +1,15 @@
 import {useState} from "react";
 import itemsApi from "@/features/items/api/itemsApi.ts";
-import {ItemAction, ItemType, type SortType} from "@/features/items/model/types.ts";
+import type {ItemAction, ItemType, SortType} from "@/features/items/model/types.ts";
 
 const actionLabels: Record<ItemAction, string> = {
-  [ItemAction.Give]: "Отдаю",
-  [ItemAction.Take]: "Ищу",
+  give: "Отдаю",
+  take: "Ищу",
 };
 
 const typeLabels: Record<ItemType, string> = {
-  [ItemType.Good]: "Товар",
-  [ItemType.Service]: "Услуга",
+  good: "Товар",
+  service: "Услуга",
 };
 
 function ItemsList() {

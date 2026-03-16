@@ -1,14 +1,14 @@
 import {useState} from "react";
 import itemsApi from "@/features/items/api/itemsApi";
 import {useNavigate} from "react-router-dom";
-import type {CreateItemAction, CreateItemType} from "@/features/items/model/types";
+import type {ItemAction, ItemType} from "@/features/items/model/types";
 
 function CreateItemForm() {
   const [createItem, {isLoading, error}] = itemsApi.useCreateItemMutation();
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [action, setAction] = useState<CreateItemAction>("give");
-  const [type, setType] = useState<CreateItemType>("good");
+  const [action, setAction] = useState<ItemAction>("give");
+  const [type, setType] = useState<ItemType>("good");
   const navigate = useNavigate();
 
   const submit = async (e: React.FormEvent) => {
@@ -29,11 +29,11 @@ function CreateItemForm() {
         value={description}
         onChange={(e) => setDescription(e.target.value)}
       />
-      <select value={action} onChange={(e) => setAction(e.target.value as CreateItemAction)}>
+      <select value={action} onChange={(e) => setAction(e.target.value as ItemAction)}>
         <option value="give">Отдаю</option>
         <option value="take">Беру</option>
       </select>
-      <select value={type} onChange={(e) => setType(e.target.value as CreateItemType)}>
+      <select value={type} onChange={(e) => setType(e.target.value as ItemType)}>
         <option value="good">Товар</option>
         <option value="service">Услуга</option>
       </select>
