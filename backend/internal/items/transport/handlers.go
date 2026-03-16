@@ -15,7 +15,7 @@ import (
 )
 
 type itemService interface {
-	CreateItem(ctx context.Context, name string, itemType model.ItemType, action model.ItemAction, description string) error
+	CreateItem(ctx context.Context, name string, itemType model.ItemType, action model.ItemAction, description string) (model.Item, error)
 	GetItems(ctx context.Context, sortType model.SortType, cursor model.UniversalCursor, limit int) ([]model.Item, model.UniversalCursor, error)
 }
 
@@ -27,63 +27,68 @@ func NewHandlers(itemService itemService) *Handlers {
 	return &Handlers{itemService: itemService}
 }
 
-//
-// CREATE_ITEM request and response structures and handler
-//
+// ================================================================================
+// CREATE ITEM
+// ================================================================================
 
-// CreateItemRequest represents the request payload for creating an item.
-// swagger:model CreateItemRequest
-type CreateItemRequest struct {
-	Name        string           `json:"name" example:"name"`
-	Type        model.ItemType   `json:"type" swaggertype:"string" enums:"good,service"`
-	Action      model.ItemAction `json:"action" swaggertype:"string" enums:"give,take"`
-	Description string           `json:"description" example:"description"`
-}
-
-// HandleCreateItem handles the creation of a new item.
-// @Security BearerAuth
-// @Summary Create a new item
-// @Description Create a new item with the provided details
-// @Tags items
-// @Accept json
-// @Param request body CreateItemRequest true "Create Item Request"
-// @Success 201
-// @Failure 400
-// @Failure 500
-// @Router /items [post]
 func (h *Handlers) HandleCreateItem(w http.ResponseWriter, r *http.Request) {
 	log := logger.LogFrom(r.Context(), slog.Default())
 	log.Info("handling register request")
 
-	var req CreateItemRequest
-	if ok := http_api.DecodeJSONWithLogs(w, r, log, &req); !ok {
+	var req types.CreateItemRequest
+	if err := http_api.DecodeJSON(r, &req); err != nil {
+		log.Error("error decoding request", slog.Any("error", err))
+		http_api.WriteJSON(w, http.StatusBadRequest, types.ErrorResponse{
+			Code:    "INVALID_REQUEST",
+			Message: "Вы отправили некорректный запрос",
+		})
 		return
 	}
 
-	log.Debug("decoded create item request",
-		slog.Any("req", req),
-	)
+	log = log.With(slog.Any("request", req))
+	log.Debug("decoded create item request")
 
-	err := h.itemService.CreateItem(r.Context(), req.Name, req.Type, req.Action, req.Description)
+	itemType, err := model.ItemTypeString(string(req.Type))
+	if err != nil {
+		log.Error("invalid item type", slog.String("type", string(req.Type)), slog.Any("error", err))
+		http_api.WriteJSON(w, http.StatusBadRequest, types.ErrorResponse{
+			Code:    "INVALID_ITEM_TYPE",
+			Message: "Невозможно создать объявление с таким типом",
+		})
+	}
+
+	action, err := model.ItemActionString(string(req.Action))
+	if err != nil {
+		log.Error("invalid item action", slog.String("action", string(req.Action)), slog.Any("error", err))
+		http_api.WriteJSON(w, http.StatusBadRequest, types.ErrorResponse{
+			Code:    "INVALID_ITEM_ACTION",
+			Message: "Невозможно создать объявление с таким действием",
+		})
+	}
+
+	item, err := h.itemService.CreateItem(r.Context(), req.Name, itemType, action, req.Description)
 	if err != nil {
 		if errors.Is(err, service.ErrInvalidItemName) {
-			log.Warn("invalid item name",
-				slog.String("error", err.Error()),
-				slog.String("name", req.Name),
-			)
-			w.WriteHeader(http.StatusBadRequest)
+			log.Warn("invalid item name", slog.String("error", err.Error()))
+			http_api.WriteJSON(w, http.StatusBadRequest, types.ErrorResponse{
+				Code:    "INVALID_ITEM_NAME",
+				Message: "Некорректное название объявления",
+			})
 			return
 		}
 		log.Error("failed to create item", slog.String("error", err.Error()))
-		w.WriteHeader(http.StatusInternalServerError)
+		http_api.WriteJSON(w, http.StatusInternalServerError, types.ErrorResponse{
+			Code:    "INTERNAL",
+			Message: "Произошла ошибка, повторите ошибку позднее",
+		})
 		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
+	http_api.WriteJSON(w, http.StatusCreated, item.ToDto())
 }
 
 // ================================================================================
-// GET_ITEMS
+// GET ITEMS
 // ================================================================================
 
 func (h *Handlers) HandleGetItems(w http.ResponseWriter, r *http.Request) {
@@ -166,7 +171,7 @@ func (h *Handlers) HandleGetItems(w http.ResponseWriter, r *http.Request) {
 		Views:     viewsPtr,
 	}
 
-	http_api.WriteJSON(w, log, http.StatusOK, types.ListItemsResponse{
+	http_api.WriteJSONWithLogs(w, log, http.StatusOK, types.ListItemsResponse{
 		Items:      respItems,
 		NextCursor: &respCursor,
 	})

@@ -47,9 +47,9 @@ func (s *ItemService) CreateItem(
 	itemType model.ItemType,
 	action model.ItemAction,
 	description string,
-) error {
+) (*model.Item, error) {
 	if name == "" {
-		return ErrInvalidItemName
+		return nil, ErrInvalidItemName
 	}
 
 	item := model.Item{
@@ -64,10 +64,10 @@ func (s *ItemService) CreateItem(
 
 	err := s.repo.AddItem(ctx, item)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return &item, nil
 }
 
 // GetItems retrieves items based on the provided query parameters.

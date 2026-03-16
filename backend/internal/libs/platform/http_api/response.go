@@ -15,7 +15,7 @@ func newErrorResponse(err error) ErrorResponse {
 	return ErrorResponse{Error: err.Error()}
 }
 
-func WriteJSON(w http.ResponseWriter, logger *slog.Logger, status int, v any) {
+func WriteJSONWithLogs(w http.ResponseWriter, logger *slog.Logger, status int, v any) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	err := json.NewEncoder(w).Encode(v)
@@ -25,5 +25,11 @@ func WriteJSON(w http.ResponseWriter, logger *slog.Logger, status int, v any) {
 }
 
 func HandleError(w http.ResponseWriter, logger *slog.Logger, status int, err error) {
-	WriteJSON(w, logger, status, newErrorResponse(err))
+	WriteJSONWithLogs(w, logger, status, newErrorResponse(err))
+}
+
+func WriteJSON(w http.ResponseWriter, status int, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(v)
 }
