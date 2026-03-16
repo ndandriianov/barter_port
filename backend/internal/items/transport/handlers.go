@@ -102,7 +102,7 @@ func (h *Handlers) HandleGetItems(w http.ResponseWriter, r *http.Request) {
 	createdAtStr := r.URL.Query().Get("cursor_created_at")
 	viewsStr := r.URL.Query().Get("cursor_views")
 	idStr := r.URL.Query().Get("cursor_id")
-	limitStr := r.URL.Query().Get("limit")
+	limitStr := r.URL.Query().Get("cursor_limit")
 
 	log = log.With(
 		slog.String("sortTypeStr", sortTypeStr),

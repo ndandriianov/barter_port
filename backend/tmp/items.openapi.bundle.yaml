@@ -109,8 +109,8 @@ components:
       schema:
         type: string
         enum:
-          - created_at
-          - popularity
+          - ByTime
+          - ByPopularity
     CursorCreatedAt:
       name: cursor_created_at
       in: query
@@ -142,7 +142,7 @@ components:
         type: string
         format: uuid
     Limit:
-      name: limit
+      name: cursor_limit
       in: query
       required: false
       description: Maximum number of items to return
@@ -262,7 +262,7 @@ components:
           $ref: '#/components/schemas/ErrorCode'
         message:
           type: string
-          example: query parameter "limit" must be between 1 and 100
+          example: Вы отправили некорректный запрос
     CreateItemRequest:
       type: object
       required:

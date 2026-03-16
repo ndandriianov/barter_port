@@ -6,8 +6,8 @@ SortType:
   schema:
     type: string
     enum:
-      - created_at
-      - popularity
+      - ByTime
+      - ByPopularity
 
 CursorCreatedAt:
   name: cursor_created_at
@@ -43,7 +43,7 @@ CursorId:
     format: uuid
 
 Limit:
-  name: limit
+  name: cursor_limit
   in: query
   required: false
   description: Maximum number of items to return
