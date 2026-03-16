@@ -5,6 +5,7 @@ export const itemActionSchema = z.enum(["give", "take"]);
 
 export const itemSchema = z.object({
   id: z.string(),
+  authorId: z.string(),
   name: z.string(),
   description: z.string(),
   action: itemActionSchema,
