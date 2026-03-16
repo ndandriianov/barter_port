@@ -25,6 +25,7 @@ const (
 
 type Item struct {
 	ID          uuid.UUID
+	AuthorId    uuid.UUID
 	Name        string
 	Type        ItemType
 	Action      ItemAction
