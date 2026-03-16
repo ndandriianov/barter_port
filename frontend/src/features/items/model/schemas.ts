@@ -15,11 +15,11 @@ export const itemSchema = z.object({
 
 export const universalCursorSchema = z.object({
   id: z.string(),
-  createdAt: z.date(),
-  views: z.number(),
+  createdAt: z.string().nullable().optional(),
+  views: z.number().nullable().optional(),
 })
 
 export const getItemsResponseSchema = z.object({
   items: z.array(itemSchema),
-  cursor: z.nullable(universalCursorSchema),
+  nextCursor: z.nullable(universalCursorSchema),
 })
