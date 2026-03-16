@@ -134,9 +134,9 @@ type ItemType string
 
 // ItemsCursor Cursor for stable pagination
 type ItemsCursor struct {
-	CreatedAt *time.Time          `json:"createdAt,omitempty"`
-	Id        *openapi_types.UUID `json:"id,omitempty"`
-	Views     *int64              `json:"views,omitempty"`
+	CreatedAt *time.Time         `json:"createdAt,omitempty"`
+	Id        openapi_types.UUID `json:"id"`
+	Views     *int64             `json:"views,omitempty"`
 }
 
 // ListItemsResponse defines model for ListItemsResponse.
