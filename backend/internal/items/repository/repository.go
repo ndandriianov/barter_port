@@ -20,11 +20,11 @@ func NewItemRepository(db *pgxpool.Pool) *ItemRepository {
 // Returns an error if the insertion fails.
 func (r *ItemRepository) AddItem(ctx context.Context, item model.Item) error {
 	query := `
-		INSERT INTO items (id, name, type, action, description, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO items (id, author_id, name, type, action, description, created_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
 
-	_, err := r.db.Exec(ctx, query, item.ID, item.Name, item.Type.String(), item.Action.String(), item.Description, item.CreatedAt)
+	_, err := r.db.Exec(ctx, query, item.ID, item.AuthorId, item.Name, item.Type.String(), item.Action.String(), item.Description, item.CreatedAt)
 	return err
 }
 
@@ -43,7 +43,7 @@ func (r *ItemRepository) GetItemsOrderByTime(
 
 	if cursor == nil {
 		query = `
-		SELECT id, name, type, action, description, created_at, views
+		SELECT id, author_id, name, type, action, description, created_at, views
 		FROM items
 		ORDER BY created_at DESC
 		LIMIT $1
@@ -51,7 +51,7 @@ func (r *ItemRepository) GetItemsOrderByTime(
 		args = append(args, limit)
 	} else {
 		query = `
-		SELECT id, name, type, action, description, created_at, views
+		SELECT id, author_id, name, type, action, description, created_at, views
 		FROM items
 		WHERE (created_at, id) < ($1, $2)
 		ORDER BY created_at DESC 
@@ -93,7 +93,7 @@ func (r *ItemRepository) GetItemsOrderByPopularity(
 
 	if cursor == nil {
 		query = `
-		SELECT id, name, type, action, description, created_at, views
+		SELECT id, author_id, name, type, action, description, created_at, views
 		FROM items
 		ORDER BY created_at DESC
 		LIMIT $1
@@ -101,7 +101,7 @@ func (r *ItemRepository) GetItemsOrderByPopularity(
 		args = append(args, limit)
 	} else {
 		query = `
-		SELECT id, name, type, action, description, created_at, views
+		SELECT id, author_id, name, type, action, description, created_at, views
 		FROM items
 		WHERE (views, id) < ($1, $2) 
 		ORDER BY views DESC 

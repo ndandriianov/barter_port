@@ -27,6 +27,7 @@ CREATE TABLE refresh_tokens
 CREATE TABLE items
 (
     id          UUID PRIMARY KEY,
+    author_id   UUID        NOT NULL,
     name        TEXT        NOT NULL,
     type        TEXT        NOT NULL,
     action      TEXT        NOT NULL,
@@ -35,5 +36,7 @@ CREATE TABLE items
     views       INTEGER     NOT NULL DEFAULT 0,
 
     CONSTRAINT items_type_check CHECK (type IN ('good', 'service')),
-    CONSTRAINT items_action_check CHECK (action IN ('give', 'take'))
+    CONSTRAINT items_action_check CHECK (action IN ('give', 'take')),
+
+    FOREIGN KEY (author_id) REFERENCES users (id) ON DELETE CASCADE
 );

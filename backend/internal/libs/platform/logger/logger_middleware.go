@@ -1,6 +1,7 @@
 package logger
 
 import (
+	"barter-port/internal/libs/authkit"
 	"log/slog"
 	"net/http"
 
@@ -15,6 +16,10 @@ func Middleware(base *slog.Logger) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			reqID := middleware.GetReqID(r.Context())
 			log := base.With(slog.String("request_id", reqID))
+			userId, ok := authkit.UserIDFromContext(r.Context())
+			if ok {
+				log = log.With(slog.String("user_id", userId.String()))
+			}
 			ctx := context.WithValue(r.Context(), ctxKeyLogger{}, log)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
