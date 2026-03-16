@@ -5,6 +5,7 @@ import RegisterPage from "@/pages/auth/RegisterPage.tsx";
 import VerifyEmailPage from "@/pages/auth/VerifyEmailPage.tsx";
 import Header from "@/widgets/Header.tsx";
 import CreateItemPage from "@/pages/items/CreateItemPage.tsx";
+import ItemsListPage from "@/pages/items/ItemsListPage.tsx";
 
 function AppRouter() {
   return (
@@ -16,6 +17,7 @@ function AppRouter() {
         <Route path="/profile" element={<ProfilePage/>}/>
         <Route path="/register" element={<RegisterPage/>}/>
         <Route path="/verify-email" element={<VerifyEmailPage/>}/>
+        <Route path="/items" element={<ItemsListPage/>}/>
         <Route path="/items/create" element={<CreateItemPage/>}/>
 
         <Route path="*" element={<ProfilePage/>}/>
