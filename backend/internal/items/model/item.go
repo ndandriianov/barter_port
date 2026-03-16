@@ -37,6 +37,7 @@ type Item struct {
 func (i Item) ToDto() types.Item {
 	return types.Item{
 		Action:      types.ItemAction(i.Action.String()),
+		AuthorId:    i.AuthorId,
 		CreatedAt:   i.CreatedAt,
 		Description: i.Description,
 		Id:          i.ID,

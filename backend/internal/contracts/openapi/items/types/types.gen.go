@@ -140,6 +140,9 @@ type Item struct {
 	// Action Whether the user offers or requests something
 	Action ItemAction `json:"action"`
 
+	// AuthorId Unique identifier of the user who created the item
+	AuthorId openapi_types.UUID `json:"authorId"`
+
 	// CreatedAt Item creation timestamp
 	CreatedAt time.Time `json:"createdAt"`
 
