@@ -3,6 +3,7 @@ package transport
 import (
 	"barter-port/internal/contracts/openapi/items/types"
 	"barter-port/internal/items/model"
+	"barter-port/internal/items/model/error_messages"
 	"barter-port/internal/items/service"
 	"barter-port/internal/libs/platform/http_api"
 	"barter-port/internal/libs/platform/logger"
@@ -40,7 +41,7 @@ func (h *Handlers) HandleCreateItem(w http.ResponseWriter, r *http.Request) {
 		log.Error("error decoding request", slog.Any("error", err))
 		http_api.WriteJSON(w, http.StatusBadRequest, types.ErrorResponse{
 			Code:    types.ErrorCodeInvalidRequest,
-			Message: "Вы отправили некорректный запрос",
+			Message: error_messages.IncorrectRequest,
 		})
 		return
 	}
@@ -53,7 +54,7 @@ func (h *Handlers) HandleCreateItem(w http.ResponseWriter, r *http.Request) {
 		log.Error("invalid item type", slog.String("type", string(req.Type)), slog.Any("error", err))
 		http_api.WriteJSON(w, http.StatusBadRequest, types.ErrorResponse{
 			Code:    types.ErrorCodeInvalidItemType,
-			Message: "Невозможно создать объявление с таким типом",
+			Message: error_messages.InvalidItemType,
 		})
 		return
 	}
@@ -63,7 +64,7 @@ func (h *Handlers) HandleCreateItem(w http.ResponseWriter, r *http.Request) {
 		log.Error("invalid item action", slog.String("action", string(req.Action)), slog.Any("error", err))
 		http_api.WriteJSON(w, http.StatusBadRequest, types.ErrorResponse{
 			Code:    types.ErrorCodeInvalidItemAction,
-			Message: "Невозможно создать объявление с таким действием",
+			Message: error_messages.InvalidItemAction,
 		})
 		return
 	}
@@ -74,14 +75,14 @@ func (h *Handlers) HandleCreateItem(w http.ResponseWriter, r *http.Request) {
 			log.Warn("invalid item name", slog.String("error", err.Error()))
 			http_api.WriteJSON(w, http.StatusBadRequest, types.ErrorResponse{
 				Code:    types.ErrorCodeInvalidItemName,
-				Message: "Некорректное название объявления",
+				Message: error_messages.InvalidItemName,
 			})
 			return
 		}
 		log.Error("failed to create item", slog.String("error", err.Error()))
 		http_api.WriteJSON(w, http.StatusInternalServerError, types.ErrorResponse{
 			Code:    types.ErrorCodeInternal,
-			Message: "Произошла ошибка, повторите ошибку позднее",
+			Message: error_messages.Internal,
 		})
 		return
 	}
@@ -117,7 +118,7 @@ func (h *Handlers) HandleGetItems(w http.ResponseWriter, r *http.Request) {
 		log.Error("invalid sort type", slog.Any("error", err))
 		http_api.WriteJSON(w, http.StatusBadRequest, types.ErrorResponse{
 			Code:    types.ErrorCodeInvalidSortType,
-			Message: "Вы указали несуществующий тип сортировки",
+			Message: error_messages.InvalidSortType,
 		})
 		return
 	}
@@ -142,7 +143,7 @@ func (h *Handlers) HandleGetItems(w http.ResponseWriter, r *http.Request) {
 		log.Error("failed to get items", slog.String("error", err.Error()))
 		http_api.WriteJSON(w, http.StatusInternalServerError, types.ErrorResponse{
 			Code:    types.ErrorCodeInternal,
-			Message: "Произошла ошибка, повторите ошибку позднее",
+			Message: error_messages.Internal,
 		})
 		return
 	}
