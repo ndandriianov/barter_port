@@ -1,0 +1,52 @@
+:80 {
+	# Логи в консоль контейнера
+	log {
+		output stdout
+		format console
+	}
+
+	# Preflight (OPTIONS) — отвечаем сразу на прокси
+	@preflight method OPTIONS
+	handle @preflight {
+		header Access-Control-Allow-Origin "http://localhost:5173"
+		header Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+		header Access-Control-Allow-Headers "Accept, Authorization, Content-Type"
+		header Access-Control-Allow-Credentials "true"
+		header Access-Control-Max-Age "86400"
+		respond "" 204
+	}
+
+	# Заголовки CORS для обычных запросов (и /auth, и остальных)
+	header {
+		Access-Control-Allow-Origin "http://localhost:5173"
+		Access-Control-Allow-Credentials "true"
+		Vary "Origin"
+	}
+
+    # swagger
+	handle /docs* {
+		reverse_proxy swagger-ui:8080
+	}
+
+	handle /swagger-specs/auth.json {
+		reverse_proxy auth:8080 {
+			rewrite /swagger/doc.json
+		}
+	}
+
+	handle /swagger-specs/items.json {
+		reverse_proxy items:8080 {
+			rewrite /swagger/doc.json
+		}
+	}
+
+	# Auth service по префиксу /auth/*
+	handle /auth/* {
+		reverse_proxy auth:8080 # локально host.docker.internal:8081
+	}
+
+	# Всё остальное — основной backend
+	handle {
+		reverse_proxy items:8080 # локально host.docker.internal:8080
+	}
+}
