@@ -1,26 +1,7 @@
 import {useState} from "react";
 import itemsApi from "@/features/items/api/itemsApi.ts";
-import type {ItemAction, ItemType, SortType} from "@/features/items/model/types.ts";
-
-const actionLabels: Record<ItemAction, string> = {
-  give: "Отдаю",
-  take: "Ищу",
-};
-
-const typeLabels: Record<ItemType, string> = {
-  good: "Товар",
-  service: "Услуга",
-};
-
-const formatCreatedAt = (value: string) =>
-  new Intl.DateTimeFormat("ru-RU", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    second: "2-digit",
-  }).format(new Date(value));
+import type {SortType} from "@/features/items/model/types.ts";
+import ItemCard from "@/widgets/items/ItemCard.tsx";
 
 function ItemsList() {
   const [sortType, setSortType] = useState<SortType>("ByTime");
@@ -55,13 +36,7 @@ function ItemsList() {
         <div>Пока нет объявлений</div>
       ) : (
         data.items.map((item) => (
-          <article key={item.id}>
-            <h3>{item.name}</h3>
-            <div>{typeLabels[item.type]} • {actionLabels[item.action]}</div>
-            <p>{item.description}</p>
-            <div>Просмотры: {item.views}</div>
-            <div>Создано: {formatCreatedAt(item.createdAt)}</div>
-          </article>
+          <ItemCard key={item.id} item={item} />
         ))
       )}
     </div>
