@@ -480,7 +480,7 @@ func (h *Handlers) Me(w http.ResponseWriter, r *http.Request) {
 	logger := h.logger.With(slog.String("request_id", requestID))
 	logger.Info("handling me request")
 
-	principal, ok := authkit.PrincipalFromContext(r.Context())
+	userId, ok := authkit.UserIDFromContext(r.Context())
 	if !ok {
 		logger.Error("failed to fetch principal")
 		http_api.HandleError(w, logger, http.StatusInternalServerError, ErrInternalServerError)
@@ -488,7 +488,7 @@ func (h *Handlers) Me(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logger.Info("successfully fetched user info")
-	http_api.WriteJSONWithLogs(w, logger, http.StatusOK, meResp{UserID: principal.UserID})
+	http_api.WriteJSONWithLogs(w, logger, http.StatusOK, meResp{UserID: userId})
 }
 
 //
