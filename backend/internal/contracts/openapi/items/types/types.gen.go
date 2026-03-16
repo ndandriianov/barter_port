@@ -81,16 +81,16 @@ func (e ItemType) Valid() bool {
 
 // Defines values for SortType.
 const (
-	SortTypeCreatedAt  SortType = "created_at"
-	SortTypePopularity SortType = "popularity"
+	SortTypeByPopularity SortType = "ByPopularity"
+	SortTypeByTime       SortType = "ByTime"
 )
 
 // Valid indicates whether the value is a known member of the SortType enum.
 func (e SortType) Valid() bool {
 	switch e {
-	case SortTypeCreatedAt:
+	case SortTypeByPopularity:
 		return true
-	case SortTypePopularity:
+	case SortTypeByTime:
 		return true
 	default:
 		return false
@@ -99,16 +99,16 @@ func (e SortType) Valid() bool {
 
 // Defines values for ListItemsParamsSort.
 const (
-	ListItemsParamsSortCreatedAt  ListItemsParamsSort = "created_at"
-	ListItemsParamsSortPopularity ListItemsParamsSort = "popularity"
+	ListItemsParamsSortByPopularity ListItemsParamsSort = "ByPopularity"
+	ListItemsParamsSortByTime       ListItemsParamsSort = "ByTime"
 )
 
 // Valid indicates whether the value is a known member of the ListItemsParamsSort enum.
 func (e ListItemsParamsSort) Valid() bool {
 	switch e {
-	case ListItemsParamsSortCreatedAt:
+	case ListItemsParamsSortByPopularity:
 		return true
-	case ListItemsParamsSortPopularity:
+	case ListItemsParamsSortByTime:
 		return true
 	default:
 		return false
@@ -212,8 +212,8 @@ type ListItemsParams struct {
 	// CursorId Cursor item ID used as a tie-breaker for stable pagination.
 	CursorId *CursorId `form:"cursor_id,omitempty" json:"cursor_id,omitempty"`
 
-	// Limit Maximum number of items to return
-	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+	// CursorLimit Maximum number of items to return
+	CursorLimit *Limit `form:"cursor_limit,omitempty" json:"cursor_limit,omitempty"`
 }
 
 // ListItemsParamsSort defines parameters for ListItems.
