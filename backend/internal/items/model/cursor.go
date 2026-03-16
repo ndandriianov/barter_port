@@ -1,11 +1,13 @@
 package model
 
 import (
+	"barter-port/internal/contracts/openapi/items/types"
 	"errors"
 	"strconv"
 	"time"
 
 	"github.com/google/uuid"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 var (
@@ -47,6 +49,19 @@ func NewUniversalCursor(createdAtStr, viewsStr, idStr string) (*UniversalCursor,
 		Views:     viewsPtr,
 		Id:        id,
 	}, nil
+}
+
+func (c *UniversalCursor) ToDto() types.ItemsCursor {
+	var views *int64
+	if c.Views != nil {
+		views = new(int64(*c.Views))
+	}
+
+	return types.ItemsCursor{
+		CreatedAt: c.CreatedAt,
+		Id:        openapi_types.UUID{},
+		Views:     views,
+	}
 }
 
 type TimeCursor struct {

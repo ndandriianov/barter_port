@@ -2,6 +2,7 @@ Item:
   type: object
   required:
     - id
+    - authorId
     - name
     - description
     - type
@@ -13,6 +14,10 @@ Item:
       type: string
       format: uuid
       description: Unique item identifier
+    authorId:
+      type: string
+      format: uuid
+      description: Unique identifier of the user who created the item
     name:
       type: string
       description: Short item title

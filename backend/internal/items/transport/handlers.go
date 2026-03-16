@@ -162,28 +162,12 @@ func (h *Handlers) HandleGetItems(w http.ResponseWriter, r *http.Request) {
 
 	respItems := make([]types.Item, len(items))
 	for i, item := range items {
-		respItems[i] = types.Item{
-			Action:      types.ItemAction(item.Action.String()),
-			CreatedAt:   item.CreatedAt,
-			Description: item.Description,
-			Id:          item.ID,
-			Name:        item.Name,
-			Type:        types.ItemType(item.Type.String()),
-			Views:       int64(item.Views),
-		}
+		respItems[i] = item.ToDto()
 	}
 
 	var respCursor *types.ItemsCursor
 	if nextCursor != nil {
-		var viewsPtr *int64 = nil // нужно для соответствия типов
-		if nextCursor.Views != nil {
-			viewsPtr = new(int64(*nextCursor.Views))
-		}
-		respCursor = &types.ItemsCursor{
-			CreatedAt: nextCursor.CreatedAt,
-			Id:        nextCursor.Id,
-			Views:     viewsPtr,
-		}
+		respCursor = new(nextCursor.ToDto())
 	}
 
 	http_api.WriteJSONWithLogs(w, log, http.StatusOK, types.ListItemsResponse{
