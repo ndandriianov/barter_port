@@ -36,8 +36,8 @@ func NewRouter(logg *slog.Logger, validator *validators.LocalJWT, h *Handlers) h
 	r.Get("/swagger/*", httpSwagger.WrapHandler)
 
 	r.Group(func(r chi.Router) {
-		r.Use(logger.Middleware(logg))
 		r.Use(authkit.Middleware(logg, validator, nil))
+		r.Use(logger.Middleware(logg))
 		r.Route("/items", func(r chi.Router) {
 			r.Post("/", h.HandleCreateItem)
 			r.Get("/", h.HandleGetItems)
