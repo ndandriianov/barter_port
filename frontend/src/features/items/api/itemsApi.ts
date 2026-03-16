@@ -1,7 +1,7 @@
 import {createApi} from "@reduxjs/toolkit/query/react";
 import {baseQueryWithReauth} from "@/shared/api/baseApi.ts";
 import {getItemsResponseSchema} from "../model/schemas.ts";
-import type {CreateItemRequest, GetItemsParams, GetItemsResponse,} from "../model/types.ts";
+import type {CreateItemRequest, GetItemsParams, GetItemsResponse} from "../model/types.ts";
 
 const itemsApi = createApi({
   reducerPath: "itemsApi",
@@ -14,8 +14,10 @@ const itemsApi = createApi({
         params,
       }),
 
-      transformResponse: (response: unknown) =>
-        getItemsResponseSchema.parse(response),
+      transformResponse: (response: unknown) => {
+        console.log("Raw response from /items:", response);
+        return getItemsResponseSchema.parse(response);
+      },
 
       providesTags: ["Items"],
     }),
