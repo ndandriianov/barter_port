@@ -59,6 +59,7 @@ func Middleware(logger *slog.Logger, v Validator, onError ErrorResponder) func(h
 			)
 
 			ctx := WithPrincipal(r.Context(), p)
+			ctx = WithUserID(ctx, p.UserID)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}

@@ -27,6 +27,7 @@ type Principal struct {
 type contextKey string
 
 const principalKey contextKey = "authkit_principal"
+const userIDKey contextKey = "authkit_user_id"
 
 func WithPrincipal(ctx context.Context, principal Principal) context.Context {
 	return context.WithValue(ctx, principalKey, principal)
@@ -35,4 +36,13 @@ func WithPrincipal(ctx context.Context, principal Principal) context.Context {
 func PrincipalFromContext(ctx context.Context) (Principal, bool) {
 	p, ok := ctx.Value(principalKey).(Principal)
 	return p, ok
+}
+
+func WithUserID(ctx context.Context, userID uuid.UUID) context.Context {
+	return context.WithValue(ctx, userIDKey, userID)
+}
+
+func UserIDFromContext(ctx context.Context) (uuid.UUID, bool) {
+	userID, ok := ctx.Value(userIDKey).(uuid.UUID)
+	return userID, ok
 }
