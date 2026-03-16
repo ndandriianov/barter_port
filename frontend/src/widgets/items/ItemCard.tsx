@@ -28,6 +28,7 @@ function ItemCard({item}: ItemCardProps) {
   return (
     <article>
       <h3>{item.name}</h3>
+      <div>authorId: {item.authorId}</div>
       <div>{typeLabels[item.type]} • {actionLabels[item.action]}</div>
       <p>{item.description}</p>
       <div>Просмотры: {item.views}</div>
