@@ -1,0 +1,131 @@
+openapi: 3.0.4
+info:
+  title: Users API
+  description: Users API
+  version: 1.0.0
+
+servers:
+  - url: 'http://localhost:80'
+
+paths:
+  /users/me:
+    get:
+      tags:
+        - users, me
+      summary: Получить информацию о себе
+      description: |
+        Возвращает информацию о текущем пользователе.
+        Обращается к auth сервису для получения email и createdAt.
+      operationId: getCurrentUser
+      security:
+        - bearerAuth: [ ]
+      responses:
+        '200':
+          description: Информация о пользователе
+          content:
+            application/json:
+              schema:
+                $ref: './components/responses.yaml#/GetMeResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: './components/errors.yaml#/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: './components/errors.yaml#/ErrorResponse'
+
+    patch:
+      tags:
+        - users, me
+      summary: Редактировать информацию о себе
+      description: |
+        Позволяет отредактировать имя или биографию текущего пользователя.
+      operationId: updateCurrentUser
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: './components/requests.yaml#/UpdateUserRequest'
+      responses:
+        '200':
+          description: Информация о пользователе после обновления
+          content:
+            application/json:
+              schema:
+                $ref: './components/responses.yaml#/GetMeResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: './components/errors.yaml#/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: './components/errors.yaml#/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: './components/errors.yaml#/ErrorResponse'
+
+
+  /users/{id}:
+    get:
+      tags:
+        - users
+      summary: Получить информацию о пользователе по id
+      description: |
+        Возвращает информацию о пользователе по его id.
+        Обращается к auth сервису для получения email и createdAt.
+      operationId: getUserById
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - $ref: './components/parameters.yaml#/Id'
+      responses:
+        '200':
+          description: Информация о пользователе
+          content:
+            application/json:
+              schema:
+                $ref: './components/schemas.yaml#/User'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: './components/errors.yaml#/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: './components/errors.yaml#/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: './components/errors.yaml#/ErrorResponse'
+
+
+
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

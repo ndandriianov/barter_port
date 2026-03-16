@@ -114,7 +114,8 @@ ErrorResponse:
   type: object
   required:
     - code
-    - message
+    - message # TODO: сделать необязательным, так как для некоторых ошибок сообщение может отсутствовать.
+              # На клиенте надо будет выводить стандартное сообщение
   properties:
     code:
       $ref: '#/ErrorCode'

@@ -1,0 +1,37 @@
+Me:
+  type: object
+  required:
+    - id
+    - email
+    - createdAt
+    - name
+  properties:
+    id:
+      $ref: './properties.yaml#/Id'
+    email:
+      type: string
+      format: email
+      description: User email
+      example: 'email@example.com'
+    createdAt:
+      type: string
+      format: date-time
+      description: User registration timestamp
+      example: '2026-03-04T12:00:00Z'
+    name:
+      $ref: './properties.yaml#/Name'
+    bio:
+      $ref: './properties.yaml#/Bio'
+
+User:
+  type: object
+  required:
+    - id
+    - name
+  properties:
+    id:
+      $ref: './properties.yaml#/Id'
+    name:
+      $ref: './properties.yaml#/Name'
+    bio:
+      $ref: './properties.yaml#/Bio'
