@@ -12,6 +12,16 @@ const typeLabels: Record<ItemType, string> = {
   service: "Услуга",
 };
 
+const formatCreatedAt = (value: string) =>
+  new Intl.DateTimeFormat("ru-RU", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).format(new Date(value));
+
 function ItemsList() {
   const [sortType, setSortType] = useState<SortType>("ByTime");
   const {data, isLoading, isFetching, error, refetch} = itemsApi.useGetItemsQuery({
@@ -50,7 +60,7 @@ function ItemsList() {
             <div>{typeLabels[item.type]} • {actionLabels[item.action]}</div>
             <p>{item.description}</p>
             <div>Просмотры: {item.views}</div>
-            <div>Создано: {new Date(item.createdAt).toLocaleString()}</div>
+            <div>Создано: {formatCreatedAt(item.createdAt)}</div>
           </article>
         ))
       )}
