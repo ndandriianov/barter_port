@@ -5,6 +5,7 @@ import (
 	"barter-port/internal/items/model"
 	"barter-port/internal/items/model/error_messages"
 	"barter-port/internal/items/service"
+	"barter-port/internal/libs/authkit"
 	"barter-port/internal/libs/platform/http_api"
 	"barter-port/internal/libs/platform/logger"
 	"errors"
@@ -12,12 +13,13 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/google/uuid"
 	"golang.org/x/net/context"
 )
 
 type itemService interface {
-	CreateItem(ctx context.Context, name string, itemType model.ItemType, action model.ItemAction, description string) (*model.Item, error)
-	GetItems(ctx context.Context, sortType model.SortType, cursor *model.UniversalCursor, limit int) ([]model.Item, model.UniversalCursor, error)
+	CreateItem(ctx context.Context, userID uuid.UUID, name string, itemType model.ItemType, action model.ItemAction, description string) (*model.Item, error)
+	GetItems(ctx context.Context, sortType model.SortType, cursor *model.UniversalCursor, limit int) ([]model.Item, *model.UniversalCursor, error)
 }
 
 type Handlers struct {
@@ -69,7 +71,17 @@ func (h *Handlers) HandleCreateItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	item, err := h.itemService.CreateItem(r.Context(), req.Name, itemType, action, req.Description)
+	userID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		log.Error("failed to get userID from context")
+		http_api.WriteJSON(w, http.StatusInternalServerError, types.ErrorResponse{
+			Code:    types.ErrorCodeInternal,
+			Message: error_messages.Internal,
+		})
+		return
+	}
+
+	item, err := h.itemService.CreateItem(r.Context(), userID, req.Name, itemType, action, req.Description)
 	if err != nil {
 		if errors.Is(err, service.ErrInvalidItemName) {
 			log.Warn("invalid item name", slog.String("error", err.Error()))
@@ -161,19 +173,21 @@ func (h *Handlers) HandleGetItems(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	var viewsPtr *int64 = nil
-	if nextCursor.Views != nil {
-		viewsPtr = new(int64(*nextCursor.Views))
-	}
-
-	respCursor := types.ItemsCursor{
-		CreatedAt: nextCursor.CreatedAt,
-		Id:        nextCursor.Id,
-		Views:     viewsPtr,
+	var respCursor *types.ItemsCursor
+	if nextCursor != nil {
+		var viewsPtr *int64 = nil // нужно для соответствия типов
+		if nextCursor.Views != nil {
+			viewsPtr = new(int64(*nextCursor.Views))
+		}
+		respCursor = &types.ItemsCursor{
+			CreatedAt: nextCursor.CreatedAt,
+			Id:        nextCursor.Id,
+			Views:     viewsPtr,
+		}
 	}
 
 	http_api.WriteJSONWithLogs(w, log, http.StatusOK, types.ListItemsResponse{
 		Items:      respItems,
-		NextCursor: &respCursor,
+		NextCursor: respCursor,
 	})
 }

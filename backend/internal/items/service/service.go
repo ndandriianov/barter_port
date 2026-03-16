@@ -43,6 +43,7 @@ func NewItemService(itemRepository Repository, fallbackLogger *slog.Logger) *Ite
 
 func (s *ItemService) CreateItem(
 	ctx context.Context,
+	userID uuid.UUID,
 	name string,
 	itemType model.ItemType,
 	action model.ItemAction,
@@ -54,6 +55,7 @@ func (s *ItemService) CreateItem(
 
 	item := model.Item{
 		ID:          uuid.New(),
+		AuthorId:    userID,
 		Name:        name,
 		Type:        itemType,
 		Action:      action,
@@ -79,7 +81,7 @@ func (s *ItemService) GetItems(
 	sortType model.SortType,
 	cursor *model.UniversalCursor,
 	limit int,
-) ([]model.Item, model.UniversalCursor, error) {
+) ([]model.Item, *model.UniversalCursor, error) {
 
 	log := logger.LogFrom(ctx, s.fallbackLogger)
 
@@ -97,10 +99,15 @@ func (s *ItemService) GetItems(
 
 		items, newCursor, err := s.repo.GetItemsOrderByTime(ctx, timeCursor, limit)
 		if err != nil {
-			return nil, model.UniversalCursor{}, err
+			return nil, nil, err
 		}
 
-		return items, *newCursor.ToUniversalCursor(), nil
+		var universalCursor *model.UniversalCursor
+		if newCursor != nil {
+			universalCursor = newCursor.ToUniversalCursor()
+		}
+
+		return items, universalCursor, nil
 
 	case model.ByPopularity:
 		var popularityCursor *model.PopularityCursor
@@ -109,19 +116,24 @@ func (s *ItemService) GetItems(
 		if cursor != nil {
 			popularityCursor, err = cursor.ToPopularityCursor()
 		}
-		if err != nil {
+		if err != nil || popularityCursor == nil {
 			log.Debug("popularity cursor is not specified, starting from the beginning", slog.Any("error", err))
 		}
 
 		items, newCursor, err := s.repo.GetItemsOrderByPopularity(ctx, popularityCursor, limit)
 		if err != nil {
-			return nil, model.UniversalCursor{}, err
+			return nil, nil, err
 		}
 
-		return items, *newCursor.ToUniversalCursor(), nil
+		var universalCursor *model.UniversalCursor
+		if newCursor != nil {
+			universalCursor = newCursor.ToUniversalCursor()
+		}
+
+		return items, universalCursor, nil
 
 	default:
-		return nil, model.UniversalCursor{}, fmt.Errorf("invalid sort type: %v", sortType)
+		return nil, nil, fmt.Errorf("invalid sort type: %v", sortType)
 	}
 }
 
