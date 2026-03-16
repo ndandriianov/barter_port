@@ -122,7 +122,7 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 		slog.String("email", res.Email),
 	)
 
-	http_api.WriteJSON(w, logger, http.StatusOK, registerResp{
+	http_api.WriteJSONWithLogs(w, logger, http.StatusOK, registerResp{
 		UserID: res.UserID,
 		Email:  res.Email,
 	})
@@ -298,7 +298,7 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 
 	// Установка refresh токена в cookie и отправка access токена в ответе
 	setRefreshCookie(w, refresh, claims.ExpiresAt.Time)
-	http_api.WriteJSON(w, logger, http.StatusOK, loginResp{AccessToken: access})
+	http_api.WriteJSONWithLogs(w, logger, http.StatusOK, loginResp{AccessToken: access})
 
 	logger.Info(
 		"successfully generated tokens for logged in user",
@@ -424,7 +424,7 @@ func (h *Handlers) Refresh(w http.ResponseWriter, r *http.Request) {
 
 	// Установка нового refresh токена в cookie и отправка access токена в ответе
 	setRefreshCookie(w, refresh, claims.ExpiresAt.Time)
-	http_api.WriteJSON(w, logger, http.StatusOK, refreshResponse{AccessToken: access})
+	http_api.WriteJSONWithLogs(w, logger, http.StatusOK, refreshResponse{AccessToken: access})
 
 	logger.Info("successfully refreshed tokens for user", slog.String("user_id", oldRefreshClaims.UserID.String()))
 }
@@ -488,7 +488,7 @@ func (h *Handlers) Me(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logger.Info("successfully fetched user info")
-	http_api.WriteJSON(w, logger, http.StatusOK, meResp{UserID: principal.UserID})
+	http_api.WriteJSONWithLogs(w, logger, http.StatusOK, meResp{UserID: principal.UserID})
 }
 
 //

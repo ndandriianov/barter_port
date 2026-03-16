@@ -1,6 +1,7 @@
 package model
 
 import (
+	"barter-port/internal/contracts/openapi/items/types"
 	"time"
 
 	"github.com/google/uuid"
@@ -30,4 +31,16 @@ type Item struct {
 	Description string
 	CreatedAt   time.Time
 	Views       int
+}
+
+func (i Item) ToDto() types.Item {
+	return types.Item{
+		Action:      types.ItemAction(i.Action.String()),
+		CreatedAt:   i.CreatedAt,
+		Description: i.Description,
+		Id:          i.ID,
+		Name:        i.Name,
+		Type:        types.ItemType(i.Type.String()),
+		Views:       int64(i.Views),
+	}
 }
