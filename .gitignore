@@ -38,3 +38,4 @@ bin/
 
 # Frontend
 /frontend/node_modules/
+/frontend/dist

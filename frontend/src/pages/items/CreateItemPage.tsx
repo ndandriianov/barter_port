@@ -1,4 +1,4 @@
-import CreateItemForm from "@/widgets/item-form/CreateItemForm";
+import CreateItemForm from "@/widgets/items/CreateItemForm";
 
 function CreateItemPage() {
   return <CreateItemForm />;
