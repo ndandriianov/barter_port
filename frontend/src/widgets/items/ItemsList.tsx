@@ -1,4 +1,5 @@
 import {useState} from "react";
+import {Link} from "react-router-dom";
 import itemsApi from "@/features/items/api/itemsApi.ts";
 import type {SortType} from "@/features/items/model/types.ts";
 import ItemCard from "@/widgets/items/ItemCard.tsx";
@@ -36,7 +37,9 @@ function ItemsList() {
         <div>Пока нет объявлений</div>
       ) : (
         data.items.map((item) => (
-          <ItemCard key={item.id} item={item} />
+          <Link key={item.id} to={`/items/${item.id}`}>
+            <ItemCard item={item} />
+          </Link>
         ))
       )}
     </div>
