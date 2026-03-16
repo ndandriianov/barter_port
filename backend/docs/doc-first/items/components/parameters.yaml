@@ -1,0 +1,54 @@
+SortType:
+  name: sort
+  in: query
+  required: true
+  description: Sorting mode for items list
+  schema:
+    type: string
+    enum:
+      - created_at
+      - popularity
+
+CursorCreatedAt:
+  name: cursor_created_at
+  in: query
+  required: false
+  description: |
+    Cursor creation timestamp in RFC3339 format.
+    Used together with `cursor_id` when `sort=created_at`.
+  schema:
+    type: string
+    format: date-time
+
+CursorViews:
+  name: cursor_views
+  in: query
+  required: false
+  description: |
+    Cursor views count.
+    Used together with `cursor_id` when `sort=popularity`.
+  schema:
+    type: integer
+    format: int64
+    minimum: 0
+
+CursorId:
+  name: cursor_id
+  in: query
+  required: false
+  description: |
+    Cursor item ID used as a tie-breaker for stable pagination.
+  schema:
+    type: string
+    format: uuid
+
+Limit:
+  name: limit
+  in: query
+  required: false
+  description: Maximum number of items to return
+  schema:
+    type: integer
+    minimum: 1
+    maximum: 100
+    default: 20

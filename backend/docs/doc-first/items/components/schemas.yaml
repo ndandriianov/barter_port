@@ -1,0 +1,117 @@
+Item:
+  type: object
+  required:
+    - id
+    - name
+    - description
+    - type
+    - action
+    - views
+    - createdAt
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: Unique item identifier
+    name:
+      type: string
+      description: Short item title
+      example: Bicycle repair
+    description:
+      type: string
+      description: Detailed item description
+      example: I can help fix city bikes and replace brake pads
+    type:
+      $ref: '#/ItemType'
+    action:
+      $ref: '#/ItemAction'
+    views:
+      type: integer
+      format: int64
+      minimum: 0
+      description: Number of item views
+      example: 120
+    createdAt:
+      type: string
+      format: date-time
+      description: Item creation timestamp
+      example: '2026-03-04T12:00:00Z'
+
+ItemType:
+  type: string
+  description: Type of barter item
+  enum:
+    - good
+    - service
+
+ItemAction:
+  type: string
+  description: Whether the user offers or requests something
+  enum:
+    - give
+    - take
+
+CreateItemRequest:
+  type: object
+  required:
+    - name
+    - description
+    - type
+    - action
+  properties:
+    name:
+      type: string
+      example: Bicycle repair
+    description:
+      type: string
+      example: I can help fix city bikes and replace brake pads
+    type:
+      $ref: '#/ItemType'
+    action:
+      $ref: '#/ItemAction'
+
+ListItemsResponse:
+  type: object
+  required:
+    - items
+  properties:
+    items:
+      type: array
+      description: List of items
+      items:
+        $ref: '#/Item'
+    nextCursor:
+      nullable: true
+      allOf:
+        - $ref: '#/ItemsCursor'
+      description: Cursor for fetching the next page; null if there is no next page
+
+ItemsCursor:
+  type: object
+  description: Cursor for stable pagination
+  properties:
+    createdAt:
+      type: string
+      format: date-time
+      example: '2026-03-04T12:00:00Z'
+    views:
+      type: integer
+      format: int64
+      example: 120
+    id:
+      type: string
+      format: uuid
+      example: '550e8400-e29b-41d4-a716-446655440000'
+
+ErrorResponse:
+  type: object
+  required:
+    - code
+    - message
+  properties:
+    code:
+      type: string
+      example: invalid_request
+    message:
+      type: string
+      example: query parameter "limit" must be between 1 and 100
