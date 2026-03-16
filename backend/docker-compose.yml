@@ -1,0 +1,99 @@
+services:
+  smtp4dev:
+    image: rnwood/smtp4dev:latest
+    container_name: smtp4dev
+    restart: unless-stopped
+    ports:
+      - "5005:80"   # Web UI
+      - "2525:25"   # SMTP
+    environment:
+      - ServerOptions__HostName=smtp4dev
+      - ServerOptions__AuthenticationRequired=true
+      - ServerOptions__Users__0__Username=user
+      - ServerOptions__Users__0__Password=password
+      # Note: For development, we can use StartTls without a certificate, but in production, you should provide a valid TLS certificate.
+      - ServerOptions__TlsMode=StartTls
+      - ServerOptions__TlsCertificate=
+
+  db:
+    image: postgres:16
+    container_name: barter-port-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U postgres -d postgres" ]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  caddy:
+    image: caddy:2
+    container_name: barter-port-caddy
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "80:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+
+  auth:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: auth
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - ./.env
+    environment:
+      APP_ENV: docker
+      CONFIG_COMMON: /app/config/common.yaml
+      CONFIG_SERVICE: # /app/config/auth.yaml
+    volumes:
+      - ./config:/app/config:ro
+
+  items:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: items
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - ./.env
+    environment:
+      APP_ENV: docker
+      CONFIG_COMMON: /app/config/common.yaml
+      CONFIG_SERVICE: # /app/config/items.yaml
+    volumes:
+      - ./config:/app/config:ro
+
+  swagger-ui:
+    image: swaggerapi/swagger-ui:latest
+    container_name: barter-port-swagger-ui
+    restart: unless-stopped
+    environment:
+      URLS: |
+        [
+          { "url": "/swagger-specs/auth.json", "name": "Auth API" },
+          { "url": "/swagger-specs/items.json", "name": "Items API" }
+        ]
+      BASE_URL: /docs
+    depends_on:
+      - auth
+      - items
+
+volumes:
+  db_data:
