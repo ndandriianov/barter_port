@@ -43,6 +43,7 @@ func NewItemService(itemRepository Repository, fallbackLogger *slog.Logger) *Ite
 
 func (s *ItemService) CreateItem(
 	ctx context.Context,
+	userID uuid.UUID,
 	name string,
 	itemType model.ItemType,
 	action model.ItemAction,
@@ -54,6 +55,7 @@ func (s *ItemService) CreateItem(
 
 	item := model.Item{
 		ID:          uuid.New(),
+		AuthorId:    userID,
 		Name:        name,
 		Type:        itemType,
 		Action:      action,
