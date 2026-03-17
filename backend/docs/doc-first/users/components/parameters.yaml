@@ -1,5 +1,5 @@
 Id:
-  name: userId
+  name: id
   in: path
   required: true
   description: User ID
