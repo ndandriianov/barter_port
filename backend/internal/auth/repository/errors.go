@@ -28,8 +28,7 @@ func (e *UniqueError) Unwrap() error {
 // If a violation is detected, it returns a UniqueError with the provided field and value for better readability.
 // Otherwise, it returns the original error.
 func TryCastToUniqueViolation(err error) error {
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) && pgErr.Code == pgerrcode.UniqueViolation {
+	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == pgerrcode.UniqueViolation {
 		return &UniqueError{
 			Constraint: pgErr.ConstraintName,
 			Err:        err,

@@ -22,6 +22,10 @@ func NewService(repository UsersRepository) *Service {
 	return &Service{repository}
 }
 
+// AddUser adds user if not exist. Unique check by id.
+//
+// Errors:
+//   - model.ErrUserAlreadyExists: Occurs if a user with the same id already exists in the repository.
 func (s *Service) AddUser(ctx context.Context, id uuid.UUID, name string) error {
 	user := model.User{
 		Id:   id,
@@ -32,13 +36,22 @@ func (s *Service) AddUser(ctx context.Context, id uuid.UUID, name string) error 
 }
 
 func (s *Service) DeleteUser(ctx context.Context, id uuid.UUID) error {
-	return s.repository.DeleteUser(ctx, id)
+	// TODO: implement with transaction
+	panic("implement me")
 }
 
+// UpdateName updates users name by id.
+//
+// Errors:
+//   - model.ErrUserNotFound: Occurs if no user is found with the given id.
 func (s *Service) UpdateName(ctx context.Context, id uuid.UUID, name string) error {
 	return s.repository.UpdateName(ctx, id, name)
 }
 
+// UpdateBio updates users bio by id. Bio can be null.
+//
+// Errors:
+//   - model.ErrUserNotFound: Occurs if no user is found with the given id.
 func (s *Service) UpdateBio(ctx context.Context, id uuid.UUID, bio *string) error {
 	return s.repository.UpdateBio(ctx, id, bio)
 }
