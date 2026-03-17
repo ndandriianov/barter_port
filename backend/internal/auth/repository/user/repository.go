@@ -2,7 +2,7 @@ package user
 
 import (
 	"barter-port/internal/auth/model"
-	"barter-port/internal/auth/repository"
+	"barter-port/internal/libs/repox"
 	"errors"
 
 	"github.com/google/uuid"
@@ -35,7 +35,7 @@ func (r *Repository) Create(ctx context.Context, u model.User) error {
 
 	_, err := r.db.Exec(ctx, query, u.ID, u.Email, u.PasswordHash, u.EmailVerified, u.CreatedAt)
 	if err != nil {
-		if repository.IsUniqueViolation(err) {
+		if repox.IsUniqueViolation(err) {
 			return ErrEmailAlreadyInUse
 		}
 		return err
