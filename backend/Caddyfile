@@ -28,20 +28,14 @@
 		reverse_proxy swagger-ui:8080
 	}
 
-	handle /swagger-specs/auth.json {
+	handle /swagger-specs/auth/swagger.json {
 		reverse_proxy auth:8080 {
 			rewrite /swagger/doc.json
 		}
 	}
 
-	handle /swagger-specs/items.yaml {
-		reverse_proxy items:8080 {
-			rewrite /swagger/swagger.yaml
-		}
-	}
-
-	handle /swagger-specs/components/* {
-		uri replace /swagger-specs /swagger
+	handle /swagger-specs/items/* {
+		uri replace /swagger-specs/items /swagger
 		reverse_proxy items:8080
 	}
 
