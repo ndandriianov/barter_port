@@ -3,10 +3,8 @@ info:
   title: Users API
   description: Users API
   version: 1.0.0
-
 servers:
-  - url: 'http://localhost:80'
-
+  - url: http://localhost:80
 paths:
   /users/me:
     get:
@@ -18,27 +16,26 @@ paths:
         Обращается к auth сервису для получения email и createdAt.
       operationId: getCurrentUser
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       responses:
         '200':
           description: Информация о пользователе
           content:
             application/json:
               schema:
-                $ref: './components/responses.yaml#/GetMeResponse'
+                $ref: '#/components/schemas/Me'
         '401':
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: './components/errors.yaml#/ErrorResponse'
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: './components/errors.yaml#/ErrorResponse'
-
+                $ref: '#/components/schemas/ErrorResponse'
     patch:
       tags:
         - users, me
@@ -47,40 +44,38 @@ paths:
         Позволяет отредактировать имя или биографию текущего пользователя.
       operationId: updateCurrentUser
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       requestBody:
         required: true
         content:
           application/json:
             schema:
-              $ref: './components/requests.yaml#/UpdateUserRequest'
+              $ref: '#/components/schemas/UpdateUserRequest'
       responses:
         '200':
           description: Информация о пользователе после обновления
           content:
             application/json:
               schema:
-                $ref: './components/responses.yaml#/GetMeResponse'
+                $ref: '#/components/schemas/Me'
         '400':
           description: Bad request
           content:
             application/json:
               schema:
-                $ref: './components/errors.yaml#/ErrorResponse'
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: './components/errors.yaml#/ErrorResponse'
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: './components/errors.yaml#/ErrorResponse'
-
-
+                $ref: '#/components/schemas/ErrorResponse'
   /users/{id}:
     get:
       tags:
@@ -91,41 +86,122 @@ paths:
         Обращается к auth сервису для получения email и createdAt.
       operationId: getUserById
       security:
-        - bearerAuth: [ ]
+        - bearerAuth: []
       parameters:
-        - $ref: './components/parameters.yaml#/Id'
+        - $ref: '#/components/parameters/Id'
       responses:
         '200':
           description: Информация о пользователе
           content:
             application/json:
               schema:
-                $ref: './components/schemas.yaml#/User'
+                $ref: '#/components/schemas/User'
         '401':
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: './components/errors.yaml#/ErrorResponse'
+                $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: User not found
           content:
             application/json:
               schema:
-                $ref: './components/errors.yaml#/ErrorResponse'
+                $ref: '#/components/schemas/ErrorResponse'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: './components/errors.yaml#/ErrorResponse'
-
-
-
-
+                $ref: '#/components/schemas/ErrorResponse'
 components:
   securitySchemes:
     bearerAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+  schemas:
+    UserId:
+      type: string
+      format: uuid
+      description: User ID
+      example: 123e4567-e89b-12d3-a456-426614174000
+    Name:
+      type: string
+      description: User name
+      example: John Doe
+    Bio:
+      type: string
+      description: User bio
+      example: I am a software developer who loves bartering.
+    Me:
+      type: object
+      required:
+        - id
+        - email
+        - createdAt
+        - name
+      properties:
+        id:
+          $ref: '#/components/schemas/UserId'
+        email:
+          type: string
+          format: email
+          description: User email
+          example: email@example.com
+        createdAt:
+          type: string
+          format: date-time
+          description: User registration timestamp
+          example: '2026-03-04T12:00:00Z'
+        name:
+          $ref: '#/components/schemas/Name'
+        bio:
+          $ref: '#/components/schemas/Bio'
+    ErrorCode:
+      type: string
+      enum:
+        - INVALID_REQUEST
+        - INTERNAL
+      x-enum-varnames:
+        - ErrorCodeInvalidRequest
+        - ErrorCodeInternal
+      example: INVALID_REQUEST
+    ErrorResponse:
+      type: object
+      required:
+        - code
+      properties:
+        code:
+          $ref: '#/components/schemas/ErrorCode'
+        message:
+          type: string
+          example: Вы отправили некорректный запрос
+    UpdateUserRequest:
+      type: object
+      properties:
+        name:
+          $ref: '#/components/schemas/Name'
+        bio:
+          $ref: '#/components/schemas/Bio'
+    User:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          $ref: '#/components/schemas/UserId'
+        name:
+          $ref: '#/components/schemas/Name'
+        bio:
+          $ref: '#/components/schemas/Bio'
+  parameters:
+    Id:
+      name: id
+      in: path
+      required: true
+      description: User ID
+      schema:
+        type: string
+        format: uuid

@@ -1,4 +1,4 @@
-Id:
+UserId:
   type: string
   format: uuid
   description: User ID

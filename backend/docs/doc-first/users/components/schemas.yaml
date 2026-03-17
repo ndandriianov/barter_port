@@ -7,7 +7,7 @@ Me:
     - name
   properties:
     id:
-      $ref: './properties.yaml#/Id'
+      $ref: './properties.yaml#/UserId'
     email:
       type: string
       format: email
@@ -30,7 +30,7 @@ User:
     - name
   properties:
     id:
-      $ref: './properties.yaml#/Id'
+      $ref: './properties.yaml#/UserId'
     name:
       $ref: './properties.yaml#/Name'
     bio:
