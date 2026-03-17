@@ -14,8 +14,6 @@ import (
 	"github.com/joho/godotenv"
 )
 
-//go:generate bash ../../scripts/generate-swagger-items.sh
-
 func main() {
 	_ = godotenv.Load()
 

@@ -34,10 +34,15 @@
 		}
 	}
 
-	handle /swagger-specs/items.json {
+	handle /swagger-specs/items.yaml {
 		reverse_proxy items:8080 {
-			rewrite /swagger/doc.json
+			rewrite /swagger/swagger.yaml
 		}
+	}
+
+	handle /swagger-specs/components/* {
+		uri replace /swagger-specs /swagger
+		reverse_proxy items:8080
 	}
 
 	# Auth service по префиксу /auth/*
