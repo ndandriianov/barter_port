@@ -1,6 +1,7 @@
 package transport
 
 import (
+	itemsdocfirst "barter-port/docs/doc-first/items"
 	"barter-port/internal/libs/authkit"
 	"barter-port/internal/libs/authkit/validators"
 	"barter-port/internal/libs/platform/logger"
@@ -8,11 +9,8 @@ import (
 	"log/slog"
 	"net/http"
 
-	_ "barter-port/docs/items"
-
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
-	httpSwagger "github.com/swaggo/http-swagger"
 )
 
 func NewRouter(logg *slog.Logger, validator *validators.LocalJWT, h *Handlers) http.Handler {
@@ -26,6 +24,7 @@ func NewRouter(logg *slog.Logger, validator *validators.LocalJWT, h *Handlers) h
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)
+	openAPISpecHandler := http.StripPrefix("/swagger/", http.FileServer(http.FS(itemsdocfirst.SpecFS)))
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("ok"))
@@ -33,7 +32,15 @@ func NewRouter(logg *slog.Logger, validator *validators.LocalJWT, h *Handlers) h
 			logg.Error("failed to write health response", slog.String("error", err.Error()))
 		}
 	})
-	r.Get("/swagger/*", httpSwagger.WrapHandler)
+	r.Get("/swagger", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/swagger/swagger.yaml", http.StatusPermanentRedirect)
+	})
+	r.Get("/swagger/", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/swagger/swagger.yaml", http.StatusPermanentRedirect)
+	})
+	r.Get("/swagger/*", func(w http.ResponseWriter, r *http.Request) {
+		openAPISpecHandler.ServeHTTP(w, r)
+	})
 
 	r.Group(func(r chi.Router) {
 		r.Use(authkit.Middleware(logg, validator, nil))
