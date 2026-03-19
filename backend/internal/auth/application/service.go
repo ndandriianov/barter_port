@@ -1,9 +1,9 @@
-package service
+package application
 
 import (
-	model2 "barter-port/internal/auth/model"
-	"barter-port/internal/auth/repository/email_token"
-	"barter-port/internal/auth/repository/user"
+	"barter-port/internal/auth/domain"
+	"barter-port/internal/auth/infrastructure/repository/email_token"
+	"barter-port/internal/auth/infrastructure/repository/user"
 	"errors"
 	"fmt"
 	"log"
@@ -41,15 +41,15 @@ var (
 )
 
 type UserRepo interface {
-	Create(ctx context.Context, user model2.User) error
-	GetByEmail(ctx context.Context, email string) (model2.User, error)
-	GetByID(ctx context.Context, id uuid.UUID) (model2.User, error)
+	Create(ctx context.Context, user domain.User) error
+	GetByEmail(ctx context.Context, email string) (domain.User, error)
+	GetByID(ctx context.Context, id uuid.UUID) (domain.User, error)
 	VerifyEmail(ctx context.Context, userID uuid.UUID) error
 }
 
 type TokenRepo interface {
-	Save(ctx context.Context, t model2.EmailVerificationToken) error
-	GetByHash(ctx context.Context, tokenHash string) (model2.EmailVerificationToken, error)
+	Save(ctx context.Context, t domain.EmailVerificationToken) error
+	GetByHash(ctx context.Context, tokenHash string) (domain.EmailVerificationToken, error)
 	MarkUsed(ctx context.Context, tokenHash string) error
 	DeleteAllForUser(ctx context.Context, userID uuid.UUID) error
 }
@@ -116,7 +116,7 @@ func (s *Service) Register(ctx context.Context, email, password string) (Registe
 		return RegisterResult{}, fmt.Errorf("failed to hash password: %w", err)
 	}
 
-	u := model2.NewUser(uuid.New(), email, string(hash))
+	u := domain.NewUser(uuid.New(), email, string(hash))
 	if err := s.users.Create(ctx, u); err != nil {
 		if errors.Is(err, user.ErrEmailAlreadyInUse) {
 			return RegisterResult{}, ErrEmailAlreadyInUse
@@ -136,7 +136,7 @@ func (s *Service) Register(ctx context.Context, email, password string) (Registe
 	}
 
 	tokenHash := getHashFromToken(rawToken)
-	t := model2.NewEmailVerificationToken(tokenHash, u.ID, time.Now().Add(tokenExpirationTime))
+	t := domain.NewEmailVerificationToken(tokenHash, u.ID, time.Now().Add(tokenExpirationTime))
 
 	if err = s.tokens.Save(ctx, t); err != nil {
 		return RegisterResult{}, fmt.Errorf("failed to save email_token: %w", err)

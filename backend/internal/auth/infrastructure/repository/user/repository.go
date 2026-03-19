@@ -1,7 +1,7 @@
 package user
 
 import (
-	"barter-port/internal/auth/model"
+	"barter-port/internal/auth/domain"
 	"barter-port/internal/libs/repox"
 	"errors"
 
@@ -27,7 +27,7 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 // Create adds a new user to the repository.
 // Errors:
 //   - errors.ErrEmailAlreadyInUse - email already exists
-func (r *Repository) Create(ctx context.Context, u model.User) error {
+func (r *Repository) Create(ctx context.Context, u domain.User) error {
 	query := `
 		INSERT INTO users
 		VALUES ($1, $2, $3, $4, $5)
@@ -47,7 +47,7 @@ func (r *Repository) Create(ctx context.Context, u model.User) error {
 // GetByEmail retrieves a user by their email address.
 // Errors:
 //   - errors.ErrUserNotFound: Occurs if no user is found with the given email address.
-func (r *Repository) GetByEmail(ctx context.Context, email string) (model.User, error) {
+func (r *Repository) GetByEmail(ctx context.Context, email string) (domain.User, error) {
 	query := `
 		SELECT id, email, password_hash, email_verified, created_at
 		FROM users
@@ -56,16 +56,16 @@ func (r *Repository) GetByEmail(ctx context.Context, email string) (model.User, 
 
 	rows, err := r.db.Query(ctx, query, email)
 	if err != nil {
-		return model.User{}, err
+		return domain.User{}, err
 	}
 	defer rows.Close()
 
-	user, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[model.User])
+	user, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[domain.User])
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return model.User{}, ErrUserNotFound
+			return domain.User{}, ErrUserNotFound
 		}
-		return model.User{}, err
+		return domain.User{}, err
 	}
 
 	return user, nil
@@ -74,7 +74,7 @@ func (r *Repository) GetByEmail(ctx context.Context, email string) (model.User, 
 // GetByID retrieves a user by their unique ID.
 // Errors:
 //   - errors.ErrUserNotFound: Occurs if no user is found with the given ID.
-func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (model.User, error) {
+func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (domain.User, error) {
 	query := `
 		SELECT id, email, password_hash, email_verified, created_at
 		FROM users
@@ -83,16 +83,16 @@ func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (model.User, err
 
 	rows, err := r.db.Query(ctx, query, id)
 	if err != nil {
-		return model.User{}, err
+		return domain.User{}, err
 	}
 	defer rows.Close()
 
-	user, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[model.User])
+	user, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[domain.User])
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return model.User{}, ErrUserNotFound
+			return domain.User{}, ErrUserNotFound
 		}
-		return model.User{}, err
+		return domain.User{}, err
 	}
 
 	return user, nil

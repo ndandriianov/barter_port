@@ -1,8 +1,8 @@
 package refresh_token
 
 import (
-	"barter-port/internal/auth/model"
-	"barter-port/internal/auth/repository"
+	"barter-port/internal/auth/domain"
+	"barter-port/internal/auth/infrastructure/repository"
 	"errors"
 
 	"github.com/google/uuid"
@@ -28,7 +28,7 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 //
 // Errors:
 //   - ErrRefreshAlreadyExists: Occurs if a refresh token with the same JTI already exists in the repository.
-func (r *Repository) Save(ctx context.Context, token model.RefreshToken) error {
+func (r *Repository) Save(ctx context.Context, token domain.RefreshToken) error {
 	query := `
 		INSERT INTO refresh_tokens (jti, user_id, expires_at, revoked)
 		VALUES ($1, $2, $3, $4)
@@ -49,7 +49,7 @@ func (r *Repository) Save(ctx context.Context, token model.RefreshToken) error {
 //
 // Errors:
 //   - ErrRefreshNotFound: Occurs if no refresh token is found with the given JTI.
-func (r *Repository) GetByJTI(ctx context.Context, jti string) (model.RefreshToken, error) {
+func (r *Repository) GetByJTI(ctx context.Context, jti string) (domain.RefreshToken, error) {
 	query := `
 		SELECT jti, user_id, expires_at, revoked
 		FROM refresh_tokens
@@ -58,16 +58,16 @@ func (r *Repository) GetByJTI(ctx context.Context, jti string) (model.RefreshTok
 
 	rows, err := r.db.Query(ctx, query, jti)
 	if err != nil {
-		return model.RefreshToken{}, err
+		return domain.RefreshToken{}, err
 	}
 	defer rows.Close()
 
-	token, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[model.RefreshToken])
+	token, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[domain.RefreshToken])
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return model.RefreshToken{}, ErrRefreshNotFound
+			return domain.RefreshToken{}, ErrRefreshNotFound
 		}
-		return model.RefreshToken{}, err
+		return domain.RefreshToken{}, err
 	}
 
 	return token, nil
