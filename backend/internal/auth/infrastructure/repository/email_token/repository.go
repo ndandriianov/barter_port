@@ -3,11 +3,11 @@ package email_token
 import (
 	"barter-port/internal/auth/domain"
 	"barter-port/internal/auth/infrastructure/repository"
+	"barter-port/internal/libs/db"
 	"errors"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/net/context"
 )
 
@@ -17,23 +17,22 @@ var (
 )
 
 type Repository struct {
-	db *pgxpool.Pool
 }
 
-func NewRepository(db *pgxpool.Pool) *Repository {
-	return &Repository{db: db}
+func NewRepository() *Repository {
+	return &Repository{}
 }
 
 // Save stores a new email verification token in the repository.
 // Errors:
 //   - errors.ErrTokenAlreadyExists: Occurs if a token with the same hash already exists in the repository.
-func (r *Repository) Save(ctx context.Context, t domain.EmailVerificationToken) error {
+func (r *Repository) Save(ctx context.Context, exec db.DB, t domain.EmailVerificationToken) error {
 	query := `
 		INSERT INTO email_tokens
 		VALUES ($1, $2, $3, $4, $5)
 	`
 
-	_, err := r.db.Exec(ctx, query, t.TokenHash, t.UserID, t.ExpiresAt, t.Used, t.CreatedAt)
+	_, err := exec.Exec(ctx, query, t.TokenHash, t.UserID, t.ExpiresAt, t.Used, t.CreatedAt)
 	if err != nil {
 		if repository.IsUniqueViolation(err) {
 			return ErrTokenAlreadyExists
@@ -44,17 +43,18 @@ func (r *Repository) Save(ctx context.Context, t domain.EmailVerificationToken) 
 	return nil
 }
 
-// GetByHash retrieves an email verification token by its hash.
+// GetByHashForUpdate retrieves an email verification token by its hash.
 // Errors:
 //   - errors.ErrTokenNotFound: Occurs if no token is found with the given hash.
-func (r *Repository) GetByHash(ctx context.Context, tokenHash string) (domain.EmailVerificationToken, error) {
+func (r *Repository) GetByHashForUpdate(ctx context.Context, exec db.DB, tokenHash string) (domain.EmailVerificationToken, error) {
 	query := `
 		SELECT token_hash, user_id, expires_at, used, created_at
 		FROM email_tokens
 		WHERE token_hash = $1
+		FOR UPDATE
 	`
 
-	rows, err := r.db.Query(ctx, query, tokenHash)
+	rows, err := exec.Query(ctx, query, tokenHash)
 	if err != nil {
 		return domain.EmailVerificationToken{}, err
 	}
@@ -74,14 +74,14 @@ func (r *Repository) GetByHash(ctx context.Context, tokenHash string) (domain.Em
 // MarkUsed marks an email verification token as used.
 // Errors:
 //   - errors.ErrTokenNotFound: Occurs if no token is found with the given hash.
-func (r *Repository) MarkUsed(ctx context.Context, tokenHash string) error {
+func (r *Repository) MarkUsed(ctx context.Context, exec db.DB, tokenHash string) error {
 	query := `
 		UPDATE email_tokens
 		SET used = true
 		WHERE token_hash = $1
 	`
 
-	cmdTag, err := r.db.Exec(ctx, query, tokenHash)
+	cmdTag, err := exec.Exec(ctx, query, tokenHash)
 	if err != nil {
 		return err
 	}
@@ -95,13 +95,13 @@ func (r *Repository) MarkUsed(ctx context.Context, tokenHash string) error {
 
 // DeleteAllForUser removes all tokens associated with a specific user.
 // Errors: only internal db errors.
-func (r *Repository) DeleteAllForUser(ctx context.Context, userID uuid.UUID) error {
+func (r *Repository) DeleteAllForUser(ctx context.Context, exec db.DB, userID uuid.UUID) error {
 	query := `
 		DELETE FROM email_tokens
 		WHERE user_id = $1
 	`
 
-	_, err := r.db.Exec(ctx, query, userID)
+	_, err := exec.Exec(ctx, query, userID)
 	if err != nil {
 		return err
 	}
