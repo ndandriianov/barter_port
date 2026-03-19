@@ -1,9 +1,9 @@
 package transport
 
 import (
-	"barter-port/internal/auth/model"
-	"barter-port/internal/auth/repository/refresh_token"
-	"barter-port/internal/auth/service"
+	"barter-port/internal/auth/application"
+	"barter-port/internal/auth/domain"
+	"barter-port/internal/auth/infrastructure/repository/refresh_token"
 	"barter-port/internal/libs/authkit"
 	"barter-port/internal/libs/jwt"
 	"barter-port/internal/libs/platform/http_api"
@@ -28,22 +28,22 @@ var (
 )
 
 type RefreshTokenRepository interface {
-	Save(ctx context.Context, token model.RefreshToken) error
-	GetByJTI(ctx context.Context, jti string) (model.RefreshToken, error)
+	Save(ctx context.Context, token domain.RefreshToken) error
+	GetByJTI(ctx context.Context, jti string) (domain.RefreshToken, error)
 	Revoke(ctx context.Context, jti string) error
 	DeleteAllForUser(ctx context.Context, userID uuid.UUID) error
 }
 
 type Handlers struct {
 	logger      *slog.Logger
-	authService *service.Service
+	authService *application.Service
 	jwtManager  *jwt.Manager
 	refreshRepo RefreshTokenRepository
 }
 
 func NewHandlers(
 	logger *slog.Logger,
-	authService *service.Service,
+	authService *application.Service,
 	jwtManager *jwt.Manager,
 	refreshRepo RefreshTokenRepository,
 ) *Handlers {
@@ -85,26 +85,26 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 	res, err := h.authService.Register(r.Context(), req.Email, req.Password)
 	if err != nil {
 		switch {
-		case errors.Is(err, service.ErrInvalidEmail):
+		case errors.Is(err, application.ErrInvalidEmail):
 			logger.Info(
 				"invalid email format in register request",
 				slog.String("email", req.Email),
 			)
-			http_api.HandleError(w, logger, http.StatusBadRequest, service.ErrInvalidEmail)
+			http_api.HandleError(w, logger, http.StatusBadRequest, application.ErrInvalidEmail)
 
-		case errors.Is(err, service.ErrPasswordTooShort):
+		case errors.Is(err, application.ErrPasswordTooShort):
 			logger.Info(
 				"password too short in register request",
 				slog.Int("password_length", len(req.Password)),
 			)
-			http_api.HandleError(w, logger, http.StatusBadRequest, service.ErrPasswordTooShort)
+			http_api.HandleError(w, logger, http.StatusBadRequest, application.ErrPasswordTooShort)
 
-		case errors.Is(err, service.ErrEmailAlreadyInUse):
+		case errors.Is(err, application.ErrEmailAlreadyInUse):
 			logger.Info(
 				"email already in use in register request",
 				slog.String("email", req.Email),
 			)
-			http_api.HandleError(w, logger, http.StatusBadRequest, service.ErrEmailAlreadyInUse)
+			http_api.HandleError(w, logger, http.StatusBadRequest, application.ErrEmailAlreadyInUse)
 
 		default:
 			logger.Error(
@@ -158,17 +158,17 @@ func (h *Handlers) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.authService.VerifyEmail(r.Context(), req.Token); err != nil {
 		switch {
-		case errors.Is(err, service.ErrInvalidEmailToken):
+		case errors.Is(err, application.ErrInvalidEmailToken):
 			logger.Info("invalid email_token in verify email request")
-			http_api.HandleError(w, logger, http.StatusBadRequest, service.ErrInvalidEmailToken)
+			http_api.HandleError(w, logger, http.StatusBadRequest, application.ErrInvalidEmailToken)
 
-		case errors.Is(err, service.ErrInvalidEmailToken):
+		case errors.Is(err, application.ErrInvalidEmailToken):
 			logger.Info("email_token expired in verify email request")
-			http_api.HandleError(w, logger, http.StatusBadRequest, service.ErrInvalidEmailToken)
+			http_api.HandleError(w, logger, http.StatusBadRequest, application.ErrInvalidEmailToken)
 
-		case errors.Is(err, service.ErrUserNotFound):
+		case errors.Is(err, application.ErrUserNotFound):
 			logger.Info("user not found in verify email request")
-			http_api.HandleError(w, logger, http.StatusNotFound, service.ErrUserNotFound)
+			http_api.HandleError(w, logger, http.StatusNotFound, application.ErrUserNotFound)
 
 		default:
 			logger.Error(
@@ -219,26 +219,26 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	userID, err := h.authService.Login(r.Context(), req.Email, req.Password)
 	if err != nil {
 		switch {
-		case errors.Is(err, service.ErrInvalidCredentials):
+		case errors.Is(err, application.ErrInvalidCredentials):
 			logger.Info(
 				"invalid credentials in login request",
 				slog.String("email", req.Email),
 			)
-			http_api.HandleError(w, logger, http.StatusBadRequest, service.ErrInvalidCredentials)
+			http_api.HandleError(w, logger, http.StatusBadRequest, application.ErrInvalidCredentials)
 
-		case errors.Is(err, service.ErrIncorrectPassword):
+		case errors.Is(err, application.ErrIncorrectPassword):
 			logger.Info(
 				"incorrect password in login request",
 				slog.String("email", req.Email),
 			)
-			http_api.HandleError(w, logger, http.StatusUnauthorized, service.ErrIncorrectPassword)
+			http_api.HandleError(w, logger, http.StatusUnauthorized, application.ErrIncorrectPassword)
 
-		case errors.Is(err, service.ErrEmailNotVerified):
+		case errors.Is(err, application.ErrEmailNotVerified):
 			logger.Info(
 				"email not verified in login request",
 				slog.String("email", req.Email),
 			)
-			http_api.HandleError(w, logger, http.StatusForbidden, service.ErrEmailNotVerified)
+			http_api.HandleError(w, logger, http.StatusForbidden, application.ErrEmailNotVerified)
 
 		default:
 			logger.Error(
@@ -280,7 +280,7 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Сохранение refresh токена в репозитории
-	err = h.refreshRepo.Save(r.Context(), model.RefreshToken{
+	err = h.refreshRepo.Save(r.Context(), domain.RefreshToken{
 		JTI:       claims.ID,
 		UserID:    claims.UserID,
 		ExpiresAt: claims.ExpiresAt.Time,
@@ -393,7 +393,7 @@ func (h *Handlers) Refresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Сохранение нового refresh токена и удаление старого
-	err = h.refreshRepo.Save(r.Context(), model.RefreshToken{
+	err = h.refreshRepo.Save(r.Context(), domain.RefreshToken{
 		JTI:       claims.ID,
 		UserID:    claims.UserID,
 		ExpiresAt: claims.ExpiresAt.Time,

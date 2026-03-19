@@ -1,11 +1,11 @@
 package main
 
 import (
-	"barter-port/internal/auth/repository/email_token"
-	"barter-port/internal/auth/repository/refresh_token"
-	"barter-port/internal/auth/repository/user"
-	"barter-port/internal/auth/service"
-	"barter-port/internal/auth/transport"
+	"barter-port/internal/auth/application"
+	"barter-port/internal/auth/infrastructure/repository/email_token"
+	"barter-port/internal/auth/infrastructure/repository/refresh_token"
+	"barter-port/internal/auth/infrastructure/repository/user"
+	"barter-port/internal/auth/infrastructure/transport"
 	"barter-port/internal/libs/bootstrap"
 	"barter-port/internal/libs/platform/logger"
 	"log/slog"
@@ -75,7 +75,7 @@ func main() {
 		log.Fatal("failed to initialize JWT validator:", err)
 	}
 
-	authService := service.NewService(userRepo, emailTokenRepo, m, infrastructureLogger, frontendURL, re)
+	authService := application.NewService(userRepo, emailTokenRepo, m, infrastructureLogger, frontendURL, re)
 	handlers := transport.NewHandlers(logg, authService, jwtManager, refreshTokenRepo)
 	router := transport.NewRouter(logg, validator, handlers)
 

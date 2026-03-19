@@ -1,8 +1,8 @@
 package email_token
 
 import (
-	"barter-port/internal/auth/model"
-	"barter-port/internal/auth/repository"
+	"barter-port/internal/auth/domain"
+	"barter-port/internal/auth/infrastructure/repository"
 	"errors"
 
 	"github.com/google/uuid"
@@ -27,7 +27,7 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 // Save stores a new email verification token in the repository.
 // Errors:
 //   - errors.ErrTokenAlreadyExists: Occurs if a token with the same hash already exists in the repository.
-func (r *Repository) Save(ctx context.Context, t model.EmailVerificationToken) error {
+func (r *Repository) Save(ctx context.Context, t domain.EmailVerificationToken) error {
 	query := `
 		INSERT INTO email_tokens
 		VALUES ($1, $2, $3, $4, $5)
@@ -47,7 +47,7 @@ func (r *Repository) Save(ctx context.Context, t model.EmailVerificationToken) e
 // GetByHash retrieves an email verification token by its hash.
 // Errors:
 //   - errors.ErrTokenNotFound: Occurs if no token is found with the given hash.
-func (r *Repository) GetByHash(ctx context.Context, tokenHash string) (model.EmailVerificationToken, error) {
+func (r *Repository) GetByHash(ctx context.Context, tokenHash string) (domain.EmailVerificationToken, error) {
 	query := `
 		SELECT token_hash, user_id, expires_at, used, created_at
 		FROM email_tokens
@@ -56,16 +56,16 @@ func (r *Repository) GetByHash(ctx context.Context, tokenHash string) (model.Ema
 
 	rows, err := r.db.Query(ctx, query, tokenHash)
 	if err != nil {
-		return model.EmailVerificationToken{}, err
+		return domain.EmailVerificationToken{}, err
 	}
 	defer rows.Close()
 
-	token, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[model.EmailVerificationToken])
+	token, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[domain.EmailVerificationToken])
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return model.EmailVerificationToken{}, ErrTokenNotFound
+			return domain.EmailVerificationToken{}, ErrTokenNotFound
 		}
-		return model.EmailVerificationToken{}, err
+		return domain.EmailVerificationToken{}, err
 	}
 
 	return token, nil
