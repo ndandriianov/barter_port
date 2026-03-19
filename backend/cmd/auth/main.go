@@ -53,9 +53,9 @@ func main() {
 	frontendURL := cfg.Frontend.URL
 	re := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 
-	userRepo := user.NewRepository(db)
-	emailTokenRepo := email_token.NewRepository(db)
-	refreshTokenRepo := refresh_token.NewRepository(db)
+	userRepo := user.NewRepository()
+	emailTokenRepo := email_token.NewRepository()
+	refreshTokenRepo := refresh_token.NewRepository()
 
 	m := bootstrap.InitMailerFromConfig(cfg)
 	if err = bootstrap.ValidateMailConfig(cfg); err != nil {
@@ -75,8 +75,8 @@ func main() {
 		log.Fatal("failed to initialize JWT validator:", err)
 	}
 
-	authService := application.NewService(userRepo, emailTokenRepo, m, infrastructureLogger, frontendURL, re)
-	handlers := transport.NewHandlers(logg, authService, jwtManager, refreshTokenRepo)
+	authService := application.NewService(db, userRepo, emailTokenRepo, m, infrastructureLogger, frontendURL, re)
+	handlers := transport.NewHandlers(logg, authService, jwtManager, db, refreshTokenRepo)
 	router := transport.NewRouter(logg, validator, handlers)
 
 	port := bootstrap.InitPortStringFromConfig(cfg, 8081)

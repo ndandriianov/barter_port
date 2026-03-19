@@ -2,12 +2,12 @@ package user
 
 import (
 	"barter-port/internal/auth/domain"
+	"barter-port/internal/libs/db"
 	"barter-port/internal/libs/repox"
 	"errors"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/net/context"
 )
 
@@ -17,23 +17,22 @@ var (
 )
 
 type Repository struct {
-	db *pgxpool.Pool
 }
 
-func NewRepository(db *pgxpool.Pool) *Repository {
-	return &Repository{db: db}
+func NewRepository() *Repository {
+	return &Repository{}
 }
 
 // Create adds a new user to the repository.
 // Errors:
 //   - errors.ErrEmailAlreadyInUse - email already exists
-func (r *Repository) Create(ctx context.Context, u domain.User) error {
+func (r *Repository) Create(ctx context.Context, exec db.DB, u domain.User) error {
 	query := `
 		INSERT INTO users
 		VALUES ($1, $2, $3, $4, $5)
 	`
 
-	_, err := r.db.Exec(ctx, query, u.ID, u.Email, u.PasswordHash, u.EmailVerified, u.CreatedAt)
+	_, err := exec.Exec(ctx, query, u.ID, u.Email, u.PasswordHash, u.EmailVerified, u.CreatedAt)
 	if err != nil {
 		if repox.IsUniqueViolation(err) {
 			return ErrEmailAlreadyInUse
@@ -47,14 +46,14 @@ func (r *Repository) Create(ctx context.Context, u domain.User) error {
 // GetByEmail retrieves a user by their email address.
 // Errors:
 //   - errors.ErrUserNotFound: Occurs if no user is found with the given email address.
-func (r *Repository) GetByEmail(ctx context.Context, email string) (domain.User, error) {
+func (r *Repository) GetByEmail(ctx context.Context, exec db.DB, email string) (domain.User, error) {
 	query := `
 		SELECT id, email, password_hash, email_verified, created_at
 		FROM users
 		WHERE email = $1
 	`
 
-	rows, err := r.db.Query(ctx, query, email)
+	rows, err := exec.Query(ctx, query, email)
 	if err != nil {
 		return domain.User{}, err
 	}
@@ -74,14 +73,14 @@ func (r *Repository) GetByEmail(ctx context.Context, email string) (domain.User,
 // GetByID retrieves a user by their unique ID.
 // Errors:
 //   - errors.ErrUserNotFound: Occurs if no user is found with the given ID.
-func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (domain.User, error) {
+func (r *Repository) GetByID(ctx context.Context, exec db.DB, id uuid.UUID) (domain.User, error) {
 	query := `
 		SELECT id, email, password_hash, email_verified, created_at
 		FROM users
 		WHERE id = $1
 	`
 
-	rows, err := r.db.Query(ctx, query, id)
+	rows, err := exec.Query(ctx, query, id)
 	if err != nil {
 		return domain.User{}, err
 	}
@@ -98,17 +97,17 @@ func (r *Repository) GetByID(ctx context.Context, id uuid.UUID) (domain.User, er
 	return user, nil
 }
 
-// VerifyEmail marks a user's email as verified.
+// VerifyEmailIfNotVerified marks a user's email as verified.
 // Errors:
 //   - errors.ErrUserNotFound: Occurs if no user is found with the given userID.
-func (r *Repository) VerifyEmail(ctx context.Context, userID uuid.UUID) error {
+func (r *Repository) VerifyEmailIfNotVerified(ctx context.Context, exec db.DB, userID uuid.UUID) error {
 	query := `
 		UPDATE users
 		SET email_verified = true
 		WHERE id = $1
 	`
 
-	cmdTag, err := r.db.Exec(ctx, query, userID)
+	cmdTag, err := exec.Exec(ctx, query, userID)
 	if err != nil {
 		return err
 	}

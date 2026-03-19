@@ -5,6 +5,7 @@ import (
 	"barter-port/internal/auth/domain"
 	"barter-port/internal/auth/infrastructure/repository/refresh_token"
 	"barter-port/internal/libs/authkit"
+	"barter-port/internal/libs/db"
 	"barter-port/internal/libs/jwt"
 	"barter-port/internal/libs/platform/http_api"
 	"encoding/json"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/net/context"
 )
 
@@ -28,16 +30,17 @@ var (
 )
 
 type RefreshTokenRepository interface {
-	Save(ctx context.Context, token domain.RefreshToken) error
-	GetByJTI(ctx context.Context, jti string) (domain.RefreshToken, error)
-	Revoke(ctx context.Context, jti string) error
-	DeleteAllForUser(ctx context.Context, userID uuid.UUID) error
+	Save(ctx context.Context, exec db.DB, token domain.RefreshToken) error
+	GetByJTI(ctx context.Context, exec db.DB, jti string) (domain.RefreshToken, error)
+	Revoke(ctx context.Context, exec db.DB, jti string) error
+	DeleteAllForUser(ctx context.Context, exec db.DB, userID uuid.UUID) error
 }
 
 type Handlers struct {
 	logger      *slog.Logger
 	authService *application.Service
 	jwtManager  *jwt.Manager
+	db          *pgxpool.Pool
 	refreshRepo RefreshTokenRepository
 }
 
@@ -45,12 +48,14 @@ func NewHandlers(
 	logger *slog.Logger,
 	authService *application.Service,
 	jwtManager *jwt.Manager,
+	db *pgxpool.Pool,
 	refreshRepo RefreshTokenRepository,
 ) *Handlers {
 	return &Handlers{
 		logger:      logger,
 		authService: authService,
 		jwtManager:  jwtManager,
+		db:          db,
 		refreshRepo: refreshRepo,
 	}
 }
@@ -280,7 +285,7 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Сохранение refresh токена в репозитории
-	err = h.refreshRepo.Save(r.Context(), domain.RefreshToken{
+	err = h.refreshRepo.Save(r.Context(), h.db, domain.RefreshToken{
 		JTI:       claims.ID,
 		UserID:    claims.UserID,
 		ExpiresAt: claims.ExpiresAt.Time,
@@ -344,7 +349,7 @@ func (h *Handlers) Refresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Получение и проверка хранимого refresh токена по JTI из claims
-	storedRefresh, err := h.refreshRepo.GetByJTI(r.Context(), oldRefreshClaims.ID)
+	storedRefresh, err := h.refreshRepo.GetByJTI(r.Context(), h.db, oldRefreshClaims.ID)
 	if err != nil {
 		storedRefreshFailedLogger := logger.With(
 			slog.String("jti", oldRefreshClaims.ID),
@@ -393,7 +398,7 @@ func (h *Handlers) Refresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Сохранение нового refresh токена и удаление старого
-	err = h.refreshRepo.Save(r.Context(), domain.RefreshToken{
+	err = h.refreshRepo.Save(r.Context(), h.db, domain.RefreshToken{
 		JTI:       claims.ID,
 		UserID:    claims.UserID,
 		ExpiresAt: claims.ExpiresAt.Time,
@@ -410,7 +415,7 @@ func (h *Handlers) Refresh(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = h.refreshRepo.Revoke(r.Context(), oldRefreshClaims.ID)
+	err = h.refreshRepo.Revoke(r.Context(), h.db, oldRefreshClaims.ID)
 	if err != nil {
 		logger.Error(
 			"failed to revoke old refresh token for user",
@@ -446,7 +451,7 @@ func (h *Handlers) Logout(w http.ResponseWriter, r *http.Request) {
 	// Отзыв refresh токена, если он есть. Если куки нет или он невалидный - просто очищаем куки и возвращаем успех
 	if err == nil {
 		if claims, err := h.jwtManager.ParseRefreshToken(cookie.Value); err == nil {
-			if err := h.refreshRepo.Revoke(r.Context(), claims.ID); err != nil {
+			if err := h.refreshRepo.Revoke(r.Context(), h.db, claims.ID); err != nil {
 				logger.Error(
 					"failed to revoke refresh token during logout",
 					slog.String("error", err.Error()),

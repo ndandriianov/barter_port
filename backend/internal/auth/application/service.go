@@ -4,6 +4,7 @@ import (
 	"barter-port/internal/auth/domain"
 	"barter-port/internal/auth/infrastructure/repository/email_token"
 	"barter-port/internal/auth/infrastructure/repository/user"
+	"barter-port/internal/libs/db"
 	"errors"
 	"fmt"
 	"log"
@@ -13,6 +14,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/net/context"
 )
@@ -41,17 +44,17 @@ var (
 )
 
 type UserRepo interface {
-	Create(ctx context.Context, user domain.User) error
-	GetByEmail(ctx context.Context, email string) (domain.User, error)
-	GetByID(ctx context.Context, id uuid.UUID) (domain.User, error)
-	VerifyEmail(ctx context.Context, userID uuid.UUID) error
+	Create(ctx context.Context, exec db.DB, user domain.User) error
+	GetByEmail(ctx context.Context, exec db.DB, email string) (domain.User, error)
+	GetByID(ctx context.Context, exec db.DB, id uuid.UUID) (domain.User, error)
+	VerifyEmailIfNotVerified(ctx context.Context, exec db.DB, userID uuid.UUID) error
 }
 
 type TokenRepo interface {
-	Save(ctx context.Context, t domain.EmailVerificationToken) error
-	GetByHash(ctx context.Context, tokenHash string) (domain.EmailVerificationToken, error)
-	MarkUsed(ctx context.Context, tokenHash string) error
-	DeleteAllForUser(ctx context.Context, userID uuid.UUID) error
+	Save(ctx context.Context, exec db.DB, t domain.EmailVerificationToken) error
+	GetByHashForUpdate(ctx context.Context, exec db.DB, tokenHash string) (domain.EmailVerificationToken, error)
+	MarkUsed(ctx context.Context, exec db.DB, tokenHash string) error
+	DeleteAllForUser(ctx context.Context, exec db.DB, userID uuid.UUID) error
 }
 
 type Mailer interface {
@@ -59,6 +62,7 @@ type Mailer interface {
 }
 
 type Service struct {
+	db     *pgxpool.Pool
 	users  UserRepo
 	tokens TokenRepo
 	mailer Mailer
@@ -69,6 +73,7 @@ type Service struct {
 }
 
 func NewService(
+	db *pgxpool.Pool,
 	users UserRepo,
 	tokens TokenRepo,
 	mailer Mailer,
@@ -82,6 +87,7 @@ func NewService(
 	}
 
 	return &Service{
+		db:     db,
 		users:  users,
 		tokens: tokens,
 		mailer: mailer,
@@ -117,33 +123,33 @@ func (s *Service) Register(ctx context.Context, email, password string) (Registe
 	}
 
 	u := domain.NewUser(uuid.New(), email, string(hash))
-	if err := s.users.Create(ctx, u); err != nil {
-		if errors.Is(err, user.ErrEmailAlreadyInUse) {
-			return RegisterResult{}, ErrEmailAlreadyInUse
+	var rawToken string
+
+	err = db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
+		if err := s.users.Create(ctx, tx, u); err != nil {
+			if errors.Is(err, user.ErrEmailAlreadyInUse) {
+				return ErrEmailAlreadyInUse
+			}
+			return fmt.Errorf("failed to create user: %w", err)
 		}
-		return RegisterResult{}, fmt.Errorf("failed to create user: %w", err)
-	}
 
-	// на всякий случай удаляются все старые токены для этого юзера, если они были
-	err = s.tokens.DeleteAllForUser(ctx, u.ID)
-	if err != nil {
-		return RegisterResult{}, fmt.Errorf("failed to delete old email_tokens: %w", err)
-	}
+		rawToken, err = generateToken(tokenLength)
+		if err != nil {
+			return fmt.Errorf("failed to generate email_token: %w", err)
+		}
 
-	rawToken, err := generateToken(tokenLength)
-	if err != nil {
-		return RegisterResult{}, fmt.Errorf("failed to generate email_token: %w", err)
-	}
+		tokenHash := getHashFromToken(rawToken)
+		t := domain.NewEmailVerificationToken(tokenHash, u.ID, time.Now().Add(tokenExpirationTime))
 
-	tokenHash := getHashFromToken(rawToken)
-	t := domain.NewEmailVerificationToken(tokenHash, u.ID, time.Now().Add(tokenExpirationTime))
+		if err = s.tokens.Save(ctx, tx, t); err != nil {
+			return fmt.Errorf("failed to save email_token: %w", err)
+		}
 
-	if err = s.tokens.Save(ctx, t); err != nil {
-		return RegisterResult{}, fmt.Errorf("failed to save email_token: %w", err)
-	}
+		return nil
+	})
 
 	if err = s.mailer.Send(u.Email, subject, s.getEmailBody(rawToken)); err != nil {
-		return RegisterResult{}, fmt.Errorf("failed to send email: %w", err)
+		s.logger.Warn("failed to send email", slog.Any("error", err))
 	}
 
 	return RegisterResult{
@@ -166,45 +172,37 @@ func (s *Service) VerifyEmail(ctx context.Context, rawToken string) error {
 		return fmt.Errorf("cannot get hash from raw email_token: %w", err)
 	}
 
-	t, err := s.tokens.GetByHash(ctx, tokenHash)
-	if err != nil {
-		if errors.Is(err, email_token.ErrTokenNotFound) {
-			return ErrInvalidEmailToken
+	err = db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
+		t, err := s.tokens.GetByHashForUpdate(ctx, tx, tokenHash)
+		if err != nil {
+			if errors.Is(err, email_token.ErrTokenNotFound) {
+				return ErrInvalidEmailToken
+			}
+			return fmt.Errorf("failed to get email_token by hash: %w", err)
 		}
-		return fmt.Errorf("failed to get email_token by hash: %w", err)
-	}
 
-	if t.Used {
+		if t.Used {
+			return nil
+		}
+		if time.Now().After(t.ExpiresAt) {
+			return ErrEmailTokenExpired
+		}
+
+		if err = s.users.VerifyEmailIfNotVerified(ctx, tx, t.UserID); err != nil {
+			if errors.Is(err, user.ErrUserNotFound) {
+				return fmt.Errorf("failed to verify email: %w", ErrUserNotFound)
+			}
+			return fmt.Errorf("failed to verify email: %w", err)
+		}
+
+		if err = s.tokens.MarkUsed(ctx, tx, tokenHash); err != nil {
+			if errors.Is(err, email_token.ErrTokenNotFound) {
+				s.logger.Warn("failed to mark used email_token as used")
+			}
+		}
+
 		return nil
-	}
-	if time.Now().After(t.ExpiresAt) {
-		return ErrEmailTokenExpired
-	}
-
-	u, err := s.users.GetByID(ctx, t.UserID)
-	if err != nil {
-		if errors.Is(err, user.ErrUserNotFound) {
-			return ErrUserNotFound
-		}
-		return fmt.Errorf("failed to get user by id: %w", err)
-	}
-
-	if u.EmailVerified {
-		return nil
-	}
-
-	if err = s.users.VerifyEmail(ctx, u.ID); err != nil {
-		if errors.Is(err, user.ErrUserNotFound) {
-			return fmt.Errorf("failed to verify email: %w", ErrUserNotFound)
-		}
-		return fmt.Errorf("failed to verify email: %w", err)
-	}
-
-	if err = s.tokens.MarkUsed(ctx, tokenHash); err != nil {
-		if errors.Is(err, email_token.ErrTokenNotFound) {
-			s.logger.Warn("failed to mark used email_token as used")
-		}
-	}
+	})
 
 	return nil
 }
@@ -231,7 +229,7 @@ func (s *Service) Login(ctx context.Context, email, password string) (uuid.UUID,
 		return uuid.Nil, fmt.Errorf("invalid password: %w", ErrInvalidCredentials)
 	}
 
-	u, err := s.users.GetByEmail(ctx, email)
+	u, err := s.users.GetByEmail(ctx, s.db, email)
 	if err != nil {
 		if errors.Is(err, user.ErrUserNotFound) {
 			return uuid.Nil, fmt.Errorf("user not found: %w", ErrInvalidCredentials)
