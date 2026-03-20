@@ -1,8 +1,8 @@
 package kafka
 
 import (
-	"barter-port/internal/auth/domain"
 	"barter-port/internal/auth/infrastructure/repository/outbox"
+	"barter-port/internal/contracts/kafka/auth-users"
 	"barter-port/internal/libs/db"
 	"barter-port/internal/libs/kafkax"
 	"context"
@@ -96,7 +96,7 @@ func (p *UserCreationOutboxPublisher) Close() error {
 }
 
 func (p *UserCreationOutboxPublisher) publishBatch(ctx context.Context) (int, error) {
-	var events []domain.UserCreationEvent
+	var events []auth_users.UserCreationEvent
 
 	err := db.RunInTx(ctx, p.db, func(ctx context.Context, tx pgx.Tx) error {
 		var err error
@@ -146,7 +146,7 @@ func (p *UserCreationOutboxPublisher) publishBatch(ctx context.Context) (int, er
 	return len(events), nil
 }
 
-func buildMessages(events []domain.UserCreationEvent) ([]kafkago.Message, error) {
+func buildMessages(events []auth_users.UserCreationEvent) ([]kafkago.Message, error) {
 	messages := make([]kafkago.Message, 0, len(events))
 
 	for _, event := range events {

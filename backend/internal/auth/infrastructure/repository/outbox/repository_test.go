@@ -1,7 +1,7 @@
 package outbox
 
 import (
-	"barter-port/internal/auth/domain"
+	"barter-port/internal/contracts/kafka/auth-users"
 	"context"
 	"errors"
 	"reflect"
@@ -18,7 +18,7 @@ func TestRepository_WriteUserCreationEvent(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	event := domain.UserCreationEvent{
+	event := auth_users.UserCreationEvent{
 		ID:        uuid.New(),
 		UserID:    uuid.New(),
 		CreatedAt: time.Date(2026, time.March, 20, 12, 0, 0, 0, time.UTC),
@@ -62,12 +62,12 @@ func TestRepository_ReadUserCreationEventsForUpdate(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		t.Parallel()
 
-		first := domain.UserCreationEvent{
+		first := auth_users.UserCreationEvent{
 			ID:        uuid.New(),
 			UserID:    uuid.New(),
 			CreatedAt: time.Date(2026, time.March, 20, 10, 0, 0, 0, time.UTC),
 		}
-		second := domain.UserCreationEvent{
+		second := auth_users.UserCreationEvent{
 			ID:        uuid.New(),
 			UserID:    uuid.New(),
 			CreatedAt: time.Date(2026, time.March, 20, 11, 0, 0, 0, time.UTC),
@@ -85,7 +85,7 @@ func TestRepository_ReadUserCreationEventsForUpdate(t *testing.T) {
 		got, err := repo.ReadUserCreationEventsForUpdate(ctx, tx, 2)
 		require.NoError(t, err)
 
-		want := []domain.UserCreationEvent{first, second}
+		want := []auth_users.UserCreationEvent{first, second}
 		require.Equal(t, want, got)
 
 		require.Equal(t, normalizeSQL(`

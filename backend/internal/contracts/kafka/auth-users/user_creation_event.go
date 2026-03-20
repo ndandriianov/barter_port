@@ -1,4 +1,4 @@
-package domain
+package auth_users
 
 import (
 	"time"
