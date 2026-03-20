@@ -3,6 +3,7 @@ package application
 import (
 	"barter-port/internal/auth/domain"
 	"barter-port/internal/auth/infrastructure/repository/email_token"
+	"barter-port/internal/auth/infrastructure/repository/outbox"
 	"barter-port/internal/auth/infrastructure/repository/user"
 	"barter-port/internal/libs/db"
 	"errors"
@@ -67,6 +68,7 @@ type Service struct {
 	tokens TokenRepo
 	mailer Mailer
 	logger *slog.Logger
+	outbox *outbox.Repository
 
 	frontendBaseURL string
 	re              *regexp.Regexp
@@ -78,6 +80,7 @@ func NewService(
 	tokens TokenRepo,
 	mailer Mailer,
 	logger *slog.Logger,
+	outbox *outbox.Repository,
 
 	frontendBaseURL string,
 	re *regexp.Regexp,
@@ -92,6 +95,7 @@ func NewService(
 		tokens: tokens,
 		mailer: mailer,
 		logger: logger,
+		outbox: outbox,
 
 		frontendBaseURL: strings.TrimRight(frontendBaseURL, "/"),
 		re:              re,
@@ -236,7 +240,16 @@ func (s *Service) VerifyEmail(ctx context.Context, rawToken string) error {
 		}
 
 		if changed {
-			// TODO: отправка сообщения для users через outbox -> kafka
+			err = s.outbox.WriteUserCreationEvent(ctx, tx, domain.UserCreationEvent{
+				ID:        uuid.New(),
+				UserID:    t.UserID,
+				CreatedAt: time.Now(),
+			})
+			if err != nil {
+				return err
+			}
+			s.logger.Debug("email verified", slog.Any("user", t.UserID))
+
 		} else {
 			s.logger.Debug("email already verified", slog.Any("user", t.UserID))
 		}
