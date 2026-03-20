@@ -62,6 +62,15 @@ CREATE TABLE users
     bio        TEXT
 );
 
+CREATE TABLE user_creation_inbox
+(
+    id         UUID PRIMARY KEY,
+    user_id    UUID        NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
 CREATE TABLE deleted_users
 (
     id         UUID PRIMARY KEY,
