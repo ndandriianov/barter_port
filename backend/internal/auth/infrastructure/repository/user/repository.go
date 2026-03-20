@@ -6,9 +6,10 @@ import (
 	"barter-port/internal/libs/repox"
 	"errors"
 
+	"context"
+
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"golang.org/x/net/context"
 )
 
 var (
