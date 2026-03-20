@@ -39,6 +39,14 @@ type Config struct {
 		RefreshTTL    time.Duration `mapstructure:"refresh_ttl"` // В минутах
 	} `mapstructure:"jwt"`
 
+	Kafka struct {
+		Brokers           []string      `mapstructure:"brokers"`
+		UserCreationTopic string        `mapstructure:"user_creation_topic"`
+		BatchSize         int           `mapstructure:"batch_size"`
+		PollInterval      time.Duration `mapstructure:"poll_interval"`
+		WriteTimeout      time.Duration `mapstructure:"write_timeout"`
+	} `mapstructure:"kafka"`
+
 	Port int `mapstructure:"port"`
 }
 
@@ -85,6 +93,7 @@ func LoadConfig(options ConfigOptions) (Config, error) {
 	bindEnv(v, "db.password")
 	bindEnv(v, "jwt.access_secret")
 	bindEnv(v, "jwt.refresh_secret")
+	bindEnv(v, "kafka.user_creation_topic")
 
 	// десериализация в структуру
 	var config Config
