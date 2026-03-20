@@ -97,24 +97,37 @@ func (r *Repository) GetByID(ctx context.Context, exec db.DB, id uuid.UUID) (dom
 	return user, nil
 }
 
-// VerifyEmailIfNotVerified marks a user's email as verified.
+// VerifyEmailIfNotVerified marks a user's email as verified. And returns true if the email was updated,
+// false if it was already verified.
+//
 // Errors:
 //   - errors.ErrUserNotFound: Occurs if no user is found with the given userID.
-func (r *Repository) VerifyEmailIfNotVerified(ctx context.Context, exec db.DB, userID uuid.UUID) error {
+func (r *Repository) VerifyEmailIfNotVerified(ctx context.Context, exec db.DB, userID uuid.UUID) (changed bool, err error) {
 	query := `
-		UPDATE users
-		SET email_verified = true
-		WHERE id = $1
+		WITH updated AS (
+			UPDATE users
+			SET email_verified = true
+			WHERE id = $1 AND email_verified = false
+			RETURNING id
+		),
+		existing AS (
+			SELECT id
+			FROM users
+			WHERE id = $1
+		)
+		SELECT exists(SELECT 1 FROM updated)  AS changed,
+			   exists(SELECT 1 FROM existing) AS exists
 	`
 
-	cmdTag, err := exec.Exec(ctx, query, userID)
-	if err != nil {
-		return err
+	var exists bool
+
+	if err = exec.QueryRow(ctx, query, userID).Scan(&changed, &exists); err != nil {
+		return false, err
 	}
 
-	if cmdTag.RowsAffected() == 0 {
-		return ErrUserNotFound
+	if !exists {
+		return false, ErrUserNotFound
 	}
 
-	return nil
+	return changed, nil
 }
