@@ -9,6 +9,7 @@ import (
 	"barter-port/internal/auth/infrastructure/repository/user"
 	"barter-port/internal/auth/infrastructure/transport"
 	"barter-port/internal/libs/bootstrap"
+	"barter-port/internal/libs/kafkax"
 	"barter-port/internal/libs/platform/logger"
 	"context"
 	"errors"
@@ -19,10 +20,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/joho/godotenv"
-
 	"log"
 	"net/http"
+
+	"github.com/joho/godotenv"
 )
 
 //go:generate bash ../../scripts/generate-swagger-auth.sh
@@ -89,9 +90,9 @@ func main() {
 		log.Fatal("failed to initialize kafka writer: user creation topic is not configured")
 	}
 
-	kafkaWriter := authkafka.NewWriter(cfg.Kafka.Brokers, cfg.Kafka.UserCreationTopic)
+	kafkaWriter := kafkax.NewWriter(cfg.Kafka.Brokers, cfg.Kafka.UserCreationTopic)
 	topicInitCtx, cancelTopicInit := context.WithTimeout(context.Background(), cfg.Kafka.WriteTimeout)
-	if err = authkafka.EnsureTopic(topicInitCtx, cfg.Kafka.Brokers, cfg.Kafka.UserCreationTopic, 1, 1); err != nil {
+	if err = kafkax.EnsureTopic(topicInitCtx, cfg.Kafka.Brokers, cfg.Kafka.UserCreationTopic, 1, 1); err != nil {
 		cancelTopicInit()
 		log.Fatal("failed to ensure kafka topic:", err)
 	}

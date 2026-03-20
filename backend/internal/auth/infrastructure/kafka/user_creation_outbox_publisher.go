@@ -4,12 +4,12 @@ import (
 	"barter-port/internal/auth/domain"
 	"barter-port/internal/auth/infrastructure/repository/outbox"
 	"barter-port/internal/libs/db"
+	"barter-port/internal/libs/kafkax"
 	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -19,15 +19,10 @@ import (
 
 const userCreationEventType = "auth.user.created"
 
-type messageWriter interface {
-	WriteMessages(ctx context.Context, msgs ...kafkago.Message) error
-	Close() error
-}
-
 type UserCreationOutboxPublisher struct {
 	db           *pgxpool.Pool
 	repo         *outbox.Repository
-	writer       messageWriter
+	writer       kafkax.MessageWriter
 	logger       *slog.Logger
 	brokers      []string
 	topic        string
@@ -39,7 +34,7 @@ type UserCreationOutboxPublisher struct {
 func NewUserCreationOutboxPublisher(
 	dbPool *pgxpool.Pool,
 	repo *outbox.Repository,
-	writer messageWriter,
+	writer kafkax.MessageWriter,
 	logger *slog.Logger,
 	brokers []string,
 	topic string,
@@ -67,16 +62,6 @@ func NewUserCreationOutboxPublisher(
 		batchSize:    batchSize,
 		pollInterval: pollInterval,
 		writeTimeout: writeTimeout,
-	}
-}
-
-func NewWriter(brokers []string, topic string) *kafkago.Writer {
-	return &kafkago.Writer{
-		Addr:         kafkago.TCP(brokers...),
-		Topic:        topic,
-		Balancer:     &kafkago.LeastBytes{},
-		RequiredAcks: kafkago.RequireOne,
-		Async:        false,
 	}
 }
 
@@ -134,8 +119,8 @@ func (p *UserCreationOutboxPublisher) publishBatch(ctx context.Context) (int, er
 		p.logger.Debug("writing outbox events to kafka", slog.Any("events", events))
 
 		if err = p.writer.WriteMessages(writeCtx, messages...); err != nil {
-			if isUnknownTopicOrPartition(err) {
-				if ensureErr := EnsureTopic(writeCtx, p.brokers, p.topic, 1, 1); ensureErr != nil {
+			if kafkax.IsUnknownTopicOrPartition(err) {
+				if ensureErr := kafkax.EnsureTopic(writeCtx, p.brokers, p.topic, 1, 1); ensureErr != nil {
 					return fmt.Errorf("ensure topic %q after publish failure: %w", p.topic, ensureErr)
 				}
 			}
@@ -159,11 +144,6 @@ func (p *UserCreationOutboxPublisher) publishBatch(ctx context.Context) (int, er
 	}
 
 	return len(events), nil
-}
-
-func isUnknownTopicOrPartition(err error) bool {
-	return errors.Is(err, kafkago.UnknownTopicOrPartition) ||
-		strings.Contains(err.Error(), "Unknown Topic Or Partition")
 }
 
 func buildMessages(events []domain.UserCreationEvent) ([]kafkago.Message, error) {
