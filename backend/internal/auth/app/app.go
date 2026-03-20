@@ -78,6 +78,13 @@ func NewApp(cfg bootstrap.Config) (*App, error) {
 	}
 
 	kafkaWriter := kafkax.NewWriter(cfg.Kafka.Brokers, cfg.Kafka.UserCreationTopic)
+	writerOwned := false
+	defer func() {
+		if !writerOwned {
+			_ = kafkaWriter.Close()
+		}
+	}()
+
 	topicInitCtx, cancelTopicInit := context.WithTimeout(context.Background(), cfg.Kafka.WriteTimeout)
 	if err = kafkax.EnsureTopic(topicInitCtx, cfg.Kafka.Brokers, cfg.Kafka.UserCreationTopic, 1, 1); err != nil {
 		cancelTopicInit()
@@ -105,6 +112,8 @@ func NewApp(cfg bootstrap.Config) (*App, error) {
 		Addr:    bootstrap.InitPortStringFromConfig(cfg, 8081),
 		Handler: router,
 	}
+
+	writerOwned = true
 
 	return &App{
 		logger:          logg,
