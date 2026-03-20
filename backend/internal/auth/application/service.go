@@ -5,6 +5,7 @@ import (
 	"barter-port/internal/auth/infrastructure/repository/email_token"
 	"barter-port/internal/auth/infrastructure/repository/outbox"
 	"barter-port/internal/auth/infrastructure/repository/user"
+	"barter-port/internal/contracts/kafka/auth-users"
 	"barter-port/internal/libs/db"
 	"errors"
 	"fmt"
@@ -240,7 +241,7 @@ func (s *Service) VerifyEmail(ctx context.Context, rawToken string) error {
 		}
 
 		if changed {
-			err = s.outbox.WriteUserCreationEvent(ctx, tx, domain.UserCreationEvent{
+			err = s.outbox.WriteUserCreationEvent(ctx, tx, auth_users.UserCreationEvent{
 				ID:        uuid.New(),
 				UserID:    t.UserID,
 				CreatedAt: time.Now(),
