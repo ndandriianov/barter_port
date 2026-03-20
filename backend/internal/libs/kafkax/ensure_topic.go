@@ -1,8 +1,9 @@
-package kafka
+package kafkax
 
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"context"
 
@@ -66,4 +67,9 @@ func EnsureTopic(ctx context.Context, brokers []string, topic string, partitions
 	}
 
 	return lastErr
+}
+
+func IsUnknownTopicOrPartition(err error) bool {
+	return errors.Is(err, kafkago.UnknownTopicOrPartition) ||
+		strings.Contains(err.Error(), "Unknown Topic Or Partition")
 }
