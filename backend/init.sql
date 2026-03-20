@@ -16,6 +16,16 @@ CREATE TABLE users
     created_at     TIMESTAMPTZ NOT NULL
 );
 
+
+CREATE TABLE user_creation_outbox
+(
+    id         UUID PRIMARY KEY,
+    user_id    UUID        NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+);
+
 CREATE TABLE refresh_tokens
 (
     jti        TEXT PRIMARY KEY,
@@ -48,7 +58,7 @@ CREATE DATABASE users_db;
 CREATE TABLE users
 (
     id         UUID PRIMARY KEY,
-    name       TEXT        NOT NULL,
+    name       TEXT,
     bio        TEXT
 );
 
