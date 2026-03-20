@@ -25,6 +25,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
+	"github.com/oklog/run"
 )
 
 //go:generate bash ../../scripts/generate-swagger-auth.sh
@@ -39,7 +40,7 @@ import (
 // @in header
 // @name Authorization
 func main() {
-	if err := run(); err != nil {
+	if err := runApp(); err != nil {
 		log.Fatal(err)
 	}
 }
@@ -51,7 +52,7 @@ type app struct {
 	outboxPublisher *authkafka.UserCreationOutboxPublisher
 }
 
-func run() error {
+func runApp() error {
 	_ = godotenv.Load()
 
 	cfg, err := loadConfig()
@@ -65,10 +66,7 @@ func run() error {
 	}
 	defer app.Close()
 
-	rootCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
-
-	return app.Run(rootCtx)
+	return app.Run()
 }
 
 func loadConfig() (bootstrap.Config, error) {
@@ -167,33 +165,43 @@ func newApp(cfg bootstrap.Config) (*app, error) {
 	}, nil
 }
 
-func (a *app) Run(rootCtx context.Context) error {
-	publisherDone := make(chan struct{})
-	go func() {
-		defer close(publisherDone)
-		if err := a.outboxPublisher.Run(rootCtx); err != nil {
-			a.logger.Error("outbox publisher stopped with error", slog.Any("error", err))
-		}
-	}()
+func (a *app) Run() error {
+	var g run.Group
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
-	go func() {
-		<-rootCtx.Done()
+	g.Add(func() error {
+		return a.outboxPublisher.Run(ctx)
+	}, func(error) {
+		cancel()
+	})
 
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-		defer cancel()
+	g.Add(func() error {
+		log.Println("backend listening on", a.server.Addr)
+		return a.server.ListenAndServe()
+	}, func(error) {
+		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer shutdownCancel()
 
 		if err := a.server.Shutdown(shutdownCtx); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			a.logger.Error("failed to shutdown auth server", slog.Any("error", err))
 		}
-	}()
+	})
 
-	log.Println("backend listening on", a.server.Addr)
-	err := a.server.ListenAndServe()
+	stop := make(chan os.Signal, 1)
+	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
+	g.Add(func() error {
+		<-stop
+		return nil
+	}, func(error) {
+		signal.Stop(stop)
+	})
+
+	err := g.Run()
 	if err != nil && !errors.Is(err, http.ErrServerClosed) {
 		return err
 	}
 
-	<-publisherDone
 	return nil
 }
 

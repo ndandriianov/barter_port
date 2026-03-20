@@ -12,6 +12,7 @@ require (
 	github.com/jackc/pgx/v5 v5.8.0
 	github.com/joho/godotenv v1.5.1
 	github.com/oapi-codegen/runtime v1.2.0
+	github.com/oklog/run v1.2.0
 	github.com/segmentio/kafka-go v0.4.49
 	github.com/spf13/viper v1.21.0
 	github.com/stretchr/testify v1.11.1
