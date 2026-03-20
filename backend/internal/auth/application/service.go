@@ -47,7 +47,7 @@ type UserRepo interface {
 	Create(ctx context.Context, exec db.DB, user domain.User) error
 	GetByEmail(ctx context.Context, exec db.DB, email string) (domain.User, error)
 	GetByID(ctx context.Context, exec db.DB, id uuid.UUID) (domain.User, error)
-	VerifyEmailIfNotVerified(ctx context.Context, exec db.DB, userID uuid.UUID) error
+	VerifyEmailIfNotVerified(ctx context.Context, exec db.DB, userID uuid.UUID) (changed bool, err error)
 }
 
 type TokenRepo interface {
@@ -227,11 +227,18 @@ func (s *Service) VerifyEmail(ctx context.Context, rawToken string) error {
 			return ErrEmailTokenExpired
 		}
 
-		if err = s.users.VerifyEmailIfNotVerified(ctx, tx, t.UserID); err != nil {
+		changed, err := s.users.VerifyEmailIfNotVerified(ctx, tx, t.UserID)
+		if err != nil {
 			if errors.Is(err, user.ErrUserNotFound) {
 				return fmt.Errorf("failed to verify email: %w", ErrUserNotFound)
 			}
 			return fmt.Errorf("failed to verify email: %w", err)
+		}
+
+		if changed {
+			// TODO: отправка сообщения для users через outbox -> kafka
+		} else {
+			s.logger.Debug("email already verified", slog.Any("user", t.UserID))
 		}
 
 		if err = s.tokens.MarkUsed(ctx, tx, tokenHash); err != nil {
