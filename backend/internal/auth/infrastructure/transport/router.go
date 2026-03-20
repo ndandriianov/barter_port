@@ -36,6 +36,7 @@ func NewRouter(logger *slog.Logger, validator *validators.LocalJWT, h *Handlers)
 
 	r.Route("/auth", func(r chi.Router) {
 		r.Post("/register", h.Register)
+		r.Post("/retry-send-verification-email", h.RetrySendVerificationEmail)
 		r.Post("/verify-email", h.VerifyEmail)
 		r.Post("/login", h.Login)
 		r.Post("/refresh", h.Refresh)

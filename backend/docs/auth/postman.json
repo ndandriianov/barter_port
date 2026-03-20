@@ -9,7 +9,7 @@
                     "description": "",
                     "item": [
                         {
-                            "id": "7f13aea6-4027-488f-8207-41fbbdcc091e",
+                            "id": "0e278b91-3bc0-4646-b239-62f69b7eeae5",
                             "name": "Login user",
                             "request": {
                                 "name": "Login user",
@@ -53,7 +53,7 @@
                             },
                             "response": [
                                 {
-                                    "id": "e435fd18-51f8-4b7f-8ca4-5d87c3ab0b9a",
+                                    "id": "f46cb822-7fb0-47dd-8e13-42b569bf4421",
                                     "name": "OK",
                                     "originalRequest": {
                                         "url": {
@@ -102,8 +102,8 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "70e30775-583d-45c9-a55c-9753ba477113",
-                                    "name": "Invalid request or credentials",
+                                    "id": "febbb197-699f-4434-a7cf-83a08d738541",
+                                    "name": "Invalid request or credentialsReq",
                                     "originalRequest": {
                                         "url": {
                                             "path": [
@@ -151,7 +151,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "d47bc30a-b00c-490a-8257-945ed8b5e3ab",
+                                    "id": "c7454571-4c03-4e9a-b10f-8e12a6528065",
                                     "name": "Incorrect password",
                                     "originalRequest": {
                                         "url": {
@@ -200,7 +200,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "4f62574e-2352-428e-9444-e70a5b6f0942",
+                                    "id": "8d9049ac-c908-4ccd-ac86-a4889e7446f7",
                                     "name": "Email not verified",
                                     "originalRequest": {
                                         "url": {
@@ -249,7 +249,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "17ce7a84-e06e-4777-9c61-18b0820b70d4",
+                                    "id": "3b34d58f-353f-4036-9a43-04dbf6d370d0",
                                     "name": "Internal server error",
                                     "originalRequest": {
                                         "url": {
@@ -310,7 +310,7 @@
                     "description": "",
                     "item": [
                         {
-                            "id": "97e99b45-5680-4565-be9a-b3ad82154843",
+                            "id": "8414009f-14ae-46b4-ad12-304875b08dda",
                             "name": "Logout user",
                             "request": {
                                 "name": "Logout user",
@@ -341,7 +341,7 @@
                             },
                             "response": [
                                 {
-                                    "id": "00a397fb-0141-47a0-af36-5c1d24040832",
+                                    "id": "ed8c49b5-95d0-4c84-b3e1-b3273267c3e1",
                                     "name": "Logout successful",
                                     "originalRequest": {
                                         "url": {
@@ -365,7 +365,7 @@
                                     "_postman_previewlanguage": "text"
                                 },
                                 {
-                                    "id": "de367308-54b3-4f36-b2d4-94117a58522b",
+                                    "id": "863fdf5f-70ff-43ec-9ab4-cd33f7c05145",
                                     "name": "Internal server error",
                                     "originalRequest": {
                                         "url": {
@@ -413,7 +413,7 @@
                     "description": "",
                     "item": [
                         {
-                            "id": "2697ee7e-15ee-42d6-a336-438892a39012",
+                            "id": "6576fac5-9406-443a-996b-e1be2d50dcd9",
                             "name": "Get user info",
                             "request": {
                                 "name": "Get user info",
@@ -460,7 +460,7 @@
                             },
                             "response": [
                                 {
-                                    "id": "26dd0e0e-3cde-4ccb-abae-706d539be459",
+                                    "id": "d63d1fa3-c57a-40f6-add8-81b48d47310f",
                                     "name": "OK",
                                     "originalRequest": {
                                         "url": {
@@ -504,7 +504,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "d430db50-37c3-4784-88c6-ad6f5f277863",
+                                    "id": "91dc75ee-f2be-45e9-ac0c-f2a5fdaa86ea",
                                     "name": "Internal server error",
                                     "originalRequest": {
                                         "url": {
@@ -560,7 +560,7 @@
                     "description": "",
                     "item": [
                         {
-                            "id": "56959d89-daa7-48ed-bc29-5967b8784d3d",
+                            "id": "a11151d4-c594-4840-963c-d4d5dce3a905",
                             "name": "Refresh tokens",
                             "request": {
                                 "name": "Refresh tokens",
@@ -600,7 +600,7 @@
                             },
                             "response": [
                                 {
-                                    "id": "6b1450f7-7325-4ce9-a23d-50fa58b31197",
+                                    "id": "7e841351-1587-4752-bace-635439e684b0",
                                     "name": "OK",
                                     "originalRequest": {
                                         "url": {
@@ -645,7 +645,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "31a10cf5-4692-4373-8542-38d0bd0a9198",
+                                    "id": "4c8d27f0-0bc8-4a20-b2aa-53719fefb72c",
                                     "name": "Unauthorized or invalid token",
                                     "originalRequest": {
                                         "url": {
@@ -690,7 +690,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "45ed5271-8459-48df-8588-bd4167eafebb",
+                                    "id": "eccd1f6a-ab67-4633-8999-671d456ec79e",
                                     "name": "Internal server error",
                                     "originalRequest": {
                                         "url": {
@@ -747,7 +747,7 @@
                     "description": "",
                     "item": [
                         {
-                            "id": "ed9532ba-309e-4ec5-8a56-e0383084c9b4",
+                            "id": "a9181e66-36a5-4093-9b7e-98f563d28b74",
                             "name": "Register a new user",
                             "request": {
                                 "name": "Register a new user",
@@ -791,7 +791,7 @@
                             },
                             "response": [
                                 {
-                                    "id": "2d3b1401-b7f7-4e2e-8670-d90db6169b79",
+                                    "id": "fd81ab1c-0447-441b-b51d-810d55beafa4",
                                     "name": "OK",
                                     "originalRequest": {
                                         "url": {
@@ -840,7 +840,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "ed1bca09-0099-425a-b553-88cbcbc6ba60",
+                                    "id": "423e5834-40ff-4889-ab27-e63443d9f028",
                                     "name": "Invalid request",
                                     "originalRequest": {
                                         "url": {
@@ -889,7 +889,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "c7a5fe83-c59c-415f-9849-e0f5041545af",
+                                    "id": "6ecc806e-2e82-476d-a2c0-ace9ecc6bce1",
                                     "name": "Internal server error",
                                     "originalRequest": {
                                         "url": {
@@ -946,11 +946,253 @@
                     ]
                 },
                 {
+                    "name": "retry-send-verification-email",
+                    "description": "",
+                    "item": [
+                        {
+                            "id": "ed6066c7-aafc-4e29-a5c5-0d7013a34e2f",
+                            "name": "Retry sending verification email",
+                            "request": {
+                                "name": "Retry sending verification email",
+                                "description": {
+                                    "content": "Generates a new email verification token and sends a verification email if the user's email is not verified.",
+                                    "type": "text/plain"
+                                },
+                                "url": {
+                                    "path": [
+                                        "auth",
+                                        "retry-send-verification-email"
+                                    ],
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "query": [],
+                                    "variable": []
+                                },
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "method": "POST",
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"email\": \"<string>\",\n  \"password\": \"<string>\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "headerFamily": "json",
+                                            "language": "json"
+                                        }
+                                    }
+                                },
+                                "auth": null
+                            },
+                            "response": [
+                                {
+                                    "id": "eecf5e9f-ea3c-4803-98b3-1554ec3b68c3",
+                                    "name": "Verification email sent successfully",
+                                    "originalRequest": {
+                                        "url": {
+                                            "path": [
+                                                "auth",
+                                                "retry-send-verification-email"
+                                            ],
+                                            "host": [
+                                                "{{baseUrl}}"
+                                            ],
+                                            "query": [],
+                                            "variable": []
+                                        },
+                                        "header": [
+                                            {
+                                                "key": "Content-Type",
+                                                "value": "application/json"
+                                            }
+                                        ],
+                                        "method": "POST",
+                                        "body": {
+                                            "mode": "raw",
+                                            "raw": "{\n  \"email\": \"<string>\",\n  \"password\": \"<string>\"\n}",
+                                            "options": {
+                                                "raw": {
+                                                    "headerFamily": "json",
+                                                    "language": "json"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "status": "OK",
+                                    "code": 200,
+                                    "header": [],
+                                    "cookie": [],
+                                    "_postman_previewlanguage": "text"
+                                },
+                                {
+                                    "id": "d3f87b03-9510-47ff-89fb-f29101c27520",
+                                    "name": "Invalid request",
+                                    "originalRequest": {
+                                        "url": {
+                                            "path": [
+                                                "auth",
+                                                "retry-send-verification-email"
+                                            ],
+                                            "host": [
+                                                "{{baseUrl}}"
+                                            ],
+                                            "query": [],
+                                            "variable": []
+                                        },
+                                        "header": [
+                                            {
+                                                "key": "Content-Type",
+                                                "value": "application/json"
+                                            },
+                                            {
+                                                "key": "Accept",
+                                                "value": "application/json"
+                                            }
+                                        ],
+                                        "method": "POST",
+                                        "body": {
+                                            "mode": "raw",
+                                            "raw": "{\n  \"email\": \"<string>\",\n  \"password\": \"<string>\"\n}",
+                                            "options": {
+                                                "raw": {
+                                                    "headerFamily": "json",
+                                                    "language": "json"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "status": "Bad Request",
+                                    "code": 400,
+                                    "header": [
+                                        {
+                                            "key": "Content-Type",
+                                            "value": "application/json"
+                                        }
+                                    ],
+                                    "body": "{\n  \"error\": \"<string>\"\n}",
+                                    "cookie": [],
+                                    "_postman_previewlanguage": "json"
+                                },
+                                {
+                                    "id": "8ce63028-f7bf-453f-bb71-05b57f7318d5",
+                                    "name": "Unauthorized",
+                                    "originalRequest": {
+                                        "url": {
+                                            "path": [
+                                                "auth",
+                                                "retry-send-verification-email"
+                                            ],
+                                            "host": [
+                                                "{{baseUrl}}"
+                                            ],
+                                            "query": [],
+                                            "variable": []
+                                        },
+                                        "header": [
+                                            {
+                                                "key": "Content-Type",
+                                                "value": "application/json"
+                                            },
+                                            {
+                                                "key": "Accept",
+                                                "value": "application/json"
+                                            }
+                                        ],
+                                        "method": "POST",
+                                        "body": {
+                                            "mode": "raw",
+                                            "raw": "{\n  \"email\": \"<string>\",\n  \"password\": \"<string>\"\n}",
+                                            "options": {
+                                                "raw": {
+                                                    "headerFamily": "json",
+                                                    "language": "json"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "status": "Unauthorized",
+                                    "code": 401,
+                                    "header": [
+                                        {
+                                            "key": "Content-Type",
+                                            "value": "application/json"
+                                        }
+                                    ],
+                                    "body": "{\n  \"error\": \"<string>\"\n}",
+                                    "cookie": [],
+                                    "_postman_previewlanguage": "json"
+                                },
+                                {
+                                    "id": "01db5223-9e4e-4e26-a7b7-211aa52bddbc",
+                                    "name": "Internal server error",
+                                    "originalRequest": {
+                                        "url": {
+                                            "path": [
+                                                "auth",
+                                                "retry-send-verification-email"
+                                            ],
+                                            "host": [
+                                                "{{baseUrl}}"
+                                            ],
+                                            "query": [],
+                                            "variable": []
+                                        },
+                                        "header": [
+                                            {
+                                                "key": "Content-Type",
+                                                "value": "application/json"
+                                            },
+                                            {
+                                                "key": "Accept",
+                                                "value": "application/json"
+                                            }
+                                        ],
+                                        "method": "POST",
+                                        "body": {
+                                            "mode": "raw",
+                                            "raw": "{\n  \"email\": \"<string>\",\n  \"password\": \"<string>\"\n}",
+                                            "options": {
+                                                "raw": {
+                                                    "headerFamily": "json",
+                                                    "language": "json"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "status": "Internal Server Error",
+                                    "code": 500,
+                                    "header": [
+                                        {
+                                            "key": "Content-Type",
+                                            "value": "application/json"
+                                        }
+                                    ],
+                                    "body": "{\n  \"error\": \"<string>\"\n}",
+                                    "cookie": [],
+                                    "_postman_previewlanguage": "json"
+                                }
+                            ],
+                            "event": [],
+                            "protocolProfileBehavior": {
+                                "disableBodyPruning": true
+                            }
+                        }
+                    ]
+                },
+                {
                     "name": "verify-email",
                     "description": "",
                     "item": [
                         {
-                            "id": "e8af377e-2d9c-4402-b124-843020b2e2d0",
+                            "id": "d7e49f0f-2eee-4f54-9114-264a2050b2c3",
                             "name": "Verify email",
                             "request": {
                                 "name": "Verify email",
@@ -994,7 +1236,7 @@
                             },
                             "response": [
                                 {
-                                    "id": "2fa52964-b2c4-4a16-ac4f-9aac56a7eb9c",
+                                    "id": "389bae16-b533-46e7-be03-9aa9342b2e39",
                                     "name": "status: ok",
                                     "originalRequest": {
                                         "url": {
@@ -1033,7 +1275,7 @@
                                     "_postman_previewlanguage": "text"
                                 },
                                 {
-                                    "id": "1e15b528-6991-4e60-90d0-58ceb88f547a",
+                                    "id": "fe78f6c6-84bf-48c2-8a08-0698b091b8e0",
                                     "name": "Invalid request or token",
                                     "originalRequest": {
                                         "url": {
@@ -1082,7 +1324,7 @@
                                     "_postman_previewlanguage": "text"
                                 },
                                 {
-                                    "id": "92c5f18a-dc02-4695-902c-5af3ce47c910",
+                                    "id": "f9198145-b011-4448-b82d-6c3d4b76108d",
                                     "name": "User not found",
                                     "originalRequest": {
                                         "url": {
@@ -1131,7 +1373,7 @@
                                     "_postman_previewlanguage": "text"
                                 },
                                 {
-                                    "id": "bfef7563-d88f-4aa8-a2f0-db3e313c2330",
+                                    "id": "a7555f36-75d5-40ed-8ef5-d88af8bd5e1d",
                                     "name": "Internal server error",
                                     "originalRequest": {
                                         "url": {
@@ -1198,7 +1440,7 @@
         }
     ],
     "info": {
-        "_postman_id": "f413a1b3-8bcd-4e9a-8a04-2fdae4e4bfc7",
+        "_postman_id": "d65b0c7b-9fe8-46dd-b25a-1518368e0a49",
         "name": "Barter Port API",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
         "description": {

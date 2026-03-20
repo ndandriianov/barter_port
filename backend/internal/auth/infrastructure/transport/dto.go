@@ -2,7 +2,7 @@ package transport
 
 import "github.com/google/uuid"
 
-type registerReq struct {
+type credentialsReq struct {
 	Email    string `json:"email" example:"user@email.com"`
 	Password string `json:"password" example:"password"`
 }
@@ -14,11 +14,6 @@ type registerResp struct {
 
 type verifyEmailReq struct {
 	Token string `json:"token" example:"iT1VWZWO1apO2GGoXG1ahOKuHlo8WA6ESwA86WMOTiI""`
-}
-
-type loginReq struct {
-	Email    string `json:"email" example:"user@email.com"`
-	Password string `json:"password" example:"password"`
 }
 
 type loginResp struct {
