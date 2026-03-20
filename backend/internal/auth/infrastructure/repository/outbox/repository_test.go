@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRepository_WriteUserCreationEvent(t *testing.T) {
@@ -30,20 +31,14 @@ func TestRepository_WriteUserCreationEvent(t *testing.T) {
 		repo := &Repository{}
 
 		err := repo.WriteUserCreationEvent(ctx, tx, event)
-		if err != nil {
-			t.Fatalf("WriteUserCreationEvent() error = %v", err)
-		}
+		require.NoError(t, err)
 
-		if normalizeSQL(tx.execSQL) != normalizeSQL(`
+		require.Equal(t, normalizeSQL(`
 			INSERT INTO user_creation_outbox (id, user_id, created_at)
-			VALUES ($1, $2, $3)`) {
-			t.Fatalf("unexpected SQL: %q", tx.execSQL)
-		}
+			VALUES ($1, $2, $3)`), normalizeSQL(tx.execSQL))
 
 		wantArgs := []any{event.ID, event.UserID, event.CreatedAt}
-		if !reflect.DeepEqual(tx.execArgs, wantArgs) {
-			t.Fatalf("unexpected args: got %v want %v", tx.execArgs, wantArgs)
-		}
+		require.Equal(t, wantArgs, tx.execArgs)
 	})
 
 	t.Run("exec error", func(t *testing.T) {
@@ -54,9 +49,7 @@ func TestRepository_WriteUserCreationEvent(t *testing.T) {
 		repo := &Repository{}
 
 		err := repo.WriteUserCreationEvent(ctx, tx, event)
-		if !errors.Is(err, wantErr) {
-			t.Fatalf("WriteUserCreationEvent() error = %v, want %v", err, wantErr)
-		}
+		require.ErrorIs(t, err, wantErr)
 	})
 }
 
@@ -90,30 +83,20 @@ func TestRepository_ReadUserCreationEventsForUpdate(t *testing.T) {
 		tx := &stubTx{queryRows: rows}
 
 		got, err := repo.ReadUserCreationEventsForUpdate(ctx, tx, 2)
-		if err != nil {
-			t.Fatalf("ReadUserCreationEventsForUpdate() error = %v", err)
-		}
+		require.NoError(t, err)
 
 		want := []domain.UserCreationEvent{first, second}
-		if !reflect.DeepEqual(got, want) {
-			t.Fatalf("ReadUserCreationEventsForUpdate() = %v, want %v", got, want)
-		}
+		require.Equal(t, want, got)
 
-		if normalizeSQL(tx.querySQL) != normalizeSQL(`
+		require.Equal(t, normalizeSQL(`
 			SELECT id, user_id, created_at FROM user_creation_outbox
 			ORDER BY created_at, id LIMIT $1
-			FOR UPDATE SKIP LOCKED`) {
-			t.Fatalf("unexpected SQL: %q", tx.querySQL)
-		}
+			FOR UPDATE SKIP LOCKED`), normalizeSQL(tx.querySQL))
 
 		wantArgs := []any{2}
-		if !reflect.DeepEqual(tx.queryArgs, wantArgs) {
-			t.Fatalf("unexpected args: got %v want %v", tx.queryArgs, wantArgs)
-		}
+		require.Equal(t, wantArgs, tx.queryArgs)
 
-		if !rows.closed {
-			t.Fatal("rows were not closed")
-		}
+		require.True(t, rows.closed)
 	})
 
 	t.Run("query error", func(t *testing.T) {
@@ -123,12 +106,8 @@ func TestRepository_ReadUserCreationEventsForUpdate(t *testing.T) {
 		tx := &stubTx{queryErr: wantErr}
 
 		got, err := repo.ReadUserCreationEventsForUpdate(ctx, tx, 3)
-		if !errors.Is(err, wantErr) {
-			t.Fatalf("ReadUserCreationEventsForUpdate() error = %v, want %v", err, wantErr)
-		}
-		if got != nil {
-			t.Fatalf("ReadUserCreationEventsForUpdate() = %v, want nil", got)
-		}
+		require.ErrorIs(t, err, wantErr)
+		require.Nil(t, got)
 	})
 
 	t.Run("scan error", func(t *testing.T) {
@@ -143,15 +122,9 @@ func TestRepository_ReadUserCreationEventsForUpdate(t *testing.T) {
 		tx := &stubTx{queryRows: rows}
 
 		got, err := repo.ReadUserCreationEventsForUpdate(ctx, tx, 1)
-		if !errors.Is(err, wantErr) {
-			t.Fatalf("ReadUserCreationEventsForUpdate() error = %v, want %v", err, wantErr)
-		}
-		if got != nil {
-			t.Fatalf("ReadUserCreationEventsForUpdate() = %v, want nil", got)
-		}
-		if !rows.closed {
-			t.Fatal("rows were not closed")
-		}
+		require.ErrorIs(t, err, wantErr)
+		require.Nil(t, got)
+		require.True(t, rows.closed)
 	})
 }
 
@@ -168,20 +141,14 @@ func TestRepository_DeleteUserCreationEvent(t *testing.T) {
 		tx := &stubTx{execTag: pgconn.NewCommandTag("DELETE 1")}
 
 		err := repo.DeleteUserCreationEvent(ctx, tx, id)
-		if err != nil {
-			t.Fatalf("DeleteUserCreationEvent() error = %v", err)
-		}
+		require.NoError(t, err)
 
-		if normalizeSQL(tx.execSQL) != normalizeSQL(`
+		require.Equal(t, normalizeSQL(`
 			DELETE FROM user_creation_outbox
-			WHERE id = $1`) {
-			t.Fatalf("unexpected SQL: %q", tx.execSQL)
-		}
+			WHERE id = $1`), normalizeSQL(tx.execSQL))
 
 		wantArgs := []any{id}
-		if !reflect.DeepEqual(tx.execArgs, wantArgs) {
-			t.Fatalf("unexpected args: got %v want %v", tx.execArgs, wantArgs)
-		}
+		require.Equal(t, wantArgs, tx.execArgs)
 	})
 
 	t.Run("exec error", func(t *testing.T) {
@@ -191,9 +158,7 @@ func TestRepository_DeleteUserCreationEvent(t *testing.T) {
 		tx := &stubTx{execErr: wantErr}
 
 		err := repo.DeleteUserCreationEvent(ctx, tx, id)
-		if !errors.Is(err, wantErr) {
-			t.Fatalf("DeleteUserCreationEvent() error = %v, want %v", err, wantErr)
-		}
+		require.ErrorIs(t, err, wantErr)
 	})
 
 	t.Run("not found", func(t *testing.T) {
@@ -202,9 +167,7 @@ func TestRepository_DeleteUserCreationEvent(t *testing.T) {
 		tx := &stubTx{execTag: pgconn.NewCommandTag("DELETE 0")}
 
 		err := repo.DeleteUserCreationEvent(ctx, tx, id)
-		if !errors.Is(err, ErrUserCreationEventNotFound) {
-			t.Fatalf("DeleteUserCreationEvent() error = %v, want %v", err, ErrUserCreationEventNotFound)
-		}
+		require.ErrorIs(t, err, ErrUserCreationEventNotFound)
 	})
 }
 
