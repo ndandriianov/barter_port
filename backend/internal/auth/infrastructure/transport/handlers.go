@@ -66,7 +66,7 @@ func NewHandlers(
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Param registerReq body registerReq true "Register request"
+// @Param credentialsReq body credentialsReq true "Register request"
 // @Success 200 {object} registerResp
 // @Failure 400 {object} http_api.ErrorResponse "Invalid request"
 // @Failure 500 {object} http_api.ErrorResponse "Internal server error"
@@ -76,7 +76,7 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 	logger := h.logger.With(slog.String("request_id", requestID))
 	logger.Info("handling register request")
 
-	var req registerReq
+	var req credentialsReq
 	if err := http_api.DecodeJSON(r, &req); err != nil {
 		logger.Warn(
 			"error decoding register request",
@@ -131,6 +131,55 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 		UserID: res.UserID,
 		Email:  res.Email,
 	})
+}
+
+// RetrySendVerificationEmail godoc
+// @Summary Retry sending verification email
+// @Description Generates a new email verification token and sends a verification email if the user's email is not verified.
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param credentialsReq body credentialsReq true "Retry send verification email request"
+// @Success 200 "Verification email sent successfully"
+// @Failure 400 {object} http_api.ErrorResponse "Invalid request"
+// @Failure 401 {object} http_api.ErrorResponse "Unauthorized"
+// @Failure 500 {object} http_api.ErrorResponse "Internal server error"
+// @Router /auth/retry-send-verification-email [post]
+func (h *Handlers) RetrySendVerificationEmail(w http.ResponseWriter, r *http.Request) {
+	requestID := middleware.GetReqID(r.Context())
+	logger := h.logger.With(slog.String("request_id", requestID))
+	logger.Info("handling RetrySendVerificationEmail request")
+
+	var req credentialsReq
+	if err := http_api.DecodeJSON(r, &req); err != nil {
+		logger.Warn(
+			"error decoding RetrySendVerificationEmail request",
+			slog.Any("request_body", r.Body),
+			slog.String("error", err.Error()),
+		)
+		http_api.HandleError(w, logger, http.StatusBadRequest, ErrInvalidRequest)
+		return
+	}
+
+	if err := h.authService.RetrySendVerificationEmail(r.Context(), req.Email, req.Password); err != nil {
+		log := logger.With(slog.String("email", req.Email), slog.Any("error", err))
+
+		switch {
+		case errors.Is(err, application.ErrInvalidCredentials),
+			errors.Is(err, application.ErrEmailNotVerified),
+			errors.Is(err, application.ErrIncorrectPassword):
+			log.Info("authentication failed")
+			http_api.HandleError(w, log, http.StatusUnauthorized, ErrUnauthorized)
+
+		default:
+			log.Error("unexpected error in RetrySendVerificationEmail request")
+			http_api.HandleError(w, log, http.StatusInternalServerError, ErrInternalServerError)
+		}
+		return
+	}
+
+	logger.Info("successfully sent verification email", slog.String("email", req.Email))
+	w.WriteHeader(http.StatusOK)
 }
 
 // VerifyEmail godoc
@@ -196,9 +245,9 @@ func (h *Handlers) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Param loginReq body loginReq true "Login request"
+// @Param credentialsReq body credentialsReq true "Login request"
 // @Success 200 {object} loginResp
-// @Failure 400 {object} http_api.ErrorResponse "Invalid request or credentials"
+// @Failure 400 {object} http_api.ErrorResponse "Invalid request or credentialsReq"
 // @Failure 401 {object} http_api.ErrorResponse "Incorrect password"
 // @Failure 403 {object} http_api.ErrorResponse "Email not verified"
 // @Failure 500 {object} http_api.ErrorResponse "Internal server error"
@@ -209,7 +258,7 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	logger.Info("handling login request")
 
 	// Парсинг email и password из тела запроса
-	var req loginReq
+	var req credentialsReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		logger.Warn(
 			"error decoding login request",

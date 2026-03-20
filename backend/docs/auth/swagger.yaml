@@ -6,7 +6,7 @@ definitions:
         description: The error message
         type: string
     type: object
-  transport.loginReq:
+  infrastructure_transport.credentialsReq:
     properties:
       email:
         example: user@email.com
@@ -15,38 +15,29 @@ definitions:
         example: password
         type: string
     type: object
-  transport.loginResp:
+  infrastructure_transport.loginResp:
     properties:
       accessToken:
         type: string
     type: object
-  transport.meResp:
+  infrastructure_transport.meResp:
     properties:
       userId:
         type: string
     type: object
-  transport.refreshResponse:
+  infrastructure_transport.refreshResponse:
     properties:
       access_token:
         type: string
     type: object
-  transport.registerReq:
-    properties:
-      email:
-        example: user@email.com
-        type: string
-      password:
-        example: password
-        type: string
-    type: object
-  transport.registerResp:
+  infrastructure_transport.registerResp:
     properties:
       email:
         type: string
       userId:
         type: string
     type: object
-  transport.verifyEmailReq:
+  infrastructure_transport.verifyEmailReq:
     properties:
       token:
         example: iT1VWZWO1apO2GGoXG1ahOKuHlo8WA6ESwA86WMOTiI
@@ -67,19 +58,19 @@ paths:
       parameters:
       - description: Login request
         in: body
-        name: loginReq
+        name: credentialsReq
         required: true
         schema:
-          $ref: '#/definitions/transport.loginReq'
+          $ref: '#/definitions/infrastructure_transport.credentialsReq'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/transport.loginResp'
+            $ref: '#/definitions/infrastructure_transport.loginResp'
         "400":
-          description: Invalid request or credentials
+          description: Invalid request or credentialsReq
           schema:
             $ref: '#/definitions/http_api.ErrorResponse'
         "401":
@@ -121,7 +112,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/transport.meResp'
+            $ref: '#/definitions/infrastructure_transport.meResp'
         "500":
           description: Internal server error
           schema:
@@ -148,7 +139,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/transport.refreshResponse'
+            $ref: '#/definitions/infrastructure_transport.refreshResponse'
         "401":
           description: Unauthorized or invalid token
           schema:
@@ -168,17 +159,17 @@ paths:
       parameters:
       - description: Register request
         in: body
-        name: registerReq
+        name: credentialsReq
         required: true
         schema:
-          $ref: '#/definitions/transport.registerReq'
+          $ref: '#/definitions/infrastructure_transport.credentialsReq'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/transport.registerResp'
+            $ref: '#/definitions/infrastructure_transport.registerResp'
         "400":
           description: Invalid request
           schema:
@@ -188,6 +179,39 @@ paths:
           schema:
             $ref: '#/definitions/http_api.ErrorResponse'
       summary: Register a new user
+      tags:
+      - auth
+  /auth/retry-send-verification-email:
+    post:
+      consumes:
+      - application/json
+      description: Generates a new email verification token and sends a verification
+        email if the user's email is not verified.
+      parameters:
+      - description: Retry send verification email request
+        in: body
+        name: credentialsReq
+        required: true
+        schema:
+          $ref: '#/definitions/infrastructure_transport.credentialsReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Verification email sent successfully
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/http_api.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/http_api.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/http_api.ErrorResponse'
+      summary: Retry sending verification email
       tags:
       - auth
   /auth/verify-email:
@@ -201,7 +225,7 @@ paths:
         name: verifyEmailReq
         required: true
         schema:
-          $ref: '#/definitions/transport.verifyEmailReq'
+          $ref: '#/definitions/infrastructure_transport.verifyEmailReq'
       produces:
       - text/plain
       responses:

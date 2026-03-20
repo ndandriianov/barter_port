@@ -158,6 +158,45 @@ func (s *Service) Register(ctx context.Context, email, password string) (Registe
 	}, nil
 }
 
+// RetrySendVerificationEmail generates a new email verification token and sends a verification email if the user's email is not verified.
+//
+// It returns the following domain errors:
+//   - ErrInvalidCredentials
+//   - ErrEmailNotVerified
+//   - ErrIncorrectPassword
+//
+// All other errors are treated as internal and returned wrapped.
+func (s *Service) RetrySendVerificationEmail(ctx context.Context, email, password string) error {
+	u, err := s.verifyCredentials(ctx, email, password)
+	if err != nil {
+		return err
+	}
+
+	if u.EmailVerified {
+		return nil
+	}
+
+	rawToken, err := generateToken(tokenLength)
+	if err != nil {
+		return fmt.Errorf("failed to generate email_token: %w", err)
+	}
+
+	tokenHash := getHashFromToken(rawToken)
+	t := domain.NewEmailVerificationToken(tokenHash, u.ID, time.Now().Add(tokenExpirationTime))
+
+	return db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
+		if err = s.tokens.Save(ctx, tx, t); err != nil {
+			return fmt.Errorf("failed to save email_token: %w", err)
+		}
+
+		if err = s.mailer.Send(u.Email, subject, s.getEmailBody(rawToken)); err != nil {
+			return fmt.Errorf("failed to send email: %w", err)
+		}
+
+		return nil
+	})
+}
+
 // VerifyEmail marks user's email as verified if the provided token is valid.
 //
 // It returns the following domain errors:
@@ -220,25 +259,9 @@ type LoginResult struct {
 //
 // All other errors are treated as internal and returned wrapped.
 func (s *Service) Login(ctx context.Context, email, password string) (uuid.UUID, error) {
-	email = strings.TrimSpace(strings.ToLower(email))
-
-	if !s.validateEmail(email) {
-		return uuid.Nil, fmt.Errorf("invalid email: %w", ErrInvalidCredentials)
-	}
-	if !validatePassword(password) {
-		return uuid.Nil, fmt.Errorf("invalid password: %w", ErrInvalidCredentials)
-	}
-
-	u, err := s.users.GetByEmail(ctx, s.db, email)
+	u, err := s.verifyCredentials(ctx, email, password)
 	if err != nil {
-		if errors.Is(err, user.ErrUserNotFound) {
-			return uuid.Nil, fmt.Errorf("user not found: %w", ErrInvalidCredentials)
-		}
-		return uuid.Nil, fmt.Errorf("failed to get user by email: %w", err)
-	}
-
-	if err = bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password)); err != nil {
-		return uuid.Nil, ErrIncorrectPassword
+		return uuid.Nil, err
 	}
 
 	if !u.EmailVerified {
@@ -246,4 +269,26 @@ func (s *Service) Login(ctx context.Context, email, password string) (uuid.UUID,
 	}
 
 	return u.ID, nil
+}
+
+func (s *Service) verifyCredentials(ctx context.Context, email, password string) (domain.User, error) {
+	email = strings.TrimSpace(strings.ToLower(email))
+
+	if err := s.validateCredentials(email, password); err != nil {
+		return domain.User{}, ErrInvalidCredentials
+	}
+
+	u, err := s.users.GetByEmail(ctx, s.db, email)
+	if err != nil {
+		if errors.Is(err, user.ErrUserNotFound) {
+			return domain.User{}, fmt.Errorf("user not found: %w", ErrInvalidCredentials)
+		}
+		return domain.User{}, fmt.Errorf("failed to get user by email: %w", err)
+	}
+
+	if err = bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password)); err != nil {
+		return domain.User{}, ErrIncorrectPassword
+	}
+
+	return u, nil
 }

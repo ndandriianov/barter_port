@@ -31,11 +31,11 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "description": "Login request",
-                        "name": "loginReq",
+                        "name": "credentialsReq",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/transport.loginReq"
+                            "$ref": "#/definitions/infrastructure_transport.credentialsReq"
                         }
                     }
                 ],
@@ -43,11 +43,11 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/transport.loginResp"
+                            "$ref": "#/definitions/infrastructure_transport.loginResp"
                         }
                     },
                     "400": {
-                        "description": "Invalid request or credentials",
+                        "description": "Invalid request or credentialsReq",
                         "schema": {
                             "$ref": "#/definitions/http_api.ErrorResponse"
                         }
@@ -115,7 +115,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/transport.meResp"
+                            "$ref": "#/definitions/infrastructure_transport.meResp"
                         }
                     },
                     "500": {
@@ -153,7 +153,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/transport.refreshResponse"
+                            "$ref": "#/definitions/infrastructure_transport.refreshResponse"
                         }
                     },
                     "401": {
@@ -187,11 +187,11 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "description": "Register request",
-                        "name": "registerReq",
+                        "name": "credentialsReq",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/transport.registerReq"
+                            "$ref": "#/definitions/infrastructure_transport.credentialsReq"
                         }
                     }
                 ],
@@ -199,11 +199,60 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/transport.registerResp"
+                            "$ref": "#/definitions/infrastructure_transport.registerResp"
                         }
                     },
                     "400": {
                         "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/http_api.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/http_api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/retry-send-verification-email": {
+            "post": {
+                "description": "Generates a new email verification token and sends a verification email if the user's email is not verified.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Retry sending verification email",
+                "parameters": [
+                    {
+                        "description": "Retry send verification email request",
+                        "name": "credentialsReq",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure_transport.credentialsReq"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Verification email sent successfully"
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/http_api.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
                         "schema": {
                             "$ref": "#/definitions/http_api.ErrorResponse"
                         }
@@ -237,7 +286,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/transport.verifyEmailReq"
+                            "$ref": "#/definitions/infrastructure_transport.verifyEmailReq"
                         }
                     }
                 ],
@@ -277,7 +326,7 @@ const docTemplate = `{
                 }
             }
         },
-        "transport.loginReq": {
+        "infrastructure_transport.credentialsReq": {
             "type": "object",
             "properties": {
                 "email": {
@@ -290,7 +339,7 @@ const docTemplate = `{
                 }
             }
         },
-        "transport.loginResp": {
+        "infrastructure_transport.loginResp": {
             "type": "object",
             "properties": {
                 "accessToken": {
@@ -298,7 +347,7 @@ const docTemplate = `{
                 }
             }
         },
-        "transport.meResp": {
+        "infrastructure_transport.meResp": {
             "type": "object",
             "properties": {
                 "userId": {
@@ -306,7 +355,7 @@ const docTemplate = `{
                 }
             }
         },
-        "transport.refreshResponse": {
+        "infrastructure_transport.refreshResponse": {
             "type": "object",
             "properties": {
                 "access_token": {
@@ -314,20 +363,7 @@ const docTemplate = `{
                 }
             }
         },
-        "transport.registerReq": {
-            "type": "object",
-            "properties": {
-                "email": {
-                    "type": "string",
-                    "example": "user@email.com"
-                },
-                "password": {
-                    "type": "string",
-                    "example": "password"
-                }
-            }
-        },
-        "transport.registerResp": {
+        "infrastructure_transport.registerResp": {
             "type": "object",
             "properties": {
                 "email": {
@@ -338,7 +374,7 @@ const docTemplate = `{
                 }
             }
         },
-        "transport.verifyEmailReq": {
+        "infrastructure_transport.verifyEmailReq": {
             "type": "object",
             "properties": {
                 "token": {

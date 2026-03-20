@@ -37,16 +37,8 @@ func getHashFromToken(token string) string {
 
 // --- CREDENTIAL VALIDATION ---
 
-func (s *Service) validateEmail(email string) bool {
-	return s.re.MatchString(email)
-}
-
-func validatePassword(password string) bool {
-	return len(password) >= minPasswordLength
-}
-
 func (s *Service) validateCredentials(email, password string) error {
-	if !s.validateEmail(email) {
+	if !s.re.MatchString(email) {
 		return ErrInvalidEmail
 	}
 	if len(password) < minPasswordLength {
