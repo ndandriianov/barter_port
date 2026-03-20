@@ -23,6 +23,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 )
 
@@ -38,8 +39,39 @@ import (
 // @in header
 // @name Authorization
 func main() {
+	if err := run(); err != nil {
+		log.Fatal(err)
+	}
+}
+
+type app struct {
+	logger          *slog.Logger
+	db              *pgxpool.Pool
+	server          *http.Server
+	outboxPublisher *authkafka.UserCreationOutboxPublisher
+}
+
+func run() error {
 	_ = godotenv.Load()
 
+	cfg, err := loadConfig()
+	if err != nil {
+		return err
+	}
+
+	app, err := newApp(cfg)
+	if err != nil {
+		return err
+	}
+	defer app.Close()
+
+	rootCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	return app.Run(rootCtx)
+}
+
+func loadConfig() (bootstrap.Config, error) {
 	//serviceName := bootstrap.GetEnv("SERVICE_NAME", "auth")
 	serviceConfigPath := "" //fmt.Sprintf("./config/%s.yaml", serviceName)
 
@@ -49,14 +81,17 @@ func main() {
 		AppEnv:      os.Getenv("APP_ENV"),
 	})
 	if err != nil {
-		log.Fatal("failed to load config:", err)
+		return bootstrap.Config{}, errors.New("failed to load config: " + err.Error())
 	}
 
+	return cfg, nil
+}
+
+func newApp(cfg bootstrap.Config) (*app, error) {
 	db, err := bootstrap.InitDatabaseFromConfig(cfg)
 	if err != nil {
-		log.Fatal("failed to initialize database:", err)
+		return nil, errors.New("failed to initialize database: " + err.Error())
 	}
-	defer db.Close()
 
 	frontendURL := cfg.Frontend.URL
 	re := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
@@ -68,7 +103,8 @@ func main() {
 
 	m := bootstrap.InitMailerFromConfig(cfg)
 	if err = bootstrap.ValidateMailConfig(cfg); err != nil {
-		log.Fatal("failed to initialize mailer:", err)
+		db.Close()
+		return nil, errors.New("failed to initialize mailer: " + err.Error())
 	}
 
 	logg := logger.NewJSONLogger(slog.LevelDebug, "auth-service", "")
@@ -76,25 +112,30 @@ func main() {
 
 	jwtManager, err := bootstrap.InitJWTManagerFromConfig(cfg)
 	if err != nil {
-		log.Fatal("failed to initialize JWT manager:", err)
+		db.Close()
+		return nil, errors.New("failed to initialize JWT manager: " + err.Error())
 	}
 
 	validator, err := bootstrap.InitLocalJWTFromConfig(cfg)
 	if err != nil {
-		log.Fatal("failed to initialize JWT validator:", err)
+		db.Close()
+		return nil, errors.New("failed to initialize JWT validator: " + err.Error())
 	}
 	if len(cfg.Kafka.Brokers) == 0 {
-		log.Fatal("failed to initialize kafka writer: kafka brokers are not configured")
+		db.Close()
+		return nil, errors.New("failed to initialize kafka writer: kafka brokers are not configured")
 	}
 	if cfg.Kafka.UserCreationTopic == "" {
-		log.Fatal("failed to initialize kafka writer: user creation topic is not configured")
+		db.Close()
+		return nil, errors.New("failed to initialize kafka writer: user creation topic is not configured")
 	}
 
 	kafkaWriter := kafkax.NewWriter(cfg.Kafka.Brokers, cfg.Kafka.UserCreationTopic)
 	topicInitCtx, cancelTopicInit := context.WithTimeout(context.Background(), cfg.Kafka.WriteTimeout)
 	if err = kafkax.EnsureTopic(topicInitCtx, cfg.Kafka.Brokers, cfg.Kafka.UserCreationTopic, 1, 1); err != nil {
 		cancelTopicInit()
-		log.Fatal("failed to ensure kafka topic:", err)
+		db.Close()
+		return nil, errors.New("failed to ensure kafka topic: " + err.Error())
 	}
 	cancelTopicInit()
 
@@ -109,11 +150,6 @@ func main() {
 		cfg.Kafka.PollInterval,
 		cfg.Kafka.WriteTimeout,
 	)
-	defer func() {
-		if err := outboxPublisher.Close(); err != nil {
-			logg.Error("failed to close kafka writer", slog.Any("error", err))
-		}
-	}()
 
 	authService := application.NewService(db, userRepo, emailTokenRepo, m, infrastructureLogger, outboxRepo, frontendURL, re)
 	handlers := transport.NewHandlers(logg, authService, jwtManager, db, refreshTokenRepo)
@@ -123,14 +159,20 @@ func main() {
 		Handler: router,
 	}
 
-	rootCtx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
+	return &app{
+		logger:          logg,
+		db:              db,
+		server:          server,
+		outboxPublisher: outboxPublisher,
+	}, nil
+}
 
+func (a *app) Run(rootCtx context.Context) error {
 	publisherDone := make(chan struct{})
 	go func() {
 		defer close(publisherDone)
-		if err := outboxPublisher.Run(rootCtx); err != nil {
-			logg.Error("outbox publisher stopped with error", slog.Any("error", err))
+		if err := a.outboxPublisher.Run(rootCtx); err != nil {
+			a.logger.Error("outbox publisher stopped with error", slog.Any("error", err))
 		}
 	}()
 
@@ -140,16 +182,24 @@ func main() {
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 
-		if err := server.Shutdown(shutdownCtx); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			logg.Error("failed to shutdown auth server", slog.Any("error", err))
+		if err := a.server.Shutdown(shutdownCtx); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			a.logger.Error("failed to shutdown auth server", slog.Any("error", err))
 		}
 	}()
 
-	log.Println("backend listening on", server.Addr)
-	err = server.ListenAndServe()
+	log.Println("backend listening on", a.server.Addr)
+	err := a.server.ListenAndServe()
 	if err != nil && !errors.Is(err, http.ErrServerClosed) {
-		log.Fatal(err)
+		return err
 	}
 
 	<-publisherDone
+	return nil
+}
+
+func (a *app) Close() {
+	if err := a.outboxPublisher.Close(); err != nil {
+		a.logger.Error("failed to close kafka writer", slog.Any("error", err))
+	}
+	a.db.Close()
 }
