@@ -2,31 +2,40 @@ package kafka
 
 import (
 	authusers "barter-port/internal/contracts/kafka/auth-users"
+	"barter-port/internal/libs/db"
 	"barter-port/internal/libs/errorx"
-	"barter-port/internal/users/infrastructure/repository/inbox"
 	"context"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"time"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	kafkago "github.com/segmentio/kafka-go"
 )
 
 type UserCreationInboxConsumer struct {
 	log          *slog.Logger
-	reader       *kafkago.Reader
-	db           *pgxpool.Pool
-	inboxRepo    *inbox.Repository
+	reader       messageReader
+	db           db.DB
+	inboxRepo    inboxWriter
 	pollInterval time.Duration
+}
+
+type messageReader interface {
+	FetchMessage(context.Context) (kafkago.Message, error)
+	CommitMessages(context.Context, ...kafkago.Message) error
+	Close() error
+}
+
+type inboxWriter interface {
+	WriteUserCreationMessage(context.Context, db.DB, authusers.UserCreationMessage) error
 }
 
 type Params struct {
 	Log          *slog.Logger
-	Reader       *kafkago.Reader
-	DB           *pgxpool.Pool
-	InboxRepo    *inbox.Repository
+	Reader       messageReader
+	DB           db.DB
+	InboxRepo    inboxWriter
 	PollInterval time.Duration
 }
 
