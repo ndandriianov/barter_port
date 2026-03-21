@@ -4,10 +4,10 @@ import (
 	"barter-port/internal/auth/infrastructure/repository/outbox"
 	"barter-port/internal/contracts/kafka/auth-users"
 	"barter-port/internal/libs/db"
+	"barter-port/internal/libs/errorx"
 	"barter-port/internal/libs/kafkax"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -72,7 +72,7 @@ func (p *UserCreationOutboxPublisher) Run(ctx context.Context) error {
 	for {
 		published, err := p.publishBatch(ctx)
 		if err != nil {
-			if errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) || ctx.Err() != nil {
+			if errorx.IsShutdownError(ctx, err) {
 				return nil
 			}
 
