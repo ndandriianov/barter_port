@@ -1,4 +1,4 @@
-package kafka
+package consumer
 
 import (
 	authusers "barter-port/internal/contracts/kafka/messages/auth-users"
@@ -56,7 +56,7 @@ func NewUserCreationInboxConsumer(params Params) *UserCreationInboxConsumer {
 func (c *UserCreationInboxConsumer) Run(ctx context.Context) error {
 	defer func() {
 		if err := c.reader.Close(); err != nil {
-			c.log.Error("failed to close Kafka reader", slog.Any("error", err))
+			c.log.Error("failed to close Kafka consumer", slog.Any("error", err))
 		}
 	}()
 

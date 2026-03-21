@@ -2,7 +2,7 @@ package app
 
 import (
 	"barter-port/internal/auth/application"
-	authkafka "barter-port/internal/auth/infrastructure/kafka"
+	authkafka "barter-port/internal/auth/infrastructure/kafka/producer"
 	"barter-port/internal/auth/infrastructure/repository/email_token"
 	"barter-port/internal/auth/infrastructure/repository/outbox"
 	"barter-port/internal/auth/infrastructure/repository/refresh_token"

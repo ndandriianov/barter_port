@@ -4,7 +4,7 @@ import (
 	"barter-port/internal/libs/bootstrap"
 	"barter-port/internal/libs/kafkax"
 	"barter-port/internal/libs/platform/logger"
-	"barter-port/internal/users/infrastructure/kafka"
+	"barter-port/internal/users/infrastructure/kafka/consumer"
 	"barter-port/internal/users/infrastructure/repository/inbox"
 	"barter-port/internal/users/infrastructure/repository/user"
 	"fmt"
@@ -24,7 +24,7 @@ type App struct {
 	log             *slog.Logger
 	db              *pgxpool.Pool
 	inboxProcessor  *inboxP.Processor
-	ucEventConsumer *kafka.UserCreationInboxConsumer
+	ucEventConsumer *consumer.UserCreationInboxConsumer
 }
 
 func NewApp(cfg bootstrap.Config) (*App, error) {
@@ -47,7 +47,7 @@ func NewApp(cfg bootstrap.Config) (*App, error) {
 		PollInterval: cfg.Kafka.PollInterval,
 	})
 
-	ucEventConsumer := kafka.NewUserCreationInboxConsumer(kafka.Params{
+	ucEventConsumer := consumer.NewUserCreationInboxConsumer(consumer.Params{
 		Log:          log,
 		Reader:       kafkax.NewMessageReader(cfg.Kafka.Brokers, cfg.Kafka.UserCreationTopic, cfg.Kafka.UserCreationGroup),
 		DB:           db,
