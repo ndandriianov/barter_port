@@ -20,10 +20,20 @@ CREATE TABLE users
 CREATE TABLE user_creation_outbox
 (
     id         UUID PRIMARY KEY,
+    event_id   UUID        NOT NULL,
+    user_id    UUID        NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE user_creation_events
+(
+    id         UUID PRIMARY KEY,
     user_id    UUID        NOT NULL,
     created_at TIMESTAMPTZ NOT NULL,
+    status     TEXT        NOT NULL,
 
-    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+    FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
+    CONSTRAINT user_creation_events_status_check CHECK (status IN ('NEW', 'CREATED', 'FAILED'))
 );
 
 CREATE TABLE refresh_tokens
@@ -57,14 +67,15 @@ CREATE DATABASE users_db;
 
 CREATE TABLE users
 (
-    id         UUID PRIMARY KEY,
-    name       TEXT,
-    bio        TEXT
+    id   UUID PRIMARY KEY,
+    name TEXT,
+    bio  TEXT
 );
 
 CREATE TABLE user_creation_inbox
 (
     id         UUID PRIMARY KEY,
+    event_id   UUID        NOT NULL,
     user_id    UUID        NOT NULL,
     created_at TIMESTAMPTZ NOT NULL
 );

@@ -6,6 +6,8 @@ import (
 	"barter-port/internal/libs/errorx"
 	"barter-port/internal/users/infrastructure/repository/inbox"
 	"barter-port/internal/users/infrastructure/repository/user"
+	"barter-port/internal/users/model"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -58,7 +60,7 @@ func (p *Processor) Run(ctx context.Context) error {
 				return nil
 			}
 
-			p.log.Error("failed to process user creation events", slog.Any("error", err))
+			p.log.Error("failed to process user creation messages", slog.Any("error", err))
 		}
 
 		if processed == p.batchSize {
@@ -74,27 +76,33 @@ func (p *Processor) Run(ctx context.Context) error {
 }
 
 func (p *Processor) processNext(ctx context.Context) (int, error) {
-	var events []authusers.UserCreationEvent
+	var messages []authusers.UserCreationMessage
 
 	err := db.RunInTx(ctx, p.db, func(ctx context.Context, tx pgx.Tx) error {
 		var err error
-		events, err = p.inboxRepo.ReadUserCreationEventsForUpdate(ctx, tx, p.batchSize)
+		messages, err = p.inboxRepo.ReadUserCreationMessagesForUpdate(ctx, tx, p.batchSize)
 		if err != nil {
-			return fmt.Errorf("failed to read user creation events: %w", err)
+			return fmt.Errorf("failed to read user creation messages: %w", err)
 		}
-		if len(events) == 0 {
+		if len(messages) == 0 {
 			return nil
 		}
 
-		for _, event := range events {
-			err = p.userRepo.AddUser(ctx, tx, event.UserID)
+		for _, message := range messages {
+			err = p.userRepo.AddUser(ctx, tx, message.UserID)
 			if err != nil {
+				if errors.Is(err, model.ErrUserAlreadyExists) {
+					// TODO: отправить событие об уже существующем пользователе
+				}
+
 				return fmt.Errorf("failed to add user: %w", err)
 			}
 
-			err = p.inboxRepo.DeleteUserCreationEvent(ctx, tx, event.ID)
+			// TODO: отправить событие об успехе
+
+			err = p.inboxRepo.DeleteUserCreationMessage(ctx, tx, message.ID)
 			if err != nil {
-				return fmt.Errorf("failed to delete user creation event: %w", err)
+				return fmt.Errorf("failed to delete user creation message: %w", err)
 			}
 		}
 
@@ -105,9 +113,9 @@ func (p *Processor) processNext(ctx context.Context) (int, error) {
 		return 0, err
 	}
 
-	if len(events) > 0 {
-		p.log.Debug("processed %d user creation events", len(events))
+	if len(messages) > 0 {
+		p.log.Debug("processed %d user creation messages", len(messages))
 	}
 
-	return len(events), nil
+	return len(messages), nil
 }

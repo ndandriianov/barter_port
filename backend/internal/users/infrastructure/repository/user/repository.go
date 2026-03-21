@@ -23,7 +23,7 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 // AddUser adds a new user to the repository.
 //
 // Errors:
-//   - Returns only database errors, no domain-specific errors are expected.
+//   - model.ErrUserAlreadyExists: Occurs if a user with the same ID already exists in the repository.
 func (r *Repository) AddUser(ctx context.Context, db db.DB, userID uuid.UUID) error {
 	query := `
 		INSERT INTO users_db.public.users (id)

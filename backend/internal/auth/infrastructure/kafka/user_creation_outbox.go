@@ -2,7 +2,7 @@ package kafka
 
 import (
 	"barter-port/internal/auth/infrastructure/repository/outbox"
-	"barter-port/internal/contracts/kafka/auth-users"
+	auth_users "barter-port/internal/contracts/kafka/auth-users"
 	"barter-port/internal/libs/db"
 	"barter-port/internal/libs/errorx"
 	"barter-port/internal/libs/kafkax"
@@ -96,19 +96,19 @@ func (p *UserCreationOutboxPublisher) Close() error {
 }
 
 func (p *UserCreationOutboxPublisher) publishBatch(ctx context.Context) (int, error) {
-	var events []auth_users.UserCreationEvent
+	var messages []auth_users.UserCreationMessage
 
 	err := db.RunInTx(ctx, p.db, func(ctx context.Context, tx pgx.Tx) error {
 		var err error
-		events, err = p.repo.ReadUserCreationEventsForUpdate(ctx, tx, p.batchSize)
+		messages, err = p.repo.ReadUserCreationMessagesForUpdate(ctx, tx, p.batchSize)
 		if err != nil {
-			return fmt.Errorf("read outbox events: %w", err)
+			return fmt.Errorf("read outbox messages: %w", err)
 		}
-		if len(events) == 0 {
+		if len(messages) == 0 {
 			return nil
 		}
 
-		messages, err := buildMessages(events)
+		kafkaMessages, err := buildMessages(messages)
 		if err != nil {
 			return fmt.Errorf("build kafka messages: %w", err)
 		}
@@ -116,9 +116,9 @@ func (p *UserCreationOutboxPublisher) publishBatch(ctx context.Context) (int, er
 		writeCtx, cancel := context.WithTimeout(ctx, p.writeTimeout)
 		defer cancel()
 
-		p.logger.Debug("writing outbox events to kafka", slog.Any("events", events))
+		p.logger.Debug("writing outbox messages to kafka", slog.Any("messages", messages))
 
-		if err = p.writer.WriteMessages(writeCtx, messages...); err != nil {
+		if err = p.writer.WriteMessages(writeCtx, kafkaMessages...); err != nil {
 			if kafkax.IsUnknownTopicOrPartition(err) {
 				if ensureErr := kafkax.EnsureTopic(writeCtx, p.brokers, p.topic, 1, 1); ensureErr != nil {
 					return fmt.Errorf("ensure topic %q after publish failure: %w", p.topic, ensureErr)
@@ -127,9 +127,9 @@ func (p *UserCreationOutboxPublisher) publishBatch(ctx context.Context) (int, er
 			return fmt.Errorf("write kafka messages: %w", err)
 		}
 
-		for _, event := range events {
-			if err = p.repo.DeleteUserCreationEvent(ctx, tx, event.ID); err != nil {
-				return fmt.Errorf("delete outbox event %s: %w", event.ID, err)
+		for _, message := range messages {
+			if err = p.repo.DeleteUserCreationMessage(ctx, tx, message.ID); err != nil {
+				return fmt.Errorf("delete outbox message %s: %w", message.ID, err)
 			}
 		}
 
@@ -139,32 +139,32 @@ func (p *UserCreationOutboxPublisher) publishBatch(ctx context.Context) (int, er
 		return 0, err
 	}
 
-	if len(events) > 0 {
-		p.logger.Info("published user creation events", slog.Int("count", len(events)))
+	if len(messages) > 0 {
+		p.logger.Info("published user creation messages", slog.Int("count", len(messages)))
 	}
 
-	return len(events), nil
+	return len(messages), nil
 }
 
-func buildMessages(events []auth_users.UserCreationEvent) ([]kafkago.Message, error) {
-	messages := make([]kafkago.Message, 0, len(events))
+func buildMessages(messages []auth_users.UserCreationMessage) ([]kafkago.Message, error) {
+	kafkaMessages := make([]kafkago.Message, 0, len(messages))
 
-	for _, event := range events {
-		payload, err := json.Marshal(event)
+	for _, message := range messages {
+		payload, err := json.Marshal(message)
 		if err != nil {
-			return nil, fmt.Errorf("marshal event %s: %w", event.ID, err)
+			return nil, fmt.Errorf("marshal message %s: %w", message.ID, err)
 		}
 
-		messages = append(messages, kafkago.Message{
-			Key:   []byte(event.UserID.String()),
+		kafkaMessages = append(kafkaMessages, kafkago.Message{
+			Key:   []byte(message.UserID.String()),
 			Value: payload,
-			Time:  event.CreatedAt,
+			Time:  message.CreatedAt,
 			Headers: []kafkago.Header{
-				{Key: "event_id", Value: []byte(event.ID.String())},
-				{Key: "event_type", Value: []byte(userCreationEventType)},
+				{Key: "message_id", Value: []byte(message.ID.String())},
+				{Key: "message_type", Value: []byte(userCreationEventType)},
 			},
 		})
 	}
 
-	return messages, nil
+	return kafkaMessages, nil
 }
