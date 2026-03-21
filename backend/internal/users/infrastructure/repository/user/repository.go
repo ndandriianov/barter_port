@@ -1,6 +1,7 @@
 package user
 
 import (
+	"barter-port/internal/libs/db"
 	"barter-port/internal/libs/repox"
 	"barter-port/internal/users/model"
 	"errors"
@@ -23,13 +24,13 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 //
 // Errors:
 //   - Returns only database errors, no domain-specific errors are expected.
-func (r *Repository) AddUser(ctx context.Context, user model.User) error {
+func (r *Repository) AddUser(ctx context.Context, db db.DB, userID uuid.UUID) error {
 	query := `
-		INSERT INTO users_db.public.users (id, name, bio)
-		VALUES ($1, $2, $3)
+		INSERT INTO users_db.public.users (id)
+		VALUES ($1)
 	`
 
-	_, err := r.db.Exec(ctx, query, user.Id, user.Name, user.Bio)
+	_, err := r.db.Exec(ctx, query, userID)
 	if err != nil && repox.IsUniqueViolation(err) {
 		return model.ErrUserAlreadyExists
 	}

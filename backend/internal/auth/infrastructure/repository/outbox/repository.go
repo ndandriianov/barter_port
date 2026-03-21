@@ -1,7 +1,7 @@
 package outbox
 
 import (
-	"barter-port/internal/contracts/kafka/auth-users"
+	authusers "barter-port/internal/contracts/kafka/auth-users"
 	"errors"
 
 	"context"
@@ -16,7 +16,7 @@ type Repository struct{}
 
 // WriteUserCreationEvent adds a new user creation event to the outbox table.
 // Produces only internal db errors.
-func (r *Repository) WriteUserCreationEvent(ctx context.Context, exec pgx.Tx, event auth_users.UserCreationEvent) error {
+func (r *Repository) WriteUserCreationEvent(ctx context.Context, exec pgx.Tx, event authusers.UserCreationEvent) error {
 	query := `
 		INSERT INTO user_creation_outbox (id, user_id, created_at)
 		VALUES ($1, $2, $3)`
@@ -29,7 +29,7 @@ func (r *Repository) WriteUserCreationEvent(ctx context.Context, exec pgx.Tx, ev
 // ReadUserCreationEventsForUpdate retrieves a batch of user creation events from the outbox table for processing.
 // It locks the selected rows to prevent concurrent processing by other workers.
 // Returns a slice of UserCreationEvent and any error encountered during the operation.
-func (r *Repository) ReadUserCreationEventsForUpdate(ctx context.Context, exec pgx.Tx, limit int) ([]auth_users.UserCreationEvent, error) {
+func (r *Repository) ReadUserCreationEventsForUpdate(ctx context.Context, exec pgx.Tx, limit int) ([]authusers.UserCreationEvent, error) {
 	query := `
 		SELECT id, user_id, created_at FROM user_creation_outbox
 		ORDER BY created_at, id LIMIT $1
@@ -41,8 +41,8 @@ func (r *Repository) ReadUserCreationEventsForUpdate(ctx context.Context, exec p
 	}
 	defer rows.Close()
 
-	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (auth_users.UserCreationEvent, error) {
-		return pgx.RowToStructByName[auth_users.UserCreationEvent](row)
+	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (authusers.UserCreationEvent, error) {
+		return pgx.RowToStructByName[authusers.UserCreationEvent](row)
 	})
 }
 
