@@ -1,4 +1,4 @@
-package kafka
+package consumer
 
 import (
 	authusers "barter-port/internal/contracts/kafka/messages/auth-users"

@@ -1,4 +1,4 @@
-package kafka
+package producer
 
 import (
 	"barter-port/internal/auth/infrastructure/repository/outbox"
