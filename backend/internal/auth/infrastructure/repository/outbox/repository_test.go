@@ -4,13 +4,11 @@ import (
 	authusers "barter-port/internal/contracts/kafka/auth-users"
 	"context"
 	"errors"
-	"reflect"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/pashagolub/pgxmock/v4"
 	"github.com/stretchr/testify/require"
 )
 
@@ -28,26 +26,29 @@ func TestRepository_WriteUserCreationEvent(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		t.Parallel()
 
-		tx := &stubTx{}
+		tx := newMockTx(t)
 		repo := &Repository{}
+		tx.ExpectExec(`
+		INSERT INTO user_creation_outbox (id, event_id, user_id, created_at)
+		VALUES ($1, $2, $3, $4)`).
+			WithArgs(message.ID, message.EventID, message.UserID, message.CreatedAt).
+			WillReturnResult(pgxmock.NewResult("INSERT", 1))
 
 		err := repo.WriteUserCreationMessage(ctx, tx, message)
 		require.NoError(t, err)
-
-		require.Equal(t, normalizeSQL(`
-			INSERT INTO user_creation_outbox (id, event_id, user_id, created_at)
-			VALUES ($1, $2, $3, $4)`), normalizeSQL(tx.execSQL))
-
-		wantArgs := []any{message.ID, message.EventID, message.UserID, message.CreatedAt}
-		require.Equal(t, wantArgs, tx.execArgs)
 	})
 
 	t.Run("exec error", func(t *testing.T) {
 		t.Parallel()
 
 		wantErr := errors.New("exec failed")
-		tx := &stubTx{execErr: wantErr}
+		tx := newMockTx(t)
 		repo := &Repository{}
+		tx.ExpectExec(`
+		INSERT INTO user_creation_outbox (id, event_id, user_id, created_at)
+		VALUES ($1, $2, $3, $4)`).
+			WithArgs(message.ID, message.EventID, message.UserID, message.CreatedAt).
+			WillReturnError(wantErr)
 
 		err := repo.WriteUserCreationMessage(ctx, tx, message)
 		require.ErrorIs(t, err, wantErr)
@@ -76,37 +77,36 @@ func TestRepository_ReadUserCreationEventsForUpdate(t *testing.T) {
 			CreatedAt: time.Date(2026, time.March, 20, 11, 0, 0, 0, time.UTC),
 		}
 
-		rows := newStubRows(
-			[]string{"id", "event_id", "user_id", "created_at"},
-			[][]any{
-				{first.ID, first.EventID, first.UserID, first.CreatedAt},
-				{second.ID, second.EventID, second.UserID, second.CreatedAt},
-			},
-		)
-		tx := &stubTx{queryRows: rows}
+		rows := pgxmock.NewRows([]string{"id", "event_id", "user_id", "created_at"}).
+			AddRow(first.ID, first.EventID, first.UserID, first.CreatedAt).
+			AddRow(second.ID, second.EventID, second.UserID, second.CreatedAt)
+		tx := newMockTx(t)
+		tx.ExpectQuery(`
+		SELECT id, event_id, user_id, created_at FROM user_creation_outbox
+		ORDER BY created_at, id LIMIT $1
+		FOR UPDATE SKIP LOCKED`).
+			WithArgs(2).
+			WillReturnRows(rows).
+			RowsWillBeClosed()
 
 		got, err := repo.ReadUserCreationMessagesForUpdate(ctx, tx, 2)
 		require.NoError(t, err)
 
 		want := []authusers.UserCreationMessage{first, second}
 		require.Equal(t, want, got)
-
-		require.Equal(t, normalizeSQL(`
-			SELECT id, event_id, user_id, created_at FROM user_creation_outbox
-			ORDER BY created_at, id LIMIT $1
-			FOR UPDATE SKIP LOCKED`), normalizeSQL(tx.querySQL))
-
-		wantArgs := []any{2}
-		require.Equal(t, wantArgs, tx.queryArgs)
-
-		require.True(t, rows.closed)
 	})
 
 	t.Run("query error", func(t *testing.T) {
 		t.Parallel()
 
 		wantErr := errors.New("query failed")
-		tx := &stubTx{queryErr: wantErr}
+		tx := newMockTx(t)
+		tx.ExpectQuery(`
+		SELECT id, event_id, user_id, created_at FROM user_creation_outbox
+		ORDER BY created_at, id LIMIT $1
+		FOR UPDATE SKIP LOCKED`).
+			WithArgs(3).
+			WillReturnError(wantErr)
 
 		got, err := repo.ReadUserCreationMessagesForUpdate(ctx, tx, 3)
 		require.ErrorIs(t, err, wantErr)
@@ -117,17 +117,21 @@ func TestRepository_ReadUserCreationEventsForUpdate(t *testing.T) {
 		t.Parallel()
 
 		wantErr := errors.New("scan failed")
-		rows := newStubRows(
-			[]string{"id", "event_id", "user_id", "created_at"},
-			[][]any{{uuid.New(), uuid.New(), uuid.New(), time.Now().UTC()}},
-		)
-		rows.scanErr = wantErr
-		tx := &stubTx{queryRows: rows}
+		rows := pgxmock.NewRows([]string{"id", "event_id", "user_id", "created_at"}).
+			AddRow(uuid.New(), uuid.New(), uuid.New(), time.Now().UTC()).
+			RowError(0, wantErr)
+		tx := newMockTx(t)
+		tx.ExpectQuery(`
+		SELECT id, event_id, user_id, created_at FROM user_creation_outbox
+		ORDER BY created_at, id LIMIT $1
+		FOR UPDATE SKIP LOCKED`).
+			WithArgs(1).
+			WillReturnRows(rows).
+			RowsWillBeClosed()
 
 		got, err := repo.ReadUserCreationMessagesForUpdate(ctx, tx, 1)
 		require.ErrorIs(t, err, wantErr)
 		require.Nil(t, got)
-		require.True(t, rows.closed)
 	})
 }
 
@@ -141,24 +145,27 @@ func TestRepository_DeleteUserCreationEvent(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		t.Parallel()
 
-		tx := &stubTx{execTag: pgconn.NewCommandTag("DELETE 1")}
+		tx := newMockTx(t)
+		tx.ExpectExec(`
+		DELETE FROM user_creation_outbox
+		WHERE id = $1`).
+			WithArgs(id).
+			WillReturnResult(pgxmock.NewResult("DELETE", 1))
 
 		err := repo.DeleteUserCreationMessage(ctx, tx, id)
 		require.NoError(t, err)
-
-		require.Equal(t, normalizeSQL(`
-			DELETE FROM user_creation_outbox
-			WHERE id = $1`), normalizeSQL(tx.execSQL))
-
-		wantArgs := []any{id}
-		require.Equal(t, wantArgs, tx.execArgs)
 	})
 
 	t.Run("exec error", func(t *testing.T) {
 		t.Parallel()
 
 		wantErr := errors.New("delete failed")
-		tx := &stubTx{execErr: wantErr}
+		tx := newMockTx(t)
+		tx.ExpectExec(`
+		DELETE FROM user_creation_outbox
+		WHERE id = $1`).
+			WithArgs(id).
+			WillReturnError(wantErr)
 
 		err := repo.DeleteUserCreationMessage(ctx, tx, id)
 		require.ErrorIs(t, err, wantErr)
@@ -167,139 +174,27 @@ func TestRepository_DeleteUserCreationEvent(t *testing.T) {
 	t.Run("not found", func(t *testing.T) {
 		t.Parallel()
 
-		tx := &stubTx{execTag: pgconn.NewCommandTag("DELETE 0")}
+		tx := newMockTx(t)
+		tx.ExpectExec(`
+		DELETE FROM user_creation_outbox
+		WHERE id = $1`).
+			WithArgs(id).
+			WillReturnResult(pgxmock.NewResult("DELETE", 0))
 
 		err := repo.DeleteUserCreationMessage(ctx, tx, id)
 		require.ErrorIs(t, err, ErrUserCreationMessageNotFound)
 	})
 }
 
-type stubTx struct {
-	execTag  pgconn.CommandTag
-	execErr  error
-	execSQL  string
-	execArgs []any
+func newMockTx(t *testing.T) pgxmock.PgxConnIface {
+	t.Helper()
 
-	queryRows pgx.Rows
-	queryErr  error
-	querySQL  string
-	queryArgs []any
-}
+	mock, err := pgxmock.NewConn(pgxmock.QueryMatcherOption(pgxmock.QueryMatcherEqual))
+	require.NoError(t, err)
 
-func (s *stubTx) Begin(context.Context) (pgx.Tx, error) {
-	return nil, errors.New("unexpected Begin call")
-}
-func (s *stubTx) Commit(context.Context) error   { return errors.New("unexpected Commit call") }
-func (s *stubTx) Rollback(context.Context) error { return errors.New("unexpected Rollback call") }
-func (s *stubTx) CopyFrom(context.Context, pgx.Identifier, []string, pgx.CopyFromSource) (int64, error) {
-	return 0, errors.New("unexpected CopyFrom call")
-}
-func (s *stubTx) SendBatch(context.Context, *pgx.Batch) pgx.BatchResults {
-	return nil
-}
-func (s *stubTx) LargeObjects() pgx.LargeObjects { return pgx.LargeObjects{} }
-func (s *stubTx) Prepare(context.Context, string, string) (*pgconn.StatementDescription, error) {
-	return nil, errors.New("unexpected Prepare call")
-}
-func (s *stubTx) Exec(_ context.Context, sql string, args ...any) (pgconn.CommandTag, error) {
-	s.execSQL = sql
-	s.execArgs = args
-	return s.execTag, s.execErr
-}
-func (s *stubTx) Query(_ context.Context, sql string, args ...any) (pgx.Rows, error) {
-	s.querySQL = sql
-	s.queryArgs = args
-	return s.queryRows, s.queryErr
-}
-func (s *stubTx) QueryRow(context.Context, string, ...any) pgx.Row { return nil }
-func (s *stubTx) Conn() *pgx.Conn                                  { return nil }
+	t.Cleanup(func() {
+		require.NoError(t, mock.ExpectationsWereMet())
+	})
 
-type stubRows struct {
-	descs   []pgconn.FieldDescription
-	values  [][]any
-	index   int
-	closed  bool
-	scanErr error
-	rowsErr error
-}
-
-func newStubRows(columns []string, values [][]any) *stubRows {
-	descs := make([]pgconn.FieldDescription, len(columns))
-	for i, column := range columns {
-		descs[i] = pgconn.FieldDescription{Name: column}
-	}
-
-	return &stubRows{
-		descs:  descs,
-		values: values,
-	}
-}
-
-func (s *stubRows) Close() { s.closed = true }
-
-func (s *stubRows) Err() error { return s.rowsErr }
-
-func (s *stubRows) CommandTag() pgconn.CommandTag { return pgconn.CommandTag{} }
-
-func (s *stubRows) FieldDescriptions() []pgconn.FieldDescription { return s.descs }
-
-func (s *stubRows) Next() bool {
-	if s.index >= len(s.values) {
-		s.closed = true
-		return false
-	}
-
-	s.index++
-	return true
-}
-
-func (s *stubRows) Scan(dest ...any) error {
-	if s.scanErr != nil {
-		s.closed = true
-		return s.scanErr
-	}
-
-	row := s.values[s.index-1]
-	for i := range dest {
-		target := reflect.ValueOf(dest[i])
-		if target.Kind() != reflect.Pointer || target.IsNil() {
-			return errors.New("destination must be a non-nil pointer")
-		}
-
-		value := reflect.ValueOf(row[i])
-		target.Elem().Set(value)
-	}
-
-	return nil
-}
-
-func (s *stubRows) Values() ([]any, error) {
-	if s.index == 0 || s.index > len(s.values) {
-		return nil, errors.New("no current row")
-	}
-	return s.values[s.index-1], nil
-}
-
-func (s *stubRows) RawValues() [][]byte { return nil }
-
-func (s *stubRows) Conn() *pgx.Conn { return nil }
-
-func normalizeSQL(sql string) string {
-	var out []rune
-	space := false
-
-	for _, r := range sql {
-		if r == ' ' || r == '\n' || r == '\t' {
-			if !space {
-				out = append(out, ' ')
-				space = true
-			}
-			continue
-		}
-
-		out = append(out, r)
-		space = false
-	}
-
-	return string(out)
+	return mock
 }
