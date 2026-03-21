@@ -70,9 +70,22 @@ services:
       KAFKA_CLUSTERS_0_NAME: barter-port
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
 
-  caddy:
+  caddy-infra:
+    profiles: ["infra"]
     image: caddy:2
-    container_name: barter-port-caddy
+    container_name: barter-port-caddy-infra
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "80:80"
+    volumes:
+      - ./Caddyfile.infra:/etc/caddy/Caddyfile:ro
+
+  caddy-app:
+    profiles: ["app"]
+    image: caddy:2
+    container_name: barter-port-caddy-app
     restart: unless-stopped
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -82,6 +95,7 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
 
   auth:
+    profiles: ["app"]
     build:
       context: .
       dockerfile: Dockerfile
@@ -98,10 +112,13 @@ services:
       APP_ENV: docker
       CONFIG_COMMON: /app/config/common.yaml
       CONFIG_SERVICE: # /app/config/auth.yaml
+    ports:
+      - "8081:8080"
     volumes:
       - ./config:/app/config:ro
 
   items:
+    profiles: ["app"]
     build:
       context: .
       dockerfile: Dockerfile
@@ -116,10 +133,13 @@ services:
       APP_ENV: docker
       CONFIG_COMMON: /app/config/common.yaml
       CONFIG_SERVICE: # /app/config/items.yaml
+    ports:
+      - "8080:8080"
     volumes:
       - ./config:/app/config:ro
 
   users:
+    profiles: ["app"]
     build:
       context: .
       dockerfile: Dockerfile
@@ -140,6 +160,7 @@ services:
       - ./config:/app/config:ro
 
   swagger-ui:
+    profiles: ["infra", "app"]
     image: swaggerapi/swagger-ui:latest
     container_name: barter-port-swagger-ui
     restart: unless-stopped
@@ -150,9 +171,6 @@ services:
           { "url": "/swagger-specs/items/swagger.yaml", "name": "Items API" }
         ]
       BASE_URL: /docs
-    depends_on:
-      - auth
-      - items
 
 volumes:
   db_data:
