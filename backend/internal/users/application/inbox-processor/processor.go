@@ -3,9 +3,9 @@ package inbox_processor
 import (
 	authusers "barter-port/internal/contracts/kafka/auth-users"
 	"barter-port/internal/libs/db"
+	"barter-port/internal/libs/errorx"
 	"barter-port/internal/users/infrastructure/repository/inbox"
 	"barter-port/internal/users/infrastructure/repository/user"
-	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -41,7 +41,7 @@ func (p *Processor) Run(ctx context.Context) error {
 	for {
 		processed, err := p.processNext(ctx)
 		if err != nil {
-			if isShutdownError(ctx, err) {
+			if errorx.IsShutdownError(ctx, err) {
 				return nil
 			}
 
@@ -97,10 +97,4 @@ func (p *Processor) processNext(ctx context.Context) (int, error) {
 	}
 
 	return len(events), nil
-}
-
-func isShutdownError(ctx context.Context, err error) bool {
-	return ctx.Err() != nil ||
-		errors.Is(err, context.Canceled) ||
-		errors.Is(err, context.DeadlineExceeded)
 }

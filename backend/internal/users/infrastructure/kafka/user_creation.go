@@ -2,10 +2,10 @@ package kafka
 
 import (
 	authusers "barter-port/internal/contracts/kafka/auth-users"
+	"barter-port/internal/libs/errorx"
 	"barter-port/internal/users/infrastructure/repository/inbox"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -39,7 +39,7 @@ func (c *UserCreationInboxConsumer) Run(ctx context.Context) error {
 			continue
 		}
 
-		if isShutdownError(ctx, err) {
+		if errorx.IsShutdownError(ctx, err) {
 			return nil
 		}
 
@@ -83,10 +83,4 @@ func (c *UserCreationInboxConsumer) consumeMessage(ctx context.Context) error {
 	}
 
 	return nil
-}
-
-func isShutdownError(ctx context.Context, err error) bool {
-	return ctx.Err() != nil ||
-		errors.Is(err, context.Canceled) ||
-		errors.Is(err, context.DeadlineExceeded)
 }
