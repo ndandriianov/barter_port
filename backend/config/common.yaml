@@ -12,6 +12,7 @@ kafka:
   brokers:
     - "localhost:9094"
   user_creation_topic: "auth.user-created"
+  user_creation_group: "items-service-uc"
   batch_size: 100
   poll_interval: 2s
   write_timeout: 10s

@@ -119,23 +119,23 @@ services:
     volumes:
       - ./config:/app/config:ro
 
-#  users:
-#    build:
-#      context: .
-#      dockerfile: Dockerfile
-#      args:
-#        SERVICE: users
-#    depends_on:
-#      db:
-#        condition: service_healthy
-#    env_file:
-#      - ./.env
-#    environment:
-#      APP_ENV: docker
-#      CONFIG_COMMON: /app/config/common.yaml
-#      CONFIG_SERVICE: /app/config/users.yaml
-#    volumes:
-#      - ./config:/app/config:ro
+  users:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: users
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - ./.env
+    environment:
+      APP_ENV: docker
+      CONFIG_COMMON: /app/config/common.yaml
+      CONFIG_SERVICE: /app/config/users.yaml
+    volumes:
+      - ./config:/app/config:ro
 
   swagger-ui:
     image: swaggerapi/swagger-ui:latest
