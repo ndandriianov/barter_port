@@ -5,7 +5,7 @@ import (
 	"barter-port/internal/auth/infrastructure/repository/email_token"
 	"barter-port/internal/auth/infrastructure/repository/outbox"
 	"barter-port/internal/auth/infrastructure/repository/user"
-	"barter-port/internal/contracts/kafka/auth-users"
+	authusers "barter-port/internal/contracts/kafka/auth-users"
 	"barter-port/internal/libs/db"
 	"errors"
 	"fmt"
@@ -241,9 +241,18 @@ func (s *Service) VerifyEmail(ctx context.Context, rawToken string) error {
 		}
 
 		if changed {
-			err = s.outbox.WriteUserCreationEvent(ctx, tx, auth_users.UserCreationEvent{
+			event := domain.UserCreationEvent{
 				ID:        uuid.New(),
 				UserID:    t.UserID,
+				CreatedAt: time.Now(),
+			}
+
+			// TODO: сделать запись о задаче на создание профиля, по которой потом будет polling frontend и ждать выполнения
+
+			err = s.outbox.WriteUserCreationMessage(ctx, tx, authusers.UserCreationMessage{
+				ID:        uuid.New(),
+				EventID:   event.ID,
+				UserID:    event.UserID,
 				CreatedAt: time.Now(),
 			})
 			if err != nil {
@@ -256,15 +265,13 @@ func (s *Service) VerifyEmail(ctx context.Context, rawToken string) error {
 		}
 
 		if err = s.tokens.MarkUsed(ctx, tx, tokenHash); err != nil {
-			if errors.Is(err, email_token.ErrTokenNotFound) {
-				s.logger.Warn("failed to mark used email_token as used")
-			}
+			return fmt.Errorf("failed to mark used email_token as used: %w", err)
 		}
 
 		return nil
 	})
 
-	return nil
+	return err
 }
 
 type LoginResult struct {

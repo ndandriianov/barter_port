@@ -1,7 +1,7 @@
 package outbox
 
 import (
-	"barter-port/internal/contracts/kafka/auth-users"
+	authusers "barter-port/internal/contracts/kafka/auth-users"
 	"context"
 	"errors"
 	"reflect"
@@ -18,8 +18,9 @@ func TestRepository_WriteUserCreationEvent(t *testing.T) {
 	t.Parallel()
 
 	ctx := context.Background()
-	event := auth_users.UserCreationEvent{
+	message := authusers.UserCreationMessage{
 		ID:        uuid.New(),
+		EventID:   uuid.New(),
 		UserID:    uuid.New(),
 		CreatedAt: time.Date(2026, time.March, 20, 12, 0, 0, 0, time.UTC),
 	}
@@ -30,14 +31,14 @@ func TestRepository_WriteUserCreationEvent(t *testing.T) {
 		tx := &stubTx{}
 		repo := &Repository{}
 
-		err := repo.WriteUserCreationEvent(ctx, tx, event)
+		err := repo.WriteUserCreationMessage(ctx, tx, message)
 		require.NoError(t, err)
 
 		require.Equal(t, normalizeSQL(`
-			INSERT INTO user_creation_outbox (id, user_id, created_at)
-			VALUES ($1, $2, $3)`), normalizeSQL(tx.execSQL))
+			INSERT INTO user_creation_outbox (id, event_id, user_id, created_at)
+			VALUES ($1, $2, $3, $4)`), normalizeSQL(tx.execSQL))
 
-		wantArgs := []any{event.ID, event.UserID, event.CreatedAt}
+		wantArgs := []any{message.ID, message.EventID, message.UserID, message.CreatedAt}
 		require.Equal(t, wantArgs, tx.execArgs)
 	})
 
@@ -48,7 +49,7 @@ func TestRepository_WriteUserCreationEvent(t *testing.T) {
 		tx := &stubTx{execErr: wantErr}
 		repo := &Repository{}
 
-		err := repo.WriteUserCreationEvent(ctx, tx, event)
+		err := repo.WriteUserCreationMessage(ctx, tx, message)
 		require.ErrorIs(t, err, wantErr)
 	})
 }
@@ -62,34 +63,36 @@ func TestRepository_ReadUserCreationEventsForUpdate(t *testing.T) {
 	t.Run("success", func(t *testing.T) {
 		t.Parallel()
 
-		first := auth_users.UserCreationEvent{
+		first := authusers.UserCreationMessage{
 			ID:        uuid.New(),
+			EventID:   uuid.New(),
 			UserID:    uuid.New(),
 			CreatedAt: time.Date(2026, time.March, 20, 10, 0, 0, 0, time.UTC),
 		}
-		second := auth_users.UserCreationEvent{
+		second := authusers.UserCreationMessage{
 			ID:        uuid.New(),
+			EventID:   uuid.New(),
 			UserID:    uuid.New(),
 			CreatedAt: time.Date(2026, time.March, 20, 11, 0, 0, 0, time.UTC),
 		}
 
 		rows := newStubRows(
-			[]string{"id", "user_id", "created_at"},
+			[]string{"id", "event_id", "user_id", "created_at"},
 			[][]any{
-				{first.ID, first.UserID, first.CreatedAt},
-				{second.ID, second.UserID, second.CreatedAt},
+				{first.ID, first.EventID, first.UserID, first.CreatedAt},
+				{second.ID, second.EventID, second.UserID, second.CreatedAt},
 			},
 		)
 		tx := &stubTx{queryRows: rows}
 
-		got, err := repo.ReadUserCreationEventsForUpdate(ctx, tx, 2)
+		got, err := repo.ReadUserCreationMessagesForUpdate(ctx, tx, 2)
 		require.NoError(t, err)
 
-		want := []auth_users.UserCreationEvent{first, second}
+		want := []authusers.UserCreationMessage{first, second}
 		require.Equal(t, want, got)
 
 		require.Equal(t, normalizeSQL(`
-			SELECT id, user_id, created_at FROM user_creation_outbox
+			SELECT id, event_id, user_id, created_at FROM user_creation_outbox
 			ORDER BY created_at, id LIMIT $1
 			FOR UPDATE SKIP LOCKED`), normalizeSQL(tx.querySQL))
 
@@ -105,7 +108,7 @@ func TestRepository_ReadUserCreationEventsForUpdate(t *testing.T) {
 		wantErr := errors.New("query failed")
 		tx := &stubTx{queryErr: wantErr}
 
-		got, err := repo.ReadUserCreationEventsForUpdate(ctx, tx, 3)
+		got, err := repo.ReadUserCreationMessagesForUpdate(ctx, tx, 3)
 		require.ErrorIs(t, err, wantErr)
 		require.Nil(t, got)
 	})
@@ -115,13 +118,13 @@ func TestRepository_ReadUserCreationEventsForUpdate(t *testing.T) {
 
 		wantErr := errors.New("scan failed")
 		rows := newStubRows(
-			[]string{"id", "user_id", "created_at"},
-			[][]any{{uuid.New(), uuid.New(), time.Now().UTC()}},
+			[]string{"id", "event_id", "user_id", "created_at"},
+			[][]any{{uuid.New(), uuid.New(), uuid.New(), time.Now().UTC()}},
 		)
 		rows.scanErr = wantErr
 		tx := &stubTx{queryRows: rows}
 
-		got, err := repo.ReadUserCreationEventsForUpdate(ctx, tx, 1)
+		got, err := repo.ReadUserCreationMessagesForUpdate(ctx, tx, 1)
 		require.ErrorIs(t, err, wantErr)
 		require.Nil(t, got)
 		require.True(t, rows.closed)
@@ -140,7 +143,7 @@ func TestRepository_DeleteUserCreationEvent(t *testing.T) {
 
 		tx := &stubTx{execTag: pgconn.NewCommandTag("DELETE 1")}
 
-		err := repo.DeleteUserCreationEvent(ctx, tx, id)
+		err := repo.DeleteUserCreationMessage(ctx, tx, id)
 		require.NoError(t, err)
 
 		require.Equal(t, normalizeSQL(`
@@ -157,7 +160,7 @@ func TestRepository_DeleteUserCreationEvent(t *testing.T) {
 		wantErr := errors.New("delete failed")
 		tx := &stubTx{execErr: wantErr}
 
-		err := repo.DeleteUserCreationEvent(ctx, tx, id)
+		err := repo.DeleteUserCreationMessage(ctx, tx, id)
 		require.ErrorIs(t, err, wantErr)
 	})
 
@@ -166,8 +169,8 @@ func TestRepository_DeleteUserCreationEvent(t *testing.T) {
 
 		tx := &stubTx{execTag: pgconn.NewCommandTag("DELETE 0")}
 
-		err := repo.DeleteUserCreationEvent(ctx, tx, id)
-		require.ErrorIs(t, err, ErrUserCreationEventNotFound)
+		err := repo.DeleteUserCreationMessage(ctx, tx, id)
+		require.ErrorIs(t, err, ErrUserCreationMessageNotFound)
 	})
 }
 

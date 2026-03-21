@@ -76,32 +76,32 @@ func (c *UserCreationInboxConsumer) Run(ctx context.Context) error {
 }
 
 func (c *UserCreationInboxConsumer) consumeMessage(ctx context.Context) error {
-	message, err := c.reader.FetchMessage(ctx)
+	rawMessage, err := c.reader.FetchMessage(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to fetch message: %w", err)
 	}
 
-	var event authusers.UserCreationEvent
-	err = json.Unmarshal(message.Value, &event)
+	var message authusers.UserCreationMessage
+	err = json.Unmarshal(rawMessage.Value, &message)
 	if err != nil {
-		if commitErr := c.reader.CommitMessages(ctx, message); commitErr != nil {
+		if commitErr := c.reader.CommitMessages(ctx, rawMessage); commitErr != nil {
 			return fmt.Errorf(
 				"failed to unmarshal message id=%s: %w; additionally failed to commit bad message: %w",
-				string(message.Key), err, commitErr,
+				string(rawMessage.Key), err, commitErr,
 			)
 		}
-		return fmt.Errorf("failed to unmarshal message id: %s: %w", string(message.Key), err)
+		return fmt.Errorf("failed to unmarshal message id: %s: %w", string(rawMessage.Key), err)
 	}
 
-	err = c.inboxRepo.WriteUserCreationEvent(ctx, c.db, event)
+	err = c.inboxRepo.WriteUserCreationMessage(ctx, c.db, message)
 	// TODO: проверка и skip при unique violation
 	if err != nil {
-		return fmt.Errorf("failed to write user creation event to inbox: %w", err)
+		return fmt.Errorf("failed to write user creation message to inbox: %w", err)
 	}
 
-	err = c.reader.CommitMessages(ctx, message)
+	err = c.reader.CommitMessages(ctx, rawMessage)
 	if err != nil {
-		return fmt.Errorf("failed to commit message id: %s: %w", string(message.Key), err)
+		return fmt.Errorf("failed to commit message id: %s: %w", string(rawMessage.Key), err)
 	}
 
 	return nil
