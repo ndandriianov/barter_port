@@ -1,25 +1,26 @@
 package producer
 
 import (
-	"barter-port/internal/auth/infrastructure/repository/outbox"
-	"barter-port/internal/contracts/kafka/messages/auth-users"
+	usersauth "barter-port/internal/contracts/kafka/messages/users-auth"
 	"barter-port/internal/libs/db"
 	"barter-port/internal/libs/errorx"
 	"barter-port/internal/libs/kafkax"
-	"context"
+	"barter-port/internal/users/infrastructure/repository/outbox"
 	"encoding/json"
 	"fmt"
 	"log/slog"
 	"time"
+
+	"context"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	kafkago "github.com/segmentio/kafka-go"
 )
 
-const userCreationMessageType = "auth.user.created"
+const ucResultMessageType = "users.auth.uc_result"
 
-type UserCreationOutboxPublisher struct {
+type UCResultOutbox struct {
 	db           *pgxpool.Pool
 	repo         *outbox.Repository
 	writer       kafkax.MessageWriter
@@ -31,8 +32,8 @@ type UserCreationOutboxPublisher struct {
 	writeTimeout time.Duration
 }
 
-func NewUserCreationOutboxPublisher(
-	dbPool *pgxpool.Pool,
+func NewUCResultOutbox(
+	db *pgxpool.Pool,
 	repo *outbox.Repository,
 	writer kafkax.MessageWriter,
 	logger *slog.Logger,
@@ -41,23 +42,13 @@ func NewUserCreationOutboxPublisher(
 	batchSize int,
 	pollInterval time.Duration,
 	writeTimeout time.Duration,
-) *UserCreationOutboxPublisher {
-	if batchSize <= 0 {
-		batchSize = 100
-	}
-	if pollInterval <= 0 {
-		pollInterval = 2 * time.Second
-	}
-	if writeTimeout <= 0 {
-		writeTimeout = 10 * time.Second
-	}
-
-	return &UserCreationOutboxPublisher{
-		db:           dbPool,
+) *UCResultOutbox {
+	return &UCResultOutbox{
+		db:           db,
 		repo:         repo,
 		writer:       writer,
 		logger:       logger,
-		brokers:      append([]string(nil), brokers...),
+		brokers:      brokers,
 		topic:        topic,
 		batchSize:    batchSize,
 		pollInterval: pollInterval,
@@ -65,7 +56,7 @@ func NewUserCreationOutboxPublisher(
 	}
 }
 
-func (p *UserCreationOutboxPublisher) Run(ctx context.Context) error {
+func (p *UCResultOutbox) Run(ctx context.Context) error {
 	ticker := time.NewTicker(p.pollInterval)
 	defer ticker.Stop()
 
@@ -91,18 +82,18 @@ func (p *UserCreationOutboxPublisher) Run(ctx context.Context) error {
 	}
 }
 
-func (p *UserCreationOutboxPublisher) Close() error {
+func (p *UCResultOutbox) Close() error {
 	return p.writer.Close()
 }
 
-func (p *UserCreationOutboxPublisher) publishBatch(ctx context.Context) (int, error) {
-	var messages []auth_users.UserCreationMessage
+func (p *UCResultOutbox) publishBatch(ctx context.Context) (int, error) {
+	var messages []usersauth.UCResultMessage
 
 	err := db.RunInTx(ctx, p.db, func(ctx context.Context, tx pgx.Tx) error {
 		var err error
-		messages, err = p.repo.ReadUserCreationMessagesForUpdate(ctx, tx, p.batchSize)
+		messages, err = p.repo.ReadUCResultMessagesForUpdate(ctx, tx, p.batchSize)
 		if err != nil {
-			return fmt.Errorf("read outbox messages: %w", err)
+			return err
 		}
 		if len(messages) == 0 {
 			return nil
@@ -110,25 +101,25 @@ func (p *UserCreationOutboxPublisher) publishBatch(ctx context.Context) (int, er
 
 		kafkaMessages, err := buildMessages(messages)
 		if err != nil {
-			return fmt.Errorf("build kafka messages: %w", err)
+			return fmt.Errorf("build Kafka messages: %w", err)
 		}
 
 		writeCtx, cancel := context.WithTimeout(ctx, p.writeTimeout)
 		defer cancel()
 
-		p.logger.Debug("writing outbox uc messages to kafka", slog.Any("messages", messages))
+		p.logger.Debug("writing outbox uc_result messages to kafka", slog.Any("messages", messages))
 
 		if err = p.writer.WriteMessages(writeCtx, kafkaMessages...); err != nil {
 			if kafkax.IsUnknownTopicOrPartition(err) {
 				if ensureErr := kafkax.EnsureTopic(writeCtx, p.brokers, p.topic, 1, 1); ensureErr != nil {
-					return fmt.Errorf("ensure topic %q after publish failure: %w", p.topic, ensureErr)
+					return fmt.Errorf("ensure topic exists: %w", ensureErr)
 				}
+				return fmt.Errorf("write messages to Kafka: %w", err)
 			}
-			return fmt.Errorf("write kafka messages: %w", err)
 		}
 
 		for _, message := range messages {
-			if err = p.repo.DeleteUserCreationMessage(ctx, tx, message.ID); err != nil {
+			if err = p.repo.DeleteUCResultMessage(ctx, tx, message.ID); err != nil {
 				return fmt.Errorf("delete outbox message %s: %w", message.ID, err)
 			}
 		}
@@ -138,12 +129,12 @@ func (p *UserCreationOutboxPublisher) publishBatch(ctx context.Context) (int, er
 	if err != nil {
 		return 0, err
 	}
-	p.logger.Info("published user creation messages", slog.Int("count", len(messages)))
+	p.logger.Debug("published outbox uc_result messages to kafka", slog.Int("count", len(messages)))
 
 	return len(messages), nil
 }
 
-func buildMessages(messages []auth_users.UserCreationMessage) ([]kafkago.Message, error) {
+func buildMessages(messages []usersauth.UCResultMessage) ([]kafkago.Message, error) {
 	kafkaMessages := make([]kafkago.Message, 0, len(messages))
 
 	for _, message := range messages {
@@ -153,12 +144,12 @@ func buildMessages(messages []auth_users.UserCreationMessage) ([]kafkago.Message
 		}
 
 		kafkaMessages = append(kafkaMessages, kafkago.Message{
-			Key:   []byte(message.ID.String()),
+			Key:   []byte(message.UserID.String()),
 			Value: payload,
 			Time:  message.CreatedAt,
 			Headers: []kafkago.Header{
 				{Key: "message_id", Value: []byte(message.ID.String())},
-				{Key: "message_type", Value: []byte(userCreationMessageType)},
+				{Key: "message_type", Value: []byte(ucResultMessageType)},
 			},
 		})
 	}
