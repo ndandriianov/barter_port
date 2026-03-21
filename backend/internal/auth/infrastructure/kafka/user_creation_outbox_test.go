@@ -2,7 +2,7 @@ package kafka
 
 import (
 	"barter-port/internal/auth/infrastructure/repository/outbox"
-	authusers "barter-port/internal/contracts/kafka/auth-users"
+	authusers "barter-port/internal/contracts/kafka/messages/auth-users"
 	"context"
 	"encoding/json"
 	"errors"

@@ -1,7 +1,7 @@
 package kafka
 
 import (
-	authusers "barter-port/internal/contracts/kafka/auth-users"
+	authusers "barter-port/internal/contracts/kafka/messages/auth-users"
 	"barter-port/internal/libs/db"
 	"barter-port/internal/users/infrastructure/repository/inbox"
 	"context"
