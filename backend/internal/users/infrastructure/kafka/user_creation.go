@@ -22,6 +22,28 @@ type UserCreationInboxConsumer struct {
 	pollInterval time.Duration
 }
 
+type Params struct {
+	Log          *slog.Logger
+	Reader       *kafkago.Reader
+	DB           *pgxpool.Pool
+	InboxRepo    *inbox.Repository
+	PollInterval time.Duration
+}
+
+func NewUserCreationInboxConsumer(params Params) *UserCreationInboxConsumer {
+	if params.PollInterval <= 0 {
+		params.PollInterval = time.Second * 5
+	}
+
+	return &UserCreationInboxConsumer{
+		log:          params.Log,
+		reader:       params.Reader,
+		db:           params.DB,
+		inboxRepo:    params.InboxRepo,
+		pollInterval: params.PollInterval,
+	}
+}
+
 func (c *UserCreationInboxConsumer) Run(ctx context.Context) error {
 	defer func() {
 		if err := c.reader.Close(); err != nil {

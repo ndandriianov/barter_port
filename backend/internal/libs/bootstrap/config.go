@@ -42,6 +42,7 @@ type Config struct {
 	Kafka struct {
 		Brokers           []string      `mapstructure:"brokers"`
 		UserCreationTopic string        `mapstructure:"user_creation_topic"`
+		UserCreationGroup string        `mapstructure:"user_creation_group"`
 		BatchSize         int           `mapstructure:"batch_size"`
 		PollInterval      time.Duration `mapstructure:"poll_interval"`
 		WriteTimeout      time.Duration `mapstructure:"write_timeout"`

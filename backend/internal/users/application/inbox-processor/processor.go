@@ -24,13 +24,26 @@ type Processor struct {
 
 	batchSize    int
 	pollInterval time.Duration
-	writeTimeout time.Duration
 }
 
-func NewProcessor(inboxRepo *inbox.Repository, userRepo *user.Repository) *Processor {
+type Params struct {
+	InboxRepo *inbox.Repository
+	UserRepo  *user.Repository
+	Db        *pgxpool.Pool
+	Log       *slog.Logger
+
+	BatchSize    int
+	PollInterval time.Duration
+}
+
+func NewProcessor(params Params) *Processor {
 	return &Processor{
-		inboxRepo: inboxRepo,
-		userRepo:  userRepo,
+		inboxRepo:    params.InboxRepo,
+		userRepo:     params.UserRepo,
+		db:           params.Db,
+		log:          params.Log,
+		batchSize:    params.BatchSize,
+		pollInterval: params.PollInterval,
 	}
 }
 
