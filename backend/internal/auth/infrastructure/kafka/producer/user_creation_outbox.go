@@ -156,7 +156,7 @@ func buildMessages(messages []auth_users.UserCreationMessage) ([]kafkago.Message
 		}
 
 		kafkaMessages = append(kafkaMessages, kafkago.Message{
-			Key:   []byte(message.UserID.String()),
+			Key:   []byte(message.ID.String()),
 			Value: payload,
 			Time:  message.CreatedAt,
 			Headers: []kafkago.Header{
