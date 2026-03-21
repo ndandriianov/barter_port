@@ -1,7 +1,7 @@
 package inbox
 
 import (
-	authusers "barter-port/internal/contracts/kafka/auth-users"
+	authusers "barter-port/internal/contracts/kafka/messages/auth-users"
 	"testing"
 	"time"
 

@@ -5,7 +5,7 @@ import (
 	"barter-port/internal/auth/infrastructure/repository/email_token"
 	"barter-port/internal/auth/infrastructure/repository/outbox"
 	"barter-port/internal/auth/infrastructure/repository/user"
-	authusers "barter-port/internal/contracts/kafka/auth-users"
+	authusers "barter-port/internal/contracts/kafka/messages/auth-users"
 	"barter-port/internal/libs/db"
 	"errors"
 	"fmt"
