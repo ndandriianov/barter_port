@@ -27,7 +27,7 @@ func (r *Repository) WriteUserCreationMessage(ctx context.Context, exec pgx.Tx, 
 
 // ReadUserCreationMessagesForUpdate retrieves a batch of user creation events from the outbox table for processing.
 // It locks the selected rows to prevent concurrent processing by other workers.
-// Returns a slice of UserCreationEvent and any error encountered during the operation.
+// Produces only internal db errors.
 func (r *Repository) ReadUserCreationMessagesForUpdate(
 	ctx context.Context,
 	exec pgx.Tx,
