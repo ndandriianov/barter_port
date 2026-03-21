@@ -87,7 +87,7 @@ func TestBuildMessages(t *testing.T) {
 	require.Equal(t, message.CreatedAt, got[0].Time)
 	require.Equal(t, []kafkago.Header{
 		{Key: "message_id", Value: []byte(message.ID.String())},
-		{Key: "message_type", Value: []byte(userCreationEventType)},
+		{Key: "message_type", Value: []byte(userCreationMessageType)},
 	}, got[0].Headers)
 }
 
