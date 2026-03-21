@@ -80,6 +80,17 @@ CREATE TABLE user_creation_inbox
     created_at TIMESTAMPTZ NOT NULL
 );
 
+CREATE TABLE user_creation_result_outbox
+(
+    id         UUID PRIMARY KEY,
+    event_id   UUID        NOT NULL,
+    user_id    UUID        NOT NULL,
+    status     TEXT        NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+
+    CONSTRAINT user_creation_result_outbox_status_check CHECK (status IN ('CREATED', 'FAILED'))
+);
+
 CREATE TABLE deleted_users
 (
     id         UUID PRIMARY KEY,
