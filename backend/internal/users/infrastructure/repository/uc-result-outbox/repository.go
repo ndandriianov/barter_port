@@ -1,4 +1,4 @@
-package outbox
+package uc_result_outbox
 
 import (
 	usersauth "barter-port/contracts/kafka/messages/users-auth"

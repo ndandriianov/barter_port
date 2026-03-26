@@ -1,4 +1,4 @@
-package inbox
+package uc_inbox
 
 import (
 	authusers "barter-port/contracts/kafka/messages/auth-users"

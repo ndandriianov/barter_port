@@ -2,7 +2,7 @@ package producer
 
 import (
 	usersauth "barter-port/contracts/kafka/messages/users-auth"
-	"barter-port/internal/users/infrastructure/repository/outbox"
+	"barter-port/internal/users/infrastructure/repository/uc-result-outbox"
 	"barter-port/pkg/db"
 	"barter-port/pkg/kafkax"
 	"context"
@@ -15,14 +15,14 @@ import (
 
 type UCResultOutbox struct {
 	db        *pgxpool.Pool
-	repo      *outbox.Repository
+	repo      *uc_result_outbox.Repository
 	logger    *slog.Logger
 	publisher *kafkax.OutboxPublisher
 }
 
 func NewUCResultOutbox(
 	db *pgxpool.Pool,
-	repo *outbox.Repository,
+	repo *uc_result_outbox.Repository,
 	logger *slog.Logger,
 	publisher *kafkax.OutboxPublisher,
 ) *UCResultOutbox {
