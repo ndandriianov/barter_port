@@ -2,7 +2,6 @@ package app
 
 import (
 	"barter-port/internal/libs/bootstrap"
-	"barter-port/internal/libs/kafkax"
 	"barter-port/internal/libs/platform/logger"
 	"barter-port/internal/users/infrastructure/kafka/consumer"
 	"barter-port/internal/users/infrastructure/repository/inbox"
@@ -23,44 +22,38 @@ import (
 type App struct {
 	log             *slog.Logger
 	db              *pgxpool.Pool
+	inboxRepository *inbox.Repository
 	inboxProcessor  *inboxP.Processor
 	ucEventConsumer *consumer.UserCreationInboxConsumer
 }
 
 func NewApp(cfg bootstrap.Config) (*App, error) {
-	db, err := bootstrap.InitDatabaseFromConfig(cfg)
-	if err != nil {
+	app := &App{}
+
+	if err := app.initDatabase(cfg); err != nil {
 		return nil, fmt.Errorf("failed to initialize database: %w", err)
 	}
 
-	log := logger.NewJSONLogger(slog.LevelDebug, "users", "")
+	app.log = logger.NewJSONLogger(slog.LevelDebug, "users", "")
 
-	inboxRepo := inbox.NewRepository()
-	userRepo := user.NewRepository(db)
+	app.inboxRepository = inbox.NewRepository()
+	userRepo := user.NewRepository(app.db)
 
-	inboxProcessor := inboxP.NewProcessor(inboxP.Params{
-		InboxRepo:    inboxRepo,
+	app.inboxProcessor = inboxP.NewProcessor(inboxP.Params{
+		InboxRepo:    app.inboxRepository,
 		UserRepo:     userRepo,
-		Db:           db,
-		Log:          log,
+		Db:           app.db,
+		Log:          app.log,
 		BatchSize:    cfg.Kafka.BatchSize,
 		PollInterval: cfg.Kafka.PollInterval,
 	})
 
-	ucEventConsumer := consumer.NewUserCreationInboxConsumer(consumer.Params{
-		Log:          log,
-		Reader:       kafkax.NewMessageReader(cfg.Kafka.Brokers, cfg.Kafka.UserCreationTopic, cfg.Kafka.UserCreationGroup),
-		DB:           db,
-		InboxRepo:    inboxRepo,
-		PollInterval: cfg.Kafka.PollInterval,
-	})
+	err := app.initUCEventConsumer(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize user creation event consumer: %w", err)
+	}
 
-	return &App{
-		log:             log,
-		db:              db,
-		inboxProcessor:  inboxProcessor,
-		ucEventConsumer: ucEventConsumer,
-	}, nil
+	return app, nil
 }
 
 func (app *App) Run() error {

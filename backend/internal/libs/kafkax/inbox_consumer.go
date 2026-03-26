@@ -26,8 +26,12 @@ type messageReader interface {
 
 var ErrDuplicate = errors.New("duplicate message")
 
-func NewInboxConsumer[T any]() *InboxConsumer[T] {
-	return &InboxConsumer[T]{}
+func NewInboxConsumer[T any](log *slog.Logger, reader messageReader, pollInterval time.Duration) *InboxConsumer[T] {
+	return &InboxConsumer[T]{
+		log:          log,
+		reader:       reader,
+		pollInterval: pollInterval,
+	}
 }
 
 func (c *InboxConsumer[T]) Run(ctx context.Context, processMessage func(context.Context, T) error) error {
