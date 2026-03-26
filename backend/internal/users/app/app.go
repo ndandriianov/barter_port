@@ -2,7 +2,9 @@ package app
 
 import (
 	"barter-port/internal/users/infrastructure/kafka/consumer"
+	"barter-port/internal/users/infrastructure/kafka/producer"
 	ucinbox "barter-port/internal/users/infrastructure/repository/uc-inbox"
+	ucroutbox "barter-port/internal/users/infrastructure/repository/uc-result-outbox"
 	"barter-port/internal/users/infrastructure/repository/user"
 	"barter-port/pkg/bootstrap"
 	"barter-port/pkg/logger"
@@ -20,11 +22,13 @@ import (
 )
 
 type App struct {
-	log             *slog.Logger
-	db              *pgxpool.Pool
-	inboxRepository *ucinbox.Repository
-	inboxProcessor  *ucinboxP.Processor
-	ucEventConsumer *consumer.UserCreationInboxConsumer
+	log              *slog.Logger
+	db               *pgxpool.Pool
+	inboxRepository  *ucinbox.Repository
+	inboxProcessor   *ucinboxP.Processor
+	ucEventConsumer  *consumer.UserCreationInboxConsumer
+	outboxRepository *ucroutbox.Repository
+	ucrEventProducer *producer.UCResultOutbox
 }
 
 func NewApp(cfg bootstrap.Config) (*App, error) {
@@ -36,21 +40,30 @@ func NewApp(cfg bootstrap.Config) (*App, error) {
 
 	app.log = logger.NewJSONLogger(slog.LevelDebug, "users", "")
 
+	// Repositories
 	app.inboxRepository = ucinbox.NewRepository()
+	app.outboxRepository = ucroutbox.NewRepository()
 	userRepo := user.NewRepository(app.db)
 
-	app.inboxProcessor = ucinboxP.NewProcessor(ucinboxP.Params{
-		InboxRepo:    app.inboxRepository,
-		UserRepo:     userRepo,
-		Db:           app.db,
-		Log:          app.log,
-		BatchSize:    cfg.Kafka.BatchSize,
-		PollInterval: cfg.Kafka.PollInterval,
-	})
+	// Kafka
+	app.inboxProcessor = ucinboxP.NewProcessor(
+		app.inboxRepository,
+		app.outboxRepository,
+		userRepo,
+		app.db,
+		app.log,
+		cfg.Kafka.BatchSize,
+		cfg.Kafka.PollInterval,
+	)
 
 	err := app.initUCEventConsumer(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize user creation event consumer: %w", err)
+	}
+
+	err = app.initUCREventProducer(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize user creation result event producer: %w", err)
 	}
 
 	return app, nil
@@ -70,6 +83,12 @@ func (app *App) Run() error {
 	g.Add(func() error {
 		return app.ucEventConsumer.Run(ctx)
 	}, func(error) {
+		cancel()
+	})
+
+	g.Add(func() error {
+		return app.ucrEventProducer.Run(ctx)
+	}, func(err error) {
 		cancel()
 	})
 
