@@ -12,7 +12,7 @@ import (
 	"os/signal"
 	"syscall"
 
-	inboxP "barter-port/internal/users/application/inbox-processor"
+	ucinboxP "barter-port/internal/users/application/uc-inbox-processor"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/oklog/run"
@@ -23,7 +23,7 @@ type App struct {
 	log             *slog.Logger
 	db              *pgxpool.Pool
 	inboxRepository *ucinbox.Repository
-	inboxProcessor  *inboxP.Processor
+	inboxProcessor  *ucinboxP.Processor
 	ucEventConsumer *consumer.UserCreationInboxConsumer
 }
 
@@ -39,7 +39,7 @@ func NewApp(cfg bootstrap.Config) (*App, error) {
 	app.inboxRepository = ucinbox.NewRepository()
 	userRepo := user.NewRepository(app.db)
 
-	app.inboxProcessor = inboxP.NewProcessor(inboxP.Params{
+	app.inboxProcessor = ucinboxP.NewProcessor(ucinboxP.Params{
 		InboxRepo:    app.inboxRepository,
 		UserRepo:     userRepo,
 		Db:           app.db,

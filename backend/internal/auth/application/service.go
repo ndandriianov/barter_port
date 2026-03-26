@@ -4,7 +4,7 @@ import (
 	authusers "barter-port/contracts/kafka/messages/auth-users"
 	"barter-port/internal/auth/domain"
 	"barter-port/internal/auth/infrastructure/repository/email_token"
-	"barter-port/internal/auth/infrastructure/repository/outbox"
+	ucoutbox "barter-port/internal/auth/infrastructure/repository/uc-outbox"
 	"barter-port/internal/auth/infrastructure/repository/user"
 	"barter-port/pkg/db"
 	"context"
@@ -69,7 +69,7 @@ type Service struct {
 	tokens TokenRepo
 	mailer Mailer
 	logger *slog.Logger
-	outbox *outbox.Repository
+	outbox *ucoutbox.Repository
 
 	frontendBaseURL string
 	re              *regexp.Regexp
@@ -81,7 +81,7 @@ func NewService(
 	tokens TokenRepo,
 	mailer Mailer,
 	logger *slog.Logger,
-	outbox *outbox.Repository,
+	outbox *ucoutbox.Repository,
 
 	frontendBaseURL string,
 	re *regexp.Regexp,

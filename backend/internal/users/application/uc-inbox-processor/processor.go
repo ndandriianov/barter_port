@@ -1,4 +1,4 @@
-package inbox_processor
+package uc_inbox_processor
 
 import (
 	authusers "barter-port/contracts/kafka/messages/auth-users"
