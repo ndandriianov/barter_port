@@ -4,8 +4,8 @@ import (
 	"barter-port/internal/auth/application"
 	authkafka "barter-port/internal/auth/infrastructure/kafka/producer"
 	"barter-port/internal/auth/infrastructure/repository/email_token"
-	"barter-port/internal/auth/infrastructure/repository/outbox"
 	"barter-port/internal/auth/infrastructure/repository/refresh_token"
+	ucoutbox "barter-port/internal/auth/infrastructure/repository/uc-outbox"
 	"barter-port/internal/auth/infrastructure/repository/user"
 	"barter-port/internal/auth/infrastructure/transport"
 	"barter-port/pkg/bootstrap"
@@ -46,7 +46,7 @@ func NewApp(cfg bootstrap.Config) (*App, error) {
 	userRepo := user.NewRepository()
 	emailTokenRepo := email_token.NewRepository()
 	refreshTokenRepo := refresh_token.NewRepository()
-	outboxRepo := &outbox.Repository{}
+	outboxRepo := &ucoutbox.Repository{}
 
 	m := bootstrap.InitMailerFromConfig(cfg)
 	if err = bootstrap.ValidateMailConfig(cfg); err != nil {
