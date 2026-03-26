@@ -31,7 +31,7 @@ type App struct {
 	logger          *slog.Logger
 	db              *pgxpool.Pool
 	server          *http.Server
-	outboxPublisher *authkafka.UserCreationOutboxPublisher
+	outboxPublisher *authkafka.UCOutbox
 }
 
 func NewApp(cfg bootstrap.Config) (*App, error) {

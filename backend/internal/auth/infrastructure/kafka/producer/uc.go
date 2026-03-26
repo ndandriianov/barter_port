@@ -13,7 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type UserCreationOutboxPublisher struct {
+type UCOutbox struct {
 	db        *pgxpool.Pool
 	repo      *uc_outbox.Repository
 	logger    *slog.Logger
@@ -25,8 +25,8 @@ func NewUserCreationOutboxPublisher(
 	repo *uc_outbox.Repository,
 	logger *slog.Logger,
 	publisher *kafkax.OutboxPublisher,
-) *UserCreationOutboxPublisher {
-	return &UserCreationOutboxPublisher{
+) *UCOutbox {
+	return &UCOutbox{
 		db:        dbPool,
 		repo:      repo,
 		logger:    logger,
@@ -34,15 +34,15 @@ func NewUserCreationOutboxPublisher(
 	}
 }
 
-func (p *UserCreationOutboxPublisher) Run(ctx context.Context) error {
+func (p *UCOutbox) Run(ctx context.Context) error {
 	return p.publisher.Run(ctx, p.publishBatch, "failed to publish user creation outbox batch")
 }
 
-func (p *UserCreationOutboxPublisher) Close() error {
+func (p *UCOutbox) Close() error {
 	return p.publisher.Close()
 }
 
-func (p *UserCreationOutboxPublisher) publishBatch(ctx context.Context) (int, error) {
+func (p *UCOutbox) publishBatch(ctx context.Context) (int, error) {
 	var messages []auth_users.UserCreationMessage
 
 	err := db.RunInTx(ctx, p.db, func(ctx context.Context, tx pgx.Tx) error {
