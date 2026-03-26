@@ -8,9 +8,9 @@ import (
 	"barter-port/internal/auth/infrastructure/repository/refresh_token"
 	"barter-port/internal/auth/infrastructure/repository/user"
 	"barter-port/internal/auth/infrastructure/transport"
-	"barter-port/internal/libs/bootstrap"
-	"barter-port/internal/libs/kafkax"
-	"barter-port/internal/libs/platform/logger"
+	bootstrap2 "barter-port/pkg/bootstrap"
+	kafkax "barter-port/pkg/kafkax"
+	"barter-port/pkg/logger"
 	"errors"
 	"log"
 	"log/slog"
@@ -34,8 +34,8 @@ type App struct {
 	outboxPublisher *authkafka.UserCreationOutboxPublisher
 }
 
-func NewApp(cfg bootstrap.Config) (*App, error) {
-	db, err := bootstrap.InitDatabaseFromConfig(cfg)
+func NewApp(cfg bootstrap2.Config) (*App, error) {
+	db, err := bootstrap2.InitDatabaseFromConfig(cfg)
 	if err != nil {
 		return nil, errors.New("failed to initialize database: " + err.Error())
 	}
@@ -48,8 +48,8 @@ func NewApp(cfg bootstrap.Config) (*App, error) {
 	refreshTokenRepo := refresh_token.NewRepository()
 	outboxRepo := &outbox.Repository{}
 
-	m := bootstrap.InitMailerFromConfig(cfg)
-	if err = bootstrap.ValidateMailConfig(cfg); err != nil {
+	m := bootstrap2.InitMailerFromConfig(cfg)
+	if err = bootstrap2.ValidateMailConfig(cfg); err != nil {
 		db.Close()
 		return nil, errors.New("failed to initialize mailer: " + err.Error())
 	}
@@ -57,13 +57,13 @@ func NewApp(cfg bootstrap.Config) (*App, error) {
 	logg := logger.NewJSONLogger(slog.LevelDebug, "auth-service", "")
 	infrastructureLogger := logger.NewJSONLogger(slog.LevelDebug, "", "infrastructure")
 
-	jwtManager, err := bootstrap.InitJWTManagerFromConfig(cfg)
+	jwtManager, err := bootstrap2.InitJWTManagerFromConfig(cfg)
 	if err != nil {
 		db.Close()
 		return nil, errors.New("failed to initialize JWT manager: " + err.Error())
 	}
 
-	validator, err := bootstrap.InitLocalJWTFromConfig(cfg)
+	validator, err := bootstrap2.InitLocalJWTFromConfig(cfg)
 	if err != nil {
 		db.Close()
 		return nil, errors.New("failed to initialize JWT validator: " + err.Error())
@@ -109,7 +109,7 @@ func NewApp(cfg bootstrap.Config) (*App, error) {
 	handlers := transport.NewHandlers(logg, authService, jwtManager, db, refreshTokenRepo)
 	router := transport.NewRouter(logg, validator, handlers)
 	server := &http.Server{
-		Addr:    bootstrap.InitPortStringFromConfig(cfg, 8081),
+		Addr:    bootstrap2.InitPortStringFromConfig(cfg, 8081),
 		Handler: router,
 	}
 

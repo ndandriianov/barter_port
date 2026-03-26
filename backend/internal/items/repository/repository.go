@@ -2,7 +2,7 @@ package repository
 
 import (
 	"barter-port/internal/items/model"
-	"barter-port/internal/libs/repox"
+	"barter-port/pkg/repox"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/net/context"

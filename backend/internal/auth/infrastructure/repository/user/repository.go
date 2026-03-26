@@ -2,8 +2,8 @@ package user
 
 import (
 	"barter-port/internal/auth/domain"
-	"barter-port/internal/libs/db"
-	"barter-port/internal/libs/repox"
+	"barter-port/pkg/db"
+	"barter-port/pkg/repox"
 	"errors"
 
 	"context"

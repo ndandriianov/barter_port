@@ -1,7 +1,7 @@
 package validators
 
 import (
-	"barter-port/internal/libs/authkit"
+	"barter-port/pkg/authkit"
 	"errors"
 	"fmt"
 

@@ -4,10 +4,11 @@ import (
 	"barter-port/internal/auth/application"
 	"barter-port/internal/auth/domain"
 	"barter-port/internal/auth/infrastructure/repository/refresh_token"
-	"barter-port/internal/libs/authkit"
-	"barter-port/internal/libs/db"
-	"barter-port/internal/libs/jwt"
-	"barter-port/internal/libs/platform/http_api"
+	"barter-port/pkg/authkit"
+	"barter-port/pkg/db"
+	"barter-port/pkg/http_api"
+	"barter-port/pkg/jwt"
+	"context"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -17,7 +18,6 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"golang.org/x/net/context"
 )
 
 const RefreshCookieName = "refresh_token"

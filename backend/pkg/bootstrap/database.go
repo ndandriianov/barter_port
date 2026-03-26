@@ -1,7 +1,7 @@
 package bootstrap
 
 import (
-	"barter-port/internal/libs/platform/database"
+	"barter-port/pkg/database"
 	"fmt"
 
 	"github.com/jackc/pgx/v5/pgxpool"

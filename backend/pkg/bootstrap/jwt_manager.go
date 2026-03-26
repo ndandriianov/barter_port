@@ -1,7 +1,7 @@
 package bootstrap
 
 import (
-	"barter-port/internal/libs/jwt"
+	"barter-port/pkg/jwt"
 	"fmt"
 )
 

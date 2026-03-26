@@ -2,11 +2,11 @@ package inbox_processor
 
 import (
 	authusers "barter-port/internal/contracts/kafka/messages/auth-users"
-	"barter-port/internal/libs/db"
-	"barter-port/internal/libs/errorx"
 	"barter-port/internal/users/infrastructure/repository/inbox"
 	"barter-port/internal/users/infrastructure/repository/user"
 	"barter-port/internal/users/model"
+	"barter-port/pkg/db"
+	"barter-port/pkg/errorx"
 	"errors"
 	"fmt"
 	"log/slog"

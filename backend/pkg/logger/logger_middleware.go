@@ -1,7 +1,7 @@
 package logger
 
 import (
-	"barter-port/internal/libs/authkit"
+	"barter-port/pkg/authkit"
 	"log/slog"
 	"net/http"
 

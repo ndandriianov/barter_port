@@ -2,9 +2,9 @@ package producer
 
 import (
 	usersauth "barter-port/internal/contracts/kafka/messages/users-auth"
-	"barter-port/internal/libs/db"
-	"barter-port/internal/libs/kafkax"
 	"barter-port/internal/users/infrastructure/repository/outbox"
+	"barter-port/pkg/db"
+	kafkax2 "barter-port/pkg/kafkax"
 	"context"
 	"fmt"
 	"log/slog"
@@ -17,14 +17,14 @@ type UCResultOutbox struct {
 	db        *pgxpool.Pool
 	repo      *outbox.Repository
 	logger    *slog.Logger
-	publisher *kafkax.OutboxPublisher
+	publisher *kafkax2.OutboxPublisher
 }
 
 func NewUCResultOutbox(
 	db *pgxpool.Pool,
 	repo *outbox.Repository,
 	logger *slog.Logger,
-	publisher *kafkax.OutboxPublisher,
+	publisher *kafkax2.OutboxPublisher,
 ) *UCResultOutbox {
 	return &UCResultOutbox{
 		db:        db,
@@ -55,7 +55,7 @@ func (p *UCResultOutbox) publishBatch(ctx context.Context) (int, error) {
 			return nil
 		}
 
-		kafkaMessages, err := kafkax.BuildMessages(messages)
+		kafkaMessages, err := kafkax2.BuildMessages(messages)
 		if err != nil {
 			return fmt.Errorf("build Kafka messages: %w", err)
 		}

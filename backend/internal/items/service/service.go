@@ -2,7 +2,7 @@ package service
 
 import (
 	"barter-port/internal/items/model"
-	"barter-port/internal/libs/platform/logger"
+	"barter-port/pkg/logger"
 	"errors"
 	"fmt"
 	"log/slog"

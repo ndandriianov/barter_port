@@ -1,8 +1,8 @@
 package main
 
 import (
-	"barter-port/internal/libs/bootstrap"
 	"barter-port/internal/users/app"
+	"barter-port/pkg/bootstrap"
 	"errors"
 	"log"
 	"os"

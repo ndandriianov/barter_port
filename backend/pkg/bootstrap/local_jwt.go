@@ -1,7 +1,7 @@
 package bootstrap
 
 import (
-	"barter-port/internal/libs/authkit/validators"
+	"barter-port/pkg/authkit/validators"
 	"fmt"
 )
 

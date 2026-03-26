@@ -2,8 +2,8 @@ package inbox
 
 import (
 	authusers "barter-port/internal/contracts/kafka/messages/auth-users"
-	"barter-port/internal/libs/db"
-	"barter-port/internal/libs/repox"
+	"barter-port/pkg/db"
+	"barter-port/pkg/repox"
 	"errors"
 
 	"github.com/google/uuid"

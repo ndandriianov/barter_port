@@ -1,7 +1,7 @@
 package kafkax
 
 import (
-	"barter-port/internal/libs/errorx"
+	"barter-port/pkg/errorx"
 	"context"
 	"fmt"
 	"log/slog"
