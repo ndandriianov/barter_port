@@ -88,7 +88,7 @@ CREATE TABLE user_creation_result_outbox
     status     TEXT        NOT NULL,
     created_at TIMESTAMPTZ NOT NULL,
 
-    CONSTRAINT user_creation_result_outbox_status_check CHECK (status IN ('CREATED', 'FAILED'))
+    CONSTRAINT user_creation_result_outbox_status_check CHECK (status IN ('Success', 'Failed'))
 );
 
 CREATE TABLE deleted_users

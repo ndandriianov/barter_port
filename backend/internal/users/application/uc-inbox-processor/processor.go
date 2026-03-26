@@ -2,7 +2,10 @@ package uc_inbox_processor
 
 import (
 	authusers "barter-port/contracts/kafka/messages/auth-users"
+	usersauth "barter-port/contracts/kafka/messages/users-auth"
+	statusUpdate "barter-port/contracts/kafka/messages/users-auth/status-update"
 	ucinbox "barter-port/internal/users/infrastructure/repository/uc-inbox"
+	ucroutbox "barter-port/internal/users/infrastructure/repository/uc-result-outbox"
 	"barter-port/internal/users/infrastructure/repository/user"
 	"barter-port/internal/users/model"
 	"barter-port/pkg/db"
@@ -13,25 +16,28 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type Processor struct {
-	inboxRepo *ucinbox.Repository
-	userRepo  *user.Repository
-	db        *pgxpool.Pool
-	log       *slog.Logger
+	inboxRepo  *ucinbox.Repository
+	outboxRepo *ucroutbox.Repository
+	userRepo   *user.Repository
+	db         *pgxpool.Pool
+	log        *slog.Logger
 
 	batchSize    int
 	pollInterval time.Duration
 }
 
 type Params struct {
-	InboxRepo *ucinbox.Repository
-	UserRepo  *user.Repository
-	Db        *pgxpool.Pool
-	Log       *slog.Logger
+	InboxRepo  *ucinbox.Repository
+	OutboxRepo *ucroutbox.Repository
+	UserRepo   *user.Repository
+	Db         *pgxpool.Pool
+	Log        *slog.Logger
 
 	BatchSize    int
 	PollInterval time.Duration
@@ -40,6 +46,7 @@ type Params struct {
 func NewProcessor(params Params) *Processor {
 	return &Processor{
 		inboxRepo:    params.InboxRepo,
+		outboxRepo:   params.OutboxRepo,
 		userRepo:     params.UserRepo,
 		db:           params.Db,
 		log:          params.Log,
@@ -91,13 +98,32 @@ func (p *Processor) processNext(ctx context.Context) (int, error) {
 			err = p.userRepo.AddUser(ctx, tx, message.UserID)
 			if err != nil {
 				if errors.Is(err, model.ErrUserAlreadyExists) {
-					// TODO: отправить событие об уже существующем пользователе
+					err = p.outboxRepo.WriteUCResultMessage(ctx, tx, usersauth.UCResultMessage{
+						ID:        uuid.New(),
+						EventID:   message.EventID,
+						UserID:    message.UserID,
+						Status:    statusUpdate.Failed.String(),
+						CreatedAt: time.Now(),
+					})
+					if err != nil {
+						return fmt.Errorf("failed to write user creation result: %w", err)
+					}
 				}
 
 				return fmt.Errorf("failed to add user: %w", err)
 			}
 
 			// TODO: отправить событие об успехе
+			err = p.outboxRepo.WriteUCResultMessage(ctx, tx, usersauth.UCResultMessage{
+				ID:        uuid.New(),
+				EventID:   message.EventID,
+				UserID:    message.UserID,
+				Status:    statusUpdate.Success.String(),
+				CreatedAt: time.Now(),
+			})
+			if err != nil {
+				return fmt.Errorf("failed to write user creation result: %w", err)
+			}
 
 			err = p.inboxRepo.DeleteUserCreationMessage(ctx, tx, message.ID)
 			if err != nil {
