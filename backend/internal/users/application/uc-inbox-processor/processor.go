@@ -32,26 +32,23 @@ type Processor struct {
 	pollInterval time.Duration
 }
 
-type Params struct {
-	InboxRepo  *ucinbox.Repository
-	OutboxRepo *ucroutbox.Repository
-	UserRepo   *user.Repository
-	Db         *pgxpool.Pool
-	Log        *slog.Logger
-
-	BatchSize    int
-	PollInterval time.Duration
-}
-
-func NewProcessor(params Params) *Processor {
+func NewProcessor(
+	inboxRepo *ucinbox.Repository,
+	outboxRepo *ucroutbox.Repository,
+	userRepo *user.Repository,
+	db *pgxpool.Pool,
+	log *slog.Logger,
+	batchSize int,
+	pollInterval time.Duration,
+) *Processor {
 	return &Processor{
-		inboxRepo:    params.InboxRepo,
-		outboxRepo:   params.OutboxRepo,
-		userRepo:     params.UserRepo,
-		db:           params.Db,
-		log:          params.Log,
-		batchSize:    params.BatchSize,
-		pollInterval: params.PollInterval,
+		inboxRepo:    inboxRepo,
+		outboxRepo:   outboxRepo,
+		userRepo:     userRepo,
+		db:           db,
+		log:          log,
+		batchSize:    batchSize,
+		pollInterval: pollInterval,
 	}
 }
 

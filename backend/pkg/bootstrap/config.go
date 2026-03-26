@@ -40,12 +40,14 @@ type Config struct {
 	} `mapstructure:"jwt"`
 
 	Kafka struct {
-		Brokers           []string      `mapstructure:"brokers"`
-		UserCreationTopic string        `mapstructure:"user_creation_topic"`
-		UserCreationGroup string        `mapstructure:"user_creation_group"`
-		BatchSize         int           `mapstructure:"batch_size"`
-		PollInterval      time.Duration `mapstructure:"poll_interval"`
-		WriteTimeout      time.Duration `mapstructure:"write_timeout"`
+		Brokers                 []string      `mapstructure:"brokers"`
+		UserCreationTopic       string        `mapstructure:"user_creation_topic"`
+		UserCreationGroup       string        `mapstructure:"user_creation_group"`
+		UserCreationResultTopic string        `mapstructure:"user_creation_result_topic"`
+		UserCreationResultGroup string        `mapstructure:"user_creation_result_group"`
+		BatchSize               int           `mapstructure:"batch_size"`
+		PollInterval            time.Duration `mapstructure:"poll_interval"`
+		WriteTimeout            time.Duration `mapstructure:"write_timeout"`
 	} `mapstructure:"kafka"`
 
 	Port int `mapstructure:"port"`
