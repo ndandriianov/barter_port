@@ -2,7 +2,7 @@ package app
 
 import (
 	"barter-port/internal/users/infrastructure/kafka/consumer"
-	"barter-port/internal/users/infrastructure/repository/inbox"
+	ucinbox "barter-port/internal/users/infrastructure/repository/uc-inbox"
 	"barter-port/internal/users/infrastructure/repository/user"
 	"barter-port/pkg/bootstrap"
 	"barter-port/pkg/logger"
@@ -22,7 +22,7 @@ import (
 type App struct {
 	log             *slog.Logger
 	db              *pgxpool.Pool
-	inboxRepository *inbox.Repository
+	inboxRepository *ucinbox.Repository
 	inboxProcessor  *inboxP.Processor
 	ucEventConsumer *consumer.UserCreationInboxConsumer
 }
@@ -36,7 +36,7 @@ func NewApp(cfg bootstrap.Config) (*App, error) {
 
 	app.log = logger.NewJSONLogger(slog.LevelDebug, "users", "")
 
-	app.inboxRepository = inbox.NewRepository()
+	app.inboxRepository = ucinbox.NewRepository()
 	userRepo := user.NewRepository(app.db)
 
 	app.inboxProcessor = inboxP.NewProcessor(inboxP.Params{

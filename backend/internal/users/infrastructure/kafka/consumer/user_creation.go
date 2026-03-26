@@ -2,7 +2,7 @@ package consumer
 
 import (
 	authusers "barter-port/contracts/kafka/messages/auth-users"
-	"barter-port/internal/users/infrastructure/repository/inbox"
+	ucinbox "barter-port/internal/users/infrastructure/repository/uc-inbox"
 	"barter-port/pkg/db"
 	"barter-port/pkg/kafkax"
 	"context"
@@ -41,7 +41,7 @@ func (c *UserCreationInboxConsumer) Run(ctx context.Context) error {
 func (c *UserCreationInboxConsumer) consumeMessage(ctx context.Context, message authusers.UserCreationMessage) error {
 	err := c.inboxRepo.WriteUserCreationMessage(ctx, c.db, message)
 	if err != nil {
-		if errors.Is(err, inbox.ErrUCEventAlreadyExists) {
+		if errors.Is(err, ucinbox.ErrUCEventAlreadyExists) {
 			return kafkax.ErrDuplicate
 		}
 		return fmt.Errorf("failed to write user creation message to inbox: %w", err)

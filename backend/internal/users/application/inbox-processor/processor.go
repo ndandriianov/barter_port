@@ -2,7 +2,7 @@ package inbox_processor
 
 import (
 	authusers "barter-port/contracts/kafka/messages/auth-users"
-	"barter-port/internal/users/infrastructure/repository/inbox"
+	ucinbox "barter-port/internal/users/infrastructure/repository/uc-inbox"
 	"barter-port/internal/users/infrastructure/repository/user"
 	"barter-port/internal/users/model"
 	"barter-port/pkg/db"
@@ -18,7 +18,7 @@ import (
 )
 
 type Processor struct {
-	inboxRepo *inbox.Repository
+	inboxRepo *ucinbox.Repository
 	userRepo  *user.Repository
 	db        *pgxpool.Pool
 	log       *slog.Logger
@@ -28,7 +28,7 @@ type Processor struct {
 }
 
 type Params struct {
-	InboxRepo *inbox.Repository
+	InboxRepo *ucinbox.Repository
 	UserRepo  *user.Repository
 	Db        *pgxpool.Pool
 	Log       *slog.Logger
