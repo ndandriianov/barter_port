@@ -4,8 +4,10 @@ import (
 	authusers "barter-port/internal/contracts/kafka/messages/auth-users"
 	"barter-port/internal/libs/db"
 	"barter-port/internal/libs/errorx"
+	"barter-port/internal/users/infrastructure/repository/inbox"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -93,9 +95,8 @@ func (c *UserCreationInboxConsumer) consumeMessage(ctx context.Context) error {
 	var message authusers.UserCreationMessage
 	err = json.Unmarshal(rawMessage.Value, &message)
 	if err != nil {
-		if commitErr := c.reader.CommitMessages(ctx, rawMessage); commitErr != nil {
-			return fmt.Errorf(
-				"failed to unmarshal message id=%s: %w; additionally failed to commit bad message: %w",
+		if commitErr := c.commitMessage(ctx, rawMessage); commitErr != nil {
+			return fmt.Errorf("failed to unmarshal message id=%s: %w; additionally: %w",
 				string(rawMessage.Key), err, commitErr,
 			)
 		}
@@ -103,15 +104,19 @@ func (c *UserCreationInboxConsumer) consumeMessage(ctx context.Context) error {
 	}
 
 	err = c.inboxRepo.WriteUserCreationMessage(ctx, c.db, message)
-	// TODO: проверка и skip при unique violation
 	if err != nil {
+		if errors.Is(err, inbox.ErrUCEventAlreadyExists) {
+			return c.commitMessage(ctx, rawMessage)
+		}
 		return fmt.Errorf("failed to write user creation message to inbox: %w", err)
 	}
 
-	err = c.reader.CommitMessages(ctx, rawMessage)
-	if err != nil {
-		return fmt.Errorf("failed to commit message id: %s: %w", string(rawMessage.Key), err)
-	}
+	return c.commitMessage(ctx, rawMessage)
+}
 
+func (c *UserCreationInboxConsumer) commitMessage(ctx context.Context, rawMessage kafkago.Message) error {
+	if commitErr := c.reader.CommitMessages(ctx, rawMessage); commitErr != nil {
+		return fmt.Errorf("commit message id: %s: %w", string(rawMessage.Key), commitErr)
+	}
 	return nil
 }
