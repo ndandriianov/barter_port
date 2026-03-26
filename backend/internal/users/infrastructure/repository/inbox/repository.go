@@ -1,14 +1,14 @@
 package inbox
 
 import (
-	authusers "barter-port/internal/contracts/kafka/messages/auth-users"
+	authusers "barter-port/contracts/kafka/messages/auth-users"
 	"barter-port/pkg/db"
 	"barter-port/pkg/repox"
+	"context"
 	"errors"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"golang.org/x/net/context"
 )
 
 var ErrUCEventAlreadyExists = errors.New("event already exists")

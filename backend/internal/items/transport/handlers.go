@@ -1,20 +1,20 @@
 package transport
 
 import (
-	"barter-port/internal/contracts/openapi/items/types"
+	"barter-port/contracts/openapi/items/types"
 	"barter-port/internal/items/model"
 	"barter-port/internal/items/model/error_messages"
 	"barter-port/internal/items/service"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/http_api"
 	"barter-port/pkg/logger"
+	"context"
 	"errors"
 	"log/slog"
 	"net/http"
 	"strconv"
 
 	"github.com/google/uuid"
-	"golang.org/x/net/context"
 )
 
 type itemService interface {

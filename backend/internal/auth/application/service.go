@@ -1,12 +1,13 @@
 package application
 
 import (
+	authusers "barter-port/contracts/kafka/messages/auth-users"
 	"barter-port/internal/auth/domain"
 	"barter-port/internal/auth/infrastructure/repository/email_token"
 	"barter-port/internal/auth/infrastructure/repository/outbox"
 	"barter-port/internal/auth/infrastructure/repository/user"
-	authusers "barter-port/internal/contracts/kafka/messages/auth-users"
 	"barter-port/pkg/db"
+	"context"
 	"errors"
 	"fmt"
 	"log"
@@ -19,7 +20,6 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/crypto/bcrypt"
-	"golang.org/x/net/context"
 )
 
 const (
