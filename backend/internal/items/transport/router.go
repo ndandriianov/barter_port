@@ -2,9 +2,9 @@ package transport
 
 import (
 	itemsdocfirst "barter-port/docs/doc-first/items"
-	"barter-port/internal/libs/authkit"
-	"barter-port/internal/libs/authkit/validators"
-	"barter-port/internal/libs/platform/logger"
+	"barter-port/pkg/authkit"
+	"barter-port/pkg/authkit/validators"
+	"barter-port/pkg/logger"
 	"log"
 	"log/slog"
 	"net/http"

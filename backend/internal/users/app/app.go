@@ -1,11 +1,11 @@
 package app
 
 import (
-	"barter-port/internal/libs/bootstrap"
-	"barter-port/internal/libs/platform/logger"
 	"barter-port/internal/users/infrastructure/kafka/consumer"
 	"barter-port/internal/users/infrastructure/repository/inbox"
 	"barter-port/internal/users/infrastructure/repository/user"
+	"barter-port/pkg/bootstrap"
+	"barter-port/pkg/logger"
 	"fmt"
 	"log/slog"
 	"os"

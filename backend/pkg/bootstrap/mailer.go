@@ -1,7 +1,7 @@
 package bootstrap
 
 import (
-	"barter-port/internal/libs/platform/mailer"
+	"barter-port/pkg/mailer"
 	"fmt"
 	"strings"
 )

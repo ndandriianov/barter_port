@@ -3,7 +3,7 @@ package refresh_token
 import (
 	"barter-port/internal/auth/domain"
 	"barter-port/internal/auth/infrastructure/repository"
-	"barter-port/internal/libs/db"
+	"barter-port/pkg/db"
 	"errors"
 
 	"github.com/google/uuid"

@@ -1,9 +1,9 @@
 package user
 
 import (
-	"barter-port/internal/libs/db"
-	"barter-port/internal/libs/repox"
 	"barter-port/internal/users/model"
+	"barter-port/pkg/db"
+	"barter-port/pkg/repox"
 	"errors"
 
 	"github.com/google/uuid"

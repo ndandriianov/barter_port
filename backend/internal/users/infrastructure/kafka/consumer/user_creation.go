@@ -2,9 +2,9 @@ package consumer
 
 import (
 	authusers "barter-port/internal/contracts/kafka/messages/auth-users"
-	"barter-port/internal/libs/db"
-	"barter-port/internal/libs/kafkax"
 	"barter-port/internal/users/infrastructure/repository/inbox"
+	"barter-port/pkg/db"
+	"barter-port/pkg/kafkax"
 	"context"
 	"errors"
 	"fmt"

@@ -2,7 +2,7 @@ package main
 
 import (
 	"barter-port/internal/auth/app"
-	"barter-port/internal/libs/bootstrap"
+	"barter-port/pkg/bootstrap"
 	"errors"
 	"log"
 	"os"
