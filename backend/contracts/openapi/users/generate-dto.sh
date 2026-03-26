@@ -8,5 +8,5 @@ npx -y @redocly/cli bundle \
 oapi-codegen \
   -generate types \
   -package types \
-  -o ./internal/contracts/openapi/users/types/types.gen.go \
+  -o ./contracts/openapi/users/types/types.gen.go \
   ./tmp/users.openapi.bundle.yaml

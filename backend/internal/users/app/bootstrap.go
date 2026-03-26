@@ -1,15 +1,15 @@
 package app
 
 import (
-	authusers "barter-port/internal/contracts/kafka/messages/auth-users"
+	authusers "barter-port/contracts/kafka/messages/auth-users"
 	"barter-port/internal/users/infrastructure/kafka/consumer"
-	bootstrap2 "barter-port/pkg/bootstrap"
-	kafkax2 "barter-port/pkg/kafkax"
+	"barter-port/pkg/bootstrap"
+	"barter-port/pkg/kafkax"
 	"errors"
 )
 
-func (app *App) initDatabase(cfg bootstrap2.Config) error {
-	db, err := bootstrap2.InitDatabaseFromConfig(cfg)
+func (app *App) initDatabase(cfg bootstrap.Config) error {
+	db, err := bootstrap.InitDatabaseFromConfig(cfg)
 	if err != nil {
 		return errors.New("failed to initialize database: " + err.Error())
 	}
@@ -17,7 +17,7 @@ func (app *App) initDatabase(cfg bootstrap2.Config) error {
 	return nil
 }
 
-func (app *App) initUCEventConsumer(cfg bootstrap2.Config) error {
+func (app *App) initUCEventConsumer(cfg bootstrap.Config) error {
 	if app.log == nil {
 		return errors.New("log is not initialized")
 	}
@@ -28,8 +28,8 @@ func (app *App) initUCEventConsumer(cfg bootstrap2.Config) error {
 		return errors.New("inboxRepository is not initialized")
 	}
 
-	reader := kafkax2.NewMessageReader(cfg.Kafka.Brokers, cfg.Kafka.UserCreationTopic, cfg.Kafka.UserCreationGroup)
-	kafkaConsumer := kafkax2.NewInboxConsumer[authusers.UserCreationMessage](app.log, reader, cfg.Kafka.PollInterval)
+	reader := kafkax.NewMessageReader(cfg.Kafka.Brokers, cfg.Kafka.UserCreationTopic, cfg.Kafka.UserCreationGroup)
+	kafkaConsumer := kafkax.NewInboxConsumer[authusers.UserCreationMessage](app.log, reader, cfg.Kafka.PollInterval)
 	app.ucEventConsumer = consumer.NewUserCreationInboxConsumer(app.db, app.inboxRepository, kafkaConsumer)
 
 	return nil

@@ -1,7 +1,7 @@
 package consumer
 
 import (
-	authusers "barter-port/internal/contracts/kafka/messages/auth-users"
+	authusers "barter-port/contracts/kafka/messages/auth-users"
 	"barter-port/internal/users/infrastructure/repository/inbox"
 	"barter-port/pkg/db"
 	"barter-port/pkg/kafkax"

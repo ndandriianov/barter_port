@@ -1,7 +1,7 @@
 package model
 
 import (
-	"barter-port/internal/contracts/openapi/items/types"
+	"barter-port/contracts/openapi/items/types"
 	"time"
 
 	"github.com/google/uuid"

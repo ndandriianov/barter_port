@@ -1,7 +1,7 @@
 package outbox
 
 import (
-	usersauth "barter-port/internal/contracts/kafka/messages/users-auth"
+	usersauth "barter-port/contracts/kafka/messages/users-auth"
 	"context"
 	"errors"
 

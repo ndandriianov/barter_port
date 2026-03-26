@@ -1,18 +1,17 @@
 package inbox_processor
 
 import (
-	authusers "barter-port/internal/contracts/kafka/messages/auth-users"
+	authusers "barter-port/contracts/kafka/messages/auth-users"
 	"barter-port/internal/users/infrastructure/repository/inbox"
 	"barter-port/internal/users/infrastructure/repository/user"
 	"barter-port/internal/users/model"
 	"barter-port/pkg/db"
 	"barter-port/pkg/errorx"
+	"context"
 	"errors"
 	"fmt"
 	"log/slog"
 	"time"
-
-	"context"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"

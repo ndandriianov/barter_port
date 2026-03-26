@@ -1,13 +1,13 @@
 package model
 
 import (
-	"barter-port/internal/contracts/openapi/items/types"
+	"barter-port/contracts/openapi/items/types"
 	"errors"
 	"strconv"
 	"time"
 
 	"github.com/google/uuid"
-	openapi_types "github.com/oapi-codegen/runtime/types"
+	openapitypes "github.com/oapi-codegen/runtime/types"
 )
 
 var (
@@ -59,7 +59,7 @@ func (c *UniversalCursor) ToDto() types.ItemsCursor {
 
 	return types.ItemsCursor{
 		CreatedAt: c.CreatedAt,
-		Id:        openapi_types.UUID{},
+		Id:        openapitypes.UUID{},
 		Views:     views,
 	}
 }

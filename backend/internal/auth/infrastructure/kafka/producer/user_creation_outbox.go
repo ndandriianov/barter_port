@@ -1,8 +1,8 @@
 package producer
 
 import (
+	"barter-port/contracts/kafka/messages/auth-users"
 	"barter-port/internal/auth/infrastructure/repository/outbox"
-	"barter-port/internal/contracts/kafka/messages/auth-users"
 	"barter-port/pkg/db"
 	"barter-port/pkg/kafkax"
 	"context"
