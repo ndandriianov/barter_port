@@ -19,10 +19,10 @@ func NewRepository() *Repository { return &Repository{} }
 // Produces only internal db errors.
 func (r *Repository) WriteUCResultMessage(ctx context.Context, exec pgx.Tx, message usersauth.UCResultMessage) error {
 	query := `
-		INSERT INTO user_creation_result_outbox (id, event_id, user_id, status, created_at)
-		VALUES ($1, $2, $3, $4, $5)`
+		INSERT INTO user_creation_result_outbox (id, user_id, status, created_at)
+		VALUES ($1, $2, $3, $4)`
 
-	_, err := exec.Exec(ctx, query, message.ID, message.EventID, message.UserID, message.Status, message.CreatedAt)
+	_, err := exec.Exec(ctx, query, message.ID, message.UserID, message.Status, message.CreatedAt)
 	return err
 }
 
@@ -31,7 +31,7 @@ func (r *Repository) WriteUCResultMessage(ctx context.Context, exec pgx.Tx, mess
 // Produces only internal db errors.
 func (r *Repository) ReadUCResultMessagesForUpdate(ctx context.Context, exec pgx.Tx, limit int) ([]usersauth.UCResultMessage, error) {
 	query := `
-		SELECT id, event_id, user_id, status, created_at FROM user_creation_result_outbox
+		SELECT id, user_id, status, created_at FROM user_creation_result_outbox
 		ORDER BY created_at, id LIMIT $1
 		FOR UPDATE SKIP LOCKED`
 

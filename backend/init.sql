@@ -20,20 +20,18 @@ CREATE TABLE users
 CREATE TABLE user_creation_outbox
 (
     id         UUID PRIMARY KEY,
-    event_id   UUID        NOT NULL,
     user_id    UUID        NOT NULL,
     created_at TIMESTAMPTZ NOT NULL
 );
 
 CREATE TABLE user_creation_events
 (
-    id         UUID PRIMARY KEY,
-    user_id    UUID        NOT NULL,
+    user_id    UUID PRIMARY KEY,
     created_at TIMESTAMPTZ NOT NULL,
     status     TEXT        NOT NULL,
 
     FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE,
-    CONSTRAINT user_creation_events_status_check CHECK (status IN ('NEW', 'CREATED', 'FAILED'))
+    CONSTRAINT user_creation_events_status_check CHECK (status IN ('New', 'Success', 'Failed'))
 );
 
 CREATE TABLE refresh_tokens

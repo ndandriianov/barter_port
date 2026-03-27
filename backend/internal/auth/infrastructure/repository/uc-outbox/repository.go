@@ -18,10 +18,10 @@ type Repository struct{}
 // Produces only internal db errors.
 func (r *Repository) WriteUserCreationMessage(ctx context.Context, exec pgx.Tx, message authusers.UserCreationMessage) error {
 	query := `
-		INSERT INTO user_creation_outbox (id, event_id, user_id, created_at)
-		VALUES ($1, $2, $3, $4)`
+		INSERT INTO user_creation_outbox (id, user_id, created_at)
+		VALUES ($1, $2, $3)`
 
-	_, err := exec.Exec(ctx, query, message.ID, message.EventID, message.UserID, message.CreatedAt)
+	_, err := exec.Exec(ctx, query, message.ID, message.UserID, message.CreatedAt)
 	return err
 }
 
@@ -34,7 +34,7 @@ func (r *Repository) ReadUserCreationMessagesForUpdate(
 	limit int,
 ) ([]authusers.UserCreationMessage, error) {
 	query := `
-		SELECT id, event_id, user_id, created_at FROM user_creation_outbox
+		SELECT id, user_id, created_at FROM user_creation_outbox
 		ORDER BY created_at, id LIMIT $1
 		FOR UPDATE SKIP LOCKED`
 

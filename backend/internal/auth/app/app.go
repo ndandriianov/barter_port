@@ -5,6 +5,7 @@ import (
 	authkafka "barter-port/internal/auth/infrastructure/kafka/producer"
 	"barter-port/internal/auth/infrastructure/repository/email_token"
 	"barter-port/internal/auth/infrastructure/repository/refresh_token"
+	ucevent "barter-port/internal/auth/infrastructure/repository/uc-event"
 	ucoutbox "barter-port/internal/auth/infrastructure/repository/uc-outbox"
 	"barter-port/internal/auth/infrastructure/repository/user"
 	"barter-port/internal/auth/infrastructure/transport"
@@ -44,6 +45,7 @@ func NewApp(cfg bootstrap.Config) (*App, error) {
 	re := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 
 	userRepo := user.NewRepository()
+	ucEventRepo := ucevent.NewRepository()
 	emailTokenRepo := email_token.NewRepository()
 	refreshTokenRepo := refresh_token.NewRepository()
 	outboxRepo := &ucoutbox.Repository{}
@@ -105,7 +107,7 @@ func NewApp(cfg bootstrap.Config) (*App, error) {
 
 	outboxPublisher := authkafka.NewUserCreationOutboxPublisher(db, outboxRepo, infrastructureLogger, kafkaPublisher)
 
-	authService := application.NewService(db, userRepo, emailTokenRepo, m, infrastructureLogger, outboxRepo, cfg.Mailer.Bypass, frontendURL, re)
+	authService := application.NewService(db, userRepo, ucEventRepo, emailTokenRepo, m, infrastructureLogger, outboxRepo, cfg.Mailer.Bypass, frontendURL, re)
 	handlers := transport.NewHandlers(logg, authService, jwtManager, db, refreshTokenRepo)
 	router := transport.NewRouter(logg, validator, handlers)
 	server := &http.Server{

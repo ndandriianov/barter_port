@@ -77,7 +77,10 @@ func (p *UCOutbox) publishBatch(ctx context.Context) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	p.logger.Info("published user creation messages", slog.Int("count", len(messages)))
+
+	if len(messages) > 0 {
+		p.logger.Debug("published user creation messages", slog.Int("count", len(messages)))
+	}
 
 	return len(messages), nil
 }
