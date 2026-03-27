@@ -3,6 +3,7 @@ package application
 import (
 	authusers "barter-port/contracts/kafka/messages/auth-users"
 	"barter-port/internal/auth/domain"
+	ucstatus "barter-port/internal/auth/domain/uc-status"
 	"barter-port/internal/auth/infrastructure/repository/email_token"
 	ucoutbox "barter-port/internal/auth/infrastructure/repository/uc-outbox"
 	"barter-port/internal/auth/infrastructure/repository/user"
@@ -59,6 +60,12 @@ type TokenRepo interface {
 	DeleteAllForUser(ctx context.Context, exec db.DB, userID uuid.UUID) error
 }
 
+type UserCreationEventRepository interface {
+	Add(ctx context.Context, exec db.DB, event domain.UserCreationEvent) error
+	GetByUserID(ctx context.Context, exec db.DB, userID uuid.UUID) (*domain.UserCreationEvent, error)
+	SetStatus(ctx context.Context, exec db.DB, userID uuid.UUID, status string) error
+}
+
 type Mailer interface {
 	Send(to, subject, body string) error
 }
@@ -66,6 +73,7 @@ type Mailer interface {
 type Service struct {
 	db              *pgxpool.Pool
 	users           UserRepo
+	ucEventRepo     UserCreationEventRepository
 	tokens          TokenRepo
 	mailer          Mailer
 	logger          *slog.Logger
@@ -79,6 +87,7 @@ type Service struct {
 func NewService(
 	db *pgxpool.Pool,
 	users UserRepo,
+	ucEventRepo UserCreationEventRepository,
 	tokens TokenRepo,
 	mailer Mailer,
 	logger *slog.Logger,
@@ -95,6 +104,7 @@ func NewService(
 	return &Service{
 		db:              db,
 		users:           users,
+		ucEventRepo:     ucEventRepo,
 		tokens:          tokens,
 		mailer:          mailer,
 		logger:          logger,
@@ -111,6 +121,8 @@ type RegisterResult struct {
 	Email  string
 }
 
+const typeName = "auth.service"
+
 // Register creates a new user, generates an email verification token,
 // and sends a verification email.
 //
@@ -121,6 +133,10 @@ type RegisterResult struct {
 //
 // All other errors are treated as internal and returned wrapped.
 func (s *Service) Register(ctx context.Context, email, password string) (RegisterResult, error) {
+	const funcName = "Register"
+
+	log := s.logger.With(slog.String("func", funcName), slog.String("type", typeName))
+
 	if err := s.validateCredentials(email, password); err != nil {
 		return RegisterResult{}, err
 	}
@@ -150,7 +166,7 @@ func (s *Service) Register(ctx context.Context, email, password string) (Registe
 				return fmt.Errorf("failed to verify email: %w", err)
 			}
 
-			s.logger.Info("user created", slog.String("email", u.Email), slog.Any("user_id", u.ID))
+			log.Info("user created", slog.String("email", u.Email), slog.Any("user_id", u.ID))
 			return nil
 		}
 
@@ -168,9 +184,12 @@ func (s *Service) Register(ctx context.Context, email, password string) (Registe
 
 		return nil
 	})
+	if err != nil {
+		return RegisterResult{}, err
+	}
 
 	if err = s.mailer.Send(u.Email, subject, s.getEmailBody(rawToken)); err != nil {
-		s.logger.Warn("failed to send email", slog.Any("error", err))
+		log.Warn("failed to send email", slog.Any("error", err))
 	}
 
 	return RegisterResult{
@@ -227,6 +246,10 @@ func (s *Service) RetrySendVerificationEmail(ctx context.Context, email, passwor
 //
 // All other errors are treated as internal and returned wrapped.
 func (s *Service) VerifyEmail(ctx context.Context, rawToken string) error {
+	const funcName = "VerifyEmail"
+
+	log := s.logger.With(slog.String("func", funcName), slog.String("type", typeName))
+
 	tokenHash, err := getHashFromRawToken(rawToken)
 	if err != nil {
 		return fmt.Errorf("cannot get hash from raw email_token: %w", err)
@@ -260,10 +283,10 @@ func (s *Service) VerifyEmail(ctx context.Context, rawToken string) error {
 			if err = s.createUser(ctx, tx, t.UserID); err != nil {
 				return fmt.Errorf("failed to create user: %w", err)
 			}
-			s.logger.Debug("email verified", slog.Any("user", t.UserID))
+			log.Debug("email verified", slog.Any("user", t.UserID))
 
 		} else {
-			s.logger.Debug("email already verified", slog.Any("user", t.UserID))
+			log.Debug("email already verified", slog.Any("user", t.UserID))
 		}
 
 		if err = s.tokens.MarkUsed(ctx, tx, tokenHash); err != nil {
@@ -277,23 +300,31 @@ func (s *Service) VerifyEmail(ctx context.Context, rawToken string) error {
 }
 
 func (s *Service) createUser(ctx context.Context, tx pgx.Tx, userID uuid.UUID) error {
+	const funcName = "createUser"
+
+	log := s.logger.With(slog.String("func", funcName), slog.String("type", typeName))
+
 	event := domain.UserCreationEvent{
-		ID:        uuid.New(),
 		UserID:    userID,
 		CreatedAt: time.Now(),
+		Status:    ucstatus.New,
 	}
 
-	// TODO: сделать запись о задаче на создание профиля, по которой потом будет polling frontend и ждать выполнения
+	err := s.ucEventRepo.Add(ctx, tx, event)
+	if err != nil {
+		return fmt.Errorf("failed to add user creation: %w", err)
+	}
 
-	err := s.outbox.WriteUserCreationMessage(ctx, tx, authusers.UserCreationMessage{
+	err = s.outbox.WriteUserCreationMessage(ctx, tx, authusers.UserCreationMessage{
 		ID:        uuid.New(),
-		EventID:   event.ID,
 		UserID:    event.UserID,
 		CreatedAt: time.Now(),
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to write user creation message to outbox: %w", err)
 	}
+
+	log.Info("user created", slog.Any("user_id", event.UserID))
 
 	return nil
 }

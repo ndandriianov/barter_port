@@ -97,7 +97,6 @@ func (p *Processor) processNext(ctx context.Context) (int, error) {
 				if errors.Is(err, model.ErrUserAlreadyExists) {
 					err = p.outboxRepo.WriteUCResultMessage(ctx, tx, usersauth.UCResultMessage{
 						ID:        uuid.New(),
-						EventID:   message.EventID,
 						UserID:    message.UserID,
 						Status:    statusUpdate.Failed.String(),
 						CreatedAt: time.Now(),
@@ -113,7 +112,6 @@ func (p *Processor) processNext(ctx context.Context) (int, error) {
 			// TODO: отправить событие об успехе
 			err = p.outboxRepo.WriteUCResultMessage(ctx, tx, usersauth.UCResultMessage{
 				ID:        uuid.New(),
-				EventID:   message.EventID,
 				UserID:    message.UserID,
 				Status:    statusUpdate.Success.String(),
 				CreatedAt: time.Now(),

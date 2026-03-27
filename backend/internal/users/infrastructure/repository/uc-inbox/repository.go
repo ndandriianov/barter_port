@@ -25,10 +25,10 @@ func NewRepository() *Repository {
 //   - ErrUCEventAlreadyExists: Occurs if an event with the same ID already exists in the inbox.
 func (r *Repository) WriteUserCreationMessage(ctx context.Context, exec db.DB, message authusers.UserCreationMessage) error {
 	query := `
-		INSERT INTO user_creation_inbox (id, event_id, user_id, created_at)
-		VALUES ($1, $2, $3, $4)`
+		INSERT INTO user_creation_inbox (id, user_id, created_at)
+		VALUES ($1, $2, $3)`
 
-	_, err := exec.Exec(ctx, query, message.ID, message.EventID, message.UserID, message.CreatedAt)
+	_, err := exec.Exec(ctx, query, message.ID, message.UserID, message.CreatedAt)
 	if err != nil {
 		if repox.IsUniqueViolation(err) {
 			return ErrUCEventAlreadyExists
@@ -45,7 +45,7 @@ func (r *Repository) WriteUserCreationMessage(ctx context.Context, exec db.DB, m
 // No Domain Errors
 func (r *Repository) ReadUserCreationMessagesForUpdate(ctx context.Context, exec db.DB, limit int) ([]authusers.UserCreationMessage, error) {
 	query := `
-		SELECT id, event_id, user_id, created_at FROM user_creation_inbox
+		SELECT id, user_id, created_at FROM user_creation_inbox
 		ORDER BY created_at, id LIMIT $1
 		FOR UPDATE SKIP LOCKED`
 

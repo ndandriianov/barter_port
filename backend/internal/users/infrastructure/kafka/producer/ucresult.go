@@ -77,7 +77,10 @@ func (p *UCResultOutbox) publishBatch(ctx context.Context) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	p.logger.Debug("published outbox uc_result messages to kafka", slog.Int("count", len(messages)))
+
+	if len(messages) > 0 {
+		p.logger.Debug("published outbox uc_result messages to kafka", slog.Int("count", len(messages)))
+	}
 
 	return len(messages), nil
 }
