@@ -4,7 +4,6 @@ Me:
     - id
     - email
     - createdAt
-    - name
   properties:
     id:
       $ref: './properties.yaml#/UserId'
@@ -27,7 +26,6 @@ User:
   type: object
   required:
     - id
-    - name
   properties:
     id:
       $ref: './properties.yaml#/UserId'

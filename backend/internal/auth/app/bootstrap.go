@@ -1,6 +1,7 @@
 package app
 
 import (
+	authpb "barter-port/contracts/grpc/auth/v1"
 	usersauth "barter-port/contracts/kafka/messages/users-auth"
 	"barter-port/internal/auth/application"
 	ucrprocessor "barter-port/internal/auth/application/uc-result-inbox-processor"
@@ -12,7 +13,8 @@ import (
 	ucoutbox "barter-port/internal/auth/infrastructure/repository/uc-outbox"
 	ucrinbox "barter-port/internal/auth/infrastructure/repository/uc-result-inbox"
 	"barter-port/internal/auth/infrastructure/repository/user"
-	"barter-port/internal/auth/infrastructure/transport"
+	httptransport "barter-port/internal/auth/infrastructure/transport"
+	grpctransport "barter-port/internal/auth/infrastructure/transport/grpc"
 	"barter-port/pkg/authkit/validators"
 	"barter-port/pkg/bootstrap"
 	"barter-port/pkg/jwt"
@@ -22,8 +24,12 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
+	"os"
 	"regexp"
+
+	"google.golang.org/grpc"
 )
 
 func (a *App) initDatabase(cfg bootstrap.Config) error {
@@ -73,12 +79,36 @@ func (a *App) initServices(cfg bootstrap.Config) error {
 		cfg.Frontend.URL,
 		regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`),
 	)
-	handlers := transport.NewHandlers(a.logger, authService, jwtManager, a.db, refreshTokenRepo)
-	router := transport.NewRouter(a.logger, validator, handlers)
+	handlers := httptransport.NewHandlers(a.logger, authService, jwtManager, a.db, refreshTokenRepo)
+	router := httptransport.NewRouter(a.logger, validator, handlers)
 	a.server = &http.Server{
 		Addr:    bootstrap.InitPortStringFromConfig(cfg, 8081),
 		Handler: router,
 	}
+
+	if err = a.initGRPCServer(authService); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (a *App) initGRPCServer(authService *application.Service) error {
+	grpcListenAddr := os.Getenv("AUTH_GRPC_LISTEN_ADDR")
+	if grpcListenAddr == "" {
+		grpcListenAddr = ":50051"
+	}
+
+	listener, err := net.Listen("tcp", grpcListenAddr)
+	if err != nil {
+		return fmt.Errorf("failed to listen grpc: %w", err)
+	}
+
+	server := grpc.NewServer()
+	authpb.RegisterAuthServiceServer(server, grpctransport.NewServer(authService))
+
+	a.grpcServer = server
+	a.grpcListener = listener
 
 	return nil
 }

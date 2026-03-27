@@ -1,20 +1,58 @@
 package app
 
 import (
+	authpb "barter-port/contracts/grpc/auth/v1"
 	authusers "barter-port/contracts/kafka/messages/auth-users"
+	userservice "barter-port/internal/users/application/user"
 	"barter-port/internal/users/infrastructure/kafka/consumer"
 	"barter-port/internal/users/infrastructure/kafka/producer"
+	httptransport "barter-port/internal/users/infrastructure/transport/http"
 	"barter-port/pkg/bootstrap"
+	"barter-port/pkg/db"
 	"barter-port/pkg/kafkax"
 	"errors"
+	"fmt"
+	"net/http"
+	"os"
+
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 )
 
+func (app *App) initAuthGRPCClient() (authpb.AuthServiceClient, error) {
+	grpcAddr := os.Getenv("AUTH_GRPC_ADDR")
+	if grpcAddr == "" {
+		grpcAddr = "localhost:50051"
+	}
+
+	conn, err := grpc.NewClient(grpcAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create auth grpc connection: %w", err)
+	}
+
+	app.authGRPCConn = conn
+	return authpb.NewAuthServiceClient(conn), nil
+}
+
 func (app *App) initDatabase(cfg bootstrap.Config) error {
-	db, err := bootstrap.InitDatabaseFromConfig(cfg)
+	pool, err := bootstrap.InitDatabaseFromConfig(cfg)
 	if err != nil {
 		return errors.New("failed to initialize database: " + err.Error())
 	}
-	app.db = db
+	app.db = pool
+
+	authDB, err := db.NewPostgres(db.Config{
+		DBUser:     cfg.DB.User,
+		DBPassword: cfg.DB.Password,
+		DBHost:     cfg.DB.Host,
+		DBPort:     cfg.DB.Port,
+		DBName:     "auth_db",
+	})
+	if err != nil {
+		return errors.New("failed to initialize auth database: " + err.Error())
+	}
+	app.authDB = authDB
+
 	return nil
 }
 
@@ -60,6 +98,29 @@ func (app *App) initUCREventProducer(cfg bootstrap.Config) error {
 	)
 
 	app.ucrEventProducer = producer.NewUCResultOutbox(app.db, app.outboxRepository, app.log, kafkaPublisher)
+
+	return nil
+}
+
+func (app *App) initHTTPServer(cfg bootstrap.Config, userService *userservice.Service) error {
+	if app.log == nil {
+		return errors.New("log is not initialized")
+	}
+	if userService == nil {
+		return errors.New("userService is not initialized")
+	}
+
+	validator, err := bootstrap.InitLocalJWTFromConfig(cfg)
+	if err != nil {
+		return fmt.Errorf("failed to initialize jwt validator: %w", err)
+	}
+
+	handlers := httptransport.NewHandlers(userService)
+	router := httptransport.NewRouter(app.log, validator, handlers)
+	app.server = &http.Server{
+		Addr:    bootstrap.InitPortStringFromConfig(cfg, 8082),
+		Handler: router,
+	}
 
 	return nil
 }

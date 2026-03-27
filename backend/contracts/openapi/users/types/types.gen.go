@@ -13,34 +13,12 @@ const (
 	BearerAuthScopes = "bearerAuth.Scopes"
 )
 
-// Defines values for ErrorCode.
-const (
-	ErrorCodeInternal       ErrorCode = "INTERNAL"
-	ErrorCodeInvalidRequest ErrorCode = "INVALID_REQUEST"
-)
-
-// Valid indicates whether the value is a known member of the ErrorCode enum.
-func (e ErrorCode) Valid() bool {
-	switch e {
-	case ErrorCodeInternal:
-		return true
-	case ErrorCodeInvalidRequest:
-		return true
-	default:
-		return false
-	}
-}
-
 // Bio User bio
 type Bio = string
 
-// ErrorCode defines model for ErrorCode.
-type ErrorCode string
-
 // ErrorResponse defines model for ErrorResponse.
 type ErrorResponse struct {
-	Code    ErrorCode `json:"code"`
-	Message *string   `json:"message,omitempty"`
+	Message *string `json:"message,omitempty"`
 }
 
 // Me defines model for Me.
@@ -58,7 +36,7 @@ type Me struct {
 	Id UserId `json:"id"`
 
 	// Name User name
-	Name Name `json:"name"`
+	Name *Name `json:"name,omitempty"`
 }
 
 // Name User name
@@ -82,7 +60,7 @@ type User struct {
 	Id UserId `json:"id"`
 
 	// Name User name
-	Name Name `json:"name"`
+	Name *Name `json:"name,omitempty"`
 }
 
 // UserId User ID
