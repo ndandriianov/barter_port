@@ -105,7 +105,7 @@ func NewApp(cfg bootstrap.Config) (*App, error) {
 
 	outboxPublisher := authkafka.NewUserCreationOutboxPublisher(db, outboxRepo, infrastructureLogger, kafkaPublisher)
 
-	authService := application.NewService(db, userRepo, emailTokenRepo, m, infrastructureLogger, outboxRepo, frontendURL, re)
+	authService := application.NewService(db, userRepo, emailTokenRepo, m, infrastructureLogger, outboxRepo, cfg.Mailer.Bypass, frontendURL, re)
 	handlers := transport.NewHandlers(logg, authService, jwtManager, db, refreshTokenRepo)
 	router := transport.NewRouter(logg, validator, handlers)
 	server := &http.Server{

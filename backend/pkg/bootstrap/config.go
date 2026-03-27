@@ -31,6 +31,7 @@ type Config struct {
 		From               string `mapstructure:"from"`
 		TLSMode            string `mapstructure:"tls_mode"`
 		InsecureSkipVerify bool   `mapstructure:"insecure_skip_verify"`
+		Bypass             bool   `mapstructure:"bypass"`
 	} `mapstructure:"mailer"`
 
 	JWT struct {

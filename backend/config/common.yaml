@@ -30,3 +30,4 @@ mailer:
   from: "no-reply@local.test"
   tls_mode: "starttls"
   insecure_skip_verify: true
+  bypass: true
