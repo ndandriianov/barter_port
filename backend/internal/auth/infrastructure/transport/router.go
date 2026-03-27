@@ -41,6 +41,7 @@ func NewRouter(logger *slog.Logger, validator *validators.LocalJWT, h *Handlers)
 		r.Post("/login", h.Login)
 		r.Post("/refresh", h.Refresh)
 		r.Post("/logout", h.Logout)
+		r.Get("/status/{userId}", h.GetUserCreationStatus)
 
 		r.Group(func(r chi.Router) {
 			r.Use(authkit.Middleware(logger, validator, nil))

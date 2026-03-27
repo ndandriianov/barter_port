@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -543,6 +544,54 @@ func (h *Handlers) Me(w http.ResponseWriter, r *http.Request) {
 
 	logger.Info("successfully fetched user info")
 	http_api.WriteJSONWithLogs(w, logger, http.StatusOK, meResp{UserID: userId})
+}
+
+type userCreationStatusResp struct {
+	Status string `json:"status"`
+}
+
+// GetUserCreationStatus godoc
+// @Summary Get user creation status
+// @Description Retrieves user creation status by user ID
+// @Tags auth
+// @Produce json
+// @Param userId path string true "User ID"
+// @Success 200 {object} userCreationStatusResp
+// @Failure 400 {object} http_api.ErrorResponse "Invalid user ID"
+// @Failure 404 {object} http_api.ErrorResponse "User creation event not found"
+// @Failure 500 {object} http_api.ErrorResponse "Internal server error"
+// @Router /auth/status/{userId} [get]
+func (h *Handlers) GetUserCreationStatus(w http.ResponseWriter, r *http.Request) {
+	requestID := middleware.GetReqID(r.Context())
+	logger := h.logger.With(slog.String("request_id", requestID))
+	logger.Info("handling get user creation status request")
+
+	userID, err := uuid.Parse(chi.URLParam(r, "userId"))
+	if err != nil {
+		logger.Info("invalid user id in user creation status request", slog.String("error", err.Error()))
+		http_api.HandleError(w, logger, http.StatusBadRequest, ErrInvalidRequest)
+		return
+	}
+
+	status, err := h.authService.GetUserCreationStatus(r.Context(), userID)
+	if err != nil {
+		switch {
+		case errors.Is(err, application.ErrUserNotFound):
+			logger.Info("user creation event not found", slog.String("user_id", userID.String()))
+			http_api.HandleError(w, logger, http.StatusNotFound, application.ErrUserNotFound)
+		default:
+			logger.Error(
+				"failed to fetch user creation status",
+				slog.String("user_id", userID.String()),
+				slog.String("error", err.Error()),
+			)
+			http_api.HandleError(w, logger, http.StatusInternalServerError, ErrInternalServerError)
+		}
+		return
+	}
+
+	logger.Info("successfully fetched user creation status", slog.String("user_id", userID.String()))
+	http_api.WriteJSONWithLogs(w, logger, http.StatusOK, userCreationStatusResp{Status: status})
 }
 
 //
