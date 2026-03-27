@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -16,12 +17,15 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/oklog/run"
+	"google.golang.org/grpc"
 )
 
 type App struct {
 	logger            *slog.Logger
 	db                *pgxpool.Pool
 	server            *http.Server
+	grpcServer        *grpc.Server
+	grpcListener      net.Listener
 	ucResultConsumer  *authconsumer.UCResultInboxConsumer
 	ucResultProcessor *ucrprocessor.Processor
 	outboxPublisher   *authkafka.UCOutbox
@@ -85,6 +89,19 @@ func (a *App) Run() error {
 		}
 	})
 
+	g.Add(func() error {
+		if a.grpcListener == nil || a.grpcServer == nil {
+			return errors.New("grpc server is not initialized")
+		}
+
+		a.logger.Info("auth grpc server listening", slog.String("addr", a.grpcListener.Addr().String()))
+		return a.grpcServer.Serve(a.grpcListener)
+	}, func(error) {
+		if a.grpcServer != nil {
+			a.grpcServer.GracefulStop()
+		}
+	})
+
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 	g.Add(func() error {
@@ -99,7 +116,7 @@ func (a *App) Run() error {
 	})
 
 	err := g.Run()
-	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+	if err != nil && !errors.Is(err, http.ErrServerClosed) && !errors.Is(err, grpc.ErrServerStopped) {
 		return err
 	}
 
@@ -117,5 +134,8 @@ func (a *App) Close() {
 	}
 	if a.db != nil {
 		a.db.Close()
+	}
+	if a.grpcListener != nil {
+		_ = a.grpcListener.Close()
 	}
 }

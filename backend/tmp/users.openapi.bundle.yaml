@@ -140,7 +140,6 @@ components:
         - id
         - email
         - createdAt
-        - name
       properties:
         id:
           $ref: '#/components/schemas/UserId'
@@ -158,22 +157,9 @@ components:
           $ref: '#/components/schemas/Name'
         bio:
           $ref: '#/components/schemas/Bio'
-    ErrorCode:
-      type: string
-      enum:
-        - INVALID_REQUEST
-        - INTERNAL
-      x-enum-varnames:
-        - ErrorCodeInvalidRequest
-        - ErrorCodeInternal
-      example: INVALID_REQUEST
     ErrorResponse:
       type: object
-      required:
-        - code
       properties:
-        code:
-          $ref: '#/components/schemas/ErrorCode'
         message:
           type: string
           example: Вы отправили некорректный запрос
@@ -188,7 +174,6 @@ components:
       type: object
       required:
         - id
-        - name
       properties:
         id:
           $ref: '#/components/schemas/UserId'

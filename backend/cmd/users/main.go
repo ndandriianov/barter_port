@@ -37,7 +37,7 @@ func main() {
 func loadConfig() (bootstrap.Config, error) {
 	cfg, err := bootstrap.LoadConfig(bootstrap.ConfigOptions{
 		CommonPath:  os.Getenv("CONFIG_COMMON"),
-		ServicePath: os.Getenv("CONFIG_SERVICE"),
+		ServicePath: resolveServiceConfigPath(),
 		AppEnv:      os.Getenv("APP_ENV"),
 	})
 	if err != nil {
@@ -45,4 +45,19 @@ func loadConfig() (bootstrap.Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func resolveServiceConfigPath() string {
+	if path := os.Getenv("CONFIG_SERVICE"); path != "" {
+		if _, err := os.Stat(path); err == nil {
+			return path
+		}
+	}
+
+	const localPath = "./config/users.yaml"
+	if _, err := os.Stat(localPath); err == nil {
+		return localPath
+	}
+
+	return os.Getenv("CONFIG_SERVICE")
 }

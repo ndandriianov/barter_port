@@ -1,9 +1,11 @@
 package model
 
-import "github.com/google/uuid"
+import (
+	"github.com/google/uuid"
+)
 
 type User struct {
-	Id   uuid.UUID
-	Name string
-	Bio  *string
+	Id   uuid.UUID `db:"id"`
+	Name *string   `db:"name"`
+	Bio  *string   `db:"bio"`
 }

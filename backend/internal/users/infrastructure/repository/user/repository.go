@@ -26,11 +26,11 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 //   - model.ErrUserAlreadyExists: Occurs if a user with the same ID already exists in the repository.
 func (r *Repository) AddUser(ctx context.Context, db db.DB, userID uuid.UUID) error {
 	query := `
-		INSERT INTO users_db.public.users (id)
+		INSERT INTO users (id)
 		VALUES ($1)
 	`
 
-	_, err := r.db.Exec(ctx, query, userID)
+	_, err := db.Exec(ctx, query, userID)
 	if err != nil && repox.IsUniqueViolation(err) {
 		return model.ErrUserAlreadyExists
 	}
@@ -44,7 +44,7 @@ func (r *Repository) AddUser(ctx context.Context, db db.DB, userID uuid.UUID) er
 func (r *Repository) GetUserById(ctx context.Context, id uuid.UUID) (*model.User, error) {
 	query := `
 		SELECT id, name, bio
-		FROM users_db.public.users
+		FROM users
 		WHERE id = $1
 	`
 
@@ -78,7 +78,7 @@ func (r *Repository) DeleteUser(ctx context.Context, id uuid.UUID) error {
 //   - model.ErrUserNotFound: Occurs if no user is found with the given id.
 func (r *Repository) UpdateName(ctx context.Context, id uuid.UUID, name string) error {
 	query := `
-		UPDATE users_db.public.users
+		UPDATE users
 		SET name = $2
 		WHERE id = $1
 	`
@@ -100,12 +100,12 @@ func (r *Repository) UpdateName(ctx context.Context, id uuid.UUID, name string) 
 //   - model.ErrUserNotFound: Occurs if no user is found with the given id.
 func (r *Repository) UpdateBio(ctx context.Context, id uuid.UUID, bio *string) error {
 	query := `
-		UPDATE users_db.public.users
+		UPDATE users
 		SET bio = $2
 		WHERE id = $1
 	`
 
-	tag, err := r.db.Exec(ctx, query, id, *bio)
+	tag, err := r.db.Exec(ctx, query, id, bio)
 	if err != nil {
 		return err
 	}

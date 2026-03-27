@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package linktracker.auth.v1;
+
+option go_package = "link-tracker/internal/contracts/grpc/auth/v1;authpb";
+
+import "google/protobuf/timestamp.proto";
+
+service AuthService {
+    rpc GetMe (GetMeRequest) returns (GetMeResponse);
+}
+
+// GetMe
+message GetMeRequest {
+    string id = 1;
+}
+
+message GetMeResponse {
+    string email = 1;
+    google.protobuf.Timestamp created_at = 2;
+}
+

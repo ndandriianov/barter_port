@@ -28,3 +28,15 @@ local-up:
 
 create-migration:
 	migrate create -ext sql -dir migrations/$(db) -seq $(name)
+
+
+
+PROTO_FILES := $(shell find contracts/grpc -name "*.proto")
+
+grpcgen:
+	protoc \
+ 	--go_out=. \
+ 	--go_opt=paths=source_relative \
+ 	--go-grpc_out=. \
+ 	--go-grpc_opt=paths=source_relative \
+ 	$(PROTO_FILES)

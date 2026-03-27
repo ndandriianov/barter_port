@@ -57,6 +57,7 @@ type Fixture struct {
 
 	AuthURL  string
 	ItemsURL string
+	UsersURL string
 }
 
 func NewFixture(t *testing.T, opts FixtureOptions) *Fixture {
@@ -102,6 +103,7 @@ func NewFixture(t *testing.T, opts FixtureOptions) *Fixture {
 	}
 	if opts.NeedUsers {
 		f.Users = SetupUsers(ctx, net, t)
+		f.UsersURL = containerBaseURL(ctx, t, f.Users, "8082/tcp")
 	}
 
 	return f
@@ -260,7 +262,7 @@ func SetupItems(ctx context.Context, net *testcontainers.DockerNetwork, t *testi
 func SetupUsers(ctx context.Context, net *testcontainers.DockerNetwork, t *testing.T) testcontainers.Container {
 	t.Helper()
 
-	req := serviceContainerRequest(t, net, "users")
+	req := serviceContainerRequest(t, net, "users", "8082/tcp")
 	req.Env = serviceEnv()
 	req.Env["CONFIG_SERVICE"] = "/app/config/users.yaml"
 

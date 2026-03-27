@@ -1,43 +1,71 @@
 package user
 
 import (
+	authpb "barter-port/contracts/grpc/auth/v1"
 	"barter-port/internal/users/model"
+	"errors"
+	"time"
 
 	"github.com/google/uuid"
 	"golang.org/x/net/context"
 )
 
 type UsersRepository interface {
-	AddUser(ctx context.Context, user model.User) error
-	DeleteUser(ctx context.Context, id uuid.UUID) error
+	GetUserById(ctx context.Context, id uuid.UUID) (*model.User, error)
 	UpdateName(ctx context.Context, id uuid.UUID, name string) error
 	UpdateBio(ctx context.Context, id uuid.UUID, bio *string) error
 }
 
+var ErrAuthClientNotConfigured = errors.New("auth grpc client is not configured")
+
+type Me struct {
+	Id        uuid.UUID
+	Name      *string
+	Bio       *string
+	Email     string
+	CreatedAt time.Time
+}
+
 type Service struct {
 	repository UsersRepository
+	authClient authpb.AuthServiceClient
 }
 
-func NewService(repository UsersRepository) *Service {
-	return &Service{repository}
+func NewService(repository UsersRepository, authClient authpb.AuthServiceClient) *Service {
+	return &Service{repository: repository, authClient: authClient}
 }
 
-// AddUser adds user if not exist. Unique check by id.
-//
-// Errors:
-//   - model.ErrUserAlreadyExists: Occurs if a user with the same id already exists in the repository.
-func (s *Service) AddUser(ctx context.Context, id uuid.UUID, name string) error {
-	user := model.User{
-		Id:   id,
-		Name: name,
+func (s *Service) GetUser(ctx context.Context, id uuid.UUID) (*model.User, error) {
+	return s.repository.GetUserById(ctx, id)
+}
+
+func (s *Service) GetMe(ctx context.Context, id uuid.UUID) (Me, error) {
+	u, err := s.repository.GetUserById(ctx, id)
+	if err != nil {
+		return Me{}, err
 	}
 
-	return s.repository.AddUser(ctx, user)
-}
+	if s.authClient == nil {
+		return Me{}, ErrAuthClientNotConfigured
+	}
 
-func (s *Service) DeleteUser(ctx context.Context, id uuid.UUID) error {
-	// TODO: implement with transaction
-	panic("implement me")
+	authMe, err := s.authClient.GetMe(ctx, &authpb.GetMeRequest{Id: id.String()})
+	if err != nil {
+		return Me{}, err
+	}
+
+	var createdAt time.Time
+	if ts := authMe.GetCreatedAt(); ts != nil {
+		createdAt = ts.AsTime()
+	}
+
+	return Me{
+		Id:        u.Id,
+		Name:      u.Name,
+		Bio:       u.Bio,
+		Email:     authMe.GetEmail(),
+		CreatedAt: createdAt,
+	}, nil
 }
 
 // UpdateName updates users name by id.
