@@ -1,4 +1,4 @@
-package database
+package db
 
 import (
 	"context"
@@ -37,6 +37,10 @@ func MustLoad(configPath string) *Config {
 }
 
 func NewPostgres(config Config) (*pgxpool.Pool, error) {
+	return pgxpool.New(context.Background(), BuildDSN(config, false))
+}
+
+func BuildDSN(config Config, sslModeDisabled bool) string {
 	dsn := fmt.Sprintf(
 		"postgres://%s:%s@%s:%s/%s",
 		config.DBUser,
@@ -46,5 +50,9 @@ func NewPostgres(config Config) (*pgxpool.Pool, error) {
 		config.DBName,
 	)
 
-	return pgxpool.New(context.Background(), dsn)
+	if sslModeDisabled {
+		dsn += "?sslmode=disable"
+	}
+
+	return dsn
 }
