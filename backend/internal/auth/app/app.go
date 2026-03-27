@@ -1,29 +1,16 @@
 package app
 
 import (
-	usersauth "barter-port/contracts/kafka/messages/users-auth"
-	"barter-port/internal/auth/application"
 	ucrprocessor "barter-port/internal/auth/application/uc-result-inbox-processor"
 	authconsumer "barter-port/internal/auth/infrastructure/kafka/consumer"
 	authkafka "barter-port/internal/auth/infrastructure/kafka/producer"
-	"barter-port/internal/auth/infrastructure/repository/email_token"
-	"barter-port/internal/auth/infrastructure/repository/refresh_token"
-	ucevent "barter-port/internal/auth/infrastructure/repository/uc-event"
-	ucoutbox "barter-port/internal/auth/infrastructure/repository/uc-outbox"
-	ucrinbox "barter-port/internal/auth/infrastructure/repository/uc-result-inbox"
-	"barter-port/internal/auth/infrastructure/repository/user"
-	"barter-port/internal/auth/infrastructure/transport"
 	"barter-port/pkg/bootstrap"
-	"barter-port/pkg/kafkax"
-	"barter-port/pkg/logger"
 	"context"
 	"errors"
-	"log"
 	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
-	"regexp"
 	"syscall"
 	"time"
 
@@ -41,126 +28,32 @@ type App struct {
 }
 
 func NewApp(cfg bootstrap.Config) (*App, error) {
-	db, err := bootstrap.InitDatabaseFromConfig(cfg)
-	if err != nil {
-		return nil, errors.New("failed to initialize database: " + err.Error())
-	}
-
-	frontendURL := cfg.Frontend.URL
-	re := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
-
-	userRepo := user.NewRepository()
-	ucEventRepo := ucevent.NewRepository()
-	ucResultInboxRepo := ucrinbox.NewRepository()
-	emailTokenRepo := email_token.NewRepository()
-	refreshTokenRepo := refresh_token.NewRepository()
-	outboxRepo := &ucoutbox.Repository{}
-
-	m := bootstrap.InitMailerFromConfig(cfg)
-	if err = bootstrap.ValidateMailConfig(cfg); err != nil {
-		db.Close()
-		return nil, errors.New("failed to initialize mailer: " + err.Error())
-	}
-
-	logg := logger.NewJSONLogger(slog.LevelDebug, "auth-service", "")
-	infrastructureLogger := logger.NewJSONLogger(slog.LevelDebug, "", "infrastructure")
-
-	jwtManager, err := bootstrap.InitJWTManagerFromConfig(cfg)
-	if err != nil {
-		db.Close()
-		return nil, errors.New("failed to initialize JWT manager: " + err.Error())
-	}
-
-	validator, err := bootstrap.InitLocalJWTFromConfig(cfg)
-	if err != nil {
-		db.Close()
-		return nil, errors.New("failed to initialize JWT validator: " + err.Error())
-	}
-	if len(cfg.Kafka.Brokers) == 0 {
-		db.Close()
-		return nil, errors.New("failed to initialize kafka writer: kafka brokers are not configured")
-	}
-	if cfg.Kafka.UserCreationTopic == "" {
-		db.Close()
-		return nil, errors.New("failed to initialize kafka writer: user creation topic is not configured")
-	}
-	if cfg.Kafka.UserCreationResultTopic == "" {
-		db.Close()
-		return nil, errors.New("failed to initialize kafka consumer: user creation result topic is not configured")
-	}
-	if cfg.Kafka.UserCreationResultGroup == "" {
-		db.Close()
-		return nil, errors.New("failed to initialize kafka consumer: user creation result group is not configured")
-	}
-
-	kafkaWriter := kafkax.NewWriter(cfg.Kafka.Brokers, cfg.Kafka.UserCreationTopic)
-	writerOwned := false
+	app := &App{}
+	var err error
 	defer func() {
-		if !writerOwned {
-			_ = kafkaWriter.Close()
+		if err != nil {
+			app.Close()
 		}
 	}()
 
-	topicInitCtx, cancelTopicInit := context.WithTimeout(context.Background(), cfg.Kafka.WriteTimeout)
-	if err = kafkax.EnsureTopic(topicInitCtx, cfg.Kafka.Brokers, cfg.Kafka.UserCreationTopic, 1, 1); err != nil {
-		cancelTopicInit()
-		db.Close()
-		return nil, errors.New("failed to ensure kafka topic: " + err.Error())
-	}
-	if err = kafkax.EnsureTopic(topicInitCtx, cfg.Kafka.Brokers, cfg.Kafka.UserCreationResultTopic, 1, 1); err != nil {
-		cancelTopicInit()
-		db.Close()
-		return nil, errors.New("failed to ensure kafka result topic: " + err.Error())
-	}
-	cancelTopicInit()
-
-	kafkaPublisher := kafkax.NewOutboxPublisher(
-		kafkaWriter,
-		infrastructureLogger,
-		cfg.Kafka.Brokers,
-		cfg.Kafka.UserCreationTopic,
-		cfg.Kafka.BatchSize,
-		cfg.Kafka.PollInterval,
-		cfg.Kafka.WriteTimeout,
-	)
-
-	outboxPublisher := authkafka.NewUserCreationOutboxPublisher(db, outboxRepo, infrastructureLogger, kafkaPublisher)
-	ucResultReader := kafkax.NewMessageReader(cfg.Kafka.Brokers, cfg.Kafka.UserCreationResultTopic, cfg.Kafka.UserCreationResultGroup)
-	ucResultKafkaConsumer := kafkax.NewInboxConsumer[usersauth.UCResultMessage](infrastructureLogger, ucResultReader, cfg.Kafka.PollInterval)
-	ucResultConsumer := authconsumer.NewUCResultInboxConsumer(db, ucResultInboxRepo, ucResultKafkaConsumer)
-	ucResultProcessor := ucrprocessor.NewProcessor(
-		ucResultInboxRepo,
-		ucEventRepo,
-		db,
-		infrastructureLogger,
-		cfg.Kafka.BatchSize,
-		cfg.Kafka.PollInterval,
-	)
-
-	authService := application.NewService(db, userRepo, ucEventRepo, emailTokenRepo, m, infrastructureLogger, outboxRepo, cfg.Mailer.Bypass, frontendURL, re)
-	handlers := transport.NewHandlers(logg, authService, jwtManager, db, refreshTokenRepo)
-	router := transport.NewRouter(logg, validator, handlers)
-	server := &http.Server{
-		Addr:    bootstrap.InitPortStringFromConfig(cfg, 8081),
-		Handler: router,
+	err = app.initDatabase(cfg)
+	if err != nil {
+		return nil, err
 	}
 
-	writerOwned = true
+	err = app.initServices(cfg)
+	if err != nil {
+		return nil, err
+	}
 
-	return &App{
-		logger:            logg,
-		db:                db,
-		server:            server,
-		ucResultConsumer:  ucResultConsumer,
-		ucResultProcessor: ucResultProcessor,
-		outboxPublisher:   outboxPublisher,
-	}, nil
+	return app, nil
 }
 
 func (a *App) Run() error {
 	var g run.Group
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	defer a.Close()
 
 	g.Add(func() error {
 		return a.outboxPublisher.Run(ctx)
@@ -181,7 +74,7 @@ func (a *App) Run() error {
 	})
 
 	g.Add(func() error {
-		log.Println("backend listening on", a.server.Addr)
+		a.logger.Info("backend listening", slog.String("addr", a.server.Addr))
 		return a.server.ListenAndServe()
 	}, func(error) {
 		shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -195,8 +88,12 @@ func (a *App) Run() error {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 	g.Add(func() error {
-		<-stop
-		return nil
+		select {
+		case <-stop:
+			return nil
+		case <-ctx.Done():
+			return ctx.Err()
+		}
 	}, func(error) {
 		signal.Stop(stop)
 	})
@@ -210,8 +107,15 @@ func (a *App) Run() error {
 }
 
 func (a *App) Close() {
-	if err := a.outboxPublisher.Close(); err != nil {
-		a.logger.Error("failed to close kafka writer", slog.Any("error", err))
+	if a == nil {
+		return
 	}
-	a.db.Close()
+	if a.outboxPublisher != nil {
+		if err := a.outboxPublisher.Close(); err != nil && a.logger != nil {
+			a.logger.Error("failed to close kafka writer", slog.Any("error", err))
+		}
+	}
+	if a.db != nil {
+		a.db.Close()
+	}
 }
