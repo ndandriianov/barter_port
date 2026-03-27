@@ -99,6 +99,7 @@ func LoadConfig(options ConfigOptions) (Config, error) {
 	bindEnv(v, "jwt.access_secret")
 	bindEnv(v, "jwt.refresh_secret")
 	bindEnv(v, "kafka.user_creation_topic")
+	bindEnv(v, "mailer.bypass")
 
 	// десериализация в структуру
 	var config Config
