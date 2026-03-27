@@ -15,22 +15,22 @@ func main() {
 
 	cfg, err := loadConfig()
 	if err != nil {
-		log.Fatalf("load config: %v", err)
+		log.Fatalf("users - load config: %v", err)
 	}
 
 	err = bootstrap.RunMigrationsFromConfig(cfg)
 	if err != nil {
-		log.Fatalf("run migrations: %v", err)
+		log.Fatalf("users - run migrations: %v", err)
 	}
 
 	usersApp, err := app.NewApp(cfg)
 	if err != nil {
-		log.Fatalf("new app: %v", err)
+		log.Fatalf("users - new app: %v", err)
 	}
 
 	err = usersApp.Run()
 	if err != nil {
-		log.Fatalf("run: %v", err)
+		log.Fatalf("users - run: %v", err)
 	}
 }
 
