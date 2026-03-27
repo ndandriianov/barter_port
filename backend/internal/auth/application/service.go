@@ -64,12 +64,13 @@ type Mailer interface {
 }
 
 type Service struct {
-	db     *pgxpool.Pool
-	users  UserRepo
-	tokens TokenRepo
-	mailer Mailer
-	logger *slog.Logger
-	outbox *ucoutbox.Repository
+	db              *pgxpool.Pool
+	users           UserRepo
+	tokens          TokenRepo
+	mailer          Mailer
+	logger          *slog.Logger
+	outbox          *ucoutbox.Repository
+	emailBypassMode bool
 
 	frontendBaseURL string
 	re              *regexp.Regexp
@@ -82,6 +83,7 @@ func NewService(
 	mailer Mailer,
 	logger *slog.Logger,
 	outbox *ucoutbox.Repository,
+	emailBypassMode bool,
 
 	frontendBaseURL string,
 	re *regexp.Regexp,
@@ -91,12 +93,13 @@ func NewService(
 	}
 
 	return &Service{
-		db:     db,
-		users:  users,
-		tokens: tokens,
-		mailer: mailer,
-		logger: logger,
-		outbox: outbox,
+		db:              db,
+		users:           users,
+		tokens:          tokens,
+		mailer:          mailer,
+		logger:          logger,
+		outbox:          outbox,
+		emailBypassMode: emailBypassMode,
 
 		frontendBaseURL: strings.TrimRight(frontendBaseURL, "/"),
 		re:              re,
@@ -136,6 +139,19 @@ func (s *Service) Register(ctx context.Context, email, password string) (Registe
 				return ErrEmailAlreadyInUse
 			}
 			return fmt.Errorf("failed to create user: %w", err)
+		}
+
+		if s.emailBypassMode {
+			if err = s.createUser(ctx, tx, u.ID); err != nil {
+				return err
+			}
+
+			if _, err = s.users.VerifyEmailIfNotVerified(ctx, tx, u.ID); err != nil {
+				return fmt.Errorf("failed to verify email: %w", err)
+			}
+
+			s.logger.Info("user created", slog.String("email", u.Email), slog.Any("user_id", u.ID))
+			return nil
 		}
 
 		rawToken, err = generateToken(tokenLength)
@@ -241,22 +257,8 @@ func (s *Service) VerifyEmail(ctx context.Context, rawToken string) error {
 		}
 
 		if changed {
-			event := domain.UserCreationEvent{
-				ID:        uuid.New(),
-				UserID:    t.UserID,
-				CreatedAt: time.Now(),
-			}
-
-			// TODO: сделать запись о задаче на создание профиля, по которой потом будет polling frontend и ждать выполнения
-
-			err = s.outbox.WriteUserCreationMessage(ctx, tx, authusers.UserCreationMessage{
-				ID:        uuid.New(),
-				EventID:   event.ID,
-				UserID:    event.UserID,
-				CreatedAt: time.Now(),
-			})
-			if err != nil {
-				return err
+			if err = s.createUser(ctx, tx, t.UserID); err != nil {
+				return fmt.Errorf("failed to create user: %w", err)
 			}
 			s.logger.Debug("email verified", slog.Any("user", t.UserID))
 
@@ -272,6 +274,28 @@ func (s *Service) VerifyEmail(ctx context.Context, rawToken string) error {
 	})
 
 	return err
+}
+
+func (s *Service) createUser(ctx context.Context, tx pgx.Tx, userID uuid.UUID) error {
+	event := domain.UserCreationEvent{
+		ID:        uuid.New(),
+		UserID:    userID,
+		CreatedAt: time.Now(),
+	}
+
+	// TODO: сделать запись о задаче на создание профиля, по которой потом будет polling frontend и ждать выполнения
+
+	err := s.outbox.WriteUserCreationMessage(ctx, tx, authusers.UserCreationMessage{
+		ID:        uuid.New(),
+		EventID:   event.ID,
+		UserID:    event.UserID,
+		CreatedAt: time.Now(),
+	})
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 type LoginResult struct {

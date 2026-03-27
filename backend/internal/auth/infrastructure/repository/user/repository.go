@@ -29,7 +29,7 @@ func NewRepository() *Repository {
 //   - errors.ErrEmailAlreadyInUse - email already exists
 func (r *Repository) Create(ctx context.Context, exec db.DB, u domain.User) error {
 	query := `
-		INSERT INTO users
+		INSERT INTO users (id, email, password_hash, email_verified, created_at)
 		VALUES ($1, $2, $3, $4, $5)
 	`
 
