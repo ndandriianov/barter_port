@@ -25,3 +25,6 @@ local-up:
 	CONFIG_COMMON=./config/common.yaml APP_ENV=local CONFIG_SERVICE=./config/items.yaml go run ./cmd/items & \
 	CONFIG_COMMON=./config/common.yaml APP_ENV=local CONFIG_SERVICE=./config/users.yaml go run ./cmd/users & \
 	wait
+
+create-migration:
+	migrate create -ext sql -dir migrations/$(db) -seq $(name)

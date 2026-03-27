@@ -11,11 +11,12 @@ import (
 
 type Config struct {
 	DB struct {
-		User     string `mapstructure:"user"`
-		Password string `mapstructure:"password"`
-		Host     string `mapstructure:"host"`
-		Port     string `mapstructure:"port"`
-		Name     string `mapstructure:"name"`
+		User           string `mapstructure:"user"`
+		Password       string `mapstructure:"password"`
+		Host           string `mapstructure:"host"`
+		Port           string `mapstructure:"port"`
+		Name           string `mapstructure:"name"`
+		MigrationsPath string `mapstructure:"migrations_path"`
 	} `mapstructure:"db"`
 
 	Frontend struct {
