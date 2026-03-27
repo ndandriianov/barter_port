@@ -12,11 +12,6 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-var (
-	ErrUserNotFound      = errors.New("user not found")
-	ErrEmailAlreadyInUse = errors.New("email already in use")
-)
-
 type Repository struct {
 }
 
@@ -26,7 +21,7 @@ func NewRepository() *Repository {
 
 // Create adds a new user to the repository.
 // Errors:
-//   - errors.ErrEmailAlreadyInUse - email already exists
+//   - domain.ErrEmailAlreadyInUse - email already exists
 func (r *Repository) Create(ctx context.Context, exec db.DB, u domain.User) error {
 	query := `
 		INSERT INTO users (id, email, password_hash, email_verified, created_at)
@@ -36,7 +31,7 @@ func (r *Repository) Create(ctx context.Context, exec db.DB, u domain.User) erro
 	_, err := exec.Exec(ctx, query, u.ID, u.Email, u.PasswordHash, u.EmailVerified, u.CreatedAt)
 	if err != nil {
 		if repox.IsUniqueViolation(err) {
-			return ErrEmailAlreadyInUse
+			return domain.ErrEmailAlreadyInUse
 		}
 		return err
 	}
@@ -46,7 +41,7 @@ func (r *Repository) Create(ctx context.Context, exec db.DB, u domain.User) erro
 
 // GetByEmail retrieves a user by their email address.
 // Errors:
-//   - errors.ErrUserNotFound: Occurs if no user is found with the given email address.
+//   - domain.ErrUserNotFound: Occurs if no user is found with the given email address.
 func (r *Repository) GetByEmail(ctx context.Context, exec db.DB, email string) (domain.User, error) {
 	query := `
 		SELECT id, email, password_hash, email_verified, created_at
@@ -63,7 +58,7 @@ func (r *Repository) GetByEmail(ctx context.Context, exec db.DB, email string) (
 	user, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[domain.User])
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return domain.User{}, ErrUserNotFound
+			return domain.User{}, domain.ErrUserNotFound
 		}
 		return domain.User{}, err
 	}
@@ -73,7 +68,7 @@ func (r *Repository) GetByEmail(ctx context.Context, exec db.DB, email string) (
 
 // GetByID retrieves a user by their unique ID.
 // Errors:
-//   - errors.ErrUserNotFound: Occurs if no user is found with the given ID.
+//   - domain.ErrUserNotFound: Occurs if no user is found with the given ID.
 func (r *Repository) GetByID(ctx context.Context, exec db.DB, id uuid.UUID) (domain.User, error) {
 	query := `
 		SELECT id, email, password_hash, email_verified, created_at
@@ -90,7 +85,7 @@ func (r *Repository) GetByID(ctx context.Context, exec db.DB, id uuid.UUID) (dom
 	user, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[domain.User])
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return domain.User{}, ErrUserNotFound
+			return domain.User{}, domain.ErrUserNotFound
 		}
 		return domain.User{}, err
 	}
@@ -102,7 +97,7 @@ func (r *Repository) GetByID(ctx context.Context, exec db.DB, id uuid.UUID) (dom
 // false if it was already verified.
 //
 // Errors:
-//   - errors.ErrUserNotFound: Occurs if no user is found with the given userID.
+//   - domain.ErrUserNotFound: Occurs if no user is found with the given userID.
 func (r *Repository) VerifyEmailIfNotVerified(ctx context.Context, exec db.DB, userID uuid.UUID) (changed bool, err error) {
 	query := `
 		WITH updated AS (
@@ -127,7 +122,7 @@ func (r *Repository) VerifyEmailIfNotVerified(ctx context.Context, exec db.DB, u
 	}
 
 	if !exists {
-		return false, ErrUserNotFound
+		return false, domain.ErrUserNotFound
 	}
 
 	return changed, nil

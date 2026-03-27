@@ -6,7 +6,6 @@ import (
 	ucstatus "barter-port/internal/auth/domain/uc-status"
 	"barter-port/internal/auth/infrastructure/repository/email_token"
 	ucoutbox "barter-port/internal/auth/infrastructure/repository/uc-outbox"
-	"barter-port/internal/auth/infrastructure/repository/user"
 	"barter-port/pkg/db"
 	"context"
 	"errors"
@@ -151,7 +150,7 @@ func (s *Service) Register(ctx context.Context, email, password string) (Registe
 
 	err = db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
 		if err := s.users.Create(ctx, tx, u); err != nil {
-			if errors.Is(err, user.ErrEmailAlreadyInUse) {
+			if errors.Is(err, domain.ErrEmailAlreadyInUse) {
 				return ErrEmailAlreadyInUse
 			}
 			return fmt.Errorf("failed to create user: %w", err)
@@ -273,7 +272,7 @@ func (s *Service) VerifyEmail(ctx context.Context, rawToken string) error {
 
 		changed, err := s.users.VerifyEmailIfNotVerified(ctx, tx, t.UserID)
 		if err != nil {
-			if errors.Is(err, user.ErrUserNotFound) {
+			if errors.Is(err, domain.ErrUserNotFound) {
 				return fmt.Errorf("failed to verify email: %w", ErrUserNotFound)
 			}
 			return fmt.Errorf("failed to verify email: %w", err)
@@ -297,6 +296,14 @@ func (s *Service) VerifyEmail(ctx context.Context, rawToken string) error {
 	})
 
 	return err
+}
+
+// GetMe retrieves the user's information by their ID.
+//
+// Errors:
+//   - domain.ErrUserNotFound
+func (s *Service) GetMe(ctx context.Context, userID uuid.UUID) (domain.User, error) {
+	return s.users.GetByID(ctx, s.db, userID)
 }
 
 func (s *Service) createUser(ctx context.Context, tx pgx.Tx, userID uuid.UUID) error {
@@ -376,7 +383,7 @@ func (s *Service) verifyCredentials(ctx context.Context, email, password string)
 
 	u, err := s.users.GetByEmail(ctx, s.db, email)
 	if err != nil {
-		if errors.Is(err, user.ErrUserNotFound) {
+		if errors.Is(err, domain.ErrUserNotFound) {
 			return domain.User{}, fmt.Errorf("user not found: %w", ErrInvalidCredentials)
 		}
 		return domain.User{}, fmt.Errorf("failed to get user by email: %w", err)
