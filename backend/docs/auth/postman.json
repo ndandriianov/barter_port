@@ -9,7 +9,7 @@
                     "description": "",
                     "item": [
                         {
-                            "id": "0e278b91-3bc0-4646-b239-62f69b7eeae5",
+                            "id": "6ea5abab-3773-495b-8ba9-c34077459489",
                             "name": "Login user",
                             "request": {
                                 "name": "Login user",
@@ -53,7 +53,7 @@
                             },
                             "response": [
                                 {
-                                    "id": "f46cb822-7fb0-47dd-8e13-42b569bf4421",
+                                    "id": "7117395c-0e9e-41ef-babb-ea4335cdc392",
                                     "name": "OK",
                                     "originalRequest": {
                                         "url": {
@@ -102,7 +102,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "febbb197-699f-4434-a7cf-83a08d738541",
+                                    "id": "2378a4d2-bae5-4a16-b6b0-82f97dcea00f",
                                     "name": "Invalid request or credentialsReq",
                                     "originalRequest": {
                                         "url": {
@@ -151,7 +151,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "c7454571-4c03-4e9a-b10f-8e12a6528065",
+                                    "id": "d74ca032-aedd-4d12-8dcc-6403db7d38aa",
                                     "name": "Incorrect password",
                                     "originalRequest": {
                                         "url": {
@@ -200,7 +200,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "8d9049ac-c908-4ccd-ac86-a4889e7446f7",
+                                    "id": "05efbb9c-2837-4f61-94ce-61e8baadf093",
                                     "name": "Email not verified",
                                     "originalRequest": {
                                         "url": {
@@ -249,7 +249,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "3b34d58f-353f-4036-9a43-04dbf6d370d0",
+                                    "id": "bb7c09f4-bc27-4708-9afa-91c6903f54ba",
                                     "name": "Internal server error",
                                     "originalRequest": {
                                         "url": {
@@ -310,7 +310,7 @@
                     "description": "",
                     "item": [
                         {
-                            "id": "8414009f-14ae-46b4-ad12-304875b08dda",
+                            "id": "64dd05a5-1bff-49d8-b12c-57d03d536abc",
                             "name": "Logout user",
                             "request": {
                                 "name": "Logout user",
@@ -341,7 +341,7 @@
                             },
                             "response": [
                                 {
-                                    "id": "ed8c49b5-95d0-4c84-b3e1-b3273267c3e1",
+                                    "id": "ccc518b9-6b45-4580-8299-2b1d42e48cd0",
                                     "name": "Logout successful",
                                     "originalRequest": {
                                         "url": {
@@ -365,7 +365,7 @@
                                     "_postman_previewlanguage": "text"
                                 },
                                 {
-                                    "id": "863fdf5f-70ff-43ec-9ab4-cd33f7c05145",
+                                    "id": "07e44791-29d5-457a-8c6e-62023ca6009f",
                                     "name": "Internal server error",
                                     "originalRequest": {
                                         "url": {
@@ -413,7 +413,7 @@
                     "description": "",
                     "item": [
                         {
-                            "id": "6576fac5-9406-443a-996b-e1be2d50dcd9",
+                            "id": "ef4ad709-b1c0-48a4-ba34-a9d00587a8d8",
                             "name": "Get user info",
                             "request": {
                                 "name": "Get user info",
@@ -460,7 +460,7 @@
                             },
                             "response": [
                                 {
-                                    "id": "d63d1fa3-c57a-40f6-add8-81b48d47310f",
+                                    "id": "b616f915-3265-48c9-8717-7cae331402cf",
                                     "name": "OK",
                                     "originalRequest": {
                                         "url": {
@@ -504,7 +504,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "91dc75ee-f2be-45e9-ac0c-f2a5fdaa86ea",
+                                    "id": "d5e4b7df-f08f-49a4-a3d7-6ccb965f502d",
                                     "name": "Internal server error",
                                     "originalRequest": {
                                         "url": {
@@ -560,7 +560,7 @@
                     "description": "",
                     "item": [
                         {
-                            "id": "a11151d4-c594-4840-963c-d4d5dce3a905",
+                            "id": "3968514a-e270-4273-a556-645c5aeef770",
                             "name": "Refresh tokens",
                             "request": {
                                 "name": "Refresh tokens",
@@ -600,7 +600,7 @@
                             },
                             "response": [
                                 {
-                                    "id": "7e841351-1587-4752-bace-635439e684b0",
+                                    "id": "6e39b4db-c1cb-4d8f-87fc-e82af5292d90",
                                     "name": "OK",
                                     "originalRequest": {
                                         "url": {
@@ -645,7 +645,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "4c8d27f0-0bc8-4a20-b2aa-53719fefb72c",
+                                    "id": "36f04833-d715-40ac-a070-756bb6131129",
                                     "name": "Unauthorized or invalid token",
                                     "originalRequest": {
                                         "url": {
@@ -690,7 +690,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "eccd1f6a-ab67-4633-8999-671d456ec79e",
+                                    "id": "f52de86b-14b5-4537-9709-9c298eabe849",
                                     "name": "Internal server error",
                                     "originalRequest": {
                                         "url": {
@@ -747,7 +747,7 @@
                     "description": "",
                     "item": [
                         {
-                            "id": "a9181e66-36a5-4093-9b7e-98f563d28b74",
+                            "id": "41c16e13-9f7e-445c-b76e-22f6d5a7344a",
                             "name": "Register a new user",
                             "request": {
                                 "name": "Register a new user",
@@ -791,7 +791,7 @@
                             },
                             "response": [
                                 {
-                                    "id": "fd81ab1c-0447-441b-b51d-810d55beafa4",
+                                    "id": "c4e586a4-8dce-426d-b6ad-4d11b2fa88ee",
                                     "name": "OK",
                                     "originalRequest": {
                                         "url": {
@@ -840,7 +840,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "423e5834-40ff-4889-ab27-e63443d9f028",
+                                    "id": "ac2cdaa5-1212-4f78-8bf5-f5c00e922d89",
                                     "name": "Invalid request",
                                     "originalRequest": {
                                         "url": {
@@ -889,7 +889,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "6ecc806e-2e82-476d-a2c0-ace9ecc6bce1",
+                                    "id": "ceae78a8-d954-4bd2-baea-bfd533521af3",
                                     "name": "Internal server error",
                                     "originalRequest": {
                                         "url": {
@@ -950,7 +950,7 @@
                     "description": "",
                     "item": [
                         {
-                            "id": "ed6066c7-aafc-4e29-a5c5-0d7013a34e2f",
+                            "id": "8fb6cd5a-0e07-41e3-9f12-d796fa3e4bd6",
                             "name": "Retry sending verification email",
                             "request": {
                                 "name": "Retry sending verification email",
@@ -994,7 +994,7 @@
                             },
                             "response": [
                                 {
-                                    "id": "eecf5e9f-ea3c-4803-98b3-1554ec3b68c3",
+                                    "id": "44e7f2c6-4026-4990-83b1-d9d49f3f7da5",
                                     "name": "Verification email sent successfully",
                                     "originalRequest": {
                                         "url": {
@@ -1033,7 +1033,7 @@
                                     "_postman_previewlanguage": "text"
                                 },
                                 {
-                                    "id": "d3f87b03-9510-47ff-89fb-f29101c27520",
+                                    "id": "ec1854e7-cf0a-4013-803f-12915191c836",
                                     "name": "Invalid request",
                                     "originalRequest": {
                                         "url": {
@@ -1082,7 +1082,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "8ce63028-f7bf-453f-bb71-05b57f7318d5",
+                                    "id": "a8a91830-7981-4c09-8dc6-b94c1dd6339f",
                                     "name": "Unauthorized",
                                     "originalRequest": {
                                         "url": {
@@ -1131,7 +1131,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "01db5223-9e4e-4e26-a7b7-211aa52bddbc",
+                                    "id": "7f3bf9de-da5a-4745-935b-c4aca5dd13e4",
                                     "name": "Internal server error",
                                     "originalRequest": {
                                         "url": {
@@ -1188,11 +1188,264 @@
                     ]
                 },
                 {
+                    "name": "status",
+                    "description": "",
+                    "item": [
+                        {
+                            "name": "{userId}",
+                            "description": "",
+                            "item": [
+                                {
+                                    "id": "3626432c-7d31-406d-b24c-6d3564f52187",
+                                    "name": "Get user creation status",
+                                    "request": {
+                                        "name": "Get user creation status",
+                                        "description": {
+                                            "content": "Retrieves user creation status by user ID",
+                                            "type": "text/plain"
+                                        },
+                                        "url": {
+                                            "path": [
+                                                "auth",
+                                                "status",
+                                                ":userId"
+                                            ],
+                                            "host": [
+                                                "{{baseUrl}}"
+                                            ],
+                                            "query": [],
+                                            "variable": [
+                                                {
+                                                    "type": "any",
+                                                    "value": "<string>",
+                                                    "key": "userId",
+                                                    "disabled": false,
+                                                    "description": {
+                                                        "content": "(Required) User ID",
+                                                        "type": "text/plain"
+                                                    }
+                                                }
+                                            ]
+                                        },
+                                        "header": [
+                                            {
+                                                "key": "Accept",
+                                                "value": "application/json"
+                                            }
+                                        ],
+                                        "method": "GET",
+                                        "body": {},
+                                        "auth": null
+                                    },
+                                    "response": [
+                                        {
+                                            "id": "198b9811-c931-4e5c-8155-f2836f15bf83",
+                                            "name": "OK",
+                                            "originalRequest": {
+                                                "url": {
+                                                    "path": [
+                                                        "auth",
+                                                        "status",
+                                                        ":userId"
+                                                    ],
+                                                    "host": [
+                                                        "{{baseUrl}}"
+                                                    ],
+                                                    "query": [],
+                                                    "variable": [
+                                                        {
+                                                            "disabled": false,
+                                                            "description": {
+                                                                "content": "(Required) User ID",
+                                                                "type": "text/plain"
+                                                            },
+                                                            "type": "any",
+                                                            "value": "<string>",
+                                                            "key": "userId"
+                                                        }
+                                                    ]
+                                                },
+                                                "header": [
+                                                    {
+                                                        "key": "Accept",
+                                                        "value": "application/json"
+                                                    }
+                                                ],
+                                                "method": "GET",
+                                                "body": {}
+                                            },
+                                            "status": "OK",
+                                            "code": 200,
+                                            "header": [
+                                                {
+                                                    "key": "Content-Type",
+                                                    "value": "application/json"
+                                                }
+                                            ],
+                                            "body": "{\n  \"status\": \"<string>\"\n}",
+                                            "cookie": [],
+                                            "_postman_previewlanguage": "json"
+                                        },
+                                        {
+                                            "id": "da1c71ba-2673-46da-a9a1-426901783090",
+                                            "name": "Invalid user ID",
+                                            "originalRequest": {
+                                                "url": {
+                                                    "path": [
+                                                        "auth",
+                                                        "status",
+                                                        ":userId"
+                                                    ],
+                                                    "host": [
+                                                        "{{baseUrl}}"
+                                                    ],
+                                                    "query": [],
+                                                    "variable": [
+                                                        {
+                                                            "disabled": false,
+                                                            "description": {
+                                                                "content": "(Required) User ID",
+                                                                "type": "text/plain"
+                                                            },
+                                                            "type": "any",
+                                                            "value": "<string>",
+                                                            "key": "userId"
+                                                        }
+                                                    ]
+                                                },
+                                                "header": [
+                                                    {
+                                                        "key": "Accept",
+                                                        "value": "application/json"
+                                                    }
+                                                ],
+                                                "method": "GET",
+                                                "body": {}
+                                            },
+                                            "status": "Bad Request",
+                                            "code": 400,
+                                            "header": [
+                                                {
+                                                    "key": "Content-Type",
+                                                    "value": "application/json"
+                                                }
+                                            ],
+                                            "body": "{\n  \"error\": \"<string>\"\n}",
+                                            "cookie": [],
+                                            "_postman_previewlanguage": "json"
+                                        },
+                                        {
+                                            "id": "8c05547c-0189-4da1-bf3f-058d333afefd",
+                                            "name": "User creation event not found",
+                                            "originalRequest": {
+                                                "url": {
+                                                    "path": [
+                                                        "auth",
+                                                        "status",
+                                                        ":userId"
+                                                    ],
+                                                    "host": [
+                                                        "{{baseUrl}}"
+                                                    ],
+                                                    "query": [],
+                                                    "variable": [
+                                                        {
+                                                            "disabled": false,
+                                                            "description": {
+                                                                "content": "(Required) User ID",
+                                                                "type": "text/plain"
+                                                            },
+                                                            "type": "any",
+                                                            "value": "<string>",
+                                                            "key": "userId"
+                                                        }
+                                                    ]
+                                                },
+                                                "header": [
+                                                    {
+                                                        "key": "Accept",
+                                                        "value": "application/json"
+                                                    }
+                                                ],
+                                                "method": "GET",
+                                                "body": {}
+                                            },
+                                            "status": "Not Found",
+                                            "code": 404,
+                                            "header": [
+                                                {
+                                                    "key": "Content-Type",
+                                                    "value": "application/json"
+                                                }
+                                            ],
+                                            "body": "{\n  \"error\": \"<string>\"\n}",
+                                            "cookie": [],
+                                            "_postman_previewlanguage": "json"
+                                        },
+                                        {
+                                            "id": "592e3622-fdd1-4dfc-8ff8-71c32ef3761c",
+                                            "name": "Internal server error",
+                                            "originalRequest": {
+                                                "url": {
+                                                    "path": [
+                                                        "auth",
+                                                        "status",
+                                                        ":userId"
+                                                    ],
+                                                    "host": [
+                                                        "{{baseUrl}}"
+                                                    ],
+                                                    "query": [],
+                                                    "variable": [
+                                                        {
+                                                            "disabled": false,
+                                                            "description": {
+                                                                "content": "(Required) User ID",
+                                                                "type": "text/plain"
+                                                            },
+                                                            "type": "any",
+                                                            "value": "<string>",
+                                                            "key": "userId"
+                                                        }
+                                                    ]
+                                                },
+                                                "header": [
+                                                    {
+                                                        "key": "Accept",
+                                                        "value": "application/json"
+                                                    }
+                                                ],
+                                                "method": "GET",
+                                                "body": {}
+                                            },
+                                            "status": "Internal Server Error",
+                                            "code": 500,
+                                            "header": [
+                                                {
+                                                    "key": "Content-Type",
+                                                    "value": "application/json"
+                                                }
+                                            ],
+                                            "body": "{\n  \"error\": \"<string>\"\n}",
+                                            "cookie": [],
+                                            "_postman_previewlanguage": "json"
+                                        }
+                                    ],
+                                    "event": [],
+                                    "protocolProfileBehavior": {
+                                        "disableBodyPruning": true
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
                     "name": "verify-email",
                     "description": "",
                     "item": [
                         {
-                            "id": "d7e49f0f-2eee-4f54-9114-264a2050b2c3",
+                            "id": "e44918ae-81e2-499d-9b0b-d3e6cf2b06cf",
                             "name": "Verify email",
                             "request": {
                                 "name": "Verify email",
@@ -1236,7 +1489,7 @@
                             },
                             "response": [
                                 {
-                                    "id": "389bae16-b533-46e7-be03-9aa9342b2e39",
+                                    "id": "142da131-f271-4606-8d61-0d90180c272e",
                                     "name": "status: ok",
                                     "originalRequest": {
                                         "url": {
@@ -1275,7 +1528,7 @@
                                     "_postman_previewlanguage": "text"
                                 },
                                 {
-                                    "id": "fe78f6c6-84bf-48c2-8a08-0698b091b8e0",
+                                    "id": "1a4bac59-2659-4a3e-be14-5ff5d3ffdaf7",
                                     "name": "Invalid request or token",
                                     "originalRequest": {
                                         "url": {
@@ -1324,7 +1577,7 @@
                                     "_postman_previewlanguage": "text"
                                 },
                                 {
-                                    "id": "f9198145-b011-4448-b82d-6c3d4b76108d",
+                                    "id": "8860451d-ab66-4c0f-bf23-77696d0997f5",
                                     "name": "User not found",
                                     "originalRequest": {
                                         "url": {
@@ -1373,7 +1626,7 @@
                                     "_postman_previewlanguage": "text"
                                 },
                                 {
-                                    "id": "a7555f36-75d5-40ed-8ef5-d88af8bd5e1d",
+                                    "id": "28219834-b39b-4940-9631-4230c231db76",
                                     "name": "Internal server error",
                                     "originalRequest": {
                                         "url": {
@@ -1440,7 +1693,7 @@
         }
     ],
     "info": {
-        "_postman_id": "d65b0c7b-9fe8-46dd-b25a-1518368e0a49",
+        "_postman_id": "36a1f7ed-8ec7-489d-81b2-878343721723",
         "name": "Barter Port API",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
         "description": {

@@ -264,6 +264,53 @@
                 }
             }
         },
+        "/auth/status/{userId}": {
+            "get": {
+                "description": "Retrieves user creation status by user ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Get user creation status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "userId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure_transport.userCreationStatusResp"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid user ID",
+                        "schema": {
+                            "$ref": "#/definitions/http_api.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "User creation event not found",
+                        "schema": {
+                            "$ref": "#/definitions/http_api.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/http_api.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/auth/verify-email": {
             "post": {
                 "description": "Verifies a user's email using a token",
@@ -368,6 +415,14 @@
                     "type": "string"
                 },
                 "userId": {
+                    "type": "string"
+                }
+            }
+        },
+        "infrastructure_transport.userCreationStatusResp": {
+            "type": "object",
+            "properties": {
+                "status": {
                     "type": "string"
                 }
             }

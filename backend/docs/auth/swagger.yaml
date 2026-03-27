@@ -37,6 +37,11 @@ definitions:
       userId:
         type: string
     type: object
+  infrastructure_transport.userCreationStatusResp:
+    properties:
+      status:
+        type: string
+    type: object
   infrastructure_transport.verifyEmailReq:
     properties:
       token:
@@ -212,6 +217,37 @@ paths:
           schema:
             $ref: '#/definitions/http_api.ErrorResponse'
       summary: Retry sending verification email
+      tags:
+      - auth
+  /auth/status/{userId}:
+    get:
+      description: Retrieves user creation status by user ID
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/infrastructure_transport.userCreationStatusResp'
+        "400":
+          description: Invalid user ID
+          schema:
+            $ref: '#/definitions/http_api.ErrorResponse'
+        "404":
+          description: User creation event not found
+          schema:
+            $ref: '#/definitions/http_api.ErrorResponse'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/http_api.ErrorResponse'
+      summary: Get user creation status
       tags:
       - auth
   /auth/verify-email:

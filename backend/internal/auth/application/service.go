@@ -333,6 +333,19 @@ type LoginResult struct {
 	AccessToken string
 }
 
+func (s *Service) GetUserCreationStatus(ctx context.Context, userID uuid.UUID) (string, error) {
+	event, err := s.ucEventRepo.GetByUserID(ctx, s.db, userID)
+	if err != nil {
+		if errors.Is(err, ErrUserNotFound) {
+			return "", ErrUserNotFound
+		}
+
+		return "", fmt.Errorf("failed to get user creation event: %w", err)
+	}
+
+	return event.Status.String(), nil
+}
+
 // Login checks the provided credentials and returns a JWT if they are valid.
 //
 // It returns the following domain errors:
