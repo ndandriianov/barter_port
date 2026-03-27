@@ -8,6 +8,8 @@ import (
 	"barter-port/internal/users/infrastructure/repository/user"
 	"barter-port/pkg/bootstrap"
 	"barter-port/pkg/logger"
+	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"os"
@@ -18,7 +20,6 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/oklog/run"
-	"golang.org/x/net/context"
 )
 
 type App struct {
@@ -33,8 +34,14 @@ type App struct {
 
 func NewApp(cfg bootstrap.Config) (*App, error) {
 	app := &App{}
+	var err error
+	defer func() {
+		if err != nil {
+			_ = app.Close()
+		}
+	}()
 
-	if err := app.initDatabase(cfg); err != nil {
+	if err = app.initDatabase(cfg); err != nil {
 		return nil, fmt.Errorf("failed to initialize database: %w", err)
 	}
 
@@ -56,7 +63,7 @@ func NewApp(cfg bootstrap.Config) (*App, error) {
 		cfg.Kafka.PollInterval,
 	)
 
-	err := app.initUCEventConsumer(cfg)
+	err = app.initUCEventConsumer(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize user creation event consumer: %w", err)
 	}
@@ -69,10 +76,28 @@ func NewApp(cfg bootstrap.Config) (*App, error) {
 	return app, nil
 }
 
+func (app *App) Close() error {
+	var err error
+
+	if app.ucrEventProducer != nil {
+		err = errors.Join(err, app.ucrEventProducer.Close())
+	}
+	if app.db != nil {
+		app.db.Close()
+	}
+
+	return err
+}
+
 func (app *App) Run() error {
 	var g run.Group
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	defer func() {
+		if err := app.Close(); err != nil && app.log != nil {
+			app.log.Error("failed to close app resources", slog.Any("error", err))
+		}
+	}()
 
 	g.Add(func() error {
 		return app.inboxProcessor.Run(ctx)
@@ -96,16 +121,15 @@ func (app *App) Run() error {
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt, syscall.SIGTERM)
 	g.Add(func() error {
-		<-stop
-		return nil
+		select {
+		case <-stop:
+			return nil
+		case <-ctx.Done():
+			return ctx.Err()
+		}
 	}, func(error) {
 		signal.Stop(stop)
 	})
 
-	err := g.Run()
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return g.Run()
 }
