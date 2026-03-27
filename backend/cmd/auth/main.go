@@ -26,28 +26,30 @@ func main() {
 
 	cfg, err := loadConfig()
 	if err != nil {
-		log.Fatalf("load config: %v", err)
+		log.Fatalf("auth - load config: %v", err)
+	}
+
+	err = bootstrap.RunMigrationsFromConfig(cfg)
+	if err != nil {
+		log.Fatalf("auth - run migrations: %v", err)
 	}
 
 	authApp, err := app.NewApp(cfg)
 	if err != nil {
-		log.Fatalf("new app: %v", err)
+		log.Fatalf("auth - new app: %v", err)
 	}
 	defer authApp.Close()
 
 	err = authApp.Run()
 	if err != nil {
-		log.Fatalf("run: %v", err)
+		log.Fatalf("auth - run: %v", err)
 	}
 }
 
 func loadConfig() (bootstrap.Config, error) {
-	//serviceName := bootstrap.GetEnv("SERVICE_NAME", "auth")
-	serviceConfigPath := "" //fmt.Sprintf("./config/%s.yaml", serviceName)
-
 	cfg, err := bootstrap.LoadConfig(bootstrap.ConfigOptions{
 		CommonPath:  os.Getenv("CONFIG_COMMON"),
-		ServicePath: serviceConfigPath,
+		ServicePath: resolveServiceConfigPath(),
 		AppEnv:      os.Getenv("APP_ENV"),
 	})
 	if err != nil {
@@ -55,4 +57,19 @@ func loadConfig() (bootstrap.Config, error) {
 	}
 
 	return cfg, nil
+}
+
+func resolveServiceConfigPath() string {
+	if path := os.Getenv("CONFIG_SERVICE"); path != "" {
+		if _, err := os.Stat(path); err == nil {
+			return path
+		}
+	}
+
+	const localPath = "./config/auth.yaml"
+	if _, err := os.Stat(localPath); err == nil {
+		return localPath
+	}
+
+	return os.Getenv("CONFIG_SERVICE")
 }
