@@ -34,6 +34,16 @@ CREATE TABLE user_creation_events
     CONSTRAINT user_creation_events_status_check CHECK (status IN ('New', 'Success', 'Failed'))
 );
 
+CREATE TABLE user_creation_result_inbox
+(
+    id         UUID PRIMARY KEY,
+    user_id    UUID        NOT NULL,
+    status     TEXT        NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
+
+    CONSTRAINT user_creation_result_inbox_status_check CHECK (status IN ('Success', 'Failed'))
+);
+
 CREATE TABLE refresh_tokens
 (
     jti        TEXT PRIMARY KEY,
