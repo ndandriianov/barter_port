@@ -1,17 +1,22 @@
 package app
 
 import (
+	usersauth "barter-port/contracts/kafka/messages/users-auth"
 	"barter-port/internal/auth/application"
+	ucrprocessor "barter-port/internal/auth/application/uc-result-inbox-processor"
+	authconsumer "barter-port/internal/auth/infrastructure/kafka/consumer"
 	authkafka "barter-port/internal/auth/infrastructure/kafka/producer"
 	"barter-port/internal/auth/infrastructure/repository/email_token"
 	"barter-port/internal/auth/infrastructure/repository/refresh_token"
 	ucevent "barter-port/internal/auth/infrastructure/repository/uc-event"
 	ucoutbox "barter-port/internal/auth/infrastructure/repository/uc-outbox"
+	ucrinbox "barter-port/internal/auth/infrastructure/repository/uc-result-inbox"
 	"barter-port/internal/auth/infrastructure/repository/user"
 	"barter-port/internal/auth/infrastructure/transport"
 	"barter-port/pkg/bootstrap"
 	"barter-port/pkg/kafkax"
 	"barter-port/pkg/logger"
+	"context"
 	"errors"
 	"log"
 	"log/slog"
@@ -22,17 +27,17 @@ import (
 	"syscall"
 	"time"
 
-	"context"
-
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/oklog/run"
 )
 
 type App struct {
-	logger          *slog.Logger
-	db              *pgxpool.Pool
-	server          *http.Server
-	outboxPublisher *authkafka.UCOutbox
+	logger            *slog.Logger
+	db                *pgxpool.Pool
+	server            *http.Server
+	ucResultConsumer  *authconsumer.UCResultInboxConsumer
+	ucResultProcessor *ucrprocessor.Processor
+	outboxPublisher   *authkafka.UCOutbox
 }
 
 func NewApp(cfg bootstrap.Config) (*App, error) {
@@ -46,6 +51,7 @@ func NewApp(cfg bootstrap.Config) (*App, error) {
 
 	userRepo := user.NewRepository()
 	ucEventRepo := ucevent.NewRepository()
+	ucResultInboxRepo := ucrinbox.NewRepository()
 	emailTokenRepo := email_token.NewRepository()
 	refreshTokenRepo := refresh_token.NewRepository()
 	outboxRepo := &ucoutbox.Repository{}
@@ -78,6 +84,14 @@ func NewApp(cfg bootstrap.Config) (*App, error) {
 		db.Close()
 		return nil, errors.New("failed to initialize kafka writer: user creation topic is not configured")
 	}
+	if cfg.Kafka.UserCreationResultTopic == "" {
+		db.Close()
+		return nil, errors.New("failed to initialize kafka consumer: user creation result topic is not configured")
+	}
+	if cfg.Kafka.UserCreationResultGroup == "" {
+		db.Close()
+		return nil, errors.New("failed to initialize kafka consumer: user creation result group is not configured")
+	}
 
 	kafkaWriter := kafkax.NewWriter(cfg.Kafka.Brokers, cfg.Kafka.UserCreationTopic)
 	writerOwned := false
@@ -93,6 +107,11 @@ func NewApp(cfg bootstrap.Config) (*App, error) {
 		db.Close()
 		return nil, errors.New("failed to ensure kafka topic: " + err.Error())
 	}
+	if err = kafkax.EnsureTopic(topicInitCtx, cfg.Kafka.Brokers, cfg.Kafka.UserCreationResultTopic, 1, 1); err != nil {
+		cancelTopicInit()
+		db.Close()
+		return nil, errors.New("failed to ensure kafka result topic: " + err.Error())
+	}
 	cancelTopicInit()
 
 	kafkaPublisher := kafkax.NewOutboxPublisher(
@@ -106,6 +125,17 @@ func NewApp(cfg bootstrap.Config) (*App, error) {
 	)
 
 	outboxPublisher := authkafka.NewUserCreationOutboxPublisher(db, outboxRepo, infrastructureLogger, kafkaPublisher)
+	ucResultReader := kafkax.NewMessageReader(cfg.Kafka.Brokers, cfg.Kafka.UserCreationResultTopic, cfg.Kafka.UserCreationResultGroup)
+	ucResultKafkaConsumer := kafkax.NewInboxConsumer[usersauth.UCResultMessage](infrastructureLogger, ucResultReader, cfg.Kafka.PollInterval)
+	ucResultConsumer := authconsumer.NewUCResultInboxConsumer(db, ucResultInboxRepo, ucResultKafkaConsumer)
+	ucResultProcessor := ucrprocessor.NewProcessor(
+		ucResultInboxRepo,
+		ucEventRepo,
+		db,
+		infrastructureLogger,
+		cfg.Kafka.BatchSize,
+		cfg.Kafka.PollInterval,
+	)
 
 	authService := application.NewService(db, userRepo, ucEventRepo, emailTokenRepo, m, infrastructureLogger, outboxRepo, cfg.Mailer.Bypass, frontendURL, re)
 	handlers := transport.NewHandlers(logg, authService, jwtManager, db, refreshTokenRepo)
@@ -118,10 +148,12 @@ func NewApp(cfg bootstrap.Config) (*App, error) {
 	writerOwned = true
 
 	return &App{
-		logger:          logg,
-		db:              db,
-		server:          server,
-		outboxPublisher: outboxPublisher,
+		logger:            logg,
+		db:                db,
+		server:            server,
+		ucResultConsumer:  ucResultConsumer,
+		ucResultProcessor: ucResultProcessor,
+		outboxPublisher:   outboxPublisher,
 	}, nil
 }
 
@@ -132,6 +164,18 @@ func (a *App) Run() error {
 
 	g.Add(func() error {
 		return a.outboxPublisher.Run(ctx)
+	}, func(error) {
+		cancel()
+	})
+
+	g.Add(func() error {
+		return a.ucResultConsumer.Run(ctx)
+	}, func(error) {
+		cancel()
+	})
+
+	g.Add(func() error {
+		return a.ucResultProcessor.Run(ctx)
 	}, func(error) {
 		cancel()
 	})
