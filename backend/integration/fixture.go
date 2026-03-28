@@ -23,6 +23,15 @@ const (
 	kafkaAlias    = "kafka"
 	smtpAlias     = "smtp4dev"
 
+	postgresPort nat.Port = "5432/tcp"
+	kafkaPort    nat.Port = "9092/tcp"
+	smtpPort     nat.Port = "25/tcp"
+	smtpUIPort   nat.Port = "80/tcp"
+
+	authHTTPPort  nat.Port = "8081/tcp"
+	itemsHTTPPort nat.Port = "8080/tcp"
+	usersHTTPPort nat.Port = "8082/tcp"
+
 	PostgresDBName = "postgres"
 	AuthDBName     = "auth_db"
 	UsersDBName    = "users_db"
@@ -96,15 +105,15 @@ func NewFixture(t *testing.T, opts FixtureOptions) *Fixture {
 	}
 	if opts.NeedAuth {
 		f.Auth = SetupAuth(ctx, net, t)
-		f.AuthURL = containerBaseURL(ctx, t, f.Auth, "8081/tcp")
+		f.AuthURL = containerBaseURL(ctx, t, f.Auth, authHTTPPort)
 	}
 	if opts.NeedItems {
 		f.Items = SetupItems(ctx, net, t)
-		f.ItemsURL = containerBaseURL(ctx, t, f.Items, "8080/tcp")
+		f.ItemsURL = containerBaseURL(ctx, t, f.Items, itemsHTTPPort)
 	}
 	if opts.NeedUsers {
 		f.Users = SetupUsers(ctx, net, t)
-		f.UsersURL = containerBaseURL(ctx, t, f.Users, "8082/tcp")
+		f.UsersURL = containerBaseURL(ctx, t, f.Users, usersHTTPPort)
 	}
 
 	return f
@@ -126,7 +135,7 @@ func SetupPostgres(ctx context.Context, net *testcontainers.DockerNetwork, t *te
 	projectRoot := projectRoot(t)
 	req := testcontainers.ContainerRequest{
 		Image:        "postgres:16",
-		ExposedPorts: []string{"5432/tcp"},
+		ExposedPorts: []string{string(postgresPort)},
 		Networks:     []string{net.Name},
 		NetworkAliases: map[string][]string{
 			net.Name: {postgresAlias},
@@ -166,7 +175,7 @@ func SetupKafka(ctx context.Context, net *testcontainers.DockerNetwork, t *testi
 
 	req := testcontainers.ContainerRequest{
 		Image:        "apache/kafka:4.2.0",
-		ExposedPorts: []string{"9092/tcp"},
+		ExposedPorts: []string{string(kafkaPort)},
 		Networks:     []string{net.Name},
 		NetworkAliases: map[string][]string{
 			net.Name: {kafkaAlias},
@@ -188,7 +197,7 @@ func SetupKafka(ctx context.Context, net *testcontainers.DockerNetwork, t *testi
 			"KAFKA_NUM_PARTITIONS":                           "1",
 			"KAFKA_LOG_DIRS":                                 "/var/lib/kafka/data",
 		},
-		WaitingFor: wait.ForListeningPort("9092/tcp").WithStartupTimeout(2 * time.Minute),
+		WaitingFor: wait.ForListeningPort(kafkaPort).WithStartupTimeout(2 * time.Minute),
 	}
 
 	kafka, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
@@ -209,7 +218,7 @@ func SetupSMTP(ctx context.Context, net *testcontainers.DockerNetwork, t *testin
 
 	req := testcontainers.ContainerRequest{
 		Image:        "rnwood/smtp4dev:latest",
-		ExposedPorts: []string{"25/tcp", "80/tcp"},
+		ExposedPorts: []string{string(smtpPort), string(smtpUIPort)},
 		Networks:     []string{net.Name},
 		NetworkAliases: map[string][]string{
 			net.Name: {smtpAlias},
@@ -222,7 +231,7 @@ func SetupSMTP(ctx context.Context, net *testcontainers.DockerNetwork, t *testin
 			"ServerOptions__TlsMode":                "StartTls",
 			"ServerOptions__TlsCertificate":         "",
 		},
-		WaitingFor: wait.ForListeningPort("25/tcp").WithStartupTimeout(2 * time.Minute),
+		WaitingFor: wait.ForListeningPort(smtpPort).WithStartupTimeout(2 * time.Minute),
 	}
 
 	smtp, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
@@ -241,7 +250,7 @@ func SetupSMTP(ctx context.Context, net *testcontainers.DockerNetwork, t *testin
 func SetupAuth(ctx context.Context, net *testcontainers.DockerNetwork, t *testing.T) testcontainers.Container {
 	t.Helper()
 
-	req := serviceContainerRequest(t, net, "auth", "8081/tcp")
+	req := serviceContainerRequest(t, net, "auth", string(authHTTPPort))
 	req.Env = serviceEnv()
 	req.Env["CONFIG_SERVICE"] = "/app/config/auth.yaml"
 	req.Env["JWT_REFRESH_SECRET"] = testJWTRefreshSecret
@@ -253,7 +262,7 @@ func SetupAuth(ctx context.Context, net *testcontainers.DockerNetwork, t *testin
 func SetupItems(ctx context.Context, net *testcontainers.DockerNetwork, t *testing.T) testcontainers.Container {
 	t.Helper()
 
-	req := serviceContainerRequest(t, net, "items", "8080/tcp")
+	req := serviceContainerRequest(t, net, "items", string(itemsHTTPPort))
 	req.Env = serviceEnv()
 	req.Env["CONFIG_SERVICE"] = "/app/config/items.yaml"
 
@@ -263,7 +272,7 @@ func SetupItems(ctx context.Context, net *testcontainers.DockerNetwork, t *testi
 func SetupUsers(ctx context.Context, net *testcontainers.DockerNetwork, t *testing.T) testcontainers.Container {
 	t.Helper()
 
-	req := serviceContainerRequest(t, net, "users", "8082/tcp")
+	req := serviceContainerRequest(t, net, "users", string(usersHTTPPort))
 	req.Env = serviceEnv()
 	req.Env["CONFIG_SERVICE"] = "/app/config/users.yaml"
 	req.Env["AUTH_GRPC_ADDR"] = "auth:50051"
@@ -378,7 +387,7 @@ func OpenDatabase(t *testing.T, f *Fixture, dbName string) *pgxpool.Pool {
 	host, err := f.Postgres.Host(f.Ctx)
 	require.NoError(t, err)
 
-	mappedPort, err := f.Postgres.MappedPort(f.Ctx, nat.Port("5432/tcp"))
+	mappedPort, err := f.Postgres.MappedPort(f.Ctx, postgresPort)
 	require.NoError(t, err)
 
 	pool, err := pgxpool.New(f.Ctx, db.BuildDSN(db.Config{
