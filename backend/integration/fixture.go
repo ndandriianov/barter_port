@@ -4,6 +4,7 @@ import (
 	"barter-port/pkg/db"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -265,6 +266,7 @@ func SetupUsers(ctx context.Context, net *testcontainers.DockerNetwork, t *testi
 	req := serviceContainerRequest(t, net, "users", "8082/tcp")
 	req.Env = serviceEnv()
 	req.Env["CONFIG_SERVICE"] = "/app/config/users.yaml"
+	req.Env["AUTH_GRPC_ADDR"] = "auth:50051"
 
 	return startContainer(ctx, t, req)
 }
@@ -287,7 +289,7 @@ func serviceContainerRequest(t *testing.T, net *testcontainers.DockerNetwork, se
 	req := testcontainers.ContainerRequest{
 		FromDockerfile: testcontainers.FromDockerfile{
 			Context:       projectRoot,
-			Dockerfile:    filepath.Join(projectRoot, "Dockerfile"),
+			Dockerfile:    "Dockerfile",
 			PrintBuildLog: false,
 			BuildArgs: map[string]*string{
 				"SERVICE": stringPtr(service),
@@ -342,11 +344,28 @@ func startContainer(ctx context.Context, t *testing.T, req testcontainers.Contai
 		ContainerRequest: req,
 		Started:          true,
 	})
-	require.NoError(t, err)
 
-	t.Cleanup(func() {
-		require.NoError(t, testcontainers.TerminateContainer(container))
-	})
+	// При любом исходе — если контейнер поднялся, регистрируем вывод логов при падении теста.
+	if container != nil {
+		t.Cleanup(func() {
+			if t.Failed() {
+				rc, logsErr := container.Logs(ctx)
+				if logsErr == nil {
+					defer rc.Close()
+					if raw, readErr := io.ReadAll(rc); readErr == nil {
+						service := ""
+						if s := req.FromDockerfile.BuildArgs["SERVICE"]; s != nil {
+							service = *s
+						}
+						t.Logf("=== container logs [%s] ===\n%s", service, string(raw))
+					}
+				}
+			}
+			require.NoError(t, testcontainers.TerminateContainer(container))
+		})
+	}
+
+	require.NoError(t, err)
 
 	return container
 }

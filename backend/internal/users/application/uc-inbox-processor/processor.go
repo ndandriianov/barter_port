@@ -134,7 +134,7 @@ func (p *Processor) processNext(ctx context.Context) (int, error) {
 	}
 
 	if len(messages) > 0 {
-		p.log.Debug("processed %d user creation messages", len(messages))
+		p.log.Debug("processed user creation messages", slog.Int("count", len(messages)))
 	}
 
 	return len(messages), nil
