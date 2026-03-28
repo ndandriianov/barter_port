@@ -30,3 +30,6 @@ mailer:
   from: "no-reply@local.test"
   tls_mode: "starttls"
   insecure_skip_verify: true
+
+auth_grpc_addr: "localhost:50051"
+auth_grpc_listen_addr: ":50051"

@@ -26,7 +26,6 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
-	"os"
 	"regexp"
 
 	"google.golang.org/grpc"
@@ -86,20 +85,19 @@ func (a *App) initServices(cfg bootstrap.Config) error {
 		Handler: router,
 	}
 
-	if err = a.initGRPCServer(authService); err != nil {
+	if err = a.initGRPCServer(cfg, authService); err != nil {
 		return err
 	}
 
 	return nil
 }
 
-func (a *App) initGRPCServer(authService *application.Service) error {
-	grpcListenAddr := os.Getenv("AUTH_GRPC_LISTEN_ADDR")
-	if grpcListenAddr == "" {
-		grpcListenAddr = ":50051"
+func (a *App) initGRPCServer(cfg bootstrap.Config, authService *application.Service) error {
+	if cfg.AuthGRPCListenAddr == "" {
+		return fmt.Errorf("failed to initialize grpc server: auth grpc listen address is not configured")
 	}
 
-	listener, err := net.Listen("tcp", grpcListenAddr)
+	listener, err := net.Listen("tcp", cfg.AuthGRPCListenAddr)
 	if err != nil {
 		return fmt.Errorf("failed to listen grpc: %w", err)
 	}

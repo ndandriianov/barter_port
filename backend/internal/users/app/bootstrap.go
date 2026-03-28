@@ -13,19 +13,17 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
 
-func (app *App) initAuthGRPCClient() (authpb.AuthServiceClient, error) {
-	grpcAddr := os.Getenv("AUTH_GRPC_ADDR")
-	if grpcAddr == "" {
-		grpcAddr = "localhost:50051"
+func (app *App) initAuthGRPCClient(cfg bootstrap.Config) (authpb.AuthServiceClient, error) {
+	if cfg.AuthGRPCAddr == "" {
+		return nil, fmt.Errorf("failed to initialize grpc server: auth grpc address is not configured")
 	}
 
-	conn, err := grpc.NewClient(grpcAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
+	conn, err := grpc.NewClient(cfg.AuthGRPCAddr, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create auth grpc connection: %w", err)
 	}

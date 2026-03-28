@@ -28,9 +28,9 @@ const (
 	smtpPort     nat.Port = "25/tcp"
 	smtpUIPort   nat.Port = "80/tcp"
 
-	authHTTPPort  nat.Port = "8081/tcp"
+	authHTTPPort  nat.Port = "8080/tcp"
 	itemsHTTPPort nat.Port = "8080/tcp"
-	usersHTTPPort nat.Port = "8082/tcp"
+	usersHTTPPort nat.Port = "8080/tcp"
 
 	PostgresDBName = "postgres"
 	AuthDBName     = "auth_db"
