@@ -8,3 +8,6 @@ kafka:
 mailer:
   host: "smtp4dev"
   port: 25
+
+port: 8080
+auth_grpc_addr: "auth:50051"

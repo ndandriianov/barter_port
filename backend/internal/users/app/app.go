@@ -58,7 +58,7 @@ func NewApp(cfg bootstrap.Config) (*App, error) {
 	app.inboxRepository = ucinbox.NewRepository()
 	app.outboxRepository = ucroutbox.NewRepository()
 	userRepo := user.NewRepository(app.db)
-	authClient, err := app.initAuthGRPCClient()
+	authClient, err := app.initAuthGRPCClient(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize auth grpc client: %w", err)
 	}
