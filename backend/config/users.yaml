@@ -1,3 +1,5 @@
 db:
   name: "users_db"
   migrations_path: "file://migrations/users"
+
+port: 8082
