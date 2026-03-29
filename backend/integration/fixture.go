@@ -612,6 +612,29 @@ func serviceEnv() map[string]string {
 	}
 }
 
+// DumpLogsOnFailure регистрирует вывод логов контейнера при падении теста.
+// Используется тестами, работающими с globalFixture (shared-контейнеры).
+func DumpLogsOnFailure(t *testing.T, c testcontainers.Container, name string) {
+	t.Helper()
+	if c == nil {
+		return
+	}
+	t.Cleanup(func() {
+		if !t.Failed() {
+			return
+		}
+		rc, err := c.Logs(context.Background())
+		if err != nil {
+			t.Logf("=== не удалось получить логи [%s]: %v ===", name, err)
+			return
+		}
+		defer rc.Close()
+		if raw, err := io.ReadAll(rc); err == nil {
+			t.Logf("=== container logs [%s] ===\n%s", name, string(raw))
+		}
+	})
+}
+
 // startContainer запускает контейнер и регистрирует вывод логов при падении теста.
 func startContainer(ctx context.Context, t *testing.T, req testcontainers.ContainerRequest) testcontainers.Container {
 	t.Helper()
