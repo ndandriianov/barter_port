@@ -2,8 +2,8 @@ package email_token
 
 import (
 	"barter-port/internal/auth/domain"
-	"barter-port/internal/auth/infrastructure/repository"
 	"barter-port/pkg/db"
+	"barter-port/pkg/repox"
 	"errors"
 
 	"github.com/google/uuid"
@@ -34,7 +34,7 @@ func (r *Repository) Save(ctx context.Context, exec db.DB, t domain.EmailVerific
 
 	_, err := exec.Exec(ctx, query, t.TokenHash, t.UserID, t.ExpiresAt, t.Used, t.CreatedAt)
 	if err != nil {
-		if repository.IsUniqueViolation(err) {
+		if repox.IsUniqueViolation(err) {
 			return ErrTokenAlreadyExists
 		}
 		return err
