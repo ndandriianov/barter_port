@@ -2,8 +2,8 @@ package refresh_token
 
 import (
 	"barter-port/internal/auth/domain"
-	"barter-port/internal/auth/infrastructure/repository"
 	"barter-port/pkg/db"
+	"barter-port/pkg/repox"
 	"errors"
 
 	"github.com/google/uuid"
@@ -35,7 +35,7 @@ func (r *Repository) Save(ctx context.Context, exec db.DB, token domain.RefreshT
 
 	_, err := exec.Exec(ctx, query, token.JTI, token.UserID, token.ExpiresAt, token.Revoked)
 	if err != nil {
-		if repository.IsUniqueViolation(err) {
+		if repox.IsUniqueViolation(err) {
 			return ErrRefreshAlreadyExists
 		}
 		return err
