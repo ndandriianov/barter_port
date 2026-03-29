@@ -1,4 +1,4 @@
-package transport
+package http
 
 import (
 	"barter-port/contracts/openapi/items/types"
