@@ -7,13 +7,60 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
+	"os"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
+	"github.com/testcontainers/testcontainers-go/network"
 )
+
+// globalFixture — единый стек контейнеров, разделяемый всеми тестами пакета.
+var globalFixture *Fixture
+
+func TestMain(m *testing.M) {
+	os.Exit(runTests(m))
+}
+
+func runTests(m *testing.M) int {
+	ctx := context.Background()
+
+	net, err := network.New(ctx)
+	if err != nil {
+		log.Printf("не удалось создать docker-сеть: %v", err)
+		return 1
+	}
+
+	var setupErr error
+	globalFixture, setupErr = newSharedFixture(ctx, net, FixtureOptions{
+		NeedAuth:  true,
+		NeedUsers: true,
+	})
+	if setupErr != nil {
+		log.Printf("не удалось поднять fixture: %v", setupErr)
+		if globalFixture != nil {
+			if cleanErr := globalFixture.TerminateAll(ctx); cleanErr != nil {
+				log.Printf("ошибка очистки после сбоя setup: %v", cleanErr)
+			}
+		}
+		return 1
+	}
+
+	defer func() {
+		if cleanErr := globalFixture.TerminateAll(ctx); cleanErr != nil {
+			log.Printf("ошибка очистки fixture: %v", cleanErr)
+		}
+	}()
+
+	return m.Run()
+}
+
+// ────────────────────────────────────────────────────────────────
+// Тесты
+// ────────────────────────────────────────────────────────────────
 
 type registerRequest struct {
 	Email    string `json:"email"`
@@ -26,10 +73,9 @@ type registerResponse struct {
 }
 
 func TestUsersGetMe(t *testing.T) {
-	fixture := NewFixture(t, FixtureOptions{
-		NeedAuth:  true,
-		NeedUsers: true,
-	})
+	t.Parallel()
+
+	fixture := globalFixture
 
 	registered := registerAuthUser(t, fixture)
 	waitForUsersProjection(t, fixture, registered.UserID)
@@ -56,10 +102,9 @@ func TestUsersGetMe(t *testing.T) {
 }
 
 func TestUsersUpdateMeAndGetUser(t *testing.T) {
-	fixture := NewFixture(t, FixtureOptions{
-		NeedAuth:  true,
-		NeedUsers: true,
-	})
+	t.Parallel()
+
+	fixture := globalFixture
 
 	registered := registerAuthUser(t, fixture)
 	waitForUsersProjection(t, fixture, registered.UserID)
@@ -109,10 +154,9 @@ func TestUsersUpdateMeAndGetUser(t *testing.T) {
 }
 
 func TestUsersUpdateMeRejectsEmptyPayload(t *testing.T) {
-	fixture := NewFixture(t, FixtureOptions{
-		NeedAuth:  true,
-		NeedUsers: true,
-	})
+	t.Parallel()
+
+	fixture := globalFixture
 
 	registered := registerAuthUser(t, fixture)
 	waitForUsersProjection(t, fixture, registered.UserID)
@@ -137,10 +181,9 @@ func TestUsersUpdateMeRejectsEmptyPayload(t *testing.T) {
 }
 
 func TestUsersGetUserNotFound(t *testing.T) {
-	fixture := NewFixture(t, FixtureOptions{
-		NeedAuth:  true,
-		NeedUsers: true,
-	})
+	t.Parallel()
+
+	fixture := globalFixture
 
 	registered := registerAuthUser(t, fixture)
 	waitForUsersProjection(t, fixture, registered.UserID)
@@ -162,6 +205,10 @@ func TestUsersGetUserNotFound(t *testing.T) {
 	require.NotNil(t, apiErr.Message)
 	require.Equal(t, "user not found", *apiErr.Message)
 }
+
+// ────────────────────────────────────────────────────────────────
+// Вспомогательные функции
+// ────────────────────────────────────────────────────────────────
 
 func registerAuthUser(t *testing.T, fixture *Fixture) registerResponse {
 	t.Helper()
@@ -204,7 +251,7 @@ func waitForUsersProjection(t *testing.T, fixture *Fixture, userID uuid.UUID) {
 			return false
 		}
 		return count == 1
-	}, 20*time.Second, 250*time.Millisecond)
+	}, 20*time.Second, 50*time.Millisecond)
 }
 
 func mustAccessToken(t *testing.T, userID uuid.UUID) string {

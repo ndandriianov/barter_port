@@ -3,6 +3,7 @@ package integration
 import (
 	"barter-port/pkg/db"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -70,6 +71,33 @@ type Fixture struct {
 	UsersURL string
 }
 
+// TerminateAll останавливает все контейнеры и удаляет сеть.
+// Используется в TestMain, где нет *testing.T.
+func (f *Fixture) TerminateAll(ctx context.Context) error {
+	var errs []error
+	for _, c := range []testcontainers.Container{
+		f.Users, f.Items, f.Auth,
+		f.SMTP, f.Kafka, f.Postgres,
+	} {
+		if c != nil {
+			if err := testcontainers.TerminateContainer(c); err != nil {
+				errs = append(errs, err)
+			}
+		}
+	}
+	if f.Network != nil {
+		if err := f.Network.Remove(ctx); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
+}
+
+// ────────────────────────────────────────────────────────────────
+// Публичный конструктор (для тестов с собственным fixture)
+// ────────────────────────────────────────────────────────────────
+
+// NewFixture создаёт fixture с параллельным запуском инфраструктуры.
 func NewFixture(t *testing.T, opts FixtureOptions) *Fixture {
 	t.Helper()
 
@@ -94,45 +122,249 @@ func NewFixture(t *testing.T, opts FixtureOptions) *Fixture {
 		opts.NeedKafka = true
 	}
 
-	if opts.NeedPostgres {
-		f.Postgres = SetupPostgres(ctx, net, t)
-	}
-	if opts.NeedKafka {
-		f.Kafka = SetupKafka(ctx, net, t)
-	}
-	if opts.NeedSMTP {
-		f.SMTP = SetupSMTP(ctx, net, t)
-	}
+	// Параллельный запуск инфраструктурных контейнеров.
+	setupInfraParallel(ctx, net, opts, f, t)
+
+	// Сервисные контейнеры запускаются последовательно:
+	// Users зависит от Auth (gRPC), поэтому Auth должен быть готов первым.
 	if opts.NeedAuth {
-		f.Auth = SetupAuth(ctx, net, t)
+		req := buildServiceRequest(net, "auth", string(authHTTPPort))
+		req.Env = serviceEnv()
+		req.Env["CONFIG_SERVICE"] = "/app/config/auth.yaml"
+		req.Env["JWT_REFRESH_SECRET"] = testJWTRefreshSecret
+		req.Env["MAILER_BYPASS"] = "true"
+		f.Auth = startContainer(ctx, t, req)
 		f.AuthURL = containerBaseURL(ctx, t, f.Auth, authHTTPPort)
 	}
 	if opts.NeedItems {
-		f.Items = SetupItems(ctx, net, t)
+		req := buildServiceRequest(net, "items", string(itemsHTTPPort))
+		req.Env = serviceEnv()
+		req.Env["CONFIG_SERVICE"] = "/app/config/items.yaml"
+		f.Items = startContainer(ctx, t, req)
 		f.ItemsURL = containerBaseURL(ctx, t, f.Items, itemsHTTPPort)
 	}
 	if opts.NeedUsers {
-		f.Users = SetupUsers(ctx, net, t)
+		req := buildServiceRequest(net, "users", string(usersHTTPPort))
+		req.Env = serviceEnv()
+		req.Env["CONFIG_SERVICE"] = "/app/config/users.yaml"
+		req.Env["AUTH_GRPC_ADDR"] = "auth:50051"
+		f.Users = startContainer(ctx, t, req)
 		f.UsersURL = containerBaseURL(ctx, t, f.Users, usersHTTPPort)
 	}
 
 	return f
 }
 
-func SetupNetwork(ctx context.Context, t *testing.T) *testcontainers.DockerNetwork {
-	t.Helper()
+// ────────────────────────────────────────────────────────────────
+// Конструктор для TestMain (без *testing.T)
+// ────────────────────────────────────────────────────────────────
 
-	net, err := network.New(ctx)
-	require.NoError(t, err)
-	testcontainers.CleanupNetwork(t, net)
+// newSharedFixture создаёт Fixture без *testing.T — для использования в TestMain.
+// При частичном сбое уже запущенные контейнеры сохраняются в *Fixture,
+// чтобы вызывающий код мог вызвать TerminateAll для очистки.
+func newSharedFixture(
+	ctx context.Context,
+	net *testcontainers.DockerNetwork,
+	opts FixtureOptions,
+) (*Fixture, error) {
+	if opts.NeedAuth {
+		opts.NeedPostgres = true
+		opts.NeedKafka = true
+		opts.NeedSMTP = true
+	}
+	if opts.NeedItems {
+		opts.NeedPostgres = true
+	}
+	if opts.NeedUsers {
+		opts.NeedPostgres = true
+		opts.NeedKafka = true
+	}
 
-	return net
+	f := &Fixture{Ctx: ctx, Network: net}
+
+	// Параллельный запуск инфраструктуры.
+	if err := setupInfraParallelShared(ctx, net, opts, f); err != nil {
+		return f, err
+	}
+
+	// Сервисные контейнеры — последовательно.
+	if opts.NeedAuth {
+		c, err := launchAuth(ctx, net)
+		f.Auth = c
+		if err != nil {
+			return f, fmt.Errorf("launch auth: %w", err)
+		}
+		url, err := getContainerBaseURL(ctx, c, authHTTPPort)
+		if err != nil {
+			return f, fmt.Errorf("auth base url: %w", err)
+		}
+		f.AuthURL = url
+	}
+	if opts.NeedItems {
+		c, err := launchItems(ctx, net)
+		f.Items = c
+		if err != nil {
+			return f, fmt.Errorf("launch items: %w", err)
+		}
+		url, err := getContainerBaseURL(ctx, c, itemsHTTPPort)
+		if err != nil {
+			return f, fmt.Errorf("items base url: %w", err)
+		}
+		f.ItemsURL = url
+	}
+	if opts.NeedUsers {
+		c, err := launchUsers(ctx, net)
+		f.Users = c
+		if err != nil {
+			return f, fmt.Errorf("launch users: %w", err)
+		}
+		url, err := getContainerBaseURL(ctx, c, usersHTTPPort)
+		if err != nil {
+			return f, fmt.Errorf("users base url: %w", err)
+		}
+		f.UsersURL = url
+	}
+
+	return f, nil
 }
 
-func SetupPostgres(ctx context.Context, net *testcontainers.DockerNetwork, t *testing.T) testcontainers.Container {
+// ────────────────────────────────────────────────────────────────
+// Параллельный запуск инфраструктуры
+// ────────────────────────────────────────────────────────────────
+
+type infraResult struct {
+	name      string
+	container testcontainers.Container
+	err       error
+}
+
+// setupInfraParallel запускает Postgres/Kafka/SMTP параллельно.
+//
+// Буфер канала равен максимальному числу горутин (3): это гарантирует отсутствие
+// утечек горутин — даже если t.FailNow() прервёт цикл после первой ошибки,
+// оставшиеся горутины смогут отправить результат и завершиться.
+//
+// Регистрация cleanup выполняется ДО вызова require.NoError, чтобы очистка
+// произошла даже при неудачном старте контейнера.
+func setupInfraParallel(
+	ctx context.Context,
+	net *testcontainers.DockerNetwork,
+	opts FixtureOptions,
+	f *Fixture,
+	t *testing.T,
+) {
 	t.Helper()
 
-	projectRoot := projectRoot(t)
+	ch := make(chan infraResult, 3)
+	launched := 0
+
+	if opts.NeedPostgres {
+		launched++
+		go func() {
+			c, err := launchPostgres(ctx, net)
+			ch <- infraResult{"postgres", c, err}
+		}()
+	}
+	if opts.NeedKafka {
+		launched++
+		go func() {
+			c, err := launchKafka(ctx, net)
+			ch <- infraResult{"kafka", c, err}
+		}()
+	}
+	if opts.NeedSMTP {
+		launched++
+		go func() {
+			c, err := launchSMTP(ctx, net)
+			ch <- infraResult{"smtp", c, err}
+		}()
+	}
+
+	for i := 0; i < launched; i++ {
+		result := <-ch
+
+		// Регистрируем очистку ДО проверки ошибки.
+		if result.container != nil {
+			c := result.container
+			t.Cleanup(func() {
+				require.NoError(t, testcontainers.TerminateContainer(c))
+			})
+		}
+
+		require.NoError(t, result.err, "инфраструктурный контейнер %q не запустился", result.name)
+
+		switch result.name {
+		case "postgres":
+			f.Postgres = result.container
+		case "kafka":
+			f.Kafka = result.container
+		case "smtp":
+			f.SMTP = result.container
+		}
+	}
+}
+
+// setupInfraParallelShared — вариант для TestMain: без *testing.T, возвращает первую ошибку.
+// Все частично запущенные контейнеры записываются в f, чтобы TerminateAll смог их очистить.
+func setupInfraParallelShared(
+	ctx context.Context,
+	net *testcontainers.DockerNetwork,
+	opts FixtureOptions,
+	f *Fixture,
+) error {
+	ch := make(chan infraResult, 3)
+	launched := 0
+
+	if opts.NeedPostgres {
+		launched++
+		go func() {
+			c, err := launchPostgres(ctx, net)
+			ch <- infraResult{"postgres", c, err}
+		}()
+	}
+	if opts.NeedKafka {
+		launched++
+		go func() {
+			c, err := launchKafka(ctx, net)
+			ch <- infraResult{"kafka", c, err}
+		}()
+	}
+	if opts.NeedSMTP {
+		launched++
+		go func() {
+			c, err := launchSMTP(ctx, net)
+			ch <- infraResult{"smtp", c, err}
+		}()
+	}
+
+	var firstErr error
+	for i := 0; i < launched; i++ {
+		result := <-ch
+
+		// Сохраняем контейнер сразу — TerminateAll должен его найти при ошибке.
+		switch result.name {
+		case "postgres":
+			f.Postgres = result.container
+		case "kafka":
+			f.Kafka = result.container
+		case "smtp":
+			f.SMTP = result.container
+		}
+
+		if result.err != nil && firstErr == nil {
+			firstErr = fmt.Errorf("запуск %s: %w", result.name, result.err)
+		}
+	}
+
+	return firstErr
+}
+
+// ────────────────────────────────────────────────────────────────
+// Низкоуровневые функции запуска (без *testing.T)
+// ────────────────────────────────────────────────────────────────
+
+func launchPostgres(ctx context.Context, net *testcontainers.DockerNetwork) (testcontainers.Container, error) {
+	projectRoot := mustGetProjectRoot()
 	req := testcontainers.ContainerRequest{
 		Image:        "postgres:16",
 		ExposedPorts: []string{string(postgresPort)},
@@ -156,23 +388,10 @@ func SetupPostgres(ctx context.Context, net *testcontainers.DockerNetwork, t *te
 			WithOccurrence(2).
 			WithStartupTimeout(2 * time.Minute),
 	}
-
-	postgres, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: req,
-		Started:          true,
-	})
-	require.NoError(t, err)
-
-	t.Cleanup(func() {
-		require.NoError(t, testcontainers.TerminateContainer(postgres))
-	})
-
-	return postgres
+	return launchContainer(ctx, req)
 }
 
-func SetupKafka(ctx context.Context, net *testcontainers.DockerNetwork, t *testing.T) testcontainers.Container {
-	t.Helper()
-
+func launchKafka(ctx context.Context, net *testcontainers.DockerNetwork) (testcontainers.Container, error) {
 	req := testcontainers.ContainerRequest{
 		Image:        "apache/kafka:4.2.0",
 		ExposedPorts: []string{string(kafkaPort)},
@@ -199,23 +418,10 @@ func SetupKafka(ctx context.Context, net *testcontainers.DockerNetwork, t *testi
 		},
 		WaitingFor: wait.ForListeningPort(kafkaPort).WithStartupTimeout(2 * time.Minute),
 	}
-
-	kafka, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: req,
-		Started:          true,
-	})
-	require.NoError(t, err)
-
-	t.Cleanup(func() {
-		require.NoError(t, testcontainers.TerminateContainer(kafka))
-	})
-
-	return kafka
+	return launchContainer(ctx, req)
 }
 
-func SetupSMTP(ctx context.Context, net *testcontainers.DockerNetwork, t *testing.T) testcontainers.Container {
-	t.Helper()
-
+func launchSMTP(ctx context.Context, net *testcontainers.DockerNetwork) (testcontainers.Container, error) {
 	req := testcontainers.ContainerRequest{
 		Image:        "rnwood/smtp4dev:latest",
 		ExposedPorts: []string{string(smtpPort), string(smtpUIPort)},
@@ -233,66 +439,43 @@ func SetupSMTP(ctx context.Context, net *testcontainers.DockerNetwork, t *testin
 		},
 		WaitingFor: wait.ForListeningPort(smtpPort).WithStartupTimeout(2 * time.Minute),
 	}
-
-	smtp, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: req,
-		Started:          true,
-	})
-	require.NoError(t, err)
-
-	t.Cleanup(func() {
-		require.NoError(t, testcontainers.TerminateContainer(smtp))
-	})
-
-	return smtp
+	return launchContainer(ctx, req)
 }
 
-func SetupAuth(ctx context.Context, net *testcontainers.DockerNetwork, t *testing.T) testcontainers.Container {
-	t.Helper()
-
-	req := serviceContainerRequest(t, net, "auth", string(authHTTPPort))
+func launchAuth(ctx context.Context, net *testcontainers.DockerNetwork) (testcontainers.Container, error) {
+	req := buildServiceRequest(net, "auth", string(authHTTPPort))
 	req.Env = serviceEnv()
 	req.Env["CONFIG_SERVICE"] = "/app/config/auth.yaml"
 	req.Env["JWT_REFRESH_SECRET"] = testJWTRefreshSecret
 	req.Env["MAILER_BYPASS"] = "true"
-
-	return startContainer(ctx, t, req)
+	return launchContainer(ctx, req)
 }
 
-func SetupItems(ctx context.Context, net *testcontainers.DockerNetwork, t *testing.T) testcontainers.Container {
-	t.Helper()
-
-	req := serviceContainerRequest(t, net, "items", string(itemsHTTPPort))
+func launchItems(ctx context.Context, net *testcontainers.DockerNetwork) (testcontainers.Container, error) {
+	req := buildServiceRequest(net, "items", string(itemsHTTPPort))
 	req.Env = serviceEnv()
 	req.Env["CONFIG_SERVICE"] = "/app/config/items.yaml"
-
-	return startContainer(ctx, t, req)
+	return launchContainer(ctx, req)
 }
 
-func SetupUsers(ctx context.Context, net *testcontainers.DockerNetwork, t *testing.T) testcontainers.Container {
-	t.Helper()
-
-	req := serviceContainerRequest(t, net, "users", string(usersHTTPPort))
+func launchUsers(ctx context.Context, net *testcontainers.DockerNetwork) (testcontainers.Container, error) {
+	req := buildServiceRequest(net, "users", string(usersHTTPPort))
 	req.Env = serviceEnv()
 	req.Env["CONFIG_SERVICE"] = "/app/config/users.yaml"
 	req.Env["AUTH_GRPC_ADDR"] = "auth:50051"
-
-	return startContainer(ctx, t, req)
+	return launchContainer(ctx, req)
 }
 
-func serviceEnv() map[string]string {
-	return map[string]string{
-		"APP_ENV":           "docker",
-		"CONFIG_COMMON":     "/app/config/common.yaml",
-		"DB_PASSWORD":       defaultDBPassword,
-		"JWT_ACCESS_SECRET": testJWTAccessSecret,
-	}
+func launchContainer(ctx context.Context, req testcontainers.ContainerRequest) (testcontainers.Container, error) {
+	return testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
+		ContainerRequest: req,
+		Started:          true,
+	})
 }
 
-func serviceContainerRequest(t *testing.T, net *testcontainers.DockerNetwork, service string, exposedPorts ...string) testcontainers.ContainerRequest {
-	t.Helper()
-
-	projectRoot := projectRoot(t)
+// buildServiceRequest строит ContainerRequest для сервисного контейнера без *testing.T.
+func buildServiceRequest(net *testcontainers.DockerNetwork, service string, exposedPorts ...string) testcontainers.ContainerRequest {
+	projectRoot := mustGetProjectRoot()
 	alias := service
 
 	req := testcontainers.ContainerRequest{
@@ -346,15 +529,95 @@ func serviceContainerRequest(t *testing.T, net *testcontainers.DockerNetwork, se
 	return req
 }
 
+// ────────────────────────────────────────────────────────────────
+// Публичные Setup-обёртки (обратная совместимость)
+// ────────────────────────────────────────────────────────────────
+
+func SetupNetwork(ctx context.Context, t *testing.T) *testcontainers.DockerNetwork {
+	t.Helper()
+
+	net, err := network.New(ctx)
+	require.NoError(t, err)
+	testcontainers.CleanupNetwork(t, net)
+
+	return net
+}
+
+func SetupPostgres(ctx context.Context, net *testcontainers.DockerNetwork, t *testing.T) testcontainers.Container {
+	t.Helper()
+
+	c, err := launchPostgres(ctx, net)
+	if c != nil {
+		t.Cleanup(func() { require.NoError(t, testcontainers.TerminateContainer(c)) })
+	}
+	require.NoError(t, err)
+	return c
+}
+
+func SetupKafka(ctx context.Context, net *testcontainers.DockerNetwork, t *testing.T) testcontainers.Container {
+	t.Helper()
+
+	c, err := launchKafka(ctx, net)
+	if c != nil {
+		t.Cleanup(func() { require.NoError(t, testcontainers.TerminateContainer(c)) })
+	}
+	require.NoError(t, err)
+	return c
+}
+
+func SetupSMTP(ctx context.Context, net *testcontainers.DockerNetwork, t *testing.T) testcontainers.Container {
+	t.Helper()
+
+	c, err := launchSMTP(ctx, net)
+	if c != nil {
+		t.Cleanup(func() { require.NoError(t, testcontainers.TerminateContainer(c)) })
+	}
+	require.NoError(t, err)
+	return c
+}
+
+func SetupAuth(ctx context.Context, net *testcontainers.DockerNetwork, t *testing.T) testcontainers.Container {
+	t.Helper()
+	req := buildServiceRequest(net, "auth", string(authHTTPPort))
+	req.Env = serviceEnv()
+	req.Env["CONFIG_SERVICE"] = "/app/config/auth.yaml"
+	req.Env["JWT_REFRESH_SECRET"] = testJWTRefreshSecret
+	req.Env["MAILER_BYPASS"] = "true"
+	return startContainer(ctx, t, req)
+}
+
+func SetupItems(ctx context.Context, net *testcontainers.DockerNetwork, t *testing.T) testcontainers.Container {
+	t.Helper()
+	req := buildServiceRequest(net, "items", string(itemsHTTPPort))
+	req.Env = serviceEnv()
+	req.Env["CONFIG_SERVICE"] = "/app/config/items.yaml"
+	return startContainer(ctx, t, req)
+}
+
+func SetupUsers(ctx context.Context, net *testcontainers.DockerNetwork, t *testing.T) testcontainers.Container {
+	t.Helper()
+	req := buildServiceRequest(net, "users", string(usersHTTPPort))
+	req.Env = serviceEnv()
+	req.Env["CONFIG_SERVICE"] = "/app/config/users.yaml"
+	req.Env["AUTH_GRPC_ADDR"] = "auth:50051"
+	return startContainer(ctx, t, req)
+}
+
+func serviceEnv() map[string]string {
+	return map[string]string{
+		"APP_ENV":           "docker",
+		"CONFIG_COMMON":     "/app/config/common.yaml",
+		"DB_PASSWORD":       defaultDBPassword,
+		"JWT_ACCESS_SECRET": testJWTAccessSecret,
+	}
+}
+
+// startContainer запускает контейнер и регистрирует вывод логов при падении теста.
 func startContainer(ctx context.Context, t *testing.T, req testcontainers.ContainerRequest) testcontainers.Container {
 	t.Helper()
 
-	container, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: req,
-		Started:          true,
-	})
+	container, err := launchContainer(ctx, req)
 
-	// При любом исходе — если контейнер поднялся, регистрируем вывод логов при падении теста.
 	if container != nil {
 		t.Cleanup(func() {
 			if t.Failed() {
@@ -378,6 +641,58 @@ func startContainer(ctx context.Context, t *testing.T, req testcontainers.Contai
 
 	return container
 }
+
+// ────────────────────────────────────────────────────────────────
+// URL-хелперы
+// ────────────────────────────────────────────────────────────────
+
+// getContainerBaseURL возвращает HTTP base URL без *testing.T.
+func getContainerBaseURL(ctx context.Context, c testcontainers.Container, port nat.Port) (string, error) {
+	host, err := c.Host(ctx)
+	if err != nil {
+		return "", fmt.Errorf("container host: %w", err)
+	}
+	mappedPort, err := c.MappedPort(ctx, port)
+	if err != nil {
+		return "", fmt.Errorf("container mapped port: %w", err)
+	}
+	return fmt.Sprintf("http://%s:%s", host, mappedPort.Port()), nil
+}
+
+// containerBaseURL — обёртка над getContainerBaseURL с t-ассертами.
+func containerBaseURL(ctx context.Context, t *testing.T, c testcontainers.Container, port nat.Port) string {
+	t.Helper()
+	url, err := getContainerBaseURL(ctx, c, port)
+	require.NoError(t, err)
+	return url
+}
+
+// ────────────────────────────────────────────────────────────────
+// Вспомогательные функции
+// ────────────────────────────────────────────────────────────────
+
+// mustGetProjectRoot возвращает корень проекта без *testing.T.
+func mustGetProjectRoot() string {
+	wd, err := os.Getwd()
+	if err != nil {
+		panic(fmt.Sprintf("os.Getwd: %v", err))
+	}
+	return filepath.Clean(filepath.Join(wd, ".."))
+}
+
+// projectRoot — обёртка с t для обратной совместимости.
+func projectRoot(t *testing.T) string {
+	t.Helper()
+	return mustGetProjectRoot()
+}
+
+func stringPtr(value string) *string {
+	return &value
+}
+
+// ────────────────────────────────────────────────────────────────
+// Работа с базой данных
+// ────────────────────────────────────────────────────────────────
 
 func OpenDatabase(t *testing.T, f *Fixture, dbName string) *pgxpool.Pool {
 	t.Helper()
@@ -444,29 +759,4 @@ func RequireUsersTablesExist(t *testing.T, pool *pgxpool.Pool) {
 		"user_creation_result_outbox",
 		"deleted_users",
 	)
-}
-
-func containerBaseURL(ctx context.Context, t *testing.T, c testcontainers.Container, port nat.Port) string {
-	t.Helper()
-
-	host, err := c.Host(ctx)
-	require.NoError(t, err)
-
-	mappedPort, err := c.MappedPort(ctx, port)
-	require.NoError(t, err)
-
-	return fmt.Sprintf("http://%s:%s", host, mappedPort.Port())
-}
-
-func projectRoot(t *testing.T) string {
-	t.Helper()
-
-	wd, err := os.Getwd()
-	require.NoError(t, err)
-
-	return filepath.Clean(filepath.Join(wd, ".."))
-}
-
-func stringPtr(value string) *string {
-	return &value
 }
