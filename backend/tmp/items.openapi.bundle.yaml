@@ -240,31 +240,9 @@ components:
           allOf:
             - $ref: '#/components/schemas/ItemsCursor'
           description: Cursor for fetching the next page; null if there is no next page
-    ErrorCode:
-      type: string
-      enum:
-        - INVALID_REQUEST
-        - INVALID_ITEM_TYPE
-        - INVALID_ITEM_ACTION
-        - INVALID_ITEM_NAME
-        - INVALID_SORT_TYPE
-        - INTERNAL
-      x-enum-varnames:
-        - ErrorCodeInvalidRequest
-        - ErrorCodeInvalidItemType
-        - ErrorCodeInvalidItemAction
-        - ErrorCodeInvalidItemName
-        - ErrorCodeInvalidSortType
-        - ErrorCodeInternal
-      example: INVALID_REQUEST
     ErrorResponse:
       type: object
-      required:
-        - code
-        - message
       properties:
-        code:
-          $ref: '#/components/schemas/ErrorCode'
         message:
           type: string
           example: Вы отправили некорректный запрос

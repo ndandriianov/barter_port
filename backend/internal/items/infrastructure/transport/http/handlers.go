@@ -4,7 +4,6 @@ import (
 	"barter-port/contracts/openapi/items/types"
 	"barter-port/internal/items/application"
 	"barter-port/internal/items/domain"
-	"barter-port/internal/items/domain/error_messages"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/http_api"
 	"barter-port/pkg/logger"
@@ -41,10 +40,7 @@ func (h *Handlers) HandleCreateItem(w http.ResponseWriter, r *http.Request) {
 	var req types.CreateItemRequest
 	if err := http_api.DecodeJSON(r, &req); err != nil {
 		log.Error("error decoding request", slog.Any("error", err))
-		http_api.WriteJSON(w, http.StatusBadRequest, types.ErrorResponse{
-			Code:    types.ErrorCodeInvalidRequest,
-			Message: error_messages.IncorrectRequest,
-		})
+		http_api.WriteError(w, http.StatusBadRequest, http_api.CannotDecodeRequestBody)
 		return
 	}
 
@@ -54,30 +50,21 @@ func (h *Handlers) HandleCreateItem(w http.ResponseWriter, r *http.Request) {
 	itemType, err := domain.ItemTypeString(string(req.Type))
 	if err != nil {
 		log.Error("invalid item type", slog.String("type", string(req.Type)), slog.Any("error", err))
-		http_api.WriteJSON(w, http.StatusBadRequest, types.ErrorResponse{
-			Code:    types.ErrorCodeInvalidItemType,
-			Message: error_messages.InvalidItemType,
-		})
+		http_api.WriteError(w, http.StatusBadRequest, "invalid item type")
 		return
 	}
 
 	action, err := domain.ItemActionString(string(req.Action))
 	if err != nil {
 		log.Error("invalid item action", slog.String("action", string(req.Action)), slog.Any("error", err))
-		http_api.WriteJSON(w, http.StatusBadRequest, types.ErrorResponse{
-			Code:    types.ErrorCodeInvalidItemAction,
-			Message: error_messages.InvalidItemAction,
-		})
+		http_api.WriteError(w, http.StatusBadRequest, "invalid item action")
 		return
 	}
 
 	userID, ok := authkit.UserIDFromContext(r.Context())
 	if !ok {
 		log.Error("failed to get userID from context")
-		http_api.WriteJSON(w, http.StatusInternalServerError, types.ErrorResponse{
-			Code:    types.ErrorCodeInternal,
-			Message: error_messages.Internal,
-		})
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
@@ -85,17 +72,11 @@ func (h *Handlers) HandleCreateItem(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, application.ErrInvalidItemName) {
 			log.Warn("invalid item name", slog.String("error", err.Error()))
-			http_api.WriteJSON(w, http.StatusBadRequest, types.ErrorResponse{
-				Code:    types.ErrorCodeInvalidItemName,
-				Message: error_messages.InvalidItemName,
-			})
+			http_api.WriteError(w, http.StatusBadRequest, "invalid item name")
 			return
 		}
 		log.Error("failed to create item", slog.String("error", err.Error()))
-		http_api.WriteJSON(w, http.StatusInternalServerError, types.ErrorResponse{
-			Code:    types.ErrorCodeInternal,
-			Message: error_messages.Internal,
-		})
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
@@ -128,10 +109,7 @@ func (h *Handlers) HandleGetItems(w http.ResponseWriter, r *http.Request) {
 	sortType, err := domain.SortTypeString(sortTypeStr)
 	if err != nil {
 		log.Error("invalid sort type", slog.Any("error", err))
-		http_api.WriteJSON(w, http.StatusBadRequest, types.ErrorResponse{
-			Code:    types.ErrorCodeInvalidSortType,
-			Message: error_messages.InvalidSortType,
-		})
+		http_api.WriteError(w, http.StatusBadRequest, "invalid sort type")
 		return
 	}
 
@@ -153,10 +131,7 @@ func (h *Handlers) HandleGetItems(w http.ResponseWriter, r *http.Request) {
 	items, nextCursor, err := h.itemService.GetItems(r.Context(), sortType, cursor, limit)
 	if err != nil {
 		log.Error("failed to get items", slog.String("error", err.Error()))
-		http_api.WriteJSON(w, http.StatusInternalServerError, types.ErrorResponse{
-			Code:    types.ErrorCodeInternal,
-			Message: error_messages.Internal,
-		})
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 

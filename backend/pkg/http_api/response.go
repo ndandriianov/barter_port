@@ -33,3 +33,15 @@ func WriteJSON(w http.ResponseWriter, status int, v any) {
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(v)
 }
+
+func WriteError(w http.ResponseWriter, status int, msg string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	json.NewEncoder(w).Encode(struct {
+		Message *string `json:"message,omitempty"`
+	}{Message: &msg})
+}
+
+const (
+	CannotDecodeRequestBody = "cannot decode request body"
+)
