@@ -3,7 +3,7 @@ package http
 import (
 	"barter-port/contracts/openapi/users/types"
 	"barter-port/internal/users/application/user"
-	"barter-port/internal/users/model"
+	"barter-port/internal/users/domain"
 	"barter-port/pkg/authkit"
 	httpapi "barter-port/pkg/http_api"
 	httplog "barter-port/pkg/logger"
@@ -41,7 +41,7 @@ func (h *Handlers) HandleGetUser(w http.ResponseWriter, r *http.Request) {
 
 	u, err := h.userService.GetUser(r.Context(), userID)
 	if err != nil {
-		if errors.Is(err, model.ErrUserNotFound) {
+		if errors.Is(err, domain.ErrUserNotFound) {
 			log.Info("user not found", slog.String("user_id", userID.String()))
 			writeError(w, http.StatusNotFound, "user not found")
 			return
@@ -75,7 +75,7 @@ func (h *Handlers) HandleGetMe(w http.ResponseWriter, r *http.Request) {
 
 	me, err := h.getMe(r.Context(), userID)
 	if err != nil {
-		if errors.Is(err, model.ErrUserNotFound) {
+		if errors.Is(err, domain.ErrUserNotFound) {
 			log.Error("current user is absent in users storage", slog.String("user_id", userID.String()))
 			writeError(w, http.StatusInternalServerError, "internal server error")
 			return
@@ -142,7 +142,7 @@ func (h *Handlers) HandleUpdateMe(w http.ResponseWriter, r *http.Request) {
 func handleUpdateError(w http.ResponseWriter, log *slog.Logger, err error, userID uuid.UUID) {
 	updateErrLog := log.With(slog.Any("userID", userID), slog.Any("error", err))
 
-	if errors.Is(err, model.ErrUserNotFound) {
+	if errors.Is(err, domain.ErrUserNotFound) {
 		updateErrLog.Info("user not found")
 		writeError(w, http.StatusNotFound, "user not found")
 	} else {

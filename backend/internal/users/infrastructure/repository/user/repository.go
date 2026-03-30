@@ -1,7 +1,7 @@
 package user
 
 import (
-	"barter-port/internal/users/model"
+	"barter-port/internal/users/domain"
 	"barter-port/pkg/db"
 	"barter-port/pkg/repox"
 	"errors"
@@ -23,7 +23,7 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 // AddUser adds a new user to the repository.
 //
 // Errors:
-//   - model.ErrUserAlreadyExists: Occurs if a user with the same ID already exists in the repository.
+//   - domain.ErrUserAlreadyExists: Occurs if a user with the same ID already exists in the repository.
 func (r *Repository) AddUser(ctx context.Context, db db.DB, userID uuid.UUID) error {
 	query := `
 		INSERT INTO users (id)
@@ -32,7 +32,7 @@ func (r *Repository) AddUser(ctx context.Context, db db.DB, userID uuid.UUID) er
 
 	_, err := db.Exec(ctx, query, userID)
 	if err != nil && repox.IsUniqueViolation(err) {
-		return model.ErrUserAlreadyExists
+		return domain.ErrUserAlreadyExists
 	}
 	return err
 }
@@ -40,8 +40,8 @@ func (r *Repository) AddUser(ctx context.Context, db db.DB, userID uuid.UUID) er
 // GetUserById returns user by id.
 //
 // Errors:
-//   - model.ErrUserNotFound: Occurs if no user is found with the given id.
-func (r *Repository) GetUserById(ctx context.Context, id uuid.UUID) (*model.User, error) {
+//   - domain.ErrUserNotFound: Occurs if no user is found with the given id.
+func (r *Repository) GetUserById(ctx context.Context, id uuid.UUID) (*domain.User, error) {
 	query := `
 		SELECT id, name, bio
 		FROM users
@@ -54,10 +54,10 @@ func (r *Repository) GetUserById(ctx context.Context, id uuid.UUID) (*model.User
 	}
 	defer rows.Close()
 
-	user, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[model.User])
+	user, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[domain.User])
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, model.ErrUserNotFound
+			return nil, domain.ErrUserNotFound
 		}
 		return nil, err
 	}
@@ -75,7 +75,7 @@ func (r *Repository) DeleteUser(ctx context.Context, id uuid.UUID) error {
 // UpdateName updates the name of a user.
 //
 // Errors:
-//   - model.ErrUserNotFound: Occurs if no user is found with the given id.
+//   - domain.ErrUserNotFound: Occurs if no user is found with the given id.
 func (r *Repository) UpdateName(ctx context.Context, id uuid.UUID, name string) error {
 	query := `
 		UPDATE users
@@ -88,7 +88,7 @@ func (r *Repository) UpdateName(ctx context.Context, id uuid.UUID, name string) 
 		return err
 	}
 	if tag.RowsAffected() == 0 {
-		return model.ErrUserNotFound
+		return domain.ErrUserNotFound
 	}
 
 	return nil
@@ -97,7 +97,7 @@ func (r *Repository) UpdateName(ctx context.Context, id uuid.UUID, name string) 
 // UpdateBio updates the bio of a user.
 //
 // Errors:
-//   - model.ErrUserNotFound: Occurs if no user is found with the given id.
+//   - domain.ErrUserNotFound: Occurs if no user is found with the given id.
 func (r *Repository) UpdateBio(ctx context.Context, id uuid.UUID, bio *string) error {
 	query := `
 		UPDATE users
@@ -110,7 +110,7 @@ func (r *Repository) UpdateBio(ctx context.Context, id uuid.UUID, bio *string) e
 		return err
 	}
 	if tag.RowsAffected() == 0 {
-		return model.ErrUserNotFound
+		return domain.ErrUserNotFound
 	}
 
 	return nil

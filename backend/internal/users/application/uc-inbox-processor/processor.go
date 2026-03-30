@@ -4,10 +4,10 @@ import (
 	authusers "barter-port/contracts/kafka/messages/auth-users"
 	usersauth "barter-port/contracts/kafka/messages/users-auth"
 	statusUpdate "barter-port/contracts/kafka/messages/users-auth/status-update"
+	"barter-port/internal/users/domain"
 	ucinbox "barter-port/internal/users/infrastructure/repository/uc-inbox"
 	ucroutbox "barter-port/internal/users/infrastructure/repository/uc-result-outbox"
 	"barter-port/internal/users/infrastructure/repository/user"
-	"barter-port/internal/users/model"
 	"barter-port/pkg/db"
 	"barter-port/pkg/errorx"
 	"context"
@@ -94,7 +94,7 @@ func (p *Processor) processNext(ctx context.Context) (int, error) {
 		for _, message := range messages {
 			err = p.userRepo.AddUser(ctx, tx, message.UserID)
 			if err != nil {
-				if errors.Is(err, model.ErrUserAlreadyExists) {
+				if errors.Is(err, domain.ErrUserAlreadyExists) {
 					err = p.outboxRepo.WriteUCResultMessage(ctx, tx, usersauth.UCResultMessage{
 						ID:        uuid.New(),
 						UserID:    message.UserID,
