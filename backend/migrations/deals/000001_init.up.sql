@@ -7,6 +7,7 @@ CREATE TABLE items
     action      TEXT        NOT NULL,
     description TEXT        NOT NULL,
     created_at  TIMESTAMPTZ NOT NULL,
+    updated_at  TIMESTAMPTZ,
     views       INTEGER     NOT NULL DEFAULT 0,
 
     CONSTRAINT items_type_check CHECK (type IN ('good', 'service')),
@@ -15,11 +16,12 @@ CREATE TABLE items
 
 CREATE TABLE draft_deals
 (
-    id          UUID PRIMARY KEY,
+    id          UUID PRIMARY KEY     DEFAULT gen_random_uuid(),
     author_id   UUID        NOT NULL,
     name        TEXT,
     description TEXT,
-    created_at  TIMESTAMPTZ NOT NULL
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at  TIMESTAMPTZ
 );
 
 CREATE TABLE draft_deal_items
