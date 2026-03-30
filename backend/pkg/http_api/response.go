@@ -6,9 +6,8 @@ import (
 	"net/http"
 )
 
-// ErrorResponse represents the structure of an error response.
 type ErrorResponse struct {
-	Error string `json:"error"` // The error message
+	Message *string `json:"message,omitempty"`
 }
 
 func WriteJSON(w http.ResponseWriter, status int, v any) {
@@ -20,17 +19,13 @@ func WriteJSON(w http.ResponseWriter, status int, v any) {
 func WriteErrorStr(w http.ResponseWriter, status int, msg string) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(struct {
-		Message *string `json:"message,omitempty"`
-	}{Message: &msg})
+	_ = json.NewEncoder(w).Encode(ErrorResponse{Message: &msg})
 }
 
 func WriteError(w http.ResponseWriter, status int, err error) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
-	json.NewEncoder(w).Encode(struct {
-		Message *string `json:"message,omitempty"`
-	}{Message: new(err.Error())})
+	_ = json.NewEncoder(w).Encode(ErrorResponse{Message: new(err.Error())})
 }
 
 var ErrCannotDecodeRequestBody = errors.New("cannot decode request body")

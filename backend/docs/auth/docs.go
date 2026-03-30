@@ -35,7 +35,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/infrastructure_transport.credentialsReq"
+                            "$ref": "#/definitions/infrastructure_transport_http.credentialsReq"
                         }
                     }
                 ],
@@ -43,7 +43,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/infrastructure_transport.loginResp"
+                            "$ref": "#/definitions/infrastructure_transport_http.loginResp"
                         }
                     },
                     "400": {
@@ -65,10 +65,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/http_api.ErrorResponse"
-                        }
+                        "description": "Internal server error"
                     }
                 }
             }
@@ -88,10 +85,7 @@ const docTemplate = `{
                         "description": "Logout successful"
                     },
                     "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/http_api.ErrorResponse"
-                        }
+                        "description": "Internal server error"
                     }
                 }
             }
@@ -115,14 +109,11 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/infrastructure_transport.meResp"
+                            "$ref": "#/definitions/infrastructure_transport_http.meResp"
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/http_api.ErrorResponse"
-                        }
+                        "description": "Internal server error"
                     }
                 }
             }
@@ -153,7 +144,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/infrastructure_transport.refreshResponse"
+                            "$ref": "#/definitions/infrastructure_transport_http.refreshResponse"
                         }
                     },
                     "401": {
@@ -163,10 +154,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/http_api.ErrorResponse"
-                        }
+                        "description": "Internal server error"
                     }
                 }
             }
@@ -191,7 +179,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/infrastructure_transport.credentialsReq"
+                            "$ref": "#/definitions/infrastructure_transport_http.credentialsReq"
                         }
                     }
                 ],
@@ -199,7 +187,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/infrastructure_transport.registerResp"
+                            "$ref": "#/definitions/infrastructure_transport_http.registerResp"
                         }
                     },
                     "400": {
@@ -209,10 +197,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/http_api.ErrorResponse"
-                        }
+                        "description": "Internal server error"
                     }
                 }
             }
@@ -237,7 +222,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/infrastructure_transport.credentialsReq"
+                            "$ref": "#/definitions/infrastructure_transport_http.credentialsReq"
                         }
                     }
                 ],
@@ -258,10 +243,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/http_api.ErrorResponse"
-                        }
+                        "description": "Internal server error"
                     }
                 }
             }
@@ -289,7 +271,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/infrastructure_transport.userCreationStatusResp"
+                            "$ref": "#/definitions/infrastructure_transport_http.userCreationStatusResp"
                         }
                     },
                     "400": {
@@ -305,10 +287,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/http_api.ErrorResponse"
-                        }
+                        "description": "Internal server error"
                     }
                 }
             }
@@ -333,7 +312,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/infrastructure_transport.verifyEmailReq"
+                            "$ref": "#/definitions/infrastructure_transport_http.verifyEmailReq"
                         }
                     }
                 ],
@@ -354,10 +333,7 @@ const docTemplate = `{
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/http_api.ErrorResponse"
-                        }
+                        "description": "Internal server error"
                     }
                 }
             }
@@ -367,13 +343,12 @@ const docTemplate = `{
         "http_api.ErrorResponse": {
             "type": "object",
             "properties": {
-                "error": {
-                    "description": "The error message",
+                "message": {
                     "type": "string"
                 }
             }
         },
-        "infrastructure_transport.credentialsReq": {
+        "infrastructure_transport_http.credentialsReq": {
             "type": "object",
             "properties": {
                 "email": {
@@ -386,7 +361,7 @@ const docTemplate = `{
                 }
             }
         },
-        "infrastructure_transport.loginResp": {
+        "infrastructure_transport_http.loginResp": {
             "type": "object",
             "properties": {
                 "accessToken": {
@@ -394,7 +369,7 @@ const docTemplate = `{
                 }
             }
         },
-        "infrastructure_transport.meResp": {
+        "infrastructure_transport_http.meResp": {
             "type": "object",
             "properties": {
                 "userId": {
@@ -402,7 +377,7 @@ const docTemplate = `{
                 }
             }
         },
-        "infrastructure_transport.refreshResponse": {
+        "infrastructure_transport_http.refreshResponse": {
             "type": "object",
             "properties": {
                 "access_token": {
@@ -410,7 +385,7 @@ const docTemplate = `{
                 }
             }
         },
-        "infrastructure_transport.registerResp": {
+        "infrastructure_transport_http.registerResp": {
             "type": "object",
             "properties": {
                 "email": {
@@ -421,7 +396,7 @@ const docTemplate = `{
                 }
             }
         },
-        "infrastructure_transport.userCreationStatusResp": {
+        "infrastructure_transport_http.userCreationStatusResp": {
             "type": "object",
             "properties": {
                 "status": {
@@ -429,7 +404,7 @@ const docTemplate = `{
                 }
             }
         },
-        "infrastructure_transport.verifyEmailReq": {
+        "infrastructure_transport_http.verifyEmailReq": {
             "type": "object",
             "properties": {
                 "token": {

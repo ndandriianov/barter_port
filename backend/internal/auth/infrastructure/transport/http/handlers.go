@@ -69,7 +69,7 @@ func NewHandlers(
 // @Param credentialsReq body credentialsReq true "Register request"
 // @Success 200 {object} registerResp
 // @Failure 400 {object} http_api.ErrorResponse "Invalid request"
-// @Failure 500 {object} http_api.ErrorResponse "Internal server error"
+// @Failure 500 "Internal server error"
 // @Router /auth/register [post]
 func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 	requestID := middleware.GetReqID(r.Context())
@@ -126,7 +126,7 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 // @Success 200 "Verification email sent successfully"
 // @Failure 400 {object} http_api.ErrorResponse "Invalid request"
 // @Failure 401 {object} http_api.ErrorResponse "Unauthorized"
-// @Failure 500 {object} http_api.ErrorResponse "Internal server error"
+// @Failure 500 "Internal server error"
 // @Router /auth/retry-send-verification-email [post]
 func (h *Handlers) RetrySendVerificationEmail(w http.ResponseWriter, r *http.Request) {
 	requestID := middleware.GetReqID(r.Context())
@@ -171,7 +171,7 @@ func (h *Handlers) RetrySendVerificationEmail(w http.ResponseWriter, r *http.Req
 // @Success 200 "status: ok"
 // @Failure 400 {object} http_api.ErrorResponse "Invalid request or token"
 // @Failure 404 {object} http_api.ErrorResponse "User not found"
-// @Failure 500 {object} http_api.ErrorResponse "Internal server error"
+// @Failure 500 "Internal server error"
 // @Router /auth/verify-email [post]
 func (h *Handlers) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	requestID := middleware.GetReqID(r.Context())
@@ -225,7 +225,7 @@ func (h *Handlers) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 // @Failure 400 {object} http_api.ErrorResponse "Invalid request or credentialsReq"
 // @Failure 401 {object} http_api.ErrorResponse "Incorrect password"
 // @Failure 403 {object} http_api.ErrorResponse "Email not verified"
-// @Failure 500 {object} http_api.ErrorResponse "Internal server error"
+// @Failure 500 "Internal server error"
 // @Router /auth/login [post]
 func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	requestID := middleware.GetReqID(r.Context())
@@ -324,7 +324,7 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Success 200 {object} refreshResponse
 // @Failure 401 {object} http_api.ErrorResponse "Unauthorized or invalid token"
-// @Failure 500 {object} http_api.ErrorResponse "Internal server error"
+// @Failure 500 "Internal server error"
 // @Router /auth/refresh [post]
 func (h *Handlers) Refresh(w http.ResponseWriter, r *http.Request) {
 	requestID := middleware.GetReqID(r.Context())
@@ -441,7 +441,7 @@ func (h *Handlers) Refresh(w http.ResponseWriter, r *http.Request) {
 // @Tags auth
 // @Produce json
 // @Success 200 "Logout successful"
-// @Failure 500 {object} http_api.ErrorResponse "Internal server error"
+// @Failure 500 "Internal server error"
 // @Router /auth/logout [post]
 func (h *Handlers) Logout(w http.ResponseWriter, r *http.Request) {
 	requestID := middleware.GetReqID(r.Context())
@@ -478,7 +478,7 @@ type meResp struct {
 // @Tags auth
 // @Produce json
 // @Success 200 {object} meResp
-// @Failure 500 {object} http_api.ErrorResponse "Internal server error"
+// @Failure 500 "Internal server error"
 // @Router /auth/me [get]
 func (h *Handlers) Me(w http.ResponseWriter, r *http.Request) {
 	requestID := middleware.GetReqID(r.Context())
@@ -509,7 +509,7 @@ type userCreationStatusResp struct {
 // @Success 200 {object} userCreationStatusResp
 // @Failure 400 {object} http_api.ErrorResponse "Invalid user ID"
 // @Failure 404 {object} http_api.ErrorResponse "User creation event not found"
-// @Failure 500 {object} http_api.ErrorResponse "Internal server error"
+// @Failure 500 "Internal server error"
 // @Router /auth/status/{userId} [get]
 func (h *Handlers) GetUserCreationStatus(w http.ResponseWriter, r *http.Request) {
 	requestID := middleware.GetReqID(r.Context())
