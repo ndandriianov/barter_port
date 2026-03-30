@@ -31,20 +31,6 @@ const (
 	subject             = "Confirm your email"
 )
 
-var (
-	ErrInvalidEmail      = errors.New("invalid email")
-	ErrPasswordTooShort  = errors.New("password too short")
-	ErrEmailAlreadyInUse = errors.New("email already in use")
-
-	ErrUserNotFound      = errors.New("user not found")
-	ErrInvalidEmailToken = errors.New("invalid email_token")
-	ErrEmailTokenExpired = errors.New("email_token expired")
-
-	ErrInvalidCredentials = errors.New("invalid credentials")
-	ErrEmailNotVerified   = errors.New("email not verified")
-	ErrIncorrectPassword  = errors.New("incorrect password")
-)
-
 type UserRepo interface {
 	Create(ctx context.Context, exec db.DB, user domain.User) error
 	GetByEmail(ctx context.Context, exec db.DB, email string) (domain.User, error)
@@ -151,7 +137,7 @@ func (s *Service) Register(ctx context.Context, email, password string) (Registe
 	err = db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
 		if err := s.users.Create(ctx, tx, u); err != nil {
 			if errors.Is(err, domain.ErrEmailAlreadyInUse) {
-				return ErrEmailAlreadyInUse
+				return domain.ErrEmailAlreadyInUse
 			}
 			return fmt.Errorf("failed to create user: %w", err)
 		}
@@ -258,7 +244,7 @@ func (s *Service) VerifyEmail(ctx context.Context, rawToken string) error {
 		t, err := s.tokens.GetByHashForUpdate(ctx, tx, tokenHash)
 		if err != nil {
 			if errors.Is(err, email_token.ErrTokenNotFound) {
-				return ErrInvalidEmailToken
+				return domain.ErrInvalidEmailToken
 			}
 			return fmt.Errorf("failed to get email_token by hash: %w", err)
 		}
@@ -267,13 +253,13 @@ func (s *Service) VerifyEmail(ctx context.Context, rawToken string) error {
 			return nil
 		}
 		if time.Now().After(t.ExpiresAt) {
-			return ErrEmailTokenExpired
+			return domain.ErrEmailTokenExpired
 		}
 
 		changed, err := s.users.VerifyEmailIfNotVerified(ctx, tx, t.UserID)
 		if err != nil {
 			if errors.Is(err, domain.ErrUserNotFound) {
-				return fmt.Errorf("failed to verify email: %w", ErrUserNotFound)
+				return fmt.Errorf("failed to verify email: %w", domain.ErrUserNotFound)
 			}
 			return fmt.Errorf("failed to verify email: %w", err)
 		}
@@ -343,10 +329,6 @@ type LoginResult struct {
 func (s *Service) GetUserCreationStatus(ctx context.Context, userID uuid.UUID) (string, error) {
 	event, err := s.ucEventRepo.GetByUserID(ctx, s.db, userID)
 	if err != nil {
-		if errors.Is(err, ErrUserNotFound) {
-			return "", ErrUserNotFound
-		}
-
 		return "", fmt.Errorf("failed to get user creation event: %w", err)
 	}
 
@@ -368,7 +350,7 @@ func (s *Service) Login(ctx context.Context, email, password string) (uuid.UUID,
 	}
 
 	if !u.EmailVerified {
-		return uuid.Nil, ErrEmailNotVerified
+		return uuid.Nil, domain.ErrEmailNotVerified
 	}
 
 	return u.ID, nil
@@ -378,19 +360,19 @@ func (s *Service) verifyCredentials(ctx context.Context, email, password string)
 	email = strings.TrimSpace(strings.ToLower(email))
 
 	if err := s.validateCredentials(email, password); err != nil {
-		return domain.User{}, ErrInvalidCredentials
+		return domain.User{}, domain.ErrInvalidCredentials
 	}
 
 	u, err := s.users.GetByEmail(ctx, s.db, email)
 	if err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) {
-			return domain.User{}, fmt.Errorf("user not found: %w", ErrInvalidCredentials)
+			return domain.User{}, fmt.Errorf("user not found: %w", domain.ErrInvalidCredentials)
 		}
 		return domain.User{}, fmt.Errorf("failed to get user by email: %w", err)
 	}
 
 	if err = bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password)); err != nil {
-		return domain.User{}, ErrIncorrectPassword
+		return domain.User{}, domain.ErrIncorrectPassword
 	}
 
 	return u, nil

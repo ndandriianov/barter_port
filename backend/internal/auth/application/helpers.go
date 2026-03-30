@@ -1,6 +1,7 @@
 package application
 
 import (
+	"barter-port/internal/auth/domain"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
@@ -26,7 +27,7 @@ func sha256Hex(s string) string {
 func getHashFromRawToken(rawToken string) (string, error) {
 	trimmedToken := strings.TrimSpace(rawToken)
 	if trimmedToken == "" {
-		return "", ErrInvalidEmailToken
+		return "", domain.ErrInvalidEmailToken
 	}
 	return sha256Hex(rawToken), nil
 }
@@ -39,10 +40,10 @@ func getHashFromToken(token string) string {
 
 func (s *Service) validateCredentials(email, password string) error {
 	if !s.re.MatchString(email) {
-		return ErrInvalidEmail
+		return domain.ErrInvalidEmail
 	}
 	if len(password) < minPasswordLength {
-		return ErrPasswordTooShort
+		return domain.ErrPasswordTooShort
 	}
 	return nil
 }

@@ -1,7 +1,6 @@
 package uc_event
 
 import (
-	"barter-port/internal/auth/application"
 	"barter-port/internal/auth/domain"
 	"barter-port/pkg/db"
 	"context"
@@ -41,7 +40,7 @@ func (r *Repository) GetByUserID(ctx context.Context, exec db.DB, userID uuid.UU
 	event, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[domain.UserCreationEvent])
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, application.ErrUserNotFound
+			return nil, domain.ErrUserNotFound
 		}
 		return nil, err
 	}
@@ -61,7 +60,7 @@ func (r *Repository) SetStatus(ctx context.Context, exec db.DB, userID uuid.UUID
 		return err
 	}
 	if tags.RowsAffected() == 0 {
-		return application.ErrUserNotFound
+		return domain.ErrUserNotFound
 	}
 
 	return nil
