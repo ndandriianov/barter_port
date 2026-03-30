@@ -1,4 +1,4 @@
-package model
+package domain
 
 //go:generate enumer -type=SortType -json -text -sql
 type SortType int

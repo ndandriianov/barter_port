@@ -1,7 +1,7 @@
-package service
+package application
 
 import (
-	"barter-port/internal/items/model"
+	"barter-port/internal/items/domain"
 	"barter-port/pkg/logger"
 	"errors"
 	"fmt"
@@ -17,19 +17,19 @@ var (
 )
 
 type Repository interface {
-	AddItem(ctx context.Context, item model.Item) error
+	AddItem(ctx context.Context, item domain.Item) error
 
 	GetItemsOrderByTime(
 		ctx context.Context,
-		cursor *model.TimeCursor,
+		cursor *domain.TimeCursor,
 		limit int,
-	) ([]model.Item, *model.TimeCursor, error)
+	) ([]domain.Item, *domain.TimeCursor, error)
 
 	GetItemsOrderByPopularity(
 		ctx context.Context,
-		cursor *model.PopularityCursor,
+		cursor *domain.PopularityCursor,
 		limit int,
-	) ([]model.Item, *model.PopularityCursor, error)
+	) ([]domain.Item, *domain.PopularityCursor, error)
 }
 
 type ItemService struct {
@@ -45,15 +45,15 @@ func (s *ItemService) CreateItem(
 	ctx context.Context,
 	userID uuid.UUID,
 	name string,
-	itemType model.ItemType,
-	action model.ItemAction,
+	itemType domain.ItemType,
+	action domain.ItemAction,
 	description string,
-) (*model.Item, error) {
+) (*domain.Item, error) {
 	if name == "" {
 		return nil, ErrInvalidItemName
 	}
 
-	item := model.Item{
+	item := domain.Item{
 		ID:          uuid.New(),
 		AuthorId:    userID,
 		Name:        name,
@@ -78,16 +78,16 @@ func (s *ItemService) CreateItem(
 // Errors: only internal
 func (s *ItemService) GetItems(
 	ctx context.Context,
-	sortType model.SortType,
-	cursor *model.UniversalCursor,
+	sortType domain.SortType,
+	cursor *domain.UniversalCursor,
 	limit int,
-) ([]model.Item, *model.UniversalCursor, error) {
+) ([]domain.Item, *domain.UniversalCursor, error) {
 
 	log := logger.LogFrom(ctx, s.fallbackLogger)
 
 	switch sortType {
-	case model.ByTime:
-		var timeCursor *model.TimeCursor
+	case domain.ByTime:
+		var timeCursor *domain.TimeCursor
 		var err error
 
 		if cursor != nil {
@@ -102,15 +102,15 @@ func (s *ItemService) GetItems(
 			return nil, nil, err
 		}
 
-		var universalCursor *model.UniversalCursor
+		var universalCursor *domain.UniversalCursor
 		if newCursor != nil {
 			universalCursor = newCursor.ToUniversalCursor()
 		}
 
 		return items, universalCursor, nil
 
-	case model.ByPopularity:
-		var popularityCursor *model.PopularityCursor
+	case domain.ByPopularity:
+		var popularityCursor *domain.PopularityCursor
 		var err error
 
 		if cursor != nil {
@@ -125,7 +125,7 @@ func (s *ItemService) GetItems(
 			return nil, nil, err
 		}
 
-		var universalCursor *model.UniversalCursor
+		var universalCursor *domain.UniversalCursor
 		if newCursor != nil {
 			universalCursor = newCursor.ToUniversalCursor()
 		}

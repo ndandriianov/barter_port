@@ -1,4 +1,4 @@
-package model
+package domain
 
 import (
 	"barter-port/contracts/openapi/items/types"

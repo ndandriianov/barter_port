@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"barter-port/internal/items/model"
+	"barter-port/internal/items/domain"
 	"barter-port/pkg/repox"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -18,7 +18,7 @@ func NewItemRepository(db *pgxpool.Pool) *ItemRepository {
 
 // AddItem inserts a new item into the database.
 // Returns an error if the insertion fails.
-func (r *ItemRepository) AddItem(ctx context.Context, item model.Item) error {
+func (r *ItemRepository) AddItem(ctx context.Context, item domain.Item) error {
 	query := `
 		INSERT INTO items (id, author_id, name, type, action, description, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -34,9 +34,9 @@ func (r *ItemRepository) AddItem(ctx context.Context, item model.Item) error {
 // Returns a slice of items, a new TimeCursor for the next page, and an error if the query fails.
 func (r *ItemRepository) GetItemsOrderByTime(
 	ctx context.Context,
-	cursor *model.TimeCursor,
+	cursor *domain.TimeCursor,
 	limit int,
-) ([]model.Item, *model.TimeCursor, error) {
+) ([]domain.Item, *domain.TimeCursor, error) {
 
 	var query string
 	var args []interface{}
@@ -60,7 +60,7 @@ func (r *ItemRepository) GetItemsOrderByTime(
 		args = append(args, cursor.CreatedAt, cursor.Id, limit)
 	}
 
-	items, err := repox.FetchStructs[model.Item](ctx, r.db, query, args...)
+	items, err := repox.FetchStructs[domain.Item](ctx, r.db, query, args...)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -70,7 +70,7 @@ func (r *ItemRepository) GetItemsOrderByTime(
 	}
 
 	lastItem := items[len(items)-1]
-	newCursor := model.TimeCursor{
+	newCursor := domain.TimeCursor{
 		CreatedAt: lastItem.CreatedAt,
 		Id:        lastItem.ID,
 	}
@@ -84,9 +84,9 @@ func (r *ItemRepository) GetItemsOrderByTime(
 // Returns a slice of items, a new PopularityCursor for the next page, and an error if the query fails.
 func (r *ItemRepository) GetItemsOrderByPopularity(
 	ctx context.Context,
-	cursor *model.PopularityCursor,
+	cursor *domain.PopularityCursor,
 	limit int,
-) ([]model.Item, *model.PopularityCursor, error) {
+) ([]domain.Item, *domain.PopularityCursor, error) {
 
 	var query string
 	var args []interface{}
@@ -110,7 +110,7 @@ func (r *ItemRepository) GetItemsOrderByPopularity(
 		args = append(args, cursor.Views, cursor.Id, limit)
 	}
 
-	items, err := repox.FetchStructs[model.Item](ctx, r.db, query, args...)
+	items, err := repox.FetchStructs[domain.Item](ctx, r.db, query, args...)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -120,7 +120,7 @@ func (r *ItemRepository) GetItemsOrderByPopularity(
 	}
 
 	lastItem := items[len(items)-1]
-	newCursor := model.PopularityCursor{
+	newCursor := domain.PopularityCursor{
 		Views: lastItem.Views,
 		Id:    lastItem.ID,
 	}
