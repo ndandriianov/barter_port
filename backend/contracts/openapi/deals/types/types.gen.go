@@ -120,12 +120,23 @@ type CreateItemRequest struct {
 
 // Draft defines model for Draft.
 type Draft struct {
+	// AuthorId The unique identifier of the user who created the draft deal
+	AuthorId openapi_types.UUID `json:"authorId"`
+
 	// CreatedAt The timestamp when the draft deal was created
 	CreatedAt time.Time `json:"createdAt"`
 
+	// Description A detailed description of the draft deal
+	Description *string `json:"description,omitempty"`
+
 	// Id The unique identifier of the draft deal
-	Id    openapi_types.UUID `json:"id"`
-	Items Item               `json:"items"`
+	Id openapi_types.UUID `json:"id"`
+
+	// Items A list of items included in the draft deal
+	Items []Item `json:"items"`
+
+	// Name The name of the draft deal
+	Name *string `json:"name,omitempty"`
 
 	// UpdatedAt The timestamp when the draft deal was last updated
 	UpdatedAt *time.Time `json:"updatedAt,omitempty"`
