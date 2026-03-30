@@ -2,7 +2,7 @@ package user
 
 import (
 	authpb "barter-port/contracts/grpc/auth/v1"
-	"barter-port/internal/users/model"
+	"barter-port/internal/users/domain"
 	"errors"
 	"time"
 
@@ -11,7 +11,7 @@ import (
 )
 
 type UsersRepository interface {
-	GetUserById(ctx context.Context, id uuid.UUID) (*model.User, error)
+	GetUserById(ctx context.Context, id uuid.UUID) (*domain.User, error)
 	UpdateName(ctx context.Context, id uuid.UUID, name string) error
 	UpdateBio(ctx context.Context, id uuid.UUID, bio *string) error
 }
@@ -35,7 +35,7 @@ func NewService(repository UsersRepository, authClient authpb.AuthServiceClient)
 	return &Service{repository: repository, authClient: authClient}
 }
 
-func (s *Service) GetUser(ctx context.Context, id uuid.UUID) (*model.User, error) {
+func (s *Service) GetUser(ctx context.Context, id uuid.UUID) (*domain.User, error) {
 	return s.repository.GetUserById(ctx, id)
 }
 
@@ -71,7 +71,7 @@ func (s *Service) GetMe(ctx context.Context, id uuid.UUID) (Me, error) {
 // UpdateName updates users name by id.
 //
 // Errors:
-//   - model.ErrUserNotFound: Occurs if no user is found with the given id.
+//   - domain.ErrUserNotFound: Occurs if no user is found with the given id.
 func (s *Service) UpdateName(ctx context.Context, id uuid.UUID, name string) error {
 	return s.repository.UpdateName(ctx, id, name)
 }
@@ -79,7 +79,7 @@ func (s *Service) UpdateName(ctx context.Context, id uuid.UUID, name string) err
 // UpdateBio updates users bio by id. Bio can be null.
 //
 // Errors:
-//   - model.ErrUserNotFound: Occurs if no user is found with the given id.
+//   - domain.ErrUserNotFound: Occurs if no user is found with the given id.
 func (s *Service) UpdateBio(ctx context.Context, id uuid.UUID, bio *string) error {
 	return s.repository.UpdateBio(ctx, id, bio)
 }
