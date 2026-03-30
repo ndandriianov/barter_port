@@ -13,7 +13,7 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-func NewRouter(logg *slog.Logger, validator *validators.LocalJWT, h *Handlers) http.Handler {
+func NewRouter(logg *slog.Logger, validator *validators.LocalJWT, h *ItemsHandlers) http.Handler {
 	if logg == nil {
 		log.Fatal("logger is required")
 	}

@@ -20,19 +20,19 @@ type itemService interface {
 	GetItems(ctx context.Context, sortType domain.SortType, cursor *domain.UniversalCursor, limit int) ([]domain.Item, *domain.UniversalCursor, error)
 }
 
-type Handlers struct {
+type ItemsHandlers struct {
 	itemService itemService
 }
 
-func NewHandlers(itemService itemService) *Handlers {
-	return &Handlers{itemService: itemService}
+func NewHandlers(itemService itemService) *ItemsHandlers {
+	return &ItemsHandlers{itemService: itemService}
 }
 
 // ================================================================================
 // CREATE ITEM
 // ================================================================================
 
-func (h *Handlers) HandleCreateItem(w http.ResponseWriter, r *http.Request) {
+func (h *ItemsHandlers) HandleCreateItem(w http.ResponseWriter, r *http.Request) {
 	log := logger.LogFrom(r.Context(), slog.Default())
 	log.Info("handling register request")
 
@@ -86,7 +86,7 @@ func (h *Handlers) HandleCreateItem(w http.ResponseWriter, r *http.Request) {
 // GET ITEMS
 // ================================================================================
 
-func (h *Handlers) HandleGetItems(w http.ResponseWriter, r *http.Request) {
+func (h *ItemsHandlers) HandleGetItems(w http.ResponseWriter, r *http.Request) {
 	log := logger.LogFrom(r.Context(), slog.Default())
 
 	// Parse query parameters
