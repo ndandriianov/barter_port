@@ -40,7 +40,7 @@ func (h *Handlers) HandleCreateItem(w http.ResponseWriter, r *http.Request) {
 	var req types.CreateItemRequest
 	if err := http_api.DecodeJSON(r, &req); err != nil {
 		log.Error("error decoding request", slog.Any("error", err))
-		http_api.WriteError(w, http.StatusBadRequest, http_api.CannotDecodeRequestBody)
+		http_api.WriteError(w, http.StatusBadRequest, http_api.ErrCannotDecodeRequestBody)
 		return
 	}
 
@@ -50,14 +50,14 @@ func (h *Handlers) HandleCreateItem(w http.ResponseWriter, r *http.Request) {
 	itemType, err := domain.ItemTypeString(string(req.Type))
 	if err != nil {
 		log.Error("invalid item type", slog.String("type", string(req.Type)), slog.Any("error", err))
-		http_api.WriteError(w, http.StatusBadRequest, "invalid item type")
+		http_api.WriteErrorStr(w, http.StatusBadRequest, "invalid item type")
 		return
 	}
 
 	action, err := domain.ItemActionString(string(req.Action))
 	if err != nil {
 		log.Error("invalid item action", slog.String("action", string(req.Action)), slog.Any("error", err))
-		http_api.WriteError(w, http.StatusBadRequest, "invalid item action")
+		http_api.WriteErrorStr(w, http.StatusBadRequest, "invalid item action")
 		return
 	}
 
@@ -72,7 +72,7 @@ func (h *Handlers) HandleCreateItem(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, application.ErrInvalidItemName) {
 			log.Warn("invalid item name", slog.String("error", err.Error()))
-			http_api.WriteError(w, http.StatusBadRequest, "invalid item name")
+			http_api.WriteError(w, http.StatusBadRequest, application.ErrInvalidItemName)
 			return
 		}
 		log.Error("failed to create item", slog.String("error", err.Error()))
@@ -109,7 +109,7 @@ func (h *Handlers) HandleGetItems(w http.ResponseWriter, r *http.Request) {
 	sortType, err := domain.SortTypeString(sortTypeStr)
 	if err != nil {
 		log.Error("invalid sort type", slog.Any("error", err))
-		http_api.WriteError(w, http.StatusBadRequest, "invalid sort type")
+		http_api.WriteErrorStr(w, http.StatusBadRequest, "invalid sort type")
 		return
 	}
 
@@ -145,7 +145,7 @@ func (h *Handlers) HandleGetItems(w http.ResponseWriter, r *http.Request) {
 		respCursor = new(nextCursor.ToDto())
 	}
 
-	http_api.WriteJSONWithLogs(w, log, http.StatusOK, types.ListItemsResponse{
+	http_api.WriteJSON(w, http.StatusOK, types.ListItemsResponse{
 		Items:      respItems,
 		NextCursor: respCursor,
 	})
