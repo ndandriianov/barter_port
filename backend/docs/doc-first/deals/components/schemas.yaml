@@ -1,0 +1,57 @@
+Item:
+  type: object
+  required:
+    - id
+    - name
+    - quantity
+    - ownerId
+    - createdAt
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: The unique identifier of the item
+    name:
+      type: string
+      description: The name of the item
+    description:
+      type: string
+      description: A detailed description of the item
+    quantity:
+      type: integer
+      description: The quantity of the item available for barter
+    ownerId:
+      type: string
+      format: uuid
+      description: The ID of the user who owns the item
+    createdAt:
+      type: string
+      format: date-time
+      description: The timestamp when the item was created
+    updatedAt:
+      type: string
+      format: date-time
+      description: The timestamp when the item was last updated
+
+
+Draft:
+  type: object
+  required:
+    - id
+    - items
+    - createdAt
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: The unique identifier of the draft deal
+    items:
+      $ref: '#/Item'
+    createdAt:
+      type: string
+      format: date-time
+      description: The timestamp when the draft deal was created
+    updatedAt:
+      type: string
+      format: date-time
+      description: The timestamp when the draft deal was last updated

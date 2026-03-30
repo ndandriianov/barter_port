@@ -1,0 +1,20 @@
+CreateDraftDealRequest:
+  type: object
+  properties:
+    items:
+      type: array
+      items:
+        type: object
+        required:
+          - itemID
+          - quantity
+        properties:
+          itemID:
+            type: string
+            format: uuid
+            description: The ID of the item to include in the draft deal
+          quantity:
+            type: integer
+            description: The quantity of the item to include in the draft deal
+  required:
+    - items

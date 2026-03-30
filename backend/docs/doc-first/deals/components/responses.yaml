@@ -1,0 +1,9 @@
+GetMyDraftDealsResponse:
+  type: object
+  properties:
+    data:
+      type: array
+      items:
+        type: string
+        format: uuid
+        description: The unique identifier of a draft deal
