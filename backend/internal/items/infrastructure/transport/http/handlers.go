@@ -63,7 +63,7 @@ func (h *Handlers) HandleCreateItem(w http.ResponseWriter, r *http.Request) {
 	userID, ok := authkit.UserIDFromContext(r.Context())
 	if !ok {
 		log.Error("failed to get userID from context")
-		w.WriteHeader(http.StatusInternalServerError)
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
 		return
 	}
 
@@ -75,7 +75,7 @@ func (h *Handlers) HandleCreateItem(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		log.Error("failed to create item", slog.Any("error", err))
-		w.WriteHeader(http.StatusInternalServerError)
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
 		return
 	}
 
@@ -130,7 +130,7 @@ func (h *Handlers) HandleGetItems(w http.ResponseWriter, r *http.Request) {
 	items, nextCursor, err := h.itemService.GetItems(r.Context(), sortType, cursor, limit)
 	if err != nil {
 		log.Error("failed to get items", slog.Any("error", err))
-		w.WriteHeader(http.StatusInternalServerError)
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
 		return
 	}
 
