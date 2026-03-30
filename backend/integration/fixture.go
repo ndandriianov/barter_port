@@ -201,7 +201,7 @@ func newSharedFixture(
 		f.AuthURL = url
 	}
 	if opts.NeedItems {
-		c, err := launchItems(ctx, net)
+		c, err := launchDeals(ctx, net)
 		f.Items = c
 		if err != nil {
 			return f, fmt.Errorf("launch items: %w", err)
@@ -451,8 +451,8 @@ func launchAuth(ctx context.Context, net *testcontainers.DockerNetwork) (testcon
 	return launchContainer(ctx, req)
 }
 
-func launchItems(ctx context.Context, net *testcontainers.DockerNetwork) (testcontainers.Container, error) {
-	req := buildServiceRequest(net, "items", string(itemsHTTPPort))
+func launchDeals(ctx context.Context, net *testcontainers.DockerNetwork) (testcontainers.Container, error) {
+	req := buildServiceRequest(net, "deals", string(itemsHTTPPort))
 	req.Env = serviceEnv()
 	req.Env["CONFIG_SERVICE"] = "/app/config/deals.yaml"
 	return launchContainer(ctx, req)
@@ -586,9 +586,9 @@ func SetupAuth(ctx context.Context, net *testcontainers.DockerNetwork, t *testin
 	return startContainer(ctx, t, req)
 }
 
-func SetupItems(ctx context.Context, net *testcontainers.DockerNetwork, t *testing.T) testcontainers.Container {
+func SetupDeals(ctx context.Context, net *testcontainers.DockerNetwork, t *testing.T) testcontainers.Container {
 	t.Helper()
-	req := buildServiceRequest(net, "items", string(itemsHTTPPort))
+	req := buildServiceRequest(net, "deals", string(itemsHTTPPort))
 	req.Env = serviceEnv()
 	req.Env["CONFIG_SERVICE"] = "/app/config/deals.yaml"
 	return startContainer(ctx, t, req)

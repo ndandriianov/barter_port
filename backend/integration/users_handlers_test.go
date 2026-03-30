@@ -38,6 +38,7 @@ func runTests(m *testing.M) int {
 	globalFixture, setupErr = newSharedFixture(ctx, net, FixtureOptions{
 		NeedAuth:  true,
 		NeedUsers: true,
+		NeedItems: true,
 	})
 	if setupErr != nil {
 		log.Printf("не удалось поднять fixture: %v", setupErr)
