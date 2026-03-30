@@ -6,6 +6,7 @@ import (
 	transporthttp "barter-port/internal/deals/infrastructure/transport/http"
 	"barter-port/pkg/bootstrap"
 	"barter-port/pkg/logger"
+	"errors"
 	"log"
 	"log/slog"
 	"net/http"
@@ -17,11 +18,7 @@ import (
 func main() {
 	_ = godotenv.Load()
 
-	cfg, err := bootstrap.LoadConfig(bootstrap.ConfigOptions{
-		CommonPath:  os.Getenv("CONFIG_COMMON"),
-		ServicePath: os.Getenv("CONFIG_SERVICE"),
-		AppEnv:      os.Getenv("APP_ENV"),
-	})
+	cfg, err := loadConfig()
 	if err != nil {
 		log.Fatal("failed to load config:", err)
 	}
@@ -48,4 +45,32 @@ func main() {
 	port := bootstrap.InitPortStringFromConfig(cfg, 8080)
 	log.Println("backend listening on", port)
 	log.Fatal(http.ListenAndServe(port, router))
+}
+
+func loadConfig() (bootstrap.Config, error) {
+	cfg, err := bootstrap.LoadConfig(bootstrap.ConfigOptions{
+		CommonPath:  os.Getenv("CONFIG_COMMON"),
+		ServicePath: resolveServiceConfigPath(),
+		AppEnv:      os.Getenv("APP_ENV"),
+	})
+	if err != nil {
+		return bootstrap.Config{}, errors.New("failed to load config: " + err.Error())
+	}
+
+	return cfg, nil
+}
+
+func resolveServiceConfigPath() string {
+	if path := os.Getenv("CONFIG_SERVICE"); path != "" {
+		if _, err := os.Stat(path); err == nil {
+			return path
+		}
+	}
+
+	const localPath = "./config/deals.yaml"
+	if _, err := os.Stat(localPath); err == nil {
+		return localPath
+	}
+
+	return os.Getenv("CONFIG_SERVICE")
 }

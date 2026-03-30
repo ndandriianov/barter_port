@@ -1,18 +1,3 @@
-CREATE TABLE items
-(
-    id          UUID PRIMARY KEY,
-    author_id   UUID        NOT NULL,
-    name        TEXT        NOT NULL,
-    type        TEXT        NOT NULL,
-    action      TEXT        NOT NULL,
-    description TEXT        NOT NULL,
-    created_at  TIMESTAMPTZ NOT NULL,
-    views       INTEGER     NOT NULL DEFAULT 0,
-
-    CONSTRAINT items_type_check CHECK (type IN ('good', 'service')),
-    CONSTRAINT items_action_check CHECK (action IN ('give', 'take'))
-);
-
 CREATE DATABASE auth_db;
 CREATE DATABASE users_db;
 CREATE DATABASE deals_db;
