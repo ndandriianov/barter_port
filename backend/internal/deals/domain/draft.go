@@ -15,3 +15,8 @@ type Draft struct {
 	UpdatedAt   *time.Time
 	Items       []Item
 }
+
+type ItemIDsAndQuantities struct {
+	ID       uuid.UUID
+	Quantity int
+}

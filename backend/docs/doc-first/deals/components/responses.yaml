@@ -7,6 +7,18 @@ ErrorResponse:
 
 
 
+CreateDraftDealResponse:
+  type: object
+  required:
+    - id
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: The unique identifier of the created draft deal
+
+
+
 GetMyDraftDealsResponse:
   type: object
   properties:
