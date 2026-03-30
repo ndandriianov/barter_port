@@ -1,7 +1,7 @@
-package application
+package items
 
 import (
-	"barter-port/internal/items/domain"
+	"barter-port/internal/deals/domain"
 	"barter-port/pkg/logger"
 	"fmt"
 	"log/slog"
@@ -27,16 +27,16 @@ type Repository interface {
 	) ([]domain.Item, *domain.PopularityCursor, error)
 }
 
-type ItemService struct {
+type Service struct {
 	repo           Repository
 	fallbackLogger *slog.Logger
 }
 
-func NewItemService(itemRepository Repository, fallbackLogger *slog.Logger) *ItemService {
-	return &ItemService{repo: itemRepository, fallbackLogger: fallbackLogger}
+func NewItemService(itemRepository Repository, fallbackLogger *slog.Logger) *Service {
+	return &Service{repo: itemRepository, fallbackLogger: fallbackLogger}
 }
 
-func (s *ItemService) CreateItem(
+func (s *Service) CreateItem(
 	ctx context.Context,
 	userID uuid.UUID,
 	name string,
@@ -71,7 +71,7 @@ func (s *ItemService) CreateItem(
 // It supports pagination through the nextCursor and limit parameters, and sorting based on the sortType.
 //
 // Errors: only internal
-func (s *ItemService) GetItems(
+func (s *Service) GetItems(
 	ctx context.Context,
 	sortType domain.SortType,
 	cursor *domain.UniversalCursor,

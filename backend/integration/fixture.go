@@ -139,7 +139,7 @@ func NewFixture(t *testing.T, opts FixtureOptions) *Fixture {
 	if opts.NeedItems {
 		req := buildServiceRequest(net, "items", string(itemsHTTPPort))
 		req.Env = serviceEnv()
-		req.Env["CONFIG_SERVICE"] = "/app/config/items.yaml"
+		req.Env["CONFIG_SERVICE"] = "/app/config/deals.yaml"
 		f.Items = startContainer(ctx, t, req)
 		f.ItemsURL = containerBaseURL(ctx, t, f.Items, itemsHTTPPort)
 	}
@@ -454,7 +454,7 @@ func launchAuth(ctx context.Context, net *testcontainers.DockerNetwork) (testcon
 func launchItems(ctx context.Context, net *testcontainers.DockerNetwork) (testcontainers.Container, error) {
 	req := buildServiceRequest(net, "items", string(itemsHTTPPort))
 	req.Env = serviceEnv()
-	req.Env["CONFIG_SERVICE"] = "/app/config/items.yaml"
+	req.Env["CONFIG_SERVICE"] = "/app/config/deals.yaml"
 	return launchContainer(ctx, req)
 }
 
@@ -509,8 +509,8 @@ func buildServiceRequest(net *testcontainers.DockerNetwork, service string, expo
 				FileMode:          0o644,
 			},
 			{
-				HostFilePath:      filepath.Join(projectRoot, "config", "items.yaml"),
-				ContainerFilePath: "/app/config/items.yaml",
+				HostFilePath:      filepath.Join(projectRoot, "config", "deals.yaml"),
+				ContainerFilePath: "/app/config/deals.yaml",
 				FileMode:          0o644,
 			},
 			{
@@ -590,7 +590,7 @@ func SetupItems(ctx context.Context, net *testcontainers.DockerNetwork, t *testi
 	t.Helper()
 	req := buildServiceRequest(net, "items", string(itemsHTTPPort))
 	req.Env = serviceEnv()
-	req.Env["CONFIG_SERVICE"] = "/app/config/items.yaml"
+	req.Env["CONFIG_SERVICE"] = "/app/config/deals.yaml"
 	return startContainer(ctx, t, req)
 }
 

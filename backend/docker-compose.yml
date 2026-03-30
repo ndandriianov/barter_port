@@ -121,13 +121,13 @@ services:
     volumes:
       - ./config:/app/config:ro
 
-  items:
+  deals:
     profiles: ["app"]
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        SERVICE: items
+        SERVICE: deals
     depends_on:
       db:
         condition: service_healthy
@@ -136,7 +136,7 @@ services:
     environment:
       APP_ENV: docker
       CONFIG_COMMON: /app/config/common.yaml
-      CONFIG_SERVICE: # /app/config/items.yaml
+      CONFIG_SERVICE: # /app/config/deals.yaml
     volumes:
       - ./config:/app/config:ro
 
