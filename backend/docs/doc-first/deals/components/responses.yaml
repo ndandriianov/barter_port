@@ -46,3 +46,27 @@ ListItemsResponse:
       allOf:
         - $ref: 'schemas.yaml#/ItemsCursor'
       description: Cursor for fetching the next page; null if there is no next page
+
+
+
+ConfirmDraftDealResponse:
+  type: object
+  required:
+    - users
+  properties:
+    users:
+      type: array
+      description: Список пользователей, которые подтвердили/не подтвердили свое участие в сделке
+      items:
+        type: object
+        required:
+          - userId
+          - confirmed
+        properties:
+          userId:
+            type: string
+            format: uuid
+            description: Уникальный идентификатор пользователя
+          confirmed:
+            type: boolean
+            description: Статус подтверждения участия пользователя в сделке
