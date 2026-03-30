@@ -28,4 +28,10 @@ func WriteError(w http.ResponseWriter, status int, err error) {
 	_ = json.NewEncoder(w).Encode(ErrorResponse{Message: new(err.Error())})
 }
 
+func WriteEmptyError(w http.ResponseWriter, status int) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(ErrorResponse{Message: nil})
+}
+
 var ErrCannotDecodeRequestBody = errors.New("cannot decode request body")

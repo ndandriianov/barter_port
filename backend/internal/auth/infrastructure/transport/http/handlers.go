@@ -99,7 +99,7 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 
 		default:
 			logger.Error("unexpected error", slog.Any("error", err))
-			w.WriteHeader(http.StatusInternalServerError)
+			httpx.WriteEmptyError(w, http.StatusInternalServerError)
 		}
 		return
 	}
@@ -147,11 +147,11 @@ func (h *Handlers) RetrySendVerificationEmail(w http.ResponseWriter, r *http.Req
 			errors.Is(err, domain.ErrEmailNotVerified),
 			errors.Is(err, domain.ErrIncorrectPassword):
 			log.Info("authentication failed")
-			w.WriteHeader(http.StatusUnauthorized)
+			httpx.WriteEmptyError(w, http.StatusUnauthorized)
 
 		default:
 			log.Error("unexpected error in RetrySendVerificationEmail request")
-			w.WriteHeader(http.StatusInternalServerError)
+			httpx.WriteEmptyError(w, http.StatusInternalServerError)
 		}
 		return
 	}
@@ -203,7 +203,7 @@ func (h *Handlers) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 				"unexpected error in verify email request",
 				slog.String("error", err.Error()),
 			)
-			w.WriteHeader(http.StatusInternalServerError)
+			httpx.WriteEmptyError(w, http.StatusInternalServerError)
 		}
 		return
 	}
@@ -257,7 +257,7 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 
 		default:
 			logger.Error("unexpected error", slog.Any("error", err), slog.String("email", req.Email))
-			w.WriteHeader(http.StatusInternalServerError)
+			httpx.WriteEmptyError(w, http.StatusInternalServerError)
 		}
 		return
 	}
@@ -273,7 +273,7 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 			slog.String("email", req.Email),
 			slog.String("user_id", userID.String()),
 		)
-		w.WriteHeader(http.StatusInternalServerError)
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
 		return
 	}
 
@@ -284,7 +284,7 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 			slog.String("email", req.Email),
 			slog.String("user_id", userID.String()),
 		)
-		w.WriteHeader(http.StatusInternalServerError)
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
 		return
 	}
 
@@ -301,7 +301,7 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 			slog.String("email", req.Email),
 			slog.String("refresh_token", refresh),
 		)
-		w.WriteHeader(http.StatusInternalServerError)
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
 	}
 
 	// Установка refresh токена в cookie и отправка access токена в ответе
@@ -365,7 +365,7 @@ func (h *Handlers) Refresh(w http.ResponseWriter, r *http.Request) {
 		}
 
 		storedRefreshFailedLogger.Error("error fetching refresh token from repository", slog.Any("error", err))
-		w.WriteHeader(http.StatusInternalServerError)
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
 		return
 	}
 
@@ -382,7 +382,7 @@ func (h *Handlers) Refresh(w http.ResponseWriter, r *http.Request) {
 			slog.Any("error", err),
 			slog.String("user_id", oldRefreshClaims.UserID.String()),
 		)
-		w.WriteHeader(http.StatusInternalServerError)
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
 		return
 	}
 
@@ -393,7 +393,7 @@ func (h *Handlers) Refresh(w http.ResponseWriter, r *http.Request) {
 			slog.Any("error", err),
 			slog.String("user_id", oldRefreshClaims.UserID.String()),
 		)
-		w.WriteHeader(http.StatusInternalServerError)
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
 		return
 	}
 
@@ -411,7 +411,7 @@ func (h *Handlers) Refresh(w http.ResponseWriter, r *http.Request) {
 			slog.String("user_id", oldRefreshClaims.UserID.String()),
 			slog.String("new_jti", claims.ID),
 		)
-		w.WriteHeader(http.StatusInternalServerError)
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
 		return
 	}
 
@@ -423,7 +423,7 @@ func (h *Handlers) Refresh(w http.ResponseWriter, r *http.Request) {
 			slog.String("user_id", oldRefreshClaims.UserID.String()),
 			slog.String("old_jti", oldRefreshClaims.ID),
 		)
-		w.WriteHeader(http.StatusInternalServerError)
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
 		return
 	}
 
@@ -456,7 +456,7 @@ func (h *Handlers) Logout(w http.ResponseWriter, r *http.Request) {
 					slog.Any("error", err),
 					slog.String("jti", claims.ID),
 				)
-				w.WriteHeader(http.StatusInternalServerError)
+				httpx.WriteEmptyError(w, http.StatusInternalServerError)
 				return
 			}
 		}
@@ -487,7 +487,7 @@ func (h *Handlers) Me(w http.ResponseWriter, r *http.Request) {
 	userId, ok := authkit.UserIDFromContext(r.Context())
 	if !ok {
 		logger.Error("failed to fetch principal")
-		w.WriteHeader(http.StatusInternalServerError)
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
 		return
 	}
 
@@ -533,7 +533,7 @@ func (h *Handlers) GetUserCreationStatus(w http.ResponseWriter, r *http.Request)
 				slog.String("user_id", userID.String()),
 				slog.Any("error", err),
 			)
-			w.WriteHeader(http.StatusInternalServerError)
+			httpx.WriteEmptyError(w, http.StatusInternalServerError)
 		}
 		return
 	}

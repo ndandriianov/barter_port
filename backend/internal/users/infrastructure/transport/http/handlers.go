@@ -34,8 +34,8 @@ func (h *Handlers) HandleGetUser(w http.ResponseWriter, r *http.Request) {
 
 	userID, err := uuid.Parse(chi.URLParam(r, "id"))
 	if err != nil {
-		log.Warn("invalid user id", slog.String("error", err.Error()))
-		writeError(w, http.StatusBadRequest, "invalid user id")
+		log.Warn("invalid user id", slog.Any("error", err))
+		httpx.WriteErrorStr(w, http.StatusBadRequest, "invalid user id")
 		return
 	}
 
@@ -43,12 +43,12 @@ func (h *Handlers) HandleGetUser(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) {
 			log.Info("user not found", slog.String("user_id", userID.String()))
-			writeError(w, http.StatusNotFound, "user not found")
+			httpx.WriteEmptyError(w, http.StatusNotFound)
 			return
 		}
 
 		log.Error("failed to get user", slog.String("user_id", userID.String()), slog.String("error", err.Error()))
-		writeError(w, http.StatusInternalServerError, "internal server error")
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
 		return
 	}
 
@@ -69,7 +69,7 @@ func (h *Handlers) HandleGetMe(w http.ResponseWriter, r *http.Request) {
 	userID, ok := authkit.UserIDFromContext(r.Context())
 	if !ok {
 		log.Warn("failed to get user id from context")
-		writeError(w, http.StatusUnauthorized, "unauthorized")
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
 		return
 	}
 
@@ -77,12 +77,12 @@ func (h *Handlers) HandleGetMe(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, domain.ErrUserNotFound) {
 			log.Error("current user is absent in users storage", slog.String("user_id", userID.String()))
-			writeError(w, http.StatusInternalServerError, "internal server error")
+			httpx.WriteEmptyError(w, http.StatusNotFound)
 			return
 		}
 
 		log.Error("failed to get current user", slog.String("user_id", userID.String()), slog.String("error", err.Error()))
-		writeError(w, http.StatusInternalServerError, "internal server error")
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
 		return
 	}
 
@@ -99,19 +99,19 @@ func (h *Handlers) HandleUpdateMe(w http.ResponseWriter, r *http.Request) {
 	userID, ok := authkit.UserIDFromContext(r.Context())
 	if !ok {
 		log.Warn("failed to get user id from context")
-		writeError(w, http.StatusUnauthorized, "unauthorized")
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
 		return
 	}
 
 	var req types.UpdateUserRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
-		log.Warn("failed to decode update user request", slog.String("error", err.Error()))
-		writeError(w, http.StatusBadRequest, "invalid request")
+		log.Warn("failed to decode", slog.Any("error", err))
+		httpx.WriteError(w, http.StatusBadRequest, httpx.ErrCannotDecodeRequestBody)
 		return
 	}
 
 	if req.Name == nil && req.Bio == nil {
-		writeError(w, http.StatusBadRequest, "empty update payload")
+		httpx.WriteErrorStr(w, http.StatusBadRequest, "empty update payload")
 		return
 	}
 
@@ -132,7 +132,7 @@ func (h *Handlers) HandleUpdateMe(w http.ResponseWriter, r *http.Request) {
 	me, err := h.getMe(r.Context(), userID)
 	if err != nil {
 		log.Error("failed to load updated user", slog.String("user_id", userID.String()), slog.String("error", err.Error()))
-		writeError(w, http.StatusInternalServerError, "internal server error")
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
 		return
 	}
 
@@ -144,10 +144,10 @@ func handleUpdateError(w http.ResponseWriter, log *slog.Logger, err error, userI
 
 	if errors.Is(err, domain.ErrUserNotFound) {
 		updateErrLog.Info("user not found")
-		writeError(w, http.StatusNotFound, "user not found")
+		httpx.WriteEmptyError(w, http.StatusNotFound)
 	} else {
 		updateErrLog.Error("failed to update user")
-		writeError(w, http.StatusInternalServerError, "internal server error")
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
 	}
 }
 
@@ -168,10 +168,4 @@ func (h *Handlers) getMe(ctx context.Context, userID uuid.UUID) (types.Me, error
 		Email:     openapitypes.Email(me.Email),
 		CreatedAt: me.CreatedAt,
 	}, nil
-}
-
-func writeError(w http.ResponseWriter, status int, message string) {
-	httpx.WriteJSON(w, status, types.ErrorResponse{
-		Message: &message,
-	})
 }

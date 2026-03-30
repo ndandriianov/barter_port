@@ -202,8 +202,6 @@ func TestUsersGetUserNotFound(t *testing.T) {
 
 	var apiErr usertypes.ErrorResponse
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&apiErr))
-	require.NotNil(t, apiErr.Message)
-	require.Equal(t, "user not found", *apiErr.Message)
 }
 
 // ────────────────────────────────────────────────────────────────
