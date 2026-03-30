@@ -3,17 +3,12 @@ package application
 import (
 	"barter-port/internal/items/domain"
 	"barter-port/pkg/logger"
-	"errors"
 	"fmt"
 	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
 	"golang.org/x/net/context"
-)
-
-var (
-	ErrInvalidItemName = errors.New("invalid item name")
 )
 
 type Repository interface {
@@ -50,7 +45,7 @@ func (s *ItemService) CreateItem(
 	description string,
 ) (*domain.Item, error) {
 	if name == "" {
-		return nil, ErrInvalidItemName
+		return nil, domain.ErrInvalidItemName
 	}
 
 	item := domain.Item{
