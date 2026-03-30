@@ -22,6 +22,7 @@ type DealsHandlers struct {
 
 func NewDealsHandlers(log *slog.Logger, dealsService *deals.Service) *DealsHandlers {
 	return &DealsHandlers{
+		log:          log,
 		dealsService: dealsService,
 	}
 }
@@ -52,11 +53,12 @@ func (h *DealsHandlers) CreateDraft(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	items := make([]domain.ItemIDsAndQuantities, len(req.Items))
+	items := make([]domain.ItemIDsAndInfo, len(req.Items))
 	for i, item := range req.Items {
-		items[i] = domain.ItemIDsAndQuantities{
-			ID:       item.ItemID,
-			Quantity: item.Quantity,
+		items[i] = domain.ItemIDsAndInfo{
+			ID:         item.ItemID,
+			Quantity:   item.Quantity,
+			ReceiverID: item.ReceiverID,
 		}
 	}
 

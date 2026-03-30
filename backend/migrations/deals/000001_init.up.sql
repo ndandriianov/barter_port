@@ -29,6 +29,8 @@ CREATE TABLE draft_deal_items
     draft_deal_id UUID    NOT NULL,
     item_id       UUID    NOT NULL,
     quantity      INTEGER NOT NULL,
+    confirmed     BOOLEAN NOT NULL DEFAULT FALSE,
+    receiver_id   UUID,
 
     FOREIGN KEY (draft_deal_id) REFERENCES draft_deals (id) ON DELETE CASCADE,
     FOREIGN KEY (item_id) REFERENCES items (id) ON DELETE CASCADE,

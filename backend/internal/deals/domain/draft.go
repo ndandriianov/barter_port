@@ -34,7 +34,8 @@ func (d *Draft) ToDTO() types.Draft {
 	}
 }
 
-type ItemIDsAndQuantities struct {
-	ID       uuid.UUID
-	Quantity int
+type ItemIDsAndInfo struct {
+	ID         uuid.UUID
+	Quantity   int
+	ReceiverID *uuid.UUID
 }

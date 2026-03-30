@@ -125,6 +125,105 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+    patch:
+      tags:
+        - drafts
+      summary: Подтвердить участие в сделке
+      description: |
+        Подтверждает участие текущего пользователя в сделке.
+        После того, как все участники черновика подтвердят свое участие, создается сделка,
+        используемые в ней items превращаются в сущность item сделки, а не просто объявления.
+
+        Запрос идемпотентный.
+      operationId: confirmDraftDeal
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: draftId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfirmDraftDealResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Draft deal not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /deals/drafts/{draftId}/cancel:
+    patch:
+      tags:
+        - drafts
+      summary: Отменить участие в сделке
+      description: |
+        Отменяет участие текущего пользователя в сделке.
+        После того, как один из участников черновика отменит свое участие, черновой договор удаляется,
+        а его участники получают нотификацию об отмене сделки.
+
+        Запрос идемпотентный. Возможен только на стадии черновика, после создания сделки отменить участие нельзя.
+      operationId: cancelDraftDeal
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: draftId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Draft deal not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /items:
     get:
       tags:
@@ -244,6 +343,13 @@ components:
               quantity:
                 type: integer
                 description: The quantity of the item to include in the draft deal
+              receiverID:
+                type: string
+                format: uuid
+                description: |
+                  The ID of the user who will receive this item in the deal.
+                  If not provided, it is assumed that the item is offered by the current user
+                  and any of other participants may choose to be a receiver.
       required:
         - items
     CreateDraftDealResponse:
@@ -360,6 +466,27 @@ components:
           description: A list of items included in the draft deal
           items:
             $ref: '#/components/schemas/Item'
+    ConfirmDraftDealResponse:
+      type: object
+      required:
+        - users
+      properties:
+        users:
+          type: array
+          description: Список пользователей, которые подтвердили/не подтвердили свое участие в сделке
+          items:
+            type: object
+            required:
+              - userId
+              - confirmed
+            properties:
+              userId:
+                type: string
+                format: uuid
+                description: Уникальный идентификатор пользователя
+              confirmed:
+                type: boolean
+                description: Статус подтверждения участия пользователя в сделке
     ItemsCursor:
       type: object
       description: Cursor for stable pagination
