@@ -18,3 +18,24 @@ CreateDraftDealRequest:
             description: The quantity of the item to include in the draft deal
   required:
     - items
+
+
+
+CreateItemRequest:
+  type: object
+  required:
+    - name
+    - description
+    - type
+    - action
+  properties:
+    name:
+      type: string
+      example: Bicycle repair
+    description:
+      type: string
+      example: I can help fix city bikes and replace brake pads
+    type:
+      $ref: 'schemas.yaml#/ItemType'
+    action:
+      $ref: 'schemas.yaml#/ItemAction'

@@ -1,7 +1,7 @@
 package http
 
 import (
-	itemsdocfirst "barter-port/docs/doc-first/items"
+	dealsdocfirst "barter-port/docs/doc-first/deals"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/authkit/validators"
 	"barter-port/pkg/logger"
@@ -24,7 +24,7 @@ func NewRouter(logg *slog.Logger, validator *validators.LocalJWT, h *Handlers) h
 	r := chi.NewRouter()
 
 	r.Use(middleware.RequestID)
-	openAPISpecHandler := http.StripPrefix("/swagger/", http.FileServer(http.FS(itemsdocfirst.SpecFS)))
+	openAPISpecHandler := http.StripPrefix("/swagger/", http.FileServer(http.FS(dealsdocfirst.SpecFS)))
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		_, err := w.Write([]byte("ok"))

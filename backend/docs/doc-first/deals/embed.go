@@ -1,4 +1,4 @@
-package itemsdocfirst
+package deals
 
 import "embed"
 

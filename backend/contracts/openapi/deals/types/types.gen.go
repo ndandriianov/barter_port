@@ -85,6 +85,17 @@ func (e ListItemsParamsSort) Valid() bool {
 	}
 }
 
+// CreateDraftDealRequest defines model for CreateDraftDealRequest.
+type CreateDraftDealRequest struct {
+	Items []struct {
+		// ItemID The ID of the item to include in the draft deal
+		ItemID openapi_types.UUID `json:"itemID"`
+
+		// Quantity The quantity of the item to include in the draft deal
+		Quantity int `json:"quantity"`
+	} `json:"items"`
+}
+
 // CreateItemRequest defines model for CreateItemRequest.
 type CreateItemRequest struct {
 	// Action Whether the user offers or requests something
@@ -96,9 +107,27 @@ type CreateItemRequest struct {
 	Type ItemType `json:"type"`
 }
 
+// Draft defines model for Draft.
+type Draft struct {
+	// CreatedAt The timestamp when the draft deal was created
+	CreatedAt time.Time `json:"createdAt"`
+
+	// Id The unique identifier of the draft deal
+	Id    openapi_types.UUID `json:"id"`
+	Items Item               `json:"items"`
+
+	// UpdatedAt The timestamp when the draft deal was last updated
+	UpdatedAt *time.Time `json:"updatedAt,omitempty"`
+}
+
 // ErrorResponse defines model for ErrorResponse.
 type ErrorResponse struct {
 	Message *string `json:"message,omitempty"`
+}
+
+// GetMyDraftDealsResponse defines model for GetMyDraftDealsResponse.
+type GetMyDraftDealsResponse struct {
+	Data *[]openapi_types.UUID `json:"data,omitempty"`
 }
 
 // Item defines model for Item.
@@ -187,6 +216,9 @@ type ListItemsParams struct {
 
 // ListItemsParamsSort defines parameters for ListItems.
 type ListItemsParamsSort string
+
+// CreateDraftDealJSONRequestBody defines body for CreateDraftDeal for application/json ContentType.
+type CreateDraftDealJSONRequestBody = CreateDraftDealRequest
 
 // CreateItemJSONRequestBody defines body for CreateItem for application/json ContentType.
 type CreateItemJSONRequestBody = CreateItemRequest

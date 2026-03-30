@@ -9,4 +9,4 @@ oapi-codegen \
   -generate types \
   -package types \
   -o ./contracts/openapi/deals/types/types.gen.go \
-  ./tmp/items.openapi.bundle.yaml
+  ./tmp/deals.openapi.bundle.yaml
