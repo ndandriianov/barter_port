@@ -41,29 +41,31 @@ paths:
           content:
             application/json:
               schema:
-                $ref: './../errorResponse.yaml#/ErrorResponse'
+                $ref: './components/responses.yaml#/ErrorResponse'
         '401':
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: './../errorResponse.yaml#/ErrorResponse'
+                $ref: './components/responses.yaml#/ErrorResponse'
         '404':
           description: One or more items not found
           content:
             application/json:
               schema:
-                $ref: './../errorResponse.yaml#/ErrorResponse'
+                $ref: './components/responses.yaml#/ErrorResponse'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: './../errorResponse.yaml#/ErrorResponse'
+                $ref: './components/responses.yaml#/ErrorResponse'
 
 
   /deals/drafts/my:
     get:
+      tags:
+        - drafts
       summary: Получить ID всех черновых договоров, созданных текущим пользователем
       operationId: getMyDraftDeals
       security:
@@ -80,17 +82,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: './../errorResponse.yaml#/ErrorResponse'
+                $ref: './components/responses.yaml#/ErrorResponse'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: './../errorResponse.yaml#/ErrorResponse'
+                $ref: './components/responses.yaml#/ErrorResponse'
 
 
   /deals/drafts/{draftId}:
     get:
+      tags:
+        - drafts
       summary: Получить черновой договор по его ID
       operationId: getDraftDealById
       security:
@@ -114,19 +118,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: './../errorResponse.yaml#/ErrorResponse'
+                $ref: './components/responses.yaml#/ErrorResponse'
         '404':
           description: Draft deal not found
           content:
             application/json:
               schema:
-                $ref: './../errorResponse.yaml#/ErrorResponse'
+                $ref: './components/responses.yaml#/ErrorResponse'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: './../errorResponse.yaml#/ErrorResponse'
+                $ref: './components/responses.yaml#/ErrorResponse'
 
 
   /items:
@@ -165,19 +169,19 @@ paths:
           content:
             application/json:
               schema:
-                $ref: './../errorResponse.yaml#/ErrorResponse'
+                $ref: './components/responses.yaml#/ErrorResponse'
         '401':
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: './../errorResponse.yaml#/ErrorResponse'
+                $ref: './components/responses.yaml#/ErrorResponse'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: './../errorResponse.yaml#/ErrorResponse'
+                $ref: './components/responses.yaml#/ErrorResponse'
 
     post:
       tags:
@@ -205,21 +209,23 @@ paths:
           content:
             application/json:
               schema:
-                $ref: './../errorResponse.yaml#/ErrorResponse'
+                $ref: './components/responses.yaml#/ErrorResponse'
         '401':
           description: Unauthorized
           content:
             application/json:
               schema:
-                $ref: './../errorResponse.yaml#/ErrorResponse'
+                $ref: './components/responses.yaml#/ErrorResponse'
         '500':
           description: Internal server error
           content:
             application/json:
               schema:
-                $ref: './../errorResponse.yaml#/ErrorResponse'
+                $ref: './components/responses.yaml#/ErrorResponse'
 
 components:
   securitySchemes:
     bearerAuth:
-      $ref: './../security.yaml#/components/securitySchemes/bearerAuth'
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

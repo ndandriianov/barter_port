@@ -172,7 +172,7 @@ services:
       URLS: |
         [
           { "url": "/swagger-specs/auth/swagger.json", "name": "Auth API" },
-          { "url": "/swagger-specs/items/swagger.yaml", "name": "Items API" },
+          { "url": "/swagger-specs/deals/swagger.yaml", "name": "Deals API" },
           { "url": "/swagger-specs/users/swagger.yaml", "name": "Users API" }
         ]
       BASE_URL: /docs
