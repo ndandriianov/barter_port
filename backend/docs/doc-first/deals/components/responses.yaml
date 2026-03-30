@@ -7,3 +7,21 @@ GetMyDraftDealsResponse:
         type: string
         format: uuid
         description: The unique identifier of a draft deal
+
+
+
+ListItemsResponse:
+  type: object
+  required:
+    - items
+  properties:
+    items:
+      type: array
+      description: List of items
+      items:
+        $ref: 'schemas.yaml#/Item'
+    nextCursor:
+      nullable: true
+      allOf:
+        - $ref: 'schemas.yaml#/ItemsCursor'
+      description: Cursor for fetching the next page; null if there is no next page
