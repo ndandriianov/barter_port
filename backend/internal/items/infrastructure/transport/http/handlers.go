@@ -71,11 +71,11 @@ func (h *Handlers) HandleCreateItem(w http.ResponseWriter, r *http.Request) {
 	item, err := h.itemService.CreateItem(r.Context(), userID, req.Name, itemType, action, req.Description)
 	if err != nil {
 		if errors.Is(err, application.ErrInvalidItemName) {
-			log.Warn("invalid item name", slog.String("error", err.Error()))
+			log.Warn("invalid item name", slog.Any("error", err))
 			http_api.WriteError(w, http.StatusBadRequest, application.ErrInvalidItemName)
 			return
 		}
-		log.Error("failed to create item", slog.String("error", err.Error()))
+		log.Error("failed to create item", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -130,7 +130,7 @@ func (h *Handlers) HandleGetItems(w http.ResponseWriter, r *http.Request) {
 	// Fetch items from the service
 	items, nextCursor, err := h.itemService.GetItems(r.Context(), sortType, cursor, limit)
 	if err != nil {
-		log.Error("failed to get items", slog.String("error", err.Error()))
+		log.Error("failed to get items", slog.Any("error", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
