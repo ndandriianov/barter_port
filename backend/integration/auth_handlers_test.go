@@ -75,7 +75,7 @@ func TestAuthRegisterDuplicateEmail(t *testing.T) {
 
 	var errResp http_api.ErrorResponse
 	require.NoError(t, json.NewDecoder(resp2.Body).Decode(&errResp))
-	require.Equal(t, "email already in use", errResp.Error)
+	require.Equal(t, "email already in use", *errResp.Message)
 }
 
 func TestAuthRegisterInvalidEmail(t *testing.T) {
@@ -93,7 +93,7 @@ func TestAuthRegisterInvalidEmail(t *testing.T) {
 
 	var errResp http_api.ErrorResponse
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&errResp))
-	require.Equal(t, "invalid email", errResp.Error)
+	require.Equal(t, "invalid email", *errResp.Message)
 }
 
 func TestAuthRegisterShortPassword(t *testing.T) {
@@ -114,7 +114,7 @@ func TestAuthRegisterShortPassword(t *testing.T) {
 
 	var errResp http_api.ErrorResponse
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&errResp))
-	require.Equal(t, "password too short", errResp.Error)
+	require.Equal(t, "password too short", *errResp.Message)
 }
 
 func TestAuthLoginSuccess(t *testing.T) {
@@ -156,7 +156,7 @@ func TestAuthLoginInvalidCredentials(t *testing.T) {
 
 	var errResp http_api.ErrorResponse
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&errResp))
-	require.Equal(t, "invalid credentials", errResp.Error)
+	require.Equal(t, "invalid credentials", *errResp.Message)
 }
 
 func TestAuthLoginWrongPassword(t *testing.T) {
@@ -173,7 +173,7 @@ func TestAuthLoginWrongPassword(t *testing.T) {
 
 	var errResp http_api.ErrorResponse
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&errResp))
-	require.Equal(t, "incorrect password", errResp.Error)
+	require.Equal(t, "incorrect password", *errResp.Message)
 }
 
 func TestAuthMe(t *testing.T) {
