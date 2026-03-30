@@ -7,6 +7,9 @@ infra-up:
 	@until docker compose exec -T db pg_isready -U postgres -d postgres >/dev/null 2>&1; do sleep 1; done
 	$(MAKE) migrate-up
 
+infra-up-wo-migrate:
+	docker compose --profile infra up -d
+
 infra-down:
 	docker compose --profile infra down
 
