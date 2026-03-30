@@ -1,6 +1,6 @@
 basePath: /
 definitions:
-  http_api.ErrorResponse:
+  httpx.ErrorResponse:
     properties:
       message:
         type: string
@@ -76,15 +76,15 @@ paths:
         "400":
           description: Invalid request or credentialsReq
           schema:
-            $ref: '#/definitions/http_api.ErrorResponse'
+            $ref: '#/definitions/httpx.ErrorResponse'
         "401":
           description: Incorrect password
           schema:
-            $ref: '#/definitions/http_api.ErrorResponse'
+            $ref: '#/definitions/httpx.ErrorResponse'
         "403":
           description: Email not verified
           schema:
-            $ref: '#/definitions/http_api.ErrorResponse'
+            $ref: '#/definitions/httpx.ErrorResponse'
         "500":
           description: Internal server error
       summary: Login user
@@ -141,7 +141,7 @@ paths:
         "401":
           description: Unauthorized or invalid token
           schema:
-            $ref: '#/definitions/http_api.ErrorResponse'
+            $ref: '#/definitions/httpx.ErrorResponse'
         "500":
           description: Internal server error
       summary: Refresh tokens
@@ -169,7 +169,7 @@ paths:
         "400":
           description: Invalid request
           schema:
-            $ref: '#/definitions/http_api.ErrorResponse'
+            $ref: '#/definitions/httpx.ErrorResponse'
         "500":
           description: Internal server error
       summary: Register a new user
@@ -196,11 +196,11 @@ paths:
         "400":
           description: Invalid request
           schema:
-            $ref: '#/definitions/http_api.ErrorResponse'
+            $ref: '#/definitions/httpx.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/http_api.ErrorResponse'
+            $ref: '#/definitions/httpx.ErrorResponse'
         "500":
           description: Internal server error
       summary: Retry sending verification email
@@ -225,11 +225,11 @@ paths:
         "400":
           description: Invalid user ID
           schema:
-            $ref: '#/definitions/http_api.ErrorResponse'
+            $ref: '#/definitions/httpx.ErrorResponse'
         "404":
           description: User creation event not found
           schema:
-            $ref: '#/definitions/http_api.ErrorResponse'
+            $ref: '#/definitions/httpx.ErrorResponse'
         "500":
           description: Internal server error
       summary: Get user creation status
@@ -255,11 +255,11 @@ paths:
         "400":
           description: Invalid request or token
           schema:
-            $ref: '#/definitions/http_api.ErrorResponse'
+            $ref: '#/definitions/httpx.ErrorResponse'
         "404":
           description: User not found
           schema:
-            $ref: '#/definitions/http_api.ErrorResponse'
+            $ref: '#/definitions/httpx.ErrorResponse'
         "500":
           description: Internal server error
       summary: Verify email

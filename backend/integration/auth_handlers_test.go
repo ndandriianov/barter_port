@@ -1,7 +1,7 @@
 package integration
 
 import (
-	"barter-port/pkg/http_api"
+	"barter-port/pkg/httpx"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -73,7 +73,7 @@ func TestAuthRegisterDuplicateEmail(t *testing.T) {
 
 	require.Equal(t, http.StatusBadRequest, resp2.StatusCode)
 
-	var errResp http_api.ErrorResponse
+	var errResp httpx.ErrorResponse
 	require.NoError(t, json.NewDecoder(resp2.Body).Decode(&errResp))
 	require.Equal(t, "email already in use", *errResp.Message)
 }
@@ -91,7 +91,7 @@ func TestAuthRegisterInvalidEmail(t *testing.T) {
 
 	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
-	var errResp http_api.ErrorResponse
+	var errResp httpx.ErrorResponse
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&errResp))
 	require.Equal(t, "invalid email", *errResp.Message)
 }
@@ -112,7 +112,7 @@ func TestAuthRegisterShortPassword(t *testing.T) {
 
 	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
-	var errResp http_api.ErrorResponse
+	var errResp httpx.ErrorResponse
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&errResp))
 	require.Equal(t, "password too short", *errResp.Message)
 }
@@ -154,7 +154,7 @@ func TestAuthLoginInvalidCredentials(t *testing.T) {
 
 	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
-	var errResp http_api.ErrorResponse
+	var errResp httpx.ErrorResponse
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&errResp))
 	require.Equal(t, "invalid credentials", *errResp.Message)
 }
@@ -171,7 +171,7 @@ func TestAuthLoginWrongPassword(t *testing.T) {
 
 	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 
-	var errResp http_api.ErrorResponse
+	var errResp httpx.ErrorResponse
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&errResp))
 	require.Equal(t, "incorrect password", *errResp.Message)
 }

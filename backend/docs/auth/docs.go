@@ -49,19 +49,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid request or credentialsReq",
                         "schema": {
-                            "$ref": "#/definitions/http_api.ErrorResponse"
+                            "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Incorrect password",
                         "schema": {
-                            "$ref": "#/definitions/http_api.ErrorResponse"
+                            "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Email not verified",
                         "schema": {
-                            "$ref": "#/definitions/http_api.ErrorResponse"
+                            "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
                     "500": {
@@ -150,7 +150,7 @@ const docTemplate = `{
                     "401": {
                         "description": "Unauthorized or invalid token",
                         "schema": {
-                            "$ref": "#/definitions/http_api.ErrorResponse"
+                            "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
                     "500": {
@@ -193,7 +193,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid request",
                         "schema": {
-                            "$ref": "#/definitions/http_api.ErrorResponse"
+                            "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
                     "500": {
@@ -233,13 +233,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid request",
                         "schema": {
-                            "$ref": "#/definitions/http_api.ErrorResponse"
+                            "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/http_api.ErrorResponse"
+                            "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
                     "500": {
@@ -277,13 +277,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid user ID",
                         "schema": {
-                            "$ref": "#/definitions/http_api.ErrorResponse"
+                            "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "User creation event not found",
                         "schema": {
-                            "$ref": "#/definitions/http_api.ErrorResponse"
+                            "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
                     "500": {
@@ -323,13 +323,13 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid request or token",
                         "schema": {
-                            "$ref": "#/definitions/http_api.ErrorResponse"
+                            "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "User not found",
                         "schema": {
-                            "$ref": "#/definitions/http_api.ErrorResponse"
+                            "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
                     "500": {
@@ -340,7 +340,7 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "http_api.ErrorResponse": {
+        "httpx.ErrorResponse": {
             "type": "object",
             "properties": {
                 "message": {

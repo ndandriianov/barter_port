@@ -1,4 +1,4 @@
-package http_api
+package httpx
 
 import (
 	"encoding/json"
