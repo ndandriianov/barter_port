@@ -35,7 +35,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: './components/schemas.yaml#/Draft'
+                $ref: './components/responses.yaml#/CreateDraftDealResponse'
         '400':
           description: Invalid request body
           content:

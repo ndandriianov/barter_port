@@ -20,15 +20,19 @@ func NewService() *Service {
 	return &Service{}
 }
 
+// ================================================================================
+// CREATE DRAFT
+// ================================================================================
+
+// CreateDraft inserts a new draft deal into the database and returns its ID.
+//
+// No domain errors
 func (s *Service) CreateDraft(
 	ctx context.Context,
 	authorID uuid.UUID,
 	name *string,
 	description *string,
-	items []struct {
-		ID       uuid.UUID
-		Quantity int
-	},
+	items []domain.ItemIDsAndQuantities,
 ) (uuid.UUID, error) {
 	var id uuid.UUID
 	var err error
@@ -43,10 +47,25 @@ func (s *Service) CreateDraft(
 	return id, txErr
 }
 
+// ================================================================================
+// GET DRAFT IDS BY AUTHOR
+// ================================================================================
+
+// GetDraftIDsByAuthor returns a list of draft deal IDs created by the specified author.
+//
+// No domain errors
 func (s *Service) GetDraftIDsByAuthor(ctx context.Context, authorID uuid.UUID) ([]uuid.UUID, error) {
 	return s.dealsRepository.GetDraftIDsByAuthor(ctx, s.db, authorID)
 }
 
+// ================================================================================
+// GET DRAFT BY ID
+// ================================================================================
+
+// GetDraftByID returns a draft deal by its ID.
+//
+// Domain errors:
+// - domain.ErrDraftNotFound: if no draft deal with the specified ID exists.
 func (s *Service) GetDraftByID(ctx context.Context, id uuid.UUID) (domain.Draft, error) {
 	return s.dealsRepository.GetDraftByID(ctx, s.db, id)
 }

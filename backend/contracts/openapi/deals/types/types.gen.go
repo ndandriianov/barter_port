@@ -87,13 +87,24 @@ func (e ListItemsParamsSort) Valid() bool {
 
 // CreateDraftDealRequest defines model for CreateDraftDealRequest.
 type CreateDraftDealRequest struct {
-	Items []struct {
+	// Description An optional description for the draft deal
+	Description *string `json:"description,omitempty"`
+	Items       []struct {
 		// ItemID The ID of the item to include in the draft deal
 		ItemID openapi_types.UUID `json:"itemID"`
 
 		// Quantity The quantity of the item to include in the draft deal
 		Quantity int `json:"quantity"`
 	} `json:"items"`
+
+	// Name An optional name for the draft deal
+	Name *string `json:"name,omitempty"`
+}
+
+// CreateDraftDealResponse defines model for CreateDraftDealResponse.
+type CreateDraftDealResponse struct {
+	// Id The unique identifier of the created draft deal
+	Id openapi_types.UUID `json:"id"`
 }
 
 // CreateItemRequest defines model for CreateItemRequest.

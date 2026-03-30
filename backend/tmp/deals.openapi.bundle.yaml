@@ -33,7 +33,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Draft'
+                $ref: '#/components/schemas/CreateDraftDealResponse'
         '400':
           description: Invalid request body
           content:
@@ -60,6 +60,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
   /deals/drafts/my:
     get:
+      tags:
+        - drafts
       summary: Получить ID всех черновых договоров, созданных текущим пользователем
       operationId: getMyDraftDeals
       security:
@@ -85,6 +87,8 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
   /deals/drafts/{draftId}:
     get:
+      tags:
+        - drafts
       summary: Получить черновой договор по его ID
       operationId: getDraftDealById
       security:
@@ -219,6 +223,12 @@ components:
     CreateDraftDealRequest:
       type: object
       properties:
+        name:
+          type: string
+          description: An optional name for the draft deal
+        description:
+          type: string
+          description: An optional description for the draft deal
         items:
           type: array
           items:
@@ -236,6 +246,30 @@ components:
                 description: The quantity of the item to include in the draft deal
       required:
         - items
+    CreateDraftDealResponse:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The unique identifier of the created draft deal
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Вы отправили некорректный запрос
+    GetMyDraftDealsResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: string
+            format: uuid
+            description: The unique identifier of a draft deal
     ItemType:
       type: string
       description: Type of barter item
@@ -312,21 +346,6 @@ components:
           type: string
           format: date-time
           description: The timestamp when the draft deal was last updated
-    ErrorResponse:
-      type: object
-      properties:
-        message:
-          type: string
-          example: Вы отправили некорректный запрос
-    GetMyDraftDealsResponse:
-      type: object
-      properties:
-        data:
-          type: array
-          items:
-            type: string
-            format: uuid
-            description: The unique identifier of a draft deal
     ItemsCursor:
       type: object
       description: Cursor for stable pagination

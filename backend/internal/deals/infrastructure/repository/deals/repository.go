@@ -30,10 +30,7 @@ func (r *Repository) CreateDraft(
 	authorID uuid.UUID,
 	name *string,
 	description *string,
-	items []struct {
-		ID       uuid.UUID
-		Quantity int
-	},
+	items []domain.ItemIDsAndQuantities,
 ) (uuid.UUID, error) {
 
 	dealsQuery := `
