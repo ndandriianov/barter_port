@@ -136,7 +136,7 @@ services:
     environment:
       APP_ENV: docker
       CONFIG_COMMON: /app/config/common.yaml
-      CONFIG_SERVICE: # /app/config/deals.yaml
+      CONFIG_SERVICE: /app/config/deals.yaml
     volumes:
       - ./config:/app/config:ro
 

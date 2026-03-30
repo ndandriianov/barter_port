@@ -35,6 +35,7 @@ create-migration:
 migrate-up:
 	migrate -path migrations/auth -database "postgres://postgres:$${DB_PASSWORD:-postgres}@localhost:5432/auth_db?sslmode=disable" up
 	migrate -path migrations/users -database "postgres://postgres:$${DB_PASSWORD:-postgres}@localhost:5432/users_db?sslmode=disable" up
+	migrate -path migrations/deals -database "postgres://postgres:$${DB_PASSWORD:-postgres}@localhost:5432/deals_db?sslmode=disable" up
 
 
 

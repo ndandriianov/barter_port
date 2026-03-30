@@ -1,1 +1,5 @@
+db:
+  name: "deals_db"
+  migrations_path: "file://migrations/deals"
+
 port: 8080
