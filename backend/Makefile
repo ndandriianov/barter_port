@@ -3,6 +3,9 @@ swagger-auth:
 
 infra-up:
 	docker compose --profile infra up -d
+	@echo "Waiting for Postgres to become ready..."
+	@until docker compose exec -T db pg_isready -U postgres -d postgres >/dev/null 2>&1; do sleep 1; done
+	$(MAKE) migrate-up
 
 infra-down:
 	docker compose --profile infra down
@@ -28,6 +31,10 @@ local-up:
 
 create-migration:
 	migrate create -ext sql -dir migrations/$(db) -seq $(name)
+
+migrate-up:
+	migrate -path migrations/auth -database "postgres://postgres:$${DB_PASSWORD:-postgres}@localhost:5432/auth_db?sslmode=disable" up
+	migrate -path migrations/users -database "postgres://postgres:$${DB_PASSWORD:-postgres}@localhost:5432/users_db?sslmode=disable" up
 
 
 
