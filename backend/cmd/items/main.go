@@ -4,7 +4,7 @@ import (
 	"barter-port/internal/items/repository"
 	"barter-port/internal/items/service"
 	httptransport "barter-port/internal/items/transport/http"
-	bootstrap2 "barter-port/pkg/bootstrap"
+	"barter-port/pkg/bootstrap"
 	"barter-port/pkg/logger"
 	"log"
 	"log/slog"
@@ -17,7 +17,7 @@ import (
 func main() {
 	_ = godotenv.Load()
 
-	cfg, err := bootstrap2.LoadConfig(bootstrap2.ConfigOptions{
+	cfg, err := bootstrap.LoadConfig(bootstrap.ConfigOptions{
 		CommonPath:  os.Getenv("CONFIG_COMMON"),
 		ServicePath: os.Getenv("CONFIG_SERVICE"),
 		AppEnv:      os.Getenv("APP_ENV"),
@@ -26,7 +26,7 @@ func main() {
 		log.Fatal("failed to load config:", err)
 	}
 
-	db, err := bootstrap2.InitDatabaseFromConfig(cfg)
+	db, err := bootstrap.InitDatabaseFromConfig(cfg)
 	if err != nil {
 		log.Fatal("failed to initialize database:", err)
 	}
@@ -37,7 +37,7 @@ func main() {
 	itemRepo := repository.NewItemRepository(db)
 	itemService := service.NewItemService(itemRepo, logg)
 
-	validator, err := bootstrap2.InitLocalJWTFromConfig(cfg)
+	validator, err := bootstrap.InitLocalJWTFromConfig(cfg)
 	if err != nil {
 		log.Fatal("failed to initialize JWT validator:", err)
 	}
@@ -45,7 +45,7 @@ func main() {
 	handlers := httptransport.NewHandlers(itemService)
 	router := httptransport.NewRouter(logg, validator, handlers)
 
-	port := bootstrap2.InitPortStringFromConfig(cfg, 8080)
+	port := bootstrap.InitPortStringFromConfig(cfg, 8080)
 	log.Println("backend listening on", port)
 	log.Fatal(http.ListenAndServe(port, router))
 }
