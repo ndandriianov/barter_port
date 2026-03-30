@@ -288,11 +288,11 @@ components:
         - id
         - authorId
         - name
-        - description
         - type
         - action
-        - views
+        - description
         - createdAt
+        - views
       properties:
         id:
           type: string
@@ -329,15 +329,24 @@ components:
       type: object
       required:
         - id
-        - items
+        - authorId
         - createdAt
+        - items
       properties:
         id:
           type: string
           format: uuid
           description: The unique identifier of the draft deal
-        items:
-          $ref: '#/components/schemas/Item'
+        authorId:
+          type: string
+          format: uuid
+          description: The unique identifier of the user who created the draft deal
+        name:
+          type: string
+          description: The name of the draft deal
+        description:
+          type: string
+          description: A detailed description of the draft deal
         createdAt:
           type: string
           format: date-time
@@ -346,6 +355,11 @@ components:
           type: string
           format: date-time
           description: The timestamp when the draft deal was last updated
+        items:
+          type: array
+          description: A list of items included in the draft deal
+          items:
+            $ref: '#/components/schemas/Item'
     ItemsCursor:
       type: object
       description: Cursor for stable pagination
