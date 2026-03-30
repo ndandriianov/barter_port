@@ -2,9 +2,9 @@ package http
 
 import (
 	"barter-port/contracts/openapi/items/types"
-	"barter-port/internal/items/model"
-	"barter-port/internal/items/model/error_messages"
-	"barter-port/internal/items/service"
+	"barter-port/internal/items/application"
+	"barter-port/internal/items/domain"
+	"barter-port/internal/items/domain/error_messages"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/http_api"
 	"barter-port/pkg/logger"
@@ -18,8 +18,8 @@ import (
 )
 
 type itemService interface {
-	CreateItem(ctx context.Context, userID uuid.UUID, name string, itemType model.ItemType, action model.ItemAction, description string) (*model.Item, error)
-	GetItems(ctx context.Context, sortType model.SortType, cursor *model.UniversalCursor, limit int) ([]model.Item, *model.UniversalCursor, error)
+	CreateItem(ctx context.Context, userID uuid.UUID, name string, itemType domain.ItemType, action domain.ItemAction, description string) (*domain.Item, error)
+	GetItems(ctx context.Context, sortType domain.SortType, cursor *domain.UniversalCursor, limit int) ([]domain.Item, *domain.UniversalCursor, error)
 }
 
 type Handlers struct {
@@ -51,7 +51,7 @@ func (h *Handlers) HandleCreateItem(w http.ResponseWriter, r *http.Request) {
 	log = log.With(slog.Any("request", req))
 	log.Debug("decoded create item request")
 
-	itemType, err := model.ItemTypeString(string(req.Type))
+	itemType, err := domain.ItemTypeString(string(req.Type))
 	if err != nil {
 		log.Error("invalid item type", slog.String("type", string(req.Type)), slog.Any("error", err))
 		http_api.WriteJSON(w, http.StatusBadRequest, types.ErrorResponse{
@@ -61,7 +61,7 @@ func (h *Handlers) HandleCreateItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	action, err := model.ItemActionString(string(req.Action))
+	action, err := domain.ItemActionString(string(req.Action))
 	if err != nil {
 		log.Error("invalid item action", slog.String("action", string(req.Action)), slog.Any("error", err))
 		http_api.WriteJSON(w, http.StatusBadRequest, types.ErrorResponse{
@@ -83,7 +83,7 @@ func (h *Handlers) HandleCreateItem(w http.ResponseWriter, r *http.Request) {
 
 	item, err := h.itemService.CreateItem(r.Context(), userID, req.Name, itemType, action, req.Description)
 	if err != nil {
-		if errors.Is(err, service.ErrInvalidItemName) {
+		if errors.Is(err, application.ErrInvalidItemName) {
 			log.Warn("invalid item name", slog.String("error", err.Error()))
 			http_api.WriteJSON(w, http.StatusBadRequest, types.ErrorResponse{
 				Code:    types.ErrorCodeInvalidItemName,
@@ -125,7 +125,7 @@ func (h *Handlers) HandleGetItems(w http.ResponseWriter, r *http.Request) {
 	)
 	log.Info("handling get items request")
 
-	sortType, err := model.SortTypeString(sortTypeStr)
+	sortType, err := domain.SortTypeString(sortTypeStr)
 	if err != nil {
 		log.Error("invalid sort type", slog.Any("error", err))
 		http_api.WriteJSON(w, http.StatusBadRequest, types.ErrorResponse{
@@ -135,7 +135,7 @@ func (h *Handlers) HandleGetItems(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cursor, err := model.NewUniversalCursor(createdAtStr, viewsStr, idStr)
+	cursor, err := domain.NewUniversalCursor(createdAtStr, viewsStr, idStr)
 	if err != nil {
 		log.Error("failed to create items cursor", slog.Any("error", err))
 		cursor = nil
