@@ -133,6 +133,109 @@ paths:
                 $ref: './components/responses.yaml#/ErrorResponse'
 
 
+    patch:
+      tags:
+        - drafts
+      summary: Подтвердить участие в сделке
+      description: |
+        Подтверждает участие текущего пользователя в сделке.
+        После того, как все участники черновика подтвердят свое участие, создается сделка,
+        используемые в ней items превращаются в сущность item сделки, а не просто объявления.
+        
+        Запрос идемпотентный.
+      operationId: confirmDraftDeal
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: draftId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: './components/responses.yaml#/ConfirmDraftDealResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: './components/responses.yaml#/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: './components/responses.yaml#/ErrorResponse'
+        '404':
+          description: Draft deal not found
+          content:
+            application/json:
+              schema:
+                $ref: './components/responses.yaml#/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: './components/responses.yaml#/ErrorResponse'
+
+
+  /deals/drafts/{draftId}/cancel:
+    patch:
+      tags:
+        - drafts
+      summary: Отменить участие в сделке
+      description: |
+        Отменяет участие текущего пользователя в сделке.
+        После того, как один из участников черновика отменит свое участие, черновой договор удаляется,
+        а его участники получают нотификацию об отмене сделки.
+        
+        Запрос идемпотентный. Возможен только на стадии черновика, после создания сделки отменить участие нельзя.
+      operationId: cancelDraftDeal
+      security:
+        - bearerAuth: [ ]
+      parameters:
+        - name: draftId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: './components/responses.yaml#/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: './components/responses.yaml#/ErrorResponse'
+        '404':
+          description: Draft deal not found
+          content:
+            application/json:
+              schema:
+                $ref: './components/responses.yaml#/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: './components/responses.yaml#/ErrorResponse'
+
+
   /items:
     get:
       tags:
@@ -150,7 +253,7 @@ paths:
         - for `popularity`: use `cursor_views` + `cursor_id`
       operationId: listItems
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
       parameters:
         - $ref: './components/parameters.yaml#/SortType'
         - $ref: './components/parameters.yaml#/CursorCreatedAt'
@@ -190,7 +293,7 @@ paths:
       description: Creates a new barter item
       operationId: createItem
       security:
-        - bearerAuth: []
+        - bearerAuth: [ ]
       requestBody:
         required: true
         content:
