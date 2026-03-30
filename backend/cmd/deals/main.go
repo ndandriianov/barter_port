@@ -2,7 +2,7 @@ package main
 
 import (
 	"barter-port/internal/deals/application/items"
-	"barter-port/internal/deals/infrastructure/repository"
+	itemsr "barter-port/internal/deals/infrastructure/repository/items"
 	transporthttp "barter-port/internal/deals/infrastructure/transport/http"
 	"barter-port/pkg/bootstrap"
 	"barter-port/pkg/logger"
@@ -31,7 +31,7 @@ func main() {
 
 	logg := logger.NewJSONLogger(slog.LevelDebug, "deals-service", "")
 
-	itemRepo := repository.NewItemRepository(db)
+	itemRepo := itemsr.NewRepository(db)
 	itemService := items.NewItemService(itemRepo, logg)
 
 	validator, err := bootstrap.InitLocalJWTFromConfig(cfg)

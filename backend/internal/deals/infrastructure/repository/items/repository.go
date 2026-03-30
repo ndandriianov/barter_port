@@ -1,4 +1,4 @@
-package repository
+package items
 
 import (
 	"barter-port/internal/deals/domain"
@@ -8,17 +8,17 @@ import (
 	"golang.org/x/net/context"
 )
 
-type ItemRepository struct {
+type Repository struct {
 	db *pgxpool.Pool
 }
 
-func NewItemRepository(db *pgxpool.Pool) *ItemRepository {
-	return &ItemRepository{db: db}
+func NewRepository(db *pgxpool.Pool) *Repository {
+	return &Repository{db: db}
 }
 
 // AddItem inserts a new item into the database.
 // Returns an error if the insertion fails.
-func (r *ItemRepository) AddItem(ctx context.Context, item domain.Item) error {
+func (r *Repository) AddItem(ctx context.Context, item domain.Item) error {
 	query := `
 		INSERT INTO items (id, author_id, name, type, action, description, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -32,7 +32,7 @@ func (r *ItemRepository) AddItem(ctx context.Context, item domain.Item) error {
 // It supports cursor-based pagination using a TimeCursor.
 // If the cursor is nil, it retrieves the most recent items.
 // Returns a slice of items, a new TimeCursor for the next page, and an error if the query fails.
-func (r *ItemRepository) GetItemsOrderByTime(
+func (r *Repository) GetItemsOrderByTime(
 	ctx context.Context,
 	cursor *domain.TimeCursor,
 	limit int,
@@ -82,7 +82,7 @@ func (r *ItemRepository) GetItemsOrderByTime(
 // It supports cursor-based pagination using a PopularityCursor.
 // If the cursor is nil, it retrieves the most popular items.
 // Returns a slice of items, a new PopularityCursor for the next page, and an error if the query fails.
-func (r *ItemRepository) GetItemsOrderByPopularity(
+func (r *Repository) GetItemsOrderByPopularity(
 	ctx context.Context,
 	cursor *domain.PopularityCursor,
 	limit int,
