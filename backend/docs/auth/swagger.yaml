@@ -2,11 +2,10 @@ basePath: /
 definitions:
   http_api.ErrorResponse:
     properties:
-      error:
-        description: The error message
+      message:
         type: string
     type: object
-  infrastructure_transport.credentialsReq:
+  infrastructure_transport_http.credentialsReq:
     properties:
       email:
         example: user@email.com
@@ -15,34 +14,34 @@ definitions:
         example: password
         type: string
     type: object
-  infrastructure_transport.loginResp:
+  infrastructure_transport_http.loginResp:
     properties:
       accessToken:
         type: string
     type: object
-  infrastructure_transport.meResp:
+  infrastructure_transport_http.meResp:
     properties:
       userId:
         type: string
     type: object
-  infrastructure_transport.refreshResponse:
+  infrastructure_transport_http.refreshResponse:
     properties:
       access_token:
         type: string
     type: object
-  infrastructure_transport.registerResp:
+  infrastructure_transport_http.registerResp:
     properties:
       email:
         type: string
       userId:
         type: string
     type: object
-  infrastructure_transport.userCreationStatusResp:
+  infrastructure_transport_http.userCreationStatusResp:
     properties:
       status:
         type: string
     type: object
-  infrastructure_transport.verifyEmailReq:
+  infrastructure_transport_http.verifyEmailReq:
     properties:
       token:
         example: iT1VWZWO1apO2GGoXG1ahOKuHlo8WA6ESwA86WMOTiI
@@ -66,14 +65,14 @@ paths:
         name: credentialsReq
         required: true
         schema:
-          $ref: '#/definitions/infrastructure_transport.credentialsReq'
+          $ref: '#/definitions/infrastructure_transport_http.credentialsReq'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/infrastructure_transport.loginResp'
+            $ref: '#/definitions/infrastructure_transport_http.loginResp'
         "400":
           description: Invalid request or credentialsReq
           schema:
@@ -88,8 +87,6 @@ paths:
             $ref: '#/definitions/http_api.ErrorResponse'
         "500":
           description: Internal server error
-          schema:
-            $ref: '#/definitions/http_api.ErrorResponse'
       summary: Login user
       tags:
       - auth
@@ -103,8 +100,6 @@ paths:
           description: Logout successful
         "500":
           description: Internal server error
-          schema:
-            $ref: '#/definitions/http_api.ErrorResponse'
       summary: Logout user
       tags:
       - auth
@@ -117,11 +112,9 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/infrastructure_transport.meResp'
+            $ref: '#/definitions/infrastructure_transport_http.meResp'
         "500":
           description: Internal server error
-          schema:
-            $ref: '#/definitions/http_api.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Get user info
@@ -144,15 +137,13 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/infrastructure_transport.refreshResponse'
+            $ref: '#/definitions/infrastructure_transport_http.refreshResponse'
         "401":
           description: Unauthorized or invalid token
           schema:
             $ref: '#/definitions/http_api.ErrorResponse'
         "500":
           description: Internal server error
-          schema:
-            $ref: '#/definitions/http_api.ErrorResponse'
       summary: Refresh tokens
       tags:
       - auth
@@ -167,22 +158,20 @@ paths:
         name: credentialsReq
         required: true
         schema:
-          $ref: '#/definitions/infrastructure_transport.credentialsReq'
+          $ref: '#/definitions/infrastructure_transport_http.credentialsReq'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/infrastructure_transport.registerResp'
+            $ref: '#/definitions/infrastructure_transport_http.registerResp'
         "400":
           description: Invalid request
           schema:
             $ref: '#/definitions/http_api.ErrorResponse'
         "500":
           description: Internal server error
-          schema:
-            $ref: '#/definitions/http_api.ErrorResponse'
       summary: Register a new user
       tags:
       - auth
@@ -198,7 +187,7 @@ paths:
         name: credentialsReq
         required: true
         schema:
-          $ref: '#/definitions/infrastructure_transport.credentialsReq'
+          $ref: '#/definitions/infrastructure_transport_http.credentialsReq'
       produces:
       - application/json
       responses:
@@ -214,8 +203,6 @@ paths:
             $ref: '#/definitions/http_api.ErrorResponse'
         "500":
           description: Internal server error
-          schema:
-            $ref: '#/definitions/http_api.ErrorResponse'
       summary: Retry sending verification email
       tags:
       - auth
@@ -234,7 +221,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/infrastructure_transport.userCreationStatusResp'
+            $ref: '#/definitions/infrastructure_transport_http.userCreationStatusResp'
         "400":
           description: Invalid user ID
           schema:
@@ -245,8 +232,6 @@ paths:
             $ref: '#/definitions/http_api.ErrorResponse'
         "500":
           description: Internal server error
-          schema:
-            $ref: '#/definitions/http_api.ErrorResponse'
       summary: Get user creation status
       tags:
       - auth
@@ -261,7 +246,7 @@ paths:
         name: verifyEmailReq
         required: true
         schema:
-          $ref: '#/definitions/infrastructure_transport.verifyEmailReq'
+          $ref: '#/definitions/infrastructure_transport_http.verifyEmailReq'
       produces:
       - text/plain
       responses:
@@ -277,8 +262,6 @@ paths:
             $ref: '#/definitions/http_api.ErrorResponse'
         "500":
           description: Internal server error
-          schema:
-            $ref: '#/definitions/http_api.ErrorResponse'
       summary: Verify email
       tags:
       - auth
