@@ -86,17 +86,17 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 	res, err := h.authService.Register(r.Context(), req.Email, req.Password)
 	if err != nil {
 		switch {
-		case errors.Is(err, application.ErrInvalidEmail):
+		case errors.Is(err, domain.ErrInvalidEmail):
 			logger.Info("invalid email format", slog.String("email", req.Email))
-			httpx.WriteError(w, http.StatusBadRequest, application.ErrInvalidEmail)
+			httpx.WriteError(w, http.StatusBadRequest, domain.ErrInvalidEmail)
 
-		case errors.Is(err, application.ErrPasswordTooShort):
+		case errors.Is(err, domain.ErrPasswordTooShort):
 			logger.Info("password too short", slog.Int("password_length", len(req.Password)))
-			httpx.WriteError(w, http.StatusBadRequest, application.ErrPasswordTooShort)
+			httpx.WriteError(w, http.StatusBadRequest, domain.ErrPasswordTooShort)
 
-		case errors.Is(err, application.ErrEmailAlreadyInUse):
+		case errors.Is(err, domain.ErrEmailAlreadyInUse):
 			logger.Info("email already in use", slog.String("email", req.Email))
-			httpx.WriteError(w, http.StatusBadRequest, application.ErrEmailAlreadyInUse)
+			httpx.WriteError(w, http.StatusBadRequest, domain.ErrEmailAlreadyInUse)
 
 		default:
 			logger.Error("unexpected error", slog.Any("error", err))
@@ -144,9 +144,9 @@ func (h *Handlers) RetrySendVerificationEmail(w http.ResponseWriter, r *http.Req
 		log := logger.With(slog.String("email", req.Email), slog.Any("error", err))
 
 		switch {
-		case errors.Is(err, application.ErrInvalidCredentials),
-			errors.Is(err, application.ErrEmailNotVerified),
-			errors.Is(err, application.ErrIncorrectPassword):
+		case errors.Is(err, domain.ErrInvalidCredentials),
+			errors.Is(err, domain.ErrEmailNotVerified),
+			errors.Is(err, domain.ErrIncorrectPassword):
 			log.Info("authentication failed")
 			w.WriteHeader(http.StatusUnauthorized)
 
@@ -187,17 +187,17 @@ func (h *Handlers) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 
 	if err := h.authService.VerifyEmail(r.Context(), req.Token); err != nil {
 		switch {
-		case errors.Is(err, application.ErrInvalidEmailToken):
+		case errors.Is(err, domain.ErrInvalidEmailToken):
 			logger.Info("invalid email_token in verify email request")
-			httpx.WriteError(w, http.StatusBadRequest, application.ErrInvalidEmailToken)
+			httpx.WriteError(w, http.StatusBadRequest, domain.ErrInvalidEmailToken)
 
-		case errors.Is(err, application.ErrEmailTokenExpired):
+		case errors.Is(err, domain.ErrEmailTokenExpired):
 			logger.Info("email_token expired in verify email request")
-			httpx.WriteError(w, http.StatusBadRequest, application.ErrEmailTokenExpired)
+			httpx.WriteError(w, http.StatusBadRequest, domain.ErrEmailTokenExpired)
 
-		case errors.Is(err, application.ErrUserNotFound):
+		case errors.Is(err, domain.ErrUserNotFound):
 			logger.Info("user not found in verify email request")
-			httpx.WriteError(w, http.StatusNotFound, application.ErrUserNotFound)
+			httpx.WriteError(w, http.StatusNotFound, domain.ErrUserNotFound)
 
 		default:
 			logger.Error(
@@ -244,17 +244,17 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	userID, err := h.authService.Login(r.Context(), req.Email, req.Password)
 	if err != nil {
 		switch {
-		case errors.Is(err, application.ErrInvalidCredentials):
+		case errors.Is(err, domain.ErrInvalidCredentials):
 			logger.Info("invalid credentials", slog.String("email", req.Email))
-			httpx.WriteError(w, http.StatusBadRequest, application.ErrInvalidCredentials)
+			httpx.WriteError(w, http.StatusBadRequest, domain.ErrInvalidCredentials)
 
-		case errors.Is(err, application.ErrIncorrectPassword):
+		case errors.Is(err, domain.ErrIncorrectPassword):
 			logger.Info("incorrect password", slog.String("email", req.Email))
-			httpx.WriteError(w, http.StatusUnauthorized, application.ErrIncorrectPassword)
+			httpx.WriteError(w, http.StatusUnauthorized, domain.ErrIncorrectPassword)
 
-		case errors.Is(err, application.ErrEmailNotVerified):
+		case errors.Is(err, domain.ErrEmailNotVerified):
 			logger.Info("email not verified", slog.String("email", req.Email))
-			httpx.WriteError(w, http.StatusForbidden, application.ErrEmailNotVerified)
+			httpx.WriteError(w, http.StatusForbidden, domain.ErrEmailNotVerified)
 
 		default:
 			logger.Error("unexpected error", slog.Any("error", err), slog.String("email", req.Email))
@@ -526,9 +526,9 @@ func (h *Handlers) GetUserCreationStatus(w http.ResponseWriter, r *http.Request)
 	status, err := h.authService.GetUserCreationStatus(r.Context(), userID)
 	if err != nil {
 		switch {
-		case errors.Is(err, application.ErrUserNotFound):
+		case errors.Is(err, domain.ErrUserNotFound):
 			logger.Info("user creation event not found", slog.String("user_id", userID.String()))
-			httpx.WriteError(w, http.StatusNotFound, application.ErrUserNotFound)
+			httpx.WriteError(w, http.StatusNotFound, domain.ErrUserNotFound)
 		default:
 			logger.Error("failed to fetch user creation status",
 				slog.String("user_id", userID.String()),
