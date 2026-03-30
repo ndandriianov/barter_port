@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"barter-port/internal/items/domain"
+	"barter-port/internal/deals/domain"
 	"barter-port/pkg/repox"
 
 	"github.com/jackc/pgx/v5/pgxpool"

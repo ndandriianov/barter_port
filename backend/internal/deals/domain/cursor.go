@@ -1,7 +1,7 @@
 package domain
 
 import (
-	"barter-port/contracts/openapi/items/types"
+	"barter-port/contracts/openapi/deals/types"
 	"errors"
 	"strconv"
 	"time"

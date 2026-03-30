@@ -1,9 +1,9 @@
 package main
 
 import (
-	"barter-port/internal/items/application"
-	"barter-port/internal/items/infrastructure/repository"
-	http2 "barter-port/internal/items/infrastructure/transport/http"
+	"barter-port/internal/deals/application/items"
+	"barter-port/internal/deals/infrastructure/repository"
+	transporthttp "barter-port/internal/deals/infrastructure/transport/http"
 	"barter-port/pkg/bootstrap"
 	"barter-port/pkg/logger"
 	"log"
@@ -32,18 +32,18 @@ func main() {
 	}
 	defer db.Close()
 
-	logg := logger.NewJSONLogger(slog.LevelDebug, "items-service", "")
+	logg := logger.NewJSONLogger(slog.LevelDebug, "deals-service", "")
 
 	itemRepo := repository.NewItemRepository(db)
-	itemService := application.NewItemService(itemRepo, logg)
+	itemService := items.NewItemService(itemRepo, logg)
 
 	validator, err := bootstrap.InitLocalJWTFromConfig(cfg)
 	if err != nil {
 		log.Fatal("failed to initialize JWT validator:", err)
 	}
 
-	handlers := http2.NewHandlers(itemService)
-	router := http2.NewRouter(logg, validator, handlers)
+	handlers := transporthttp.NewHandlers(itemService)
+	router := transporthttp.NewRouter(logg, validator, handlers)
 
 	port := bootstrap.InitPortStringFromConfig(cfg, 8080)
 	log.Println("backend listening on", port)

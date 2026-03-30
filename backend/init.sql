@@ -15,6 +15,7 @@ CREATE TABLE items
 
 CREATE DATABASE auth_db;
 CREATE DATABASE users_db;
+CREATE DATABASE deals_db;
 
 -- CREATE TABLE offers
 -- (

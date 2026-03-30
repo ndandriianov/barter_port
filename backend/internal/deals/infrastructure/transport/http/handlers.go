@@ -1,8 +1,8 @@
 package http
 
 import (
-	"barter-port/contracts/openapi/items/types"
-	"barter-port/internal/items/domain"
+	"barter-port/contracts/openapi/deals/types"
+	"barter-port/internal/deals/domain"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/httpx"
 	"barter-port/pkg/logger"
