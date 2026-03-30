@@ -5,7 +5,7 @@ import (
 	"barter-port/internal/users/application/user"
 	"barter-port/internal/users/domain"
 	"barter-port/pkg/authkit"
-	httpapi "barter-port/pkg/http_api"
+	"barter-port/pkg/httpx"
 	httplog "barter-port/pkg/logger"
 	"context"
 	"errors"
@@ -52,7 +52,7 @@ func (h *Handlers) HandleGetUser(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpapi.WriteJSON(w, http.StatusOK, types.User{
+	httpx.WriteJSON(w, http.StatusOK, types.User{
 		Id:   u.Id,
 		Name: u.Name,
 		Bio:  u.Bio,
@@ -86,7 +86,7 @@ func (h *Handlers) HandleGetMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpapi.WriteJSON(w, http.StatusOK, me)
+	httpx.WriteJSON(w, http.StatusOK, me)
 }
 
 // ================================================================================
@@ -104,7 +104,7 @@ func (h *Handlers) HandleUpdateMe(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var req types.UpdateUserRequest
-	if err := httpapi.DecodeJSON(r, &req); err != nil {
+	if err := httpx.DecodeJSON(r, &req); err != nil {
 		log.Warn("failed to decode update user request", slog.String("error", err.Error()))
 		writeError(w, http.StatusBadRequest, "invalid request")
 		return
@@ -136,7 +136,7 @@ func (h *Handlers) HandleUpdateMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpapi.WriteJSON(w, http.StatusOK, me)
+	httpx.WriteJSON(w, http.StatusOK, me)
 }
 
 func handleUpdateError(w http.ResponseWriter, log *slog.Logger, err error, userID uuid.UUID) {
@@ -171,7 +171,7 @@ func (h *Handlers) getMe(ctx context.Context, userID uuid.UUID) (types.Me, error
 }
 
 func writeError(w http.ResponseWriter, status int, message string) {
-	httpapi.WriteJSON(w, status, types.ErrorResponse{
+	httpx.WriteJSON(w, status, types.ErrorResponse{
 		Message: &message,
 	})
 }

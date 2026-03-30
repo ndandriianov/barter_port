@@ -5,7 +5,7 @@ import (
 	"barter-port/internal/items/application"
 	"barter-port/internal/items/domain"
 	"barter-port/pkg/authkit"
-	"barter-port/pkg/http_api"
+	"barter-port/pkg/httpx"
 	"barter-port/pkg/logger"
 	"context"
 	"errors"
@@ -38,9 +38,9 @@ func (h *Handlers) HandleCreateItem(w http.ResponseWriter, r *http.Request) {
 	log.Info("handling register request")
 
 	var req types.CreateItemRequest
-	if err := http_api.DecodeJSON(r, &req); err != nil {
+	if err := httpx.DecodeJSON(r, &req); err != nil {
 		log.Error("error decoding request", slog.Any("error", err))
-		http_api.WriteError(w, http.StatusBadRequest, http_api.ErrCannotDecodeRequestBody)
+		httpx.WriteError(w, http.StatusBadRequest, httpx.ErrCannotDecodeRequestBody)
 		return
 	}
 
@@ -50,14 +50,14 @@ func (h *Handlers) HandleCreateItem(w http.ResponseWriter, r *http.Request) {
 	itemType, err := domain.ItemTypeString(string(req.Type))
 	if err != nil {
 		log.Error("invalid item type", slog.String("type", string(req.Type)), slog.Any("error", err))
-		http_api.WriteErrorStr(w, http.StatusBadRequest, "invalid item type")
+		httpx.WriteErrorStr(w, http.StatusBadRequest, "invalid item type")
 		return
 	}
 
 	action, err := domain.ItemActionString(string(req.Action))
 	if err != nil {
 		log.Error("invalid item action", slog.String("action", string(req.Action)), slog.Any("error", err))
-		http_api.WriteErrorStr(w, http.StatusBadRequest, "invalid item action")
+		httpx.WriteErrorStr(w, http.StatusBadRequest, "invalid item action")
 		return
 	}
 
@@ -72,7 +72,7 @@ func (h *Handlers) HandleCreateItem(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, application.ErrInvalidItemName) {
 			log.Warn("invalid item name", slog.Any("error", err))
-			http_api.WriteError(w, http.StatusBadRequest, application.ErrInvalidItemName)
+			httpx.WriteError(w, http.StatusBadRequest, application.ErrInvalidItemName)
 			return
 		}
 		log.Error("failed to create item", slog.Any("error", err))
@@ -80,7 +80,7 @@ func (h *Handlers) HandleCreateItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http_api.WriteJSON(w, http.StatusCreated, item.ToDto())
+	httpx.WriteJSON(w, http.StatusCreated, item.ToDto())
 }
 
 // ================================================================================
@@ -109,7 +109,7 @@ func (h *Handlers) HandleGetItems(w http.ResponseWriter, r *http.Request) {
 	sortType, err := domain.SortTypeString(sortTypeStr)
 	if err != nil {
 		log.Error("invalid sort type", slog.Any("error", err))
-		http_api.WriteErrorStr(w, http.StatusBadRequest, "invalid sort type")
+		httpx.WriteErrorStr(w, http.StatusBadRequest, "invalid sort type")
 		return
 	}
 
@@ -145,7 +145,7 @@ func (h *Handlers) HandleGetItems(w http.ResponseWriter, r *http.Request) {
 		respCursor = new(nextCursor.ToDto())
 	}
 
-	http_api.WriteJSON(w, http.StatusOK, types.ListItemsResponse{
+	httpx.WriteJSON(w, http.StatusOK, types.ListItemsResponse{
 		Items:      respItems,
 		NextCursor: respCursor,
 	})

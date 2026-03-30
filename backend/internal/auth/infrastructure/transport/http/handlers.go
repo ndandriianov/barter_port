@@ -6,7 +6,7 @@ import (
 	"barter-port/internal/auth/infrastructure/repository/refresh_token"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/db"
-	"barter-port/pkg/http_api"
+	"barter-port/pkg/httpx"
 	"barter-port/pkg/jwt"
 	"context"
 	"encoding/json"
@@ -68,7 +68,7 @@ func NewHandlers(
 // @Produce json
 // @Param credentialsReq body credentialsReq true "Register request"
 // @Success 200 {object} registerResp
-// @Failure 400 {object} http_api.ErrorResponse "Invalid request"
+// @Failure 400 {object} httpx.ErrorResponse "Invalid request"
 // @Failure 500 "Internal server error"
 // @Router /auth/register [post]
 func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
@@ -77,9 +77,9 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 	logger.Info("handling register request")
 
 	var req credentialsReq
-	if err := http_api.DecodeJSON(r, &req); err != nil {
+	if err := httpx.DecodeJSON(r, &req); err != nil {
 		logger.Warn("error decoding request", slog.Any("error", err))
-		http_api.WriteError(w, http.StatusBadRequest, http_api.ErrCannotDecodeRequestBody)
+		httpx.WriteError(w, http.StatusBadRequest, httpx.ErrCannotDecodeRequestBody)
 		return
 	}
 
@@ -88,15 +88,15 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case errors.Is(err, application.ErrInvalidEmail):
 			logger.Info("invalid email format", slog.String("email", req.Email))
-			http_api.WriteError(w, http.StatusBadRequest, application.ErrInvalidEmail)
+			httpx.WriteError(w, http.StatusBadRequest, application.ErrInvalidEmail)
 
 		case errors.Is(err, application.ErrPasswordTooShort):
 			logger.Info("password too short", slog.Int("password_length", len(req.Password)))
-			http_api.WriteError(w, http.StatusBadRequest, application.ErrPasswordTooShort)
+			httpx.WriteError(w, http.StatusBadRequest, application.ErrPasswordTooShort)
 
 		case errors.Is(err, application.ErrEmailAlreadyInUse):
 			logger.Info("email already in use", slog.String("email", req.Email))
-			http_api.WriteError(w, http.StatusBadRequest, application.ErrEmailAlreadyInUse)
+			httpx.WriteError(w, http.StatusBadRequest, application.ErrEmailAlreadyInUse)
 
 		default:
 			logger.Error("unexpected error", slog.Any("error", err))
@@ -110,7 +110,7 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 		slog.String("email", res.Email),
 	)
 
-	http_api.WriteJSON(w, http.StatusOK, registerResp{
+	httpx.WriteJSON(w, http.StatusOK, registerResp{
 		UserID: res.UserID,
 		Email:  res.Email,
 	})
@@ -124,8 +124,8 @@ func (h *Handlers) Register(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param credentialsReq body credentialsReq true "Retry send verification email request"
 // @Success 200 "Verification email sent successfully"
-// @Failure 400 {object} http_api.ErrorResponse "Invalid request"
-// @Failure 401 {object} http_api.ErrorResponse "Unauthorized"
+// @Failure 400 {object} httpx.ErrorResponse "Invalid request"
+// @Failure 401 {object} httpx.ErrorResponse "Unauthorized"
 // @Failure 500 "Internal server error"
 // @Router /auth/retry-send-verification-email [post]
 func (h *Handlers) RetrySendVerificationEmail(w http.ResponseWriter, r *http.Request) {
@@ -134,9 +134,9 @@ func (h *Handlers) RetrySendVerificationEmail(w http.ResponseWriter, r *http.Req
 	logger.Info("handling RetrySendVerificationEmail request")
 
 	var req credentialsReq
-	if err := http_api.DecodeJSON(r, &req); err != nil {
+	if err := httpx.DecodeJSON(r, &req); err != nil {
 		logger.Warn("error decoding", slog.Any("error", err))
-		http_api.WriteError(w, http.StatusBadRequest, http_api.ErrCannotDecodeRequestBody)
+		httpx.WriteError(w, http.StatusBadRequest, httpx.ErrCannotDecodeRequestBody)
 		return
 	}
 
@@ -169,8 +169,8 @@ func (h *Handlers) RetrySendVerificationEmail(w http.ResponseWriter, r *http.Req
 // @Param verifyEmailReq body verifyEmailReq true "Verify email request"
 // @Produce plain
 // @Success 200 "status: ok"
-// @Failure 400 {object} http_api.ErrorResponse "Invalid request or token"
-// @Failure 404 {object} http_api.ErrorResponse "User not found"
+// @Failure 400 {object} httpx.ErrorResponse "Invalid request or token"
+// @Failure 404 {object} httpx.ErrorResponse "User not found"
 // @Failure 500 "Internal server error"
 // @Router /auth/verify-email [post]
 func (h *Handlers) VerifyEmail(w http.ResponseWriter, r *http.Request) {
@@ -179,9 +179,9 @@ func (h *Handlers) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 	logger.Info("handling verify email request")
 
 	var req verifyEmailReq
-	if err := http_api.DecodeJSON(r, &req); err != nil {
+	if err := httpx.DecodeJSON(r, &req); err != nil {
 		logger.Warn("error decoding", slog.Any("error", err))
-		http_api.WriteError(w, http.StatusBadRequest, http_api.ErrCannotDecodeRequestBody)
+		httpx.WriteError(w, http.StatusBadRequest, httpx.ErrCannotDecodeRequestBody)
 		return
 	}
 
@@ -189,15 +189,15 @@ func (h *Handlers) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case errors.Is(err, application.ErrInvalidEmailToken):
 			logger.Info("invalid email_token in verify email request")
-			http_api.WriteError(w, http.StatusBadRequest, application.ErrInvalidEmailToken)
+			httpx.WriteError(w, http.StatusBadRequest, application.ErrInvalidEmailToken)
 
 		case errors.Is(err, application.ErrEmailTokenExpired):
 			logger.Info("email_token expired in verify email request")
-			http_api.WriteError(w, http.StatusBadRequest, application.ErrEmailTokenExpired)
+			httpx.WriteError(w, http.StatusBadRequest, application.ErrEmailTokenExpired)
 
 		case errors.Is(err, application.ErrUserNotFound):
 			logger.Info("user not found in verify email request")
-			http_api.WriteError(w, http.StatusNotFound, application.ErrUserNotFound)
+			httpx.WriteError(w, http.StatusNotFound, application.ErrUserNotFound)
 
 		default:
 			logger.Error(
@@ -222,9 +222,9 @@ func (h *Handlers) VerifyEmail(w http.ResponseWriter, r *http.Request) {
 // @Produce json
 // @Param credentialsReq body credentialsReq true "Login request"
 // @Success 200 {object} loginResp
-// @Failure 400 {object} http_api.ErrorResponse "Invalid request or credentialsReq"
-// @Failure 401 {object} http_api.ErrorResponse "Incorrect password"
-// @Failure 403 {object} http_api.ErrorResponse "Email not verified"
+// @Failure 400 {object} httpx.ErrorResponse "Invalid request or credentialsReq"
+// @Failure 401 {object} httpx.ErrorResponse "Incorrect password"
+// @Failure 403 {object} httpx.ErrorResponse "Email not verified"
 // @Failure 500 "Internal server error"
 // @Router /auth/login [post]
 func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
@@ -236,7 +236,7 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	var req credentialsReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		logger.Warn("error decoding", slog.Any("error", err))
-		http_api.WriteError(w, http.StatusBadRequest, http_api.ErrCannotDecodeRequestBody)
+		httpx.WriteError(w, http.StatusBadRequest, httpx.ErrCannotDecodeRequestBody)
 		return
 	}
 
@@ -246,15 +246,15 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case errors.Is(err, application.ErrInvalidCredentials):
 			logger.Info("invalid credentials", slog.String("email", req.Email))
-			http_api.WriteError(w, http.StatusBadRequest, application.ErrInvalidCredentials)
+			httpx.WriteError(w, http.StatusBadRequest, application.ErrInvalidCredentials)
 
 		case errors.Is(err, application.ErrIncorrectPassword):
 			logger.Info("incorrect password", slog.String("email", req.Email))
-			http_api.WriteError(w, http.StatusUnauthorized, application.ErrIncorrectPassword)
+			httpx.WriteError(w, http.StatusUnauthorized, application.ErrIncorrectPassword)
 
 		case errors.Is(err, application.ErrEmailNotVerified):
 			logger.Info("email not verified", slog.String("email", req.Email))
-			http_api.WriteError(w, http.StatusForbidden, application.ErrEmailNotVerified)
+			httpx.WriteError(w, http.StatusForbidden, application.ErrEmailNotVerified)
 
 		default:
 			logger.Error("unexpected error", slog.Any("error", err), slog.String("email", req.Email))
@@ -307,7 +307,7 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 
 	// Установка refresh токена в cookie и отправка access токена в ответе
 	setRefreshCookie(w, refresh, claims.ExpiresAt.Time)
-	http_api.WriteJSON(w, http.StatusOK, loginResp{AccessToken: access})
+	httpx.WriteJSON(w, http.StatusOK, loginResp{AccessToken: access})
 
 	logger.Info("successfully generated tokens for logged in user",
 		slog.String("email", req.Email),
@@ -323,7 +323,7 @@ func (h *Handlers) Login(w http.ResponseWriter, r *http.Request) {
 // @Param Cookie header string true "refresh_token=<JWT refresh token>"
 // @Produce json
 // @Success 200 {object} refreshResponse
-// @Failure 401 {object} http_api.ErrorResponse "Unauthorized or invalid token"
+// @Failure 401 {object} httpx.ErrorResponse "Unauthorized or invalid token"
 // @Failure 500 "Internal server error"
 // @Router /auth/refresh [post]
 func (h *Handlers) Refresh(w http.ResponseWriter, r *http.Request) {
@@ -335,7 +335,7 @@ func (h *Handlers) Refresh(w http.ResponseWriter, r *http.Request) {
 	cookie, err := r.Cookie(RefreshCookieName)
 	if err != nil {
 		logger.Warn("missing refresh token cookie", slog.Any("error", err))
-		http_api.WriteError(w, http.StatusUnauthorized, ErrMissingRefreshCookie)
+		httpx.WriteError(w, http.StatusUnauthorized, ErrMissingRefreshCookie)
 		return
 	}
 
@@ -343,11 +343,11 @@ func (h *Handlers) Refresh(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, authkit.ErrTokenExpired) {
 			logger.Info("refresh token expired", slog.Any("error", err))
-			http_api.WriteError(w, http.StatusUnauthorized, authkit.ErrTokenExpired)
+			httpx.WriteError(w, http.StatusUnauthorized, authkit.ErrTokenExpired)
 			return
 		}
 		logger.Warn("invalid refresh token", slog.Any("error", err))
-		http_api.WriteError(w, http.StatusUnauthorized, authkit.ErrInvalidToken)
+		httpx.WriteError(w, http.StatusUnauthorized, authkit.ErrInvalidToken)
 		return
 	}
 
@@ -361,7 +361,7 @@ func (h *Handlers) Refresh(w http.ResponseWriter, r *http.Request) {
 
 		if errors.Is(err, refresh_token.ErrRefreshNotFound) {
 			storedRefreshFailedLogger.Info("refresh token not found in repository")
-			http_api.WriteError(w, http.StatusUnauthorized, ErrUnauthorized)
+			httpx.WriteError(w, http.StatusUnauthorized, ErrUnauthorized)
 			return
 		}
 
@@ -371,7 +371,7 @@ func (h *Handlers) Refresh(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if storedRefresh.Revoked || storedRefresh.ExpiresAt.Before(time.Now()) {
-		http_api.WriteError(w, http.StatusUnauthorized, ErrUnauthorized)
+		httpx.WriteError(w, http.StatusUnauthorized, ErrUnauthorized)
 		return
 	}
 
@@ -430,7 +430,7 @@ func (h *Handlers) Refresh(w http.ResponseWriter, r *http.Request) {
 
 	// Установка нового refresh токена в cookie и отправка access токена в ответе
 	setRefreshCookie(w, refresh, claims.ExpiresAt.Time)
-	http_api.WriteJSON(w, http.StatusOK, refreshResponse{AccessToken: access})
+	httpx.WriteJSON(w, http.StatusOK, refreshResponse{AccessToken: access})
 
 	logger.Info("successfully refreshed tokens for user", slog.String("user_id", oldRefreshClaims.UserID.String()))
 }
@@ -493,7 +493,7 @@ func (h *Handlers) Me(w http.ResponseWriter, r *http.Request) {
 	}
 
 	logger.Info("successfully fetched user info")
-	http_api.WriteJSON(w, http.StatusOK, meResp{UserID: userId})
+	httpx.WriteJSON(w, http.StatusOK, meResp{UserID: userId})
 }
 
 type userCreationStatusResp struct {
@@ -507,8 +507,8 @@ type userCreationStatusResp struct {
 // @Produce json
 // @Param userId path string true "User ID"
 // @Success 200 {object} userCreationStatusResp
-// @Failure 400 {object} http_api.ErrorResponse "Invalid user ID"
-// @Failure 404 {object} http_api.ErrorResponse "User creation event not found"
+// @Failure 400 {object} httpx.ErrorResponse "Invalid user ID"
+// @Failure 404 {object} httpx.ErrorResponse "User creation event not found"
 // @Failure 500 "Internal server error"
 // @Router /auth/status/{userId} [get]
 func (h *Handlers) GetUserCreationStatus(w http.ResponseWriter, r *http.Request) {
@@ -519,7 +519,7 @@ func (h *Handlers) GetUserCreationStatus(w http.ResponseWriter, r *http.Request)
 	userID, err := uuid.Parse(chi.URLParam(r, "userId"))
 	if err != nil {
 		logger.Info("invalid user id in user creation status request", slog.Any("error", err))
-		http_api.WriteError(w, http.StatusBadRequest, ErrInvalidRequest)
+		httpx.WriteError(w, http.StatusBadRequest, ErrInvalidRequest)
 		return
 	}
 
@@ -528,7 +528,7 @@ func (h *Handlers) GetUserCreationStatus(w http.ResponseWriter, r *http.Request)
 		switch {
 		case errors.Is(err, application.ErrUserNotFound):
 			logger.Info("user creation event not found", slog.String("user_id", userID.String()))
-			http_api.WriteError(w, http.StatusNotFound, application.ErrUserNotFound)
+			httpx.WriteError(w, http.StatusNotFound, application.ErrUserNotFound)
 		default:
 			logger.Error("failed to fetch user creation status",
 				slog.String("user_id", userID.String()),
@@ -540,7 +540,7 @@ func (h *Handlers) GetUserCreationStatus(w http.ResponseWriter, r *http.Request)
 	}
 
 	logger.Info("successfully fetched user creation status", slog.String("user_id", userID.String()))
-	http_api.WriteJSON(w, http.StatusOK, userCreationStatusResp{Status: status})
+	httpx.WriteJSON(w, http.StatusOK, userCreationStatusResp{Status: status})
 }
 
 //
