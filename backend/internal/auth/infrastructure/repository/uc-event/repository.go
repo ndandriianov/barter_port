@@ -27,7 +27,7 @@ func (r *Repository) Add(ctx context.Context, exec db.DB, event domain.UserCreat
 // GetByUserID retrieves a user creation event by user ID.
 //
 // Errors:
-//   - application.ErrUserNotFound
+//   - domain.ErrUserNotFound
 func (r *Repository) GetByUserID(ctx context.Context, exec db.DB, userID uuid.UUID) (*domain.UserCreationEvent, error) {
 	query := `SELECT user_id, created_at, status FROM user_creation_events WHERE user_id = $1`
 
@@ -51,7 +51,7 @@ func (r *Repository) GetByUserID(ctx context.Context, exec db.DB, userID uuid.UU
 // SetStatus updates the status of a user creation event for a given user ID.
 //
 // Errors:
-//   - application.ErrUserNotFound
+//   - domain.ErrUserNotFound
 func (r *Repository) SetStatus(ctx context.Context, exec db.DB, userID uuid.UUID, status string) error {
 	query := `UPDATE user_creation_events SET status = $1 WHERE user_id = $2`
 
