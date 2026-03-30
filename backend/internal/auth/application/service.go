@@ -4,7 +4,6 @@ import (
 	authusers "barter-port/contracts/kafka/messages/auth-users"
 	"barter-port/internal/auth/domain"
 	ucstatus "barter-port/internal/auth/domain/uc-status"
-	"barter-port/internal/auth/infrastructure/repository/email_token"
 	ucoutbox "barter-port/internal/auth/infrastructure/repository/uc-outbox"
 	"barter-port/pkg/db"
 	"context"
@@ -112,9 +111,9 @@ const typeName = "auth.service"
 // and sends a verification email.
 //
 // It returns the following domain errors:
-//   - ErrInvalidEmail
-//   - ErrPasswordTooShort
-//   - ErrEmailAlreadyInUse
+//   - domain.ErrInvalidEmail
+//   - domain.ErrPasswordTooShort
+//   - domain.ErrEmailAlreadyInUse
 //
 // All other errors are treated as internal and returned wrapped.
 func (s *Service) Register(ctx context.Context, email, password string) (RegisterResult, error) {
@@ -186,9 +185,9 @@ func (s *Service) Register(ctx context.Context, email, password string) (Registe
 // RetrySendVerificationEmail generates a new email verification token and sends a verification email if the user's email is not verified.
 //
 // It returns the following domain errors:
-//   - ErrInvalidCredentials
-//   - ErrEmailNotVerified
-//   - ErrIncorrectPassword
+//   - domain.ErrInvalidCredentials
+//   - domain.ErrEmailNotVerified
+//   - domain.ErrIncorrectPassword
 //
 // All other errors are treated as internal and returned wrapped.
 func (s *Service) RetrySendVerificationEmail(ctx context.Context, email, password string) error {
@@ -225,9 +224,9 @@ func (s *Service) RetrySendVerificationEmail(ctx context.Context, email, passwor
 // VerifyEmail marks user's email as verified if the provided token is valid.
 //
 // It returns the following domain errors:
-//   - ErrInvalidEmailToken
-//   - ErrEmailTokenExpired
-//   - ErrUserNotFound
+//   - domain.ErrInvalidEmailToken
+//   - domain.ErrEmailTokenExpired
+//   - domain.ErrUserNotFound
 //
 // All other errors are treated as internal and returned wrapped.
 func (s *Service) VerifyEmail(ctx context.Context, rawToken string) error {
@@ -243,7 +242,7 @@ func (s *Service) VerifyEmail(ctx context.Context, rawToken string) error {
 	err = db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
 		t, err := s.tokens.GetByHashForUpdate(ctx, tx, tokenHash)
 		if err != nil {
-			if errors.Is(err, email_token.ErrTokenNotFound) {
+			if errors.Is(err, domain.ErrTokenNotFound) {
 				return domain.ErrInvalidEmailToken
 			}
 			return fmt.Errorf("failed to get email_token by hash: %w", err)
@@ -338,9 +337,9 @@ func (s *Service) GetUserCreationStatus(ctx context.Context, userID uuid.UUID) (
 // Login checks the provided credentials and returns a JWT if they are valid.
 //
 // It returns the following domain errors:
-//   - ErrInvalidCredentials
-//   - ErrEmailNotVerified
-//   - ErrIncorrectPassword
+//   - domain.ErrInvalidCredentials
+//   - domain.ErrEmailNotVerified
+//   - domain.ErrIncorrectPassword
 //
 // All other errors are treated as internal and returned wrapped.
 func (s *Service) Login(ctx context.Context, email, password string) (uuid.UUID, error) {

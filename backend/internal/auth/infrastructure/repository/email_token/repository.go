@@ -11,11 +11,6 @@ import (
 	"golang.org/x/net/context"
 )
 
-var (
-	ErrTokenNotFound      = errors.New("token not found")
-	ErrTokenAlreadyExists = errors.New("token already exists")
-)
-
 type Repository struct {
 }
 
@@ -25,7 +20,7 @@ func NewRepository() *Repository {
 
 // Save stores a new email verification token in the repository.
 // Errors:
-//   - errors.ErrTokenAlreadyExists: Occurs if a token with the same hash already exists in the repository.
+//   - domain.ErrTokenAlreadyExists: Occurs if a token with the same hash already exists in the repository.
 func (r *Repository) Save(ctx context.Context, exec db.DB, t domain.EmailVerificationToken) error {
 	query := `
 		INSERT INTO email_tokens
@@ -35,7 +30,7 @@ func (r *Repository) Save(ctx context.Context, exec db.DB, t domain.EmailVerific
 	_, err := exec.Exec(ctx, query, t.TokenHash, t.UserID, t.ExpiresAt, t.Used, t.CreatedAt)
 	if err != nil {
 		if repox.IsUniqueViolation(err) {
-			return ErrTokenAlreadyExists
+			return domain.ErrTokenAlreadyExists
 		}
 		return err
 	}
@@ -45,7 +40,7 @@ func (r *Repository) Save(ctx context.Context, exec db.DB, t domain.EmailVerific
 
 // GetByHashForUpdate retrieves an email verification token by its hash.
 // Errors:
-//   - errors.ErrTokenNotFound: Occurs if no token is found with the given hash.
+//   - domain.ErrTokenNotFound: Occurs if no token is found with the given hash.
 func (r *Repository) GetByHashForUpdate(ctx context.Context, exec db.DB, tokenHash string) (domain.EmailVerificationToken, error) {
 	query := `
 		SELECT token_hash, user_id, expires_at, used, created_at
@@ -63,7 +58,7 @@ func (r *Repository) GetByHashForUpdate(ctx context.Context, exec db.DB, tokenHa
 	token, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[domain.EmailVerificationToken])
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return domain.EmailVerificationToken{}, ErrTokenNotFound
+			return domain.EmailVerificationToken{}, domain.ErrTokenNotFound
 		}
 		return domain.EmailVerificationToken{}, err
 	}
@@ -73,7 +68,7 @@ func (r *Repository) GetByHashForUpdate(ctx context.Context, exec db.DB, tokenHa
 
 // MarkUsed marks an email verification token as used.
 // Errors:
-//   - errors.ErrTokenNotFound: Occurs if no token is found with the given hash.
+//   - domain.ErrTokenNotFound: Occurs if no token is found with the given hash.
 func (r *Repository) MarkUsed(ctx context.Context, exec db.DB, tokenHash string) error {
 	query := `
 		UPDATE email_tokens
@@ -87,7 +82,7 @@ func (r *Repository) MarkUsed(ctx context.Context, exec db.DB, tokenHash string)
 	}
 
 	if cmdTag.RowsAffected() == 0 {
-		return ErrTokenNotFound
+		return domain.ErrTokenNotFound
 	}
 
 	return nil

@@ -3,7 +3,6 @@ package http
 import (
 	"barter-port/internal/auth/application"
 	"barter-port/internal/auth/domain"
-	"barter-port/internal/auth/infrastructure/repository/refresh_token"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/db"
 	"barter-port/pkg/httpx"
@@ -359,7 +358,7 @@ func (h *Handlers) Refresh(w http.ResponseWriter, r *http.Request) {
 			slog.String("user_id", oldRefreshClaims.UserID.String()),
 		)
 
-		if errors.Is(err, refresh_token.ErrRefreshNotFound) {
+		if errors.Is(err, domain.ErrRefreshNotFound) {
 			storedRefreshFailedLogger.Info("refresh token not found in repository")
 			httpx.WriteError(w, http.StatusUnauthorized, ErrUnauthorized)
 			return

@@ -11,11 +11,6 @@ import (
 	"golang.org/x/net/context"
 )
 
-var (
-	ErrRefreshNotFound      = errors.New("refresh token not found")
-	ErrRefreshAlreadyExists = errors.New("refresh token with this JTI already exists")
-)
-
 type Repository struct {
 }
 
@@ -26,7 +21,7 @@ func NewRepository() *Repository {
 // Save adds a new refresh token to the repository.
 //
 // Errors:
-//   - ErrRefreshAlreadyExists: Occurs if a refresh token with the same JTI already exists in the repository.
+//   - domain.ErrRefreshAlreadyExists: Occurs if a refresh token with the same JTI already exists in the repository.
 func (r *Repository) Save(ctx context.Context, exec db.DB, token domain.RefreshToken) error {
 	query := `
 		INSERT INTO refresh_tokens (jti, user_id, expires_at, revoked)
@@ -36,7 +31,7 @@ func (r *Repository) Save(ctx context.Context, exec db.DB, token domain.RefreshT
 	_, err := exec.Exec(ctx, query, token.JTI, token.UserID, token.ExpiresAt, token.Revoked)
 	if err != nil {
 		if repox.IsUniqueViolation(err) {
-			return ErrRefreshAlreadyExists
+			return domain.ErrRefreshAlreadyExists
 		}
 		return err
 	}
@@ -47,7 +42,7 @@ func (r *Repository) Save(ctx context.Context, exec db.DB, token domain.RefreshT
 // GetByJTI retrieves a refresh token by its JTI.
 //
 // Errors:
-//   - ErrRefreshNotFound: Occurs if no refresh token is found with the given JTI.
+//   - domain.ErrRefreshNotFound: Occurs if no refresh token is found with the given JTI.
 func (r *Repository) GetByJTI(ctx context.Context, exec db.DB, jti string) (domain.RefreshToken, error) {
 	query := `
 		SELECT jti, user_id, expires_at, revoked
@@ -64,7 +59,7 @@ func (r *Repository) GetByJTI(ctx context.Context, exec db.DB, jti string) (doma
 	token, err := pgx.CollectOneRow(rows, pgx.RowToStructByName[domain.RefreshToken])
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return domain.RefreshToken{}, ErrRefreshNotFound
+			return domain.RefreshToken{}, domain.ErrRefreshNotFound
 		}
 		return domain.RefreshToken{}, err
 	}
@@ -75,7 +70,7 @@ func (r *Repository) GetByJTI(ctx context.Context, exec db.DB, jti string) (doma
 // Revoke marks a refresh token as revoked by its JTI.
 //
 // Errors:
-//   - ErrRefreshNotFound: Occurs if no refresh token is found with the given JTI.
+//   - domain.ErrRefreshNotFound: Occurs if no refresh token is found with the given JTI.
 func (r *Repository) Revoke(ctx context.Context, exec db.DB, jti string) error {
 	query := `
 		UPDATE refresh_tokens
@@ -89,7 +84,7 @@ func (r *Repository) Revoke(ctx context.Context, exec db.DB, jti string) error {
 	}
 
 	if cmdTag.RowsAffected() == 0 {
-		return ErrRefreshNotFound
+		return domain.ErrRefreshNotFound
 	}
 
 	return nil
