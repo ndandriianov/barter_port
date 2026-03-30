@@ -85,6 +85,18 @@ func (e ListItemsParamsSort) Valid() bool {
 	}
 }
 
+// ConfirmDraftDealResponse defines model for ConfirmDraftDealResponse.
+type ConfirmDraftDealResponse struct {
+	// Users Список пользователей, которые подтвердили/не подтвердили свое участие в сделке
+	Users []struct {
+		// Confirmed Статус подтверждения участия пользователя в сделке
+		Confirmed bool `json:"confirmed"`
+
+		// UserId Уникальный идентификатор пользователя
+		UserId openapi_types.UUID `json:"userId"`
+	} `json:"users"`
+}
+
 // CreateDraftDealRequest defines model for CreateDraftDealRequest.
 type CreateDraftDealRequest struct {
 	// Description An optional description for the draft deal
@@ -95,6 +107,11 @@ type CreateDraftDealRequest struct {
 
 		// Quantity The quantity of the item to include in the draft deal
 		Quantity int `json:"quantity"`
+
+		// ReceiverID The ID of the user who will receive this item in the deal.
+		// If not provided, it is assumed that the item is offered by the current user
+		// and any of other participants may choose to be a receiver.
+		ReceiverID *openapi_types.UUID `json:"receiverID,omitempty"`
 	} `json:"items"`
 
 	// Name An optional name for the draft deal

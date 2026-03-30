@@ -30,7 +30,7 @@ func (r *Repository) CreateDraft(
 	authorID uuid.UUID,
 	name *string,
 	description *string,
-	items []domain.ItemIDsAndQuantities,
+	items []domain.ItemIDsAndInfo,
 ) (uuid.UUID, error) {
 
 	dealsQuery := `
@@ -45,11 +45,11 @@ func (r *Repository) CreateDraft(
 	}
 
 	dealsItemsQuery := `
-		INSERT INTO draft_deal_items (draft_deal_id, item_id, quantity)
-		VALUES ($1, $2, $3);`
+		INSERT INTO draft_deal_items (draft_deal_id, item_id, quantity, receiver_id)
+		VALUES ($1, $2, $3, $4);`
 
 	for _, item := range items {
-		_, err = tx.Exec(ctx, dealsItemsQuery, id, item.ID, item.Quantity)
+		_, err = tx.Exec(ctx, dealsItemsQuery, id, item.ID, item.Quantity, item.ReceiverID)
 		if err != nil {
 			return uuid.Nil, fmt.Errorf("sql: deals items: %w, itemID: %s", err, item.ID)
 		}
