@@ -13,11 +13,11 @@ import (
 
 type Service struct {
 	db              *pgxpool.Pool
-	dealsRepository deals.Repository
+	dealsRepository *deals.Repository
 }
 
-func NewService() *Service {
-	return &Service{}
+func NewService(db *pgxpool.Pool, repo *deals.Repository) *Service {
+	return &Service{db: db, dealsRepository: repo}
 }
 
 // ================================================================================

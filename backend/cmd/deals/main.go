@@ -1,7 +1,9 @@
 package main
 
 import (
+	dealssvc "barter-port/internal/deals/application/deals"
 	"barter-port/internal/deals/application/items"
+	dealsrepo "barter-port/internal/deals/infrastructure/repository/deals"
 	itemsr "barter-port/internal/deals/infrastructure/repository/items"
 	transporthttp "barter-port/internal/deals/infrastructure/transport/http"
 	"barter-port/pkg/bootstrap"
@@ -23,6 +25,11 @@ func main() {
 		log.Fatal("failed to load config:", err)
 	}
 
+	err = bootstrap.RunMigrationsFromConfig(cfg)
+	if err != nil {
+		log.Fatal("deals - run migrations:", err)
+	}
+
 	db, err := bootstrap.InitDatabaseFromConfig(cfg)
 	if err != nil {
 		log.Fatal("failed to initialize database:", err)
@@ -34,13 +41,17 @@ func main() {
 	itemRepo := itemsr.NewRepository(db)
 	itemService := items.NewItemService(itemRepo, logg)
 
+	dealsRepo := dealsrepo.NewRepository()
+	dealsService := dealssvc.NewService(db, dealsRepo)
+
 	validator, err := bootstrap.InitLocalJWTFromConfig(cfg)
 	if err != nil {
 		log.Fatal("failed to initialize JWT validator:", err)
 	}
 
 	handlers := transporthttp.NewHandlers(itemService)
-	router := transporthttp.NewRouter(logg, validator, handlers)
+	dealsHandlers := transporthttp.NewDealsHandlers(logg, dealsService)
+	router := transporthttp.NewRouter(logg, validator, handlers, dealsHandlers)
 
 	port := bootstrap.InitPortStringFromConfig(cfg, 8080)
 	log.Println("backend listening on", port)

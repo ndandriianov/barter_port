@@ -13,12 +13,15 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-func NewRouter(logg *slog.Logger, validator *validators.LocalJWT, h *ItemsHandlers) http.Handler {
+func NewRouter(logg *slog.Logger, validator *validators.LocalJWT, h *ItemsHandlers, dh *DealsHandlers) http.Handler {
 	if logg == nil {
 		log.Fatal("logger is required")
 	}
 	if h == nil {
 		log.Fatal("handlers are required")
+	}
+	if dh == nil {
+		log.Fatal("deals handlers are required")
 	}
 
 	r := chi.NewRouter()
@@ -49,6 +52,9 @@ func NewRouter(logg *slog.Logger, validator *validators.LocalJWT, h *ItemsHandle
 			r.Post("/", h.HandleCreateItem)
 			r.Get("/", h.HandleGetItems)
 		})
+		r.Post("/drafts", dh.CreateDraft)
+		r.Get("/my-drafts", dh.GetMyDrafts)
+		r.Get("/drafts/{draftId}", dh.GetDraftByID)
 	})
 
 	return r
