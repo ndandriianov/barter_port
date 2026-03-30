@@ -2,7 +2,6 @@ package http
 
 import (
 	"barter-port/contracts/openapi/items/types"
-	"barter-port/internal/items/application"
 	"barter-port/internal/items/domain"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/httpx"
@@ -70,9 +69,9 @@ func (h *Handlers) HandleCreateItem(w http.ResponseWriter, r *http.Request) {
 
 	item, err := h.itemService.CreateItem(r.Context(), userID, req.Name, itemType, action, req.Description)
 	if err != nil {
-		if errors.Is(err, application.ErrInvalidItemName) {
+		if errors.Is(err, domain.ErrInvalidItemName) {
 			log.Warn("invalid item name", slog.Any("error", err))
-			httpx.WriteError(w, http.StatusBadRequest, application.ErrInvalidItemName)
+			httpx.WriteError(w, http.StatusBadRequest, domain.ErrInvalidItemName)
 			return
 		}
 		log.Error("failed to create item", slog.Any("error", err))
