@@ -4,6 +4,6 @@ import "github.com/google/uuid"
 
 type DraftDeal struct {
 	Id          uuid.UUID `json:"id"`
-	Items       []Item    `json:"items"`
+	Items       []Offer   `json:"items"`
 	Description string    `json:"description"`
 }

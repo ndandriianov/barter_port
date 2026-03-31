@@ -30,7 +30,7 @@ func (r *Repository) CreateDraft(
 	authorID uuid.UUID,
 	name *string,
 	description *string,
-	items []domain.ItemIDsAndInfo,
+	offers []domain.OfferIDAndInfo,
 ) (uuid.UUID, error) {
 
 	dealsQuery := `
@@ -44,14 +44,14 @@ func (r *Repository) CreateDraft(
 		return uuid.Nil, fmt.Errorf("sql: deals: %w", err)
 	}
 
-	dealsItemsQuery := `
+	dealsOffersQuery := `
 		INSERT INTO draft_deal_offers (draft_deal_id, offer_id, quantity)
 		VALUES ($1, $2, $3);`
 
-	for _, item := range items {
-		_, err = tx.Exec(ctx, dealsItemsQuery, id, item.ID, item.Info.Quantity)
+	for _, offer := range offers {
+		_, err = tx.Exec(ctx, dealsOffersQuery, id, offer.ID, offer.Info.Quantity)
 		if err != nil {
-			return uuid.Nil, fmt.Errorf("sql: deals items: %w, itemID: %s", err, item.ID)
+			return uuid.Nil, fmt.Errorf("sql: deals items: %w, itemID: %s", err, offer.ID)
 		}
 	}
 
@@ -110,7 +110,8 @@ func (r *Repository) GetDraftByID(ctx context.Context, exec db.DB, id uuid.UUID)
 		       i.description,
 		       i.created_at,
 		       i.views,
-		       ddi.quantity
+		       ddi.quantity,
+		       ddi.confirmed
 		FROM draft_deals d
 		LEFT JOIN draft_deal_offers ddi ON ddi.draft_deal_id = d.id
 		LEFT JOIN offers i ON i.id = ddi.offer_id
@@ -126,15 +127,16 @@ func (r *Repository) GetDraftByID(ctx context.Context, exec db.DB, id uuid.UUID)
 	found := false
 
 	for rows.Next() {
-		var itemID *uuid.UUID
-		var itemAuthorID *uuid.UUID
-		var itemName *string
-		var itemType *string
-		var itemAction *string
-		var itemDescription *string
-		var itemCreatedAt *time.Time
-		var itemViews *int
-		var itemQuantity *int
+		var offerID *uuid.UUID
+		var offerAuthorID *uuid.UUID
+		var offerName *string
+		var offerType *string
+		var offerAction *string
+		var offerDescription *string
+		var offerCreatedAt *time.Time
+		var offerViews *int
+		var offerQuantity *int
+		var offerConfirmed *bool
 
 		if err = rows.Scan(
 			&draft.ID,
@@ -143,52 +145,54 @@ func (r *Repository) GetDraftByID(ctx context.Context, exec db.DB, id uuid.UUID)
 			&draft.Description,
 			&draft.CreatedAt,
 			&draft.UpdatedAt,
-			&itemID,
-			&itemAuthorID,
-			&itemName,
-			&itemType,
-			&itemAction,
-			&itemDescription,
-			&itemCreatedAt,
-			&itemViews,
-			&itemQuantity,
+			&offerID,
+			&offerAuthorID,
+			&offerName,
+			&offerType,
+			&offerAction,
+			&offerDescription,
+			&offerCreatedAt,
+			&offerViews,
+			&offerQuantity,
+			&offerConfirmed,
 		); err != nil {
 			return domain.Draft{}, fmt.Errorf("scan draft item: %w", err)
 		}
 
 		found = true
 
-		if itemID == nil {
+		if offerID == nil {
 			continue
 		}
 
-		if itemAuthorID == nil || itemName == nil || itemType == nil || itemAction == nil || itemDescription == nil || itemCreatedAt == nil || itemViews == nil || itemQuantity == nil {
+		if offerAuthorID == nil || offerName == nil || offerType == nil || offerAction == nil || offerDescription == nil || offerCreatedAt == nil || offerViews == nil || offerQuantity == nil {
 			return domain.Draft{}, fmt.Errorf("scan draft item: item has null required fields")
 		}
 
-		itemTypeValue, err := domain.ItemTypeString(*itemType)
+		itemTypeValue, err := domain.ItemTypeString(*offerType)
 		if err != nil {
 			return domain.Draft{}, fmt.Errorf("item type: %w", err)
 		}
 
-		itemActionValue, err := domain.ItemActionString(*itemAction)
+		itemActionValue, err := domain.ItemActionString(*offerAction)
 		if err != nil {
 			return domain.Draft{}, fmt.Errorf("item action: %w", err)
 		}
 
-		draft.Items = append(draft.Items, domain.ItemWithInfo{
-			Item: domain.Item{
-				ID:          *itemID,
-				AuthorId:    *itemAuthorID,
-				Name:        *itemName,
+		draft.Items = append(draft.Items, domain.OfferWithInfo{
+			Offer: domain.Offer{
+				ID:          *offerID,
+				AuthorId:    *offerAuthorID,
+				Name:        *offerName,
 				Type:        itemTypeValue,
 				Action:      itemActionValue,
-				Description: *itemDescription,
-				CreatedAt:   *itemCreatedAt,
-				Views:       *itemViews,
+				Description: *offerDescription,
+				CreatedAt:   *offerCreatedAt,
+				Views:       *offerViews,
 			},
-			Info: domain.ItemInfo{
-				Quantity: *itemQuantity,
+			Info: domain.OfferInfo{
+				Quantity:  *offerQuantity,
+				Confirmed: offerConfirmed,
 			},
 		})
 	}

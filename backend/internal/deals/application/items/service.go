@@ -12,19 +12,19 @@ import (
 )
 
 type Repository interface {
-	AddItem(ctx context.Context, item domain.Item) error
+	AddItem(ctx context.Context, item domain.Offer) error
 
 	GetItemsOrderByTime(
 		ctx context.Context,
 		cursor *domain.TimeCursor,
 		limit int,
-	) ([]domain.Item, *domain.TimeCursor, error)
+	) ([]domain.Offer, *domain.TimeCursor, error)
 
 	GetItemsOrderByPopularity(
 		ctx context.Context,
 		cursor *domain.PopularityCursor,
 		limit int,
-	) ([]domain.Item, *domain.PopularityCursor, error)
+	) ([]domain.Offer, *domain.PopularityCursor, error)
 }
 
 type Service struct {
@@ -43,12 +43,12 @@ func (s *Service) CreateItem(
 	itemType domain.ItemType,
 	action domain.ItemAction,
 	description string,
-) (*domain.Item, error) {
+) (*domain.Offer, error) {
 	if name == "" {
 		return nil, domain.ErrInvalidItemName
 	}
 
-	item := domain.Item{
+	item := domain.Offer{
 		ID:          uuid.New(),
 		AuthorId:    userID,
 		Name:        name,
@@ -76,7 +76,7 @@ func (s *Service) GetItems(
 	sortType domain.SortType,
 	cursor *domain.UniversalCursor,
 	limit int,
-) ([]domain.Item, *domain.UniversalCursor, error) {
+) ([]domain.Offer, *domain.UniversalCursor, error) {
 
 	log := logger.LogFrom(ctx, s.fallbackLogger)
 

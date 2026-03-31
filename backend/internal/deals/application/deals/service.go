@@ -33,7 +33,7 @@ func (s *Service) CreateDraft(
 	authorID uuid.UUID,
 	name *string,
 	description *string,
-	items []domain.ItemIDsAndInfo,
+	items []domain.OfferIDAndInfo,
 ) (uuid.UUID, error) {
 	var id uuid.UUID
 	var err error

@@ -18,7 +18,7 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 
 // AddItem inserts a new item into the database.
 // Returns an error if the insertion fails.
-func (r *Repository) AddItem(ctx context.Context, item domain.Item) error {
+func (r *Repository) AddItem(ctx context.Context, item domain.Offer) error {
 	query := `
 		INSERT INTO offers (id, author_id, name, type, action, description, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
@@ -36,7 +36,7 @@ func (r *Repository) GetItemsOrderByTime(
 	ctx context.Context,
 	cursor *domain.TimeCursor,
 	limit int,
-) ([]domain.Item, *domain.TimeCursor, error) {
+) ([]domain.Offer, *domain.TimeCursor, error) {
 
 	var query string
 	var args []interface{}
@@ -60,7 +60,7 @@ func (r *Repository) GetItemsOrderByTime(
 		args = append(args, cursor.CreatedAt, cursor.Id, limit)
 	}
 
-	items, err := repox.FetchStructs[domain.Item](ctx, r.db, query, args...)
+	items, err := repox.FetchStructs[domain.Offer](ctx, r.db, query, args...)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -86,7 +86,7 @@ func (r *Repository) GetItemsOrderByPopularity(
 	ctx context.Context,
 	cursor *domain.PopularityCursor,
 	limit int,
-) ([]domain.Item, *domain.PopularityCursor, error) {
+) ([]domain.Offer, *domain.PopularityCursor, error) {
 
 	var query string
 	var args []interface{}
@@ -110,7 +110,7 @@ func (r *Repository) GetItemsOrderByPopularity(
 		args = append(args, cursor.Views, cursor.Id, limit)
 	}
 
-	items, err := repox.FetchStructs[domain.Item](ctx, r.db, query, args...)
+	items, err := repox.FetchStructs[domain.Offer](ctx, r.db, query, args...)
 	if err != nil {
 		return nil, nil, err
 	}

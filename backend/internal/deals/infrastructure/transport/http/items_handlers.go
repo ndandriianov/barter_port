@@ -16,8 +16,8 @@ import (
 )
 
 type itemService interface {
-	CreateItem(ctx context.Context, userID uuid.UUID, name string, itemType domain.ItemType, action domain.ItemAction, description string) (*domain.Item, error)
-	GetItems(ctx context.Context, sortType domain.SortType, cursor *domain.UniversalCursor, limit int) ([]domain.Item, *domain.UniversalCursor, error)
+	CreateItem(ctx context.Context, userID uuid.UUID, name string, itemType domain.ItemType, action domain.ItemAction, description string) (*domain.Offer, error)
+	GetItems(ctx context.Context, sortType domain.SortType, cursor *domain.UniversalCursor, limit int) ([]domain.Offer, *domain.UniversalCursor, error)
 }
 
 type ItemsHandlers struct {

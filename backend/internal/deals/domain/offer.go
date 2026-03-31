@@ -23,7 +23,7 @@ const (
 	Take
 )
 
-type Item struct {
+type Offer struct {
 	ID          uuid.UUID
 	AuthorId    uuid.UUID
 	Name        string
@@ -34,7 +34,7 @@ type Item struct {
 	Views       int
 }
 
-func (i *Item) ToDto() types.Item {
+func (i *Offer) ToDto() types.Item {
 	return types.Item{
 		Id:          i.ID,
 		AuthorId:    i.AuthorId,
@@ -47,7 +47,7 @@ func (i *Item) ToDto() types.Item {
 	}
 }
 
-func (i *Item) ToDTOWithInfo(info ItemInfo) types.ItemWithInfo {
+func (i *Offer) ToDTOWithInfo(info OfferInfo) types.ItemWithInfo {
 	return types.ItemWithInfo{
 		Action:      types.ItemAction(i.Action.String()),
 		AuthorId:    i.AuthorId,
@@ -56,7 +56,6 @@ func (i *Item) ToDTOWithInfo(info ItemInfo) types.ItemWithInfo {
 		Id:          i.ID,
 		Name:        i.Name,
 		Quantity:    info.Quantity,
-		ReceiverID:  info.ReceiverID,
 		Type:        types.ItemType(i.Type.String()),
 		Views:       int64(i.Views),
 	}
