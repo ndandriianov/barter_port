@@ -319,6 +319,32 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    ItemInfo:
+      type: object
+      required:
+        - quantity
+      properties:
+        quantity:
+          type: integer
+          description: The quantity of the item to include in the draft deal
+        receiverID:
+          type: string
+          format: uuid
+          description: |
+            The ID of the user who will receive this item in the deal.
+            If not provided, it is assumed that the item is offered by the current user
+            and any of other participants may choose to be a receiver.
+    ItemIDAndInfo:
+      allOf:
+        - type: object
+          required:
+            - itemID
+          properties:
+            itemID:
+              type: string
+              format: uuid
+              description: The ID of the item to include in the draft deal
+        - $ref: '#/components/schemas/ItemInfo'
     CreateDraftDealRequest:
       type: object
       properties:
@@ -331,25 +357,7 @@ components:
         items:
           type: array
           items:
-            type: object
-            required:
-              - itemID
-              - quantity
-            properties:
-              itemID:
-                type: string
-                format: uuid
-                description: The ID of the item to include in the draft deal
-              quantity:
-                type: integer
-                description: The quantity of the item to include in the draft deal
-              receiverID:
-                type: string
-                format: uuid
-                description: |
-                  The ID of the user who will receive this item in the deal.
-                  If not provided, it is assumed that the item is offered by the current user
-                  and any of other participants may choose to be a receiver.
+            $ref: '#/components/schemas/ItemIDAndInfo'
       required:
         - items
     CreateDraftDealResponse:
@@ -431,6 +439,10 @@ components:
           format: date-time
           description: Item creation timestamp
           example: '2026-03-04T12:00:00Z'
+    ItemWithInfo:
+      allOf:
+        - $ref: '#/components/schemas/Item'
+        - $ref: '#/components/schemas/ItemInfo'
     Draft:
       type: object
       required:
@@ -465,7 +477,7 @@ components:
           type: array
           description: A list of items included in the draft deal
           items:
-            $ref: '#/components/schemas/Item'
+            $ref: '#/components/schemas/ItemWithInfo'
     ConfirmDraftDealResponse:
       type: object
       required:

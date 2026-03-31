@@ -14,13 +14,13 @@ type Draft struct {
 	Description *string
 	CreatedAt   time.Time
 	UpdatedAt   *time.Time
-	Items       []Item
+	Items       []ItemWithInfo
 }
 
 func (d *Draft) ToDTO() types.Draft {
-	itemsDTO := make([]types.Item, len(d.Items))
+	itemsDTO := make([]types.ItemWithInfo, len(d.Items))
 	for i, item := range d.Items {
-		itemsDTO[i] = item.ToDto()
+		itemsDTO[i] = item.Item.ToDTOWithInfo(item.Info)
 	}
 
 	return types.Draft{
@@ -34,8 +34,17 @@ func (d *Draft) ToDTO() types.Draft {
 	}
 }
 
-type ItemIDsAndInfo struct {
-	ID         uuid.UUID
+type ItemInfo struct {
 	Quantity   int
 	ReceiverID *uuid.UUID
+}
+
+type ItemIDsAndInfo struct {
+	ID   uuid.UUID
+	Info ItemInfo
+}
+
+type ItemWithInfo struct {
+	Item Item
+	Info ItemInfo
 }

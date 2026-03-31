@@ -26,7 +26,8 @@ func NewService(db *pgxpool.Pool, repo *deals.Repository) *Service {
 
 // CreateDraft inserts a new draft deal into the database and returns its ID.
 //
-// No domain errors
+// Errors:
+//   - domain.ErrNoItems: if the items list is empty.
 func (s *Service) CreateDraft(
 	ctx context.Context,
 	authorID uuid.UUID,
@@ -38,6 +39,9 @@ func (s *Service) CreateDraft(
 	var err error
 
 	txErr := db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
+		if len(items) == 0 {
+			return domain.ErrNoItems
+		}
 		// TODO: проверить items
 
 		id, err = s.dealsRepository.CreateDraft(ctx, tx, authorID, name, description, items)

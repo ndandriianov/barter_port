@@ -49,7 +49,7 @@ func (r *Repository) CreateDraft(
 		VALUES ($1, $2, $3, $4);`
 
 	for _, item := range items {
-		_, err = tx.Exec(ctx, dealsItemsQuery, id, item.ID, item.Quantity, item.ReceiverID)
+		_, err = tx.Exec(ctx, dealsItemsQuery, id, item.ID, item.Info.Quantity, item.Info.ReceiverID)
 		if err != nil {
 			return uuid.Nil, fmt.Errorf("sql: deals items: %w, itemID: %s", err, item.ID)
 		}
@@ -109,7 +109,9 @@ func (r *Repository) GetDraftByID(ctx context.Context, exec db.DB, id uuid.UUID)
 		       i.action,
 		       i.description,
 		       i.created_at,
-		       i.views
+		       i.views,
+		       ddi.quantity,
+		       ddi.receiver_id
 		FROM draft_deals d
 		LEFT JOIN draft_deal_items ddi ON ddi.draft_deal_id = d.id
 		LEFT JOIN items i ON i.id = ddi.item_id
@@ -133,6 +135,8 @@ func (r *Repository) GetDraftByID(ctx context.Context, exec db.DB, id uuid.UUID)
 		var itemDescription *string
 		var itemCreatedAt *time.Time
 		var itemViews *int
+		var itemQuantity *int
+		var itemReceiverID *uuid.UUID
 
 		if err = rows.Scan(
 			&draft.ID,
@@ -149,6 +153,8 @@ func (r *Repository) GetDraftByID(ctx context.Context, exec db.DB, id uuid.UUID)
 			&itemDescription,
 			&itemCreatedAt,
 			&itemViews,
+			&itemQuantity,
+			&itemReceiverID,
 		); err != nil {
 			return domain.Draft{}, fmt.Errorf("scan draft item: %w", err)
 		}
@@ -159,7 +165,7 @@ func (r *Repository) GetDraftByID(ctx context.Context, exec db.DB, id uuid.UUID)
 			continue
 		}
 
-		if itemAuthorID == nil || itemName == nil || itemType == nil || itemAction == nil || itemDescription == nil || itemCreatedAt == nil || itemViews == nil {
+		if itemAuthorID == nil || itemName == nil || itemType == nil || itemAction == nil || itemDescription == nil || itemCreatedAt == nil || itemViews == nil || itemQuantity == nil {
 			return domain.Draft{}, fmt.Errorf("scan draft item: item has null required fields")
 		}
 
@@ -173,15 +179,21 @@ func (r *Repository) GetDraftByID(ctx context.Context, exec db.DB, id uuid.UUID)
 			return domain.Draft{}, fmt.Errorf("item action: %w", err)
 		}
 
-		draft.Items = append(draft.Items, domain.Item{
-			ID:          *itemID,
-			AuthorId:    *itemAuthorID,
-			Name:        *itemName,
-			Type:        itemTypeValue,
-			Action:      itemActionValue,
-			Description: *itemDescription,
-			CreatedAt:   *itemCreatedAt,
-			Views:       *itemViews,
+		draft.Items = append(draft.Items, domain.ItemWithInfo{
+			Item: domain.Item{
+				ID:          *itemID,
+				AuthorId:    *itemAuthorID,
+				Name:        *itemName,
+				Type:        itemTypeValue,
+				Action:      itemActionValue,
+				Description: *itemDescription,
+				CreatedAt:   *itemCreatedAt,
+				Views:       *itemViews,
+			},
+			Info: domain.ItemInfo{
+				Quantity:   *itemQuantity,
+				ReceiverID: itemReceiverID,
+			},
 		})
 	}
 
