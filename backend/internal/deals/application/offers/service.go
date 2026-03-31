@@ -2,6 +2,7 @@ package offers
 
 import (
 	"barter-port/internal/deals/domain"
+	"barter-port/internal/deals/domain/enums"
 	offersrep "barter-port/internal/deals/infrastructure/repository/offers"
 	"barter-port/pkg/logger"
 	"fmt"
@@ -25,8 +26,8 @@ func (s *Service) CreateOffer(
 	ctx context.Context,
 	userID uuid.UUID,
 	name string,
-	itemType domain.ItemType,
-	action domain.OfferAction,
+	itemType enums.ItemType,
+	action enums.OfferAction,
 	description string,
 ) (*domain.Offer, error) {
 	if name == "" {
@@ -58,7 +59,7 @@ func (s *Service) CreateOffer(
 // Errors: only internal
 func (s *Service) GetOffers(
 	ctx context.Context,
-	sortType domain.SortType,
+	sortType enums.SortType,
 	cursor *domain.UniversalCursor,
 	limit int,
 ) ([]domain.Offer, *domain.UniversalCursor, error) {
@@ -66,7 +67,7 @@ func (s *Service) GetOffers(
 	log := logger.LogFrom(ctx, s.fallbackLogger)
 
 	switch sortType {
-	case domain.ByTime:
+	case enums.SortTypeByTime:
 		var timeCursor *domain.TimeCursor
 		var err error
 
@@ -89,7 +90,7 @@ func (s *Service) GetOffers(
 
 		return offers, universalCursor, nil
 
-	case domain.ByPopularity:
+	case enums.SortTypeByPopularity:
 		var popularityCursor *domain.PopularityCursor
 		var err error
 

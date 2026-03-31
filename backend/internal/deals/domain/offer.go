@@ -2,33 +2,18 @@ package domain
 
 import (
 	"barter-port/contracts/openapi/deals/types"
+	"barter-port/internal/deals/domain/enums"
 	"time"
 
 	"github.com/google/uuid"
-)
-
-//go:generate enumer -type=ItemType -json -text -sql -transform=lower
-type ItemType int
-
-const (
-	Good ItemType = iota
-	Service
-)
-
-//go:generate enumer -type=OfferAction -json -text -sql -transform=lower
-type OfferAction int
-
-const (
-	Give OfferAction = iota
-	Take
 )
 
 type Offer struct {
 	ID          uuid.UUID
 	AuthorId    uuid.UUID
 	Name        string
-	Type        ItemType
-	Action      OfferAction
+	Type        enums.ItemType
+	Action      enums.OfferAction
 	Description string
 	CreatedAt   time.Time
 	Views       int
