@@ -182,7 +182,7 @@ func (r *Repository) GetDraftByID(ctx context.Context, exec db.DB, id uuid.UUID)
 			return domain.Draft{}, fmt.Errorf("item action: %w", err)
 		}
 
-		draft.Items = append(draft.Items, domain.OfferWithInfo{
+		draft.Offers = append(draft.Offers, domain.OfferWithInfo{
 			Offer: domain.Offer{
 				ID:          *offerID,
 				AuthorId:    *offerAuthorID,
@@ -211,48 +211,121 @@ func (r *Repository) GetDraftByID(ctx context.Context, exec db.DB, id uuid.UUID)
 	return draft, nil
 }
 
+// ConfirmDraftByID marks current user's offer in the draft as confirmed.
+//
+// Errors:
+//   - domain.ErrDraftNotFound: if draft deal with the specified ID does not exist.
+//   - domain.ErrUserNotInDraft: if user has no offers in the specified draft deal.
+//   - SQL errors are wrapped.
 func (r *Repository) ConfirmDraftByID(ctx context.Context, exec db.DB, id uuid.UUID, userID uuid.UUID) error {
 	updateQuery := `
 		WITH updated_draft_deal_offer AS (
 			UPDATE draft_deal_offers ddo
-				SET confirmed = true
-				FROM offers o
-				WHERE o.id = ddo.offer_id
-					AND ddo.draft_deal_id = $1
-					AND o.author_id = $2
-					AND ddo.confirmed = false
-				RETURNING ddo.draft_deal_id)
-		
-		UPDATE draft_deals dd
-		SET updated_at = now()
-		FROM updated_draft_deal_offer udo
-		WHERE dd.id = udo.draft_deal_id;`
+			SET confirmed = true
+			FROM offers o
+			WHERE o.id = ddo.offer_id
+				AND ddo.draft_deal_id = $1
+				AND o.author_id = $2
+				AND ddo.confirmed = false
+			RETURNING ddo.draft_deal_id
+		),
+		updated_draft_deal AS (
+			UPDATE draft_deals dd
+			SET updated_at = now()
+			FROM updated_draft_deal_offer udo
+			WHERE dd.id = udo.draft_deal_id
+			RETURNING dd.id
+		)
+		SELECT EXISTS(
+			SELECT 1
+			FROM draft_deals dd
+			WHERE dd.id = $1
+		),
+		EXISTS(
+			SELECT 1
+			FROM draft_deal_offers ddo
+			JOIN offers o ON o.id = ddo.offer_id
+			WHERE ddo.draft_deal_id = $1
+				AND o.author_id = $2
+		);`
 
-	_, err := exec.Exec(ctx, updateQuery, id, userID)
-	return err
+	var draftExists bool
+	var userInDraft bool
+	err := exec.QueryRow(ctx, updateQuery, id, userID).Scan(&draftExists, &userInDraft)
+	if err != nil {
+		return fmt.Errorf("sql confirm draft: %w", err)
+	}
+
+	if !draftExists {
+		return domain.ErrDraftNotFound
+	}
+
+	if !userInDraft {
+		return domain.ErrUserNotInDraft
+	}
+
+	return nil
 }
 
+// UnconfirmDraftByID marks current user's offer in the draft as unconfirmed.
+//
+// Errors:
+//   - domain.ErrDraftNotFound: if draft deal with the specified ID does not exist.
+//   - domain.ErrUserNotInDraft: if user has no offers in the specified draft deal.
+//   - SQL errors are wrapped.
 func (r *Repository) UnconfirmDraftByID(ctx context.Context, exec db.DB, id uuid.UUID, userID uuid.UUID) error {
 	updateQuery := `
 		WITH updated_draft_deal_offer AS (
 			UPDATE draft_deal_offers ddo
-				SET confirmed = false
-				FROM offers o
-				WHERE o.id = ddo.offer_id
-					AND ddo.draft_deal_id = $1
-					AND o.author_id = $2
-					AND ddo.confirmed = true
-				RETURNING ddo.draft_deal_id)
-		
-		UPDATE draft_deals dd
-		SET updated_at = now()
-		FROM updated_draft_deal_offer udo
-		WHERE dd.id = udo.draft_deal_id;`
+			SET confirmed = false
+			FROM offers o
+			WHERE o.id = ddo.offer_id
+				AND ddo.draft_deal_id = $1
+				AND o.author_id = $2
+				AND ddo.confirmed = true
+			RETURNING ddo.draft_deal_id
+		),
+		updated_draft_deal AS (
+			UPDATE draft_deals dd
+			SET updated_at = now()
+			FROM updated_draft_deal_offer udo
+			WHERE dd.id = udo.draft_deal_id
+			RETURNING dd.id
+		)
+		SELECT EXISTS(
+			SELECT 1
+			FROM draft_deals dd
+			WHERE dd.id = $1
+		),
+		EXISTS(
+			SELECT 1
+			FROM draft_deal_offers ddo
+			JOIN offers o ON o.id = ddo.offer_id
+			WHERE ddo.draft_deal_id = $1
+				AND o.author_id = $2
+		);`
 
-	_, err := exec.Exec(ctx, updateQuery, id, userID)
-	return err
+	var draftExists bool
+	var userInDraft bool
+	err := exec.QueryRow(ctx, updateQuery, id, userID).Scan(&draftExists, &userInDraft)
+	if err != nil {
+		return fmt.Errorf("sql unconfirm draft: %w", err)
+	}
+
+	if !draftExists {
+		return domain.ErrDraftNotFound
+	}
+
+	if !userInDraft {
+		return domain.ErrUserNotInDraft
+	}
+
+	return nil
 }
 
+// GetConfirms returns confirm flags of all participants in a draft deal.
+//
+// No domain errors
 func (r *Repository) GetConfirms(ctx context.Context, exec db.DB, draftID uuid.UUID) ([]htypes.UserConfirmed, error) {
 	query := `
 		SELECT dd.author_id, ddo.confirmed

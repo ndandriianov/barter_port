@@ -2,10 +2,14 @@ package deals
 
 import (
 	"barter-port/internal/deals/domain"
+	"barter-port/internal/deals/domain/enums"
 	"barter-port/internal/deals/domain/htypes"
+	"barter-port/internal/deals/infrastructure/repository/deals"
 	"barter-port/internal/deals/infrastructure/repository/drafts"
+	"barter-port/internal/deals/infrastructure/repository/offers"
 	"barter-port/pkg/db"
 	"context"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -15,10 +19,12 @@ import (
 type Service struct {
 	db               *pgxpool.Pool
 	draftsRepository *drafts.Repository
+	dealsRepository  *deals.Repository
+	offersRepository *offers.Repository
 }
 
-func NewService(db *pgxpool.Pool, repo *drafts.Repository) *Service {
-	return &Service{db: db, draftsRepository: repo}
+func NewService(db *pgxpool.Pool, draftsRepo *drafts.Repository, dealsRepo *deals.Repository) *Service {
+	return &Service{db: db, draftsRepository: draftsRepo, dealsRepository: dealsRepo}
 }
 
 // ================================================================================
@@ -82,19 +88,40 @@ func (s *Service) GetDraftByID(ctx context.Context, id uuid.UUID) (domain.Draft,
 // ConfirmDraft allows a user to confirm their participation in a draft deal.
 // If all users confirm, this creates a new deal based on draft
 //
-// Errors: no domain errors
+// Errors:
+//   - domain.ErrDraftNotFound
+//   - domain.ErrUserNotInDraft
 func (s *Service) ConfirmDraft(ctx context.Context, id uuid.UUID, userID uuid.UUID) ([]htypes.UserConfirmed, error) {
 	var users []htypes.UserConfirmed
 
 	err := db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
 		err := s.draftsRepository.ConfirmDraftByID(ctx, tx, id, userID)
 		if err != nil {
-			return err
+			return fmt.Errorf("could not confirm draft: %w", err)
 		}
 
 		users, err = s.draftsRepository.GetConfirms(ctx, tx, id)
 		if err != nil {
 			return err
+		}
+
+		ready := true
+		for _, user := range users {
+			if user.Confirmed == false {
+				ready = false
+			}
+		}
+
+		if ready {
+			draft, err := s.draftsRepository.GetDraftByID(ctx, tx, id)
+			if err != nil {
+				return fmt.Errorf("could not find draft: %w", err)
+			}
+
+			id, err = s.createDeal(ctx, tx, draft)
+			if err != nil {
+				return fmt.Errorf("could not create deal: %w", err)
+			}
 		}
 
 		return nil
@@ -104,4 +131,50 @@ func (s *Service) ConfirmDraft(ctx context.Context, id uuid.UUID, userID uuid.UU
 	}
 
 	return users, nil
+}
+
+// ================================================================================
+// HELPER METHODS
+// ================================================================================
+
+// ================================================================================
+// CREATE DEAL
+// ================================================================================
+
+// createDeal creates a new deal based on the provided draft and its associated offers.
+//
+// No domain Errors
+func (s *Service) createDeal(ctx context.Context, tx pgx.Tx, draft domain.Draft) (uuid.UUID, error) {
+	items := make([]domain.Item, len(draft.Offers))
+	for i, o := range draft.Offers {
+		var receiver *uuid.UUID = nil
+		var provider *uuid.UUID = nil
+
+		if o.Offer.Action == enums.OfferActionGive {
+			provider = &o.Offer.AuthorId
+		} else {
+			receiver = &o.Offer.AuthorId
+		}
+
+		items[i] = domain.Item{
+			ID:          o.Offer.ID,
+			AuthorID:    o.Offer.AuthorId,
+			ProviderID:  provider,
+			ReceiverID:  receiver,
+			Name:        o.Offer.Name,
+			Description: o.Offer.Description,
+			Type:        o.Offer.Type,
+		}
+	}
+
+	id, err := s.dealsRepository.CreateDeal(ctx, tx, domain.Deal{
+		Name:        draft.Name,
+		Description: draft.Description,
+		Items:       items,
+	})
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("failed to create deal: %w", err)
+	}
+
+	return id, nil
 }
