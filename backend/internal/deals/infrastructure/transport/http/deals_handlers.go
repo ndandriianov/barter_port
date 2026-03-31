@@ -53,20 +53,20 @@ func (h *DealsHandlers) CreateDraft(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	items := make([]domain.OfferIDAndInfo, len(req.Items))
-	for i, item := range req.Items {
-		items[i] = domain.OfferIDAndInfo{
-			ID: item.ItemID,
+	offers := make([]domain.OfferIDAndInfo, len(req.Offers))
+	for i, item := range req.Offers {
+		offers[i] = domain.OfferIDAndInfo{
+			ID: item.OfferID,
 			Info: domain.OfferInfo{
 				Quantity: item.Quantity,
 			},
 		}
 	}
 
-	id, err := h.dealsService.CreateDraft(r.Context(), authorID, req.Name, req.Description, items)
+	id, err := h.dealsService.CreateDraft(r.Context(), authorID, req.Name, req.Description, offers)
 	if err != nil {
-		if errors.Is(err, domain.ErrNoItems) {
-			log.Warn("no items in request")
+		if errors.Is(err, domain.ErrNoOffers) {
+			log.Warn("no offers in request")
 			httpx.WriteError(w, http.StatusBadRequest, err)
 			return
 		}

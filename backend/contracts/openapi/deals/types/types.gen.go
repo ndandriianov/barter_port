@@ -100,11 +100,11 @@ type ConfirmDraftDealResponse struct {
 // CreateDraftDealRequest defines model for CreateDraftDealRequest.
 type CreateDraftDealRequest struct {
 	// Description An optional description for the draft deal
-	Description *string         `json:"description,omitempty"`
-	Items       []ItemIDAndInfo `json:"items"`
+	Description *string `json:"description,omitempty"`
 
 	// Name An optional name for the draft deal
-	Name *string `json:"name,omitempty"`
+	Name   *string              `json:"name,omitempty"`
+	Offers []OfferIDAndQuantity `json:"offers"`
 }
 
 // CreateDraftDealResponse defines model for CreateDraftDealResponse.
@@ -138,11 +138,11 @@ type Draft struct {
 	// Id The unique identifier of the draft deal
 	Id openapi_types.UUID `json:"id"`
 
-	// Items A list of items included in the draft deal
-	Items []ItemWithInfo `json:"items"`
-
 	// Name The name of the draft deal
 	Name *string `json:"name,omitempty"`
+
+	// Offers A list of offers included in the draft deal
+	Offers []OfferWithInfo `json:"offers"`
 
 	// UpdatedAt The timestamp when the draft deal was last updated
 	UpdatedAt *time.Time `json:"updatedAt,omitempty"`
@@ -158,68 +158,8 @@ type GetMyDraftDealsResponse struct {
 	Data *[]openapi_types.UUID `json:"data,omitempty"`
 }
 
-// ItemIDAndInfo defines model for ItemIDAndInfo.
-type ItemIDAndInfo struct {
-	// ItemID The ID of the item to include in the draft deal
-	ItemID openapi_types.UUID `json:"itemID"`
-
-	// Quantity The quantity of the item to include in the draft deal
-	Quantity int `json:"quantity"`
-
-	// ReceiverID The ID of the user who will receive this item in the deal.
-	// If not provided, it is assumed that the item is offered by the current user
-	// and any of other participants may choose to be a receiver.
-	ReceiverID *openapi_types.UUID `json:"receiverID,omitempty"`
-}
-
-// ItemInfo defines model for ItemInfo.
-type ItemInfo struct {
-	// Quantity The quantity of the item to include in the draft deal
-	Quantity int `json:"quantity"`
-
-	// ReceiverID The ID of the user who will receive this item in the deal.
-	// If not provided, it is assumed that the item is offered by the current user
-	// and any of other participants may choose to be a receiver.
-	ReceiverID *openapi_types.UUID `json:"receiverID,omitempty"`
-}
-
 // ItemType Type of barter item
 type ItemType string
-
-// ItemWithInfo defines model for ItemWithInfo.
-type ItemWithInfo struct {
-	// Action Whether the user offers or requests something
-	Action OfferAction `json:"action"`
-
-	// AuthorId Unique identifier of the user who created the item
-	AuthorId openapi_types.UUID `json:"authorId"`
-
-	// CreatedAt Item creation timestamp
-	CreatedAt time.Time `json:"createdAt"`
-
-	// Description Detailed item description
-	Description string `json:"description"`
-
-	// Id Unique item identifier
-	Id openapi_types.UUID `json:"id"`
-
-	// Name Short item title
-	Name string `json:"name"`
-
-	// Quantity The quantity of the item to include in the draft deal
-	Quantity int `json:"quantity"`
-
-	// ReceiverID The ID of the user who will receive this item in the deal.
-	// If not provided, it is assumed that the item is offered by the current user
-	// and any of other participants may choose to be a receiver.
-	ReceiverID *openapi_types.UUID `json:"receiverID,omitempty"`
-
-	// Type Type of barter item
-	Type ItemType `json:"type"`
-
-	// Views Number of item views
-	Views int64 `json:"views"`
-}
 
 // ListOffersResponse defines model for ListOffersResponse.
 type ListOffersResponse struct {
@@ -259,6 +199,57 @@ type Offer struct {
 
 // OfferAction Whether the user offers or requests something
 type OfferAction string
+
+// OfferIDAndQuantity defines model for OfferIDAndQuantity.
+type OfferIDAndQuantity struct {
+	// OfferID The ID of the offer to include in the draft deal
+	OfferID openapi_types.UUID `json:"offerID"`
+
+	// Quantity The quantity of the offer to include in the draft deal
+	Quantity int `json:"quantity"`
+}
+
+// OfferInfo defines model for OfferInfo.
+type OfferInfo struct {
+	// Confirmed Whether the offer has been confirmed for the draft deal.
+	Confirmed *bool `json:"confirmed,omitempty"`
+
+	// Quantity The quantity of the offer to include in the draft deal
+	Quantity int `json:"quantity"`
+}
+
+// OfferWithInfo defines model for OfferWithInfo.
+type OfferWithInfo struct {
+	// Action Whether the user offers or requests something
+	Action OfferAction `json:"action"`
+
+	// AuthorId Unique identifier of the user who created the item
+	AuthorId openapi_types.UUID `json:"authorId"`
+
+	// Confirmed Whether the offer has been confirmed for the draft deal.
+	Confirmed *bool `json:"confirmed,omitempty"`
+
+	// CreatedAt Item creation timestamp
+	CreatedAt time.Time `json:"createdAt"`
+
+	// Description Detailed item description
+	Description string `json:"description"`
+
+	// Id Unique item identifier
+	Id openapi_types.UUID `json:"id"`
+
+	// Name Short item title
+	Name string `json:"name"`
+
+	// Quantity The quantity of the offer to include in the draft deal
+	Quantity int `json:"quantity"`
+
+	// Type Type of barter item
+	Type ItemType `json:"type"`
+
+	// Views Number of item views
+	Views int64 `json:"views"`
+}
 
 // OffersCursor Cursor for stable pagination
 type OffersCursor struct {

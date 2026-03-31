@@ -117,7 +117,7 @@ func TestCreateDraftNoItems(t *testing.T) {
 
 	var apiErr dealstypes.ErrorResponse
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&apiErr))
-	require.Equal(t, domain.ErrNoItems.Error(), *apiErr.Message)
+	require.Equal(t, domain.ErrNoOffers.Error(), *apiErr.Message)
 }
 
 func TestCreateDraftNoItemsWithNameAndDescription(t *testing.T) {
@@ -148,7 +148,7 @@ func TestCreateDraftNoItemsWithNameAndDescription(t *testing.T) {
 
 	var apiErr dealstypes.ErrorResponse
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&apiErr))
-	require.Equal(t, domain.ErrNoItems.Error(), *apiErr.Message)
+	require.Equal(t, domain.ErrNoOffers.Error(), *apiErr.Message)
 }
 
 func TestCreateDraftWithItemsAndNameAndDescription(t *testing.T) {

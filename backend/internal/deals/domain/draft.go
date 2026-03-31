@@ -18,7 +18,7 @@ type Draft struct {
 }
 
 func (d *Draft) ToDTO() types.Draft {
-	itemsDTO := make([]types.ItemWithInfo, len(d.Items))
+	itemsDTO := make([]types.OfferWithInfo, len(d.Items))
 	for i, item := range d.Items {
 		itemsDTO[i] = item.Offer.ToDTOWithInfo(item.Info)
 	}
@@ -30,7 +30,7 @@ func (d *Draft) ToDTO() types.Draft {
 		Description: d.Description,
 		CreatedAt:   d.CreatedAt,
 		UpdatedAt:   d.UpdatedAt,
-		Items:       itemsDTO,
+		Offers:      itemsDTO,
 	}
 }
 

@@ -1,4 +1,4 @@
-package items
+package offers
 
 import (
 	"barter-port/internal/deals/domain"
@@ -17,7 +17,7 @@ type Service struct {
 	fallbackLogger *slog.Logger
 }
 
-func NewItemService(offerRepository *offersrep.Repository, fallbackLogger *slog.Logger) *Service {
+func NewService(offerRepository *offersrep.Repository, fallbackLogger *slog.Logger) *Service {
 	return &Service{repo: offerRepository, fallbackLogger: fallbackLogger}
 }
 
@@ -30,7 +30,7 @@ func (s *Service) CreateOffer(
 	description string,
 ) (*domain.Offer, error) {
 	if name == "" {
-		return nil, domain.ErrInvalidItemName
+		return nil, domain.ErrInvalidOfferName
 	}
 
 	item := domain.Offer{

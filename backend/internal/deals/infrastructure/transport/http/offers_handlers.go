@@ -2,7 +2,7 @@ package http
 
 import (
 	"barter-port/contracts/openapi/deals/types"
-	"barter-port/internal/deals/application/items"
+	"barter-port/internal/deals/application/offers"
 	"barter-port/internal/deals/domain"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/httpx"
@@ -13,19 +13,19 @@ import (
 	"strconv"
 )
 
-type ItemsHandlers struct {
-	offerService *items.Service
+type OffersHandlers struct {
+	offerService *offers.Service
 }
 
-func NewHandlers(offerService *items.Service) *ItemsHandlers {
-	return &ItemsHandlers{offerService: offerService}
+func NewHandlers(offerService *offers.Service) *OffersHandlers {
+	return &OffersHandlers{offerService: offerService}
 }
 
 // ================================================================================
 // CREATE OFFER
 // ================================================================================
 
-func (h *ItemsHandlers) HandleCreateOffer(w http.ResponseWriter, r *http.Request) {
+func (h *OffersHandlers) HandleCreateOffer(w http.ResponseWriter, r *http.Request) {
 	log := logger.LogFrom(r.Context(), slog.Default())
 	log.Info("handling create offer request")
 
@@ -62,9 +62,9 @@ func (h *ItemsHandlers) HandleCreateOffer(w http.ResponseWriter, r *http.Request
 
 	offer, err := h.offerService.CreateOffer(r.Context(), userID, req.Name, itemType, action, req.Description)
 	if err != nil {
-		if errors.Is(err, domain.ErrInvalidItemName) {
+		if errors.Is(err, domain.ErrInvalidOfferName) {
 			log.Warn("invalid offer name", slog.Any("error", err))
-			httpx.WriteError(w, http.StatusBadRequest, domain.ErrInvalidItemName)
+			httpx.WriteError(w, http.StatusBadRequest, domain.ErrInvalidOfferName)
 			return
 		}
 		log.Error("failed to create offer", slog.Any("error", err))
@@ -79,7 +79,7 @@ func (h *ItemsHandlers) HandleCreateOffer(w http.ResponseWriter, r *http.Request
 // GET OFFERS
 // ================================================================================
 
-func (h *ItemsHandlers) HandleGetOffers(w http.ResponseWriter, r *http.Request) {
+func (h *OffersHandlers) HandleGetOffers(w http.ResponseWriter, r *http.Request) {
 	log := logger.LogFrom(r.Context(), slog.Default())
 
 	// Parse query parameters
