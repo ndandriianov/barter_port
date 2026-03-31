@@ -4,6 +4,7 @@ import (
 	"barter-port/contracts/openapi/deals/types"
 	"barter-port/internal/deals/application/offers"
 	"barter-port/internal/deals/domain"
+	enums "barter-port/internal/deals/domain/enums"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/httpx"
 	"barter-port/pkg/logger"
@@ -39,14 +40,14 @@ func (h *OffersHandlers) HandleCreateOffer(w http.ResponseWriter, r *http.Reques
 	log = log.With(slog.Any("request", req))
 	log.Debug("decoded create offer request")
 
-	itemType, err := domain.ItemTypeString(string(req.Type))
+	itemType, err := enums.ItemTypeString(string(req.Type))
 	if err != nil {
 		log.Error("invalid item type", slog.String("type", string(req.Type)), slog.Any("error", err))
 		httpx.WriteErrorStr(w, http.StatusBadRequest, "invalid item type")
 		return
 	}
 
-	action, err := domain.OfferActionString(string(req.Action))
+	action, err := enums.OfferActionString(string(req.Action))
 	if err != nil {
 		log.Error("invalid offer action", slog.String("action", string(req.Action)), slog.Any("error", err))
 		httpx.WriteErrorStr(w, http.StatusBadRequest, "invalid offer action")
@@ -98,7 +99,7 @@ func (h *OffersHandlers) HandleGetOffers(w http.ResponseWriter, r *http.Request)
 	)
 	log.Info("handling get offers request")
 
-	sortType, err := domain.SortTypeString(sortTypeStr)
+	sortType, err := enums.SortTypeString(sortTypeStr)
 	if err != nil {
 		log.Error("invalid sort type", slog.Any("error", err))
 		httpx.WriteErrorStr(w, http.StatusBadRequest, "invalid sort type")

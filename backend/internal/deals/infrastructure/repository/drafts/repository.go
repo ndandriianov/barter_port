@@ -2,6 +2,7 @@ package drafts
 
 import (
 	"barter-port/internal/deals/domain"
+	"barter-port/internal/deals/domain/enums"
 	"barter-port/internal/deals/domain/htypes"
 	"barter-port/pkg/db"
 	"context"
@@ -171,12 +172,12 @@ func (r *Repository) GetDraftByID(ctx context.Context, exec db.DB, id uuid.UUID)
 			return domain.Draft{}, fmt.Errorf("scan draft item: item has null required fields")
 		}
 
-		itemTypeValue, err := domain.ItemTypeString(*offerType)
+		itemTypeValue, err := enums.ItemTypeString(*offerType)
 		if err != nil {
 			return domain.Draft{}, fmt.Errorf("item type: %w", err)
 		}
 
-		offerActionValue, err := domain.OfferActionString(*offerAction)
+		offerActionValue, err := enums.OfferActionString(*offerAction)
 		if err != nil {
 			return domain.Draft{}, fmt.Errorf("item action: %w", err)
 		}
