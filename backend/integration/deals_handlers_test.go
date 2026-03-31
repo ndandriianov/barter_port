@@ -151,7 +151,7 @@ func TestCreateDraftNoItemsWithNameAndDescription(t *testing.T) {
 	require.Equal(t, domain.ErrNoOffers.Error(), *apiErr.Message)
 }
 
-func TestCreateDraftWithItemsAndNameAndDescription(t *testing.T) {
+func TestCreateDraftWithOffersOnly(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)
 
@@ -181,7 +181,7 @@ func TestCreateDraftWithItemsAndNameAndDescription(t *testing.T) {
 	require.NotEqual(t, uuid.Nil, created.Id)
 }
 
-func TestCreateDraftWithOffers(t *testing.T) {
+func TestCreateDraftWithOffersAndNameAndDescription(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)
 
@@ -556,6 +556,192 @@ func TestCancelDraftForbiddenAfterAllConfirmed(t *testing.T) {
 	defer func() { _ = cancelResp.Body.Close() }()
 
 	require.Equal(t, http.StatusForbidden, cancelResp.StatusCode)
+}
+
+// ────────────────────────────────────────────────────────────────
+// GetDeals
+// ────────────────────────────────────────────────────────────────
+
+func TestGetDealsUnauthorized(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	resp, err := http.Get(dealsURL() + "/deals/")
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+}
+
+func TestGetDealsMyEmpty(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	ids := mustGetDealIDs(t, userID, true)
+	require.Empty(t, ids)
+}
+
+func TestGetDealsMyTrueReturnsParticipantDeals(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	dealID := mustCreateDeal(t, userID)
+
+	ids := mustGetDealIDs(t, userID, true)
+	require.Contains(t, ids, dealID)
+}
+
+func TestGetDealsMyTrueExcludesOtherUsersDeals(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userA := uuid.New()
+	userB := uuid.New()
+	mustCreateDeal(t, userA)
+
+	ids := mustGetDealIDs(t, userB, true)
+	require.Empty(t, ids)
+}
+
+// ────────────────────────────────────────────────────────────────
+// GetDealByID
+// ────────────────────────────────────────────────────────────────
+
+func TestGetDealByIDSuccess(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	offerID := mustCreateOffer(t, userID)
+	draftID := mustCreateDraft(t, userID, nil, nil, []dealstypes.OfferIDAndQuantity{{OfferID: offerID, Quantity: 1}})
+	mustConfirmDraft(t, userID, draftID)
+
+	dealIDs := mustGetDealIDs(t, userID, true)
+	require.Len(t, dealIDs, 1)
+
+	req, err := http.NewRequest(http.MethodGet, dealsURL()+"/deals/"+dealIDs[0].String(), nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userID))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var deal dealstypes.Deal
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&deal))
+	require.Equal(t, dealIDs[0], deal.Id)
+	require.False(t, deal.CreatedAt.IsZero())
+	require.Len(t, deal.Items, 1)
+	require.NotEqual(t, uuid.Nil, deal.Items[0].Id)
+	require.Equal(t, userID, deal.Items[0].AuthorId)
+}
+
+func TestGetDealByIDNotFound(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+
+	req, err := http.NewRequest(http.MethodGet, dealsURL()+"/deals/"+uuid.NewString(), nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userID))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
+
+func TestGetDealByIDInvalidUUID(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+
+	req, err := http.NewRequest(http.MethodGet, dealsURL()+"/deals/not-a-uuid", nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userID))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestGetDealByIDUnauthorized(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	resp, err := http.Get(dealsURL() + "/deals/" + uuid.NewString())
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+}
+
+// ────────────────────────────────────────────────────────────────
+// Вспомогательные функции (helpers for deals)
+// ────────────────────────────────────────────────────────────────
+
+func mustConfirmDraft(t *testing.T, userID uuid.UUID, draftID uuid.UUID) {
+	t.Helper()
+
+	req, err := http.NewRequest(http.MethodPatch, dealsURL()+"/deals/drafts/"+draftID.String(), nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userID))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+func mustGetDealIDs(t *testing.T, userID uuid.UUID, my bool) []uuid.UUID {
+	t.Helper()
+
+	url := dealsURL() + "/deals/"
+	if my {
+		url += "?my=true"
+	}
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userID))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var result dealstypes.GetDealsResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
+
+	if result.Data == nil {
+		return nil
+	}
+
+	return *result.Data
+}
+
+func mustCreateDeal(t *testing.T, userID uuid.UUID) uuid.UUID {
+	t.Helper()
+
+	offerID := mustCreateOffer(t, userID)
+	draftID := mustCreateDraft(t, userID, nil, nil, []dealstypes.OfferIDAndQuantity{{OfferID: offerID, Quantity: 1}})
+	mustConfirmDraft(t, userID, draftID)
+
+	ids := mustGetDealIDs(t, userID, true)
+	require.NotEmpty(t, ids)
+
+	return ids[0]
 }
 
 func mustRequest(t *testing.T, method, url string, body *bytes.Reader) *http.Request {
