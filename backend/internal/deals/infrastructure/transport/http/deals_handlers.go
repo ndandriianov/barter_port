@@ -200,6 +200,72 @@ func (h *DealsHandlers) ConfirmDraft(w http.ResponseWriter, r *http.Request) {
 }
 
 // ================================================================================
+// GET DEALS
+// ================================================================================
+
+func (h *DealsHandlers) GetDeals(w http.ResponseWriter, r *http.Request) {
+	log := logger.LogFrom(r.Context(), h.log).With(slog.String("handler", "GetDeals"))
+	log.Info("handling get deals request")
+
+	my := r.URL.Query().Get("my") == "true"
+	// TODO: open deals filtering is not yet supported (no status field in schema)
+	_ = r.URL.Query().Get("open")
+
+	userID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		log.Error("failed to get userID from context")
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
+	ids, err := h.dealsService.GetDeals(r.Context(), userID, my)
+	if err != nil {
+		log.Error("error getting deals", slog.Any("error", err))
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		return
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, types.GetDealsResponse{Data: &ids})
+}
+
+// ================================================================================
+// GET DEAL BY ID
+// ================================================================================
+
+func (h *DealsHandlers) GetDealByID(w http.ResponseWriter, r *http.Request) {
+	log := logger.LogFrom(r.Context(), h.log).With(slog.String("handler", "GetDealByID"))
+	log.Info("handling get deal by id request")
+
+	idStr := chi.URLParam(r, "dealId")
+	if idStr == "" {
+		log.Error("dealId is required")
+		httpx.WriteEmptyError(w, http.StatusBadRequest)
+		return
+	}
+
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		log.Error("error parsing deal id")
+		httpx.WriteEmptyError(w, http.StatusBadRequest)
+		return
+	}
+
+	deal, err := h.dealsService.GetDealByID(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, domain.ErrDealNotFound) {
+			log.Info("deal not found", slog.String("dealId", idStr))
+			httpx.WriteEmptyError(w, http.StatusNotFound)
+			return
+		}
+		log.Error("error getting deal", slog.Any("error", err))
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		return
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, deal.ToDTO())
+}
+
+// ================================================================================
 // CANCEL DRAFT
 // ================================================================================
 

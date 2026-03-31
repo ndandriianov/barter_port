@@ -2,8 +2,11 @@ package deals
 
 import (
 	"barter-port/internal/deals/domain"
+	"barter-port/internal/deals/domain/enums"
+	"barter-port/pkg/db"
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -46,4 +49,127 @@ func (r *Repository) CreateDeal(ctx context.Context, tx pgx.Tx, deal domain.Deal
 	}
 
 	return id, nil
+}
+
+// ================================================================================
+// GET DEAL IDs
+// ================================================================================
+
+// GetDealIDs returns deal IDs. If userID is non-nil, returns only deals the user participates in.
+//
+// No domain errors.
+func (r *Repository) GetDealIDs(ctx context.Context, exec db.DB, userID *uuid.UUID) ([]uuid.UUID, error) {
+	query := `
+		SELECT DISTINCT d.id
+		FROM deals d
+		LEFT JOIN items i ON i.deal_id = d.id
+		WHERE ($1::uuid IS NULL
+		   OR i.author_id = $1
+		   OR i.provider_id = $1
+		   OR i.receiver_id = $1)`
+
+	rows, err := exec.Query(ctx, query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("sql get deal ids: %w", err)
+	}
+	defer rows.Close()
+
+	ids, err := pgx.CollectRows(rows, pgx.RowTo[uuid.UUID])
+	if err != nil {
+		return nil, fmt.Errorf("collect rows: %w", err)
+	}
+
+	return ids, nil
+}
+
+// ================================================================================
+// GET DEAL BY ID
+// ================================================================================
+
+// GetDealByID returns a deal with its items by ID.
+//
+// Domain errors:
+//   - domain.ErrDealNotFound: if no deal with the specified ID exists.
+func (r *Repository) GetDealByID(ctx context.Context, exec db.DB, id uuid.UUID) (domain.Deal, error) {
+	query := `
+		SELECT d.id, d.name, d.description, d.created_at, d.updated_at,
+		       i.id, i.author_id, i.provider_id, i.receiver_id,
+		       i.name, i.description, i.type, i.updated_at
+		FROM deals d
+		LEFT JOIN items i ON i.deal_id = d.id
+		WHERE d.id = $1`
+
+	rows, err := exec.Query(ctx, query, id)
+	if err != nil {
+		return domain.Deal{}, fmt.Errorf("sql get deal by id: %w", err)
+	}
+	defer rows.Close()
+
+	var deal domain.Deal
+	found := false
+
+	for rows.Next() {
+		var itemID *uuid.UUID
+		var itemAuthorID *uuid.UUID
+		var itemProviderID *uuid.UUID
+		var itemReceiverID *uuid.UUID
+		var itemName *string
+		var itemDescription *string
+		var itemType *string
+		var itemUpdatedAt *time.Time
+
+		if err = rows.Scan(
+			&deal.ID,
+			&deal.Name,
+			&deal.Description,
+			&deal.CreatedAt,
+			&deal.UpdatedAt,
+			&itemID,
+			&itemAuthorID,
+			&itemProviderID,
+			&itemReceiverID,
+			&itemName,
+			&itemDescription,
+			&itemType,
+			&itemUpdatedAt,
+		); err != nil {
+			return domain.Deal{}, fmt.Errorf("scan deal row: %w", err)
+		}
+
+		found = true
+
+		if itemID == nil {
+			continue
+		}
+
+		if itemAuthorID == nil || itemName == nil || itemDescription == nil || itemType == nil {
+			return domain.Deal{}, fmt.Errorf("scan deal item: null required fields")
+		}
+
+		itemTypeValue, err := enums.ItemTypeString(*itemType)
+		if err != nil {
+			return domain.Deal{}, fmt.Errorf("item type: %w", err)
+		}
+
+		deal.Items = append(deal.Items, domain.Item{
+			ID:          *itemID,
+			AuthorID:    *itemAuthorID,
+			ProviderID:  itemProviderID,
+			ReceiverID:  itemReceiverID,
+			Name:        *itemName,
+			Description: *itemDescription,
+			Type:        itemTypeValue,
+			UpdatedAt:   itemUpdatedAt,
+		})
+	}
+
+	if err = rows.Err(); err != nil {
+		return domain.Deal{}, fmt.Errorf("rows: %w", err)
+	}
+
+	if !found {
+		return domain.Deal{}, domain.ErrDealNotFound
+	}
+
+	return deal, nil
 }
