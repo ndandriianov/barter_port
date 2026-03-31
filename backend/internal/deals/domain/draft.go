@@ -14,12 +14,12 @@ type Draft struct {
 	Description *string
 	CreatedAt   time.Time
 	UpdatedAt   *time.Time
-	Items       []OfferWithInfo
+	Offers      []OfferWithInfo
 }
 
 func (d *Draft) ToDTO() types.Draft {
-	itemsDTO := make([]types.OfferWithInfo, len(d.Items))
-	for i, item := range d.Items {
+	itemsDTO := make([]types.OfferWithInfo, len(d.Offers))
+	for i, item := range d.Offers {
 		itemsDTO[i] = item.Offer.ToDTOWithInfo(item.Info)
 	}
 

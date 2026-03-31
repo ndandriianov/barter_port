@@ -16,7 +16,8 @@ type Offer struct {
 	Action      enums.OfferAction
 	Description string
 	CreatedAt   time.Time
-	Views       int
+	// TODO: добавить updated at
+	Views int
 }
 
 func (i *Offer) ToDto() types.Offer {

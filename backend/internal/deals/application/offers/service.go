@@ -101,7 +101,7 @@ func (s *Service) GetOffers(
 			log.Debug("popularity cursor is not specified, starting from the beginning", slog.Any("error", err))
 		}
 
-		offers, newCursor, err := s.repo.GetItemsOrderByPopularity(ctx, popularityCursor, limit)
+		offers, newCursor, err := s.repo.GetOffersOrderByPopularity(ctx, popularityCursor, limit)
 		if err != nil {
 			return nil, nil, err
 		}

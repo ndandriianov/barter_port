@@ -47,16 +47,16 @@ CREATE TABLE deals
 
 CREATE TABLE items
 (
-    id          UUID PRIMARY KEY     DEFAULT gen_random_uuid(),
-    deal_id     UUID        NOT NULL,
-    author_id   UUID        NOT NULL,
-    receiver_id UUID        NOT NULL,
-    name        TEXT,
-    description TEXT,
-    action      TEXT        NOT NULL,
-    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    deal_id     UUID NOT NULL,
+    author_id   UUID NOT NULL,
+    provider_id UUID,
+    receiver_id UUID,
+    name        TEXT NOT NULL,
+    description TEXT NOT NULL,
+    type        TEXT NOT NULL,
     updated_at  TIMESTAMPTZ,
 
-    CONSTRAINT items_action_check CHECK (action IN ('give', 'take')),
+    CONSTRAINT offers_type_check CHECK (type IN ('good', 'service')),
     FOREIGN KEY (deal_id) REFERENCES deals (id) ON DELETE CASCADE
 )

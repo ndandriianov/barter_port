@@ -2,8 +2,12 @@ package offers
 
 import (
 	"barter-port/internal/deals/domain"
+	"barter-port/pkg/db"
 	"barter-port/pkg/repox"
+	"errors"
 
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/net/context"
 )
@@ -16,6 +20,10 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 	return &Repository{db: db}
 }
 
+// ================================================================================
+// ADD OFFER
+// ================================================================================
+
 // AddOffer inserts a new item into the database.
 // Returns an error if the insertion fails.
 func (r *Repository) AddOffer(ctx context.Context, offer domain.Offer) error {
@@ -27,6 +35,10 @@ func (r *Repository) AddOffer(ctx context.Context, offer domain.Offer) error {
 	_, err := r.db.Exec(ctx, query, offer.ID, offer.AuthorId, offer.Name, offer.Type.String(), offer.Action.String(), offer.Description, offer.CreatedAt)
 	return err
 }
+
+// ================================================================================
+// GET OFFERS ORDER BY TIME
+// ================================================================================
 
 // GetOffersOrderByTime retrieves items from the database ordered by creation time.
 // It supports cursor-based pagination using a TimeCursor.
@@ -78,11 +90,15 @@ func (r *Repository) GetOffersOrderByTime(
 	return offers, &newCursor, nil
 }
 
-// GetItemsOrderByPopularity retrieves items from the database ordered by popularity (views).
+// ================================================================================
+// GET OFFERS ORDER BY POPULARITY
+// ================================================================================
+
+// GetOffersOrderByPopularity retrieves items from the database ordered by popularity (views).
 // It supports cursor-based pagination using a PopularityCursor.
 // If the cursor is nil, it retrieves the most popular items.
 // Returns a slice of items, a new PopularityCursor for the next page, and an error if the query fails.
-func (r *Repository) GetItemsOrderByPopularity(
+func (r *Repository) GetOffersOrderByPopularity(
 	ctx context.Context,
 	cursor *domain.PopularityCursor,
 	limit int,
@@ -126,4 +142,38 @@ func (r *Repository) GetItemsOrderByPopularity(
 	}
 
 	return offers, &newCursor, nil
+}
+
+// ================================================================================
+// GET OFFER
+// ================================================================================
+
+// GetOffer retrieves a single item from the database by its ID.
+//
+// Errors:
+//   - domain.ErrOfferNotFound: if no item with the given ID exists.
+func (r *Repository) GetOffer(ctx context.Context, exec db.DB, id uuid.UUID) (*domain.Offer, error) {
+	query := `
+		SELECT id, author_id, name, type, action, description, created_at
+		FROM offers
+		WHERE id = $1`
+
+	var offer domain.Offer
+	err := exec.QueryRow(ctx, query, id).Scan(
+		&offer.ID,
+		&offer.AuthorId,
+		&offer.Name,
+		&offer.Type,
+		&offer.Action,
+		&offer.Description,
+		&offer.CreatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domain.ErrOfferNotFound
+		}
+		return nil, err
+	}
+
+	return &offer, nil
 }
