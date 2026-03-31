@@ -27,7 +27,7 @@ func dealsURL() string {
 	return globalFixture.DealsURL
 }
 
-func mustCreateItem(t *testing.T, userID uuid.UUID) uuid.UUID {
+func mustCreateOffer(t *testing.T, userID uuid.UUID) uuid.UUID {
 	t.Helper()
 
 	body, err := json.Marshal(dealstypes.CreateOfferRequest{
@@ -38,7 +38,7 @@ func mustCreateItem(t *testing.T, userID uuid.UUID) uuid.UUID {
 	})
 	require.NoError(t, err)
 
-	req, err := http.NewRequest(http.MethodPost, dealsURL()+"/items/", bytes.NewReader(body))
+	req, err := http.NewRequest(http.MethodPost, dealsURL()+"/offers/", bytes.NewReader(body))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userID))
@@ -60,7 +60,7 @@ func mustCreateDraft(
 	userID uuid.UUID,
 	name *string,
 	description *string,
-	offers []dealstypes.ItemIDAndInfo,
+	offers []dealstypes.OfferIDAndQuantity,
 ) uuid.UUID {
 	t.Helper()
 
@@ -93,14 +93,14 @@ func mustCreateDraft(
 // CreateDraft
 // ────────────────────────────────────────────────────────────────
 
-func TestCreateDraftNoItems(t *testing.T) {
+func TestCreateDraftNoOffers(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)
 
 	userID := uuid.New()
 
 	body, err := json.Marshal(map[string]any{
-		"items": []any{},
+		"offers": []any{},
 	})
 	require.NoError(t, err)
 
@@ -129,7 +129,7 @@ func TestCreateDraftNoItemsWithNameAndDescription(t *testing.T) {
 	description := "This is a test draft"
 
 	body, err := json.Marshal(map[string]any{
-		"items":       []any{},
+		"offers":      []any{},
 		"name":        name,
 		"description": description,
 	})
@@ -156,11 +156,11 @@ func TestCreateDraftWithItemsAndNameAndDescription(t *testing.T) {
 	dumpDealsLogs(t)
 
 	userID := uuid.New()
-	itemID := mustCreateItem(t, userID)
+	offerID := mustCreateOffer(t, userID)
 
 	body, err := json.Marshal(map[string]any{
-		"items": []map[string]any{
-			{"itemID": itemID.String(), "quantity": 2},
+		"offers": []map[string]any{
+			{"offerID": offerID.String(), "quantity": 2},
 		},
 	})
 	require.NoError(t, err)
@@ -181,18 +181,18 @@ func TestCreateDraftWithItemsAndNameAndDescription(t *testing.T) {
 	require.NotEqual(t, uuid.Nil, created.Id)
 }
 
-func TestCreateDraftWithItems(t *testing.T) {
+func TestCreateDraftWithOffers(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)
 
 	userID := uuid.New()
-	itemID := mustCreateItem(t, userID)
+	offerID := mustCreateOffer(t, userID)
 	name := "My Draft Deal"
 	description := "This is a test draft"
 
 	body, err := json.Marshal(map[string]any{
-		"items": []map[string]any{
-			{"itemID": itemID.String(), "quantity": 2},
+		"offers": []map[string]any{
+			{"offerID": offerID.String(), "quantity": 2},
 		},
 		"name":        name,
 		"description": description,
@@ -219,7 +219,7 @@ func TestCreateDraftUnauthorized(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)
 
-	body, err := json.Marshal(map[string]any{"items": []any{}})
+	body, err := json.Marshal(map[string]any{"offers": []any{}})
 	require.NoError(t, err)
 
 	resp, err := http.Post(dealsURL()+"/deals/drafts", "application/json", bytes.NewReader(body))
@@ -294,15 +294,15 @@ func TestGetDraftByIDSuccess(t *testing.T) {
 	userID := uuid.New()
 	name := "Test Draft"
 	description := "Test Description"
-	item1ID := mustCreateItem(t, userID)
-	item2ID := mustCreateItem(t, userID)
-	item2ReceiverID := uuid.New()
+	offer1ID := mustCreateOffer(t, userID)
+	offer2ID := mustCreateOffer(t, userID)
 
-	items := []dealstypes.ItemIDAndInfo{
-		{ItemID: item1ID, Quantity: 2}, {ItemID: item2ID, Quantity: 5, ReceiverID: &item2ReceiverID},
+	offers := []dealstypes.OfferIDAndQuantity{
+		{OfferID: offer1ID, Quantity: 2},
+		{OfferID: offer2ID, Quantity: 5},
 	}
 
-	draftID := mustCreateDraft(t, userID, &name, &description, items)
+	draftID := mustCreateDraft(t, userID, &name, &description, offers)
 
 	req, err := http.NewRequest(http.MethodGet, dealsURL()+"/deals/drafts/"+draftID.String(), nil)
 	require.NoError(t, err)
@@ -323,38 +323,35 @@ func TestGetDraftByIDSuccess(t *testing.T) {
 	require.NotNil(t, draft.Description)
 	require.Equal(t, description, *draft.Description)
 
-	require.Len(t, draft.Items, 2)
+	require.Len(t, draft.Offers, 2)
 
-	var foundItem1, foundItem2 bool
-	for _, it := range draft.Items {
+	var foundOffer1, foundOffer2 bool
+	for _, it := range draft.Offers {
 		switch it.Id {
-		case item1ID:
-			foundItem1 = true
+		case offer1ID:
+			foundOffer1 = true
 			require.EqualValues(t, 2, it.Quantity)
-		case item2ID:
-			foundItem2 = true
+		case offer2ID:
+			foundOffer2 = true
 			require.EqualValues(t, 5, it.Quantity)
-			require.EqualValues(t, item2ReceiverID, *it.ReceiverID)
 		}
 	}
 
-	require.True(t, foundItem1)
-	require.True(t, foundItem2)
-
-	require.False(t, draft.CreatedAt.IsZero())
+	require.True(t, foundOffer1)
+	require.True(t, foundOffer2)
 
 	require.False(t, draft.CreatedAt.IsZero())
 }
 
-func TestGetDraftByIDWithItems(t *testing.T) {
+func TestGetDraftByIDWithOffers(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)
 
 	userID := uuid.New()
-	itemID := mustCreateItem(t, userID)
+	offerID := mustCreateOffer(t, userID)
 
-	draftID := mustCreateDraft(t, userID, nil, nil, []dealstypes.ItemIDAndInfo{
-		{ItemID: itemID, Quantity: 3},
+	draftID := mustCreateDraft(t, userID, nil, nil, []dealstypes.OfferIDAndQuantity{
+		{OfferID: offerID, Quantity: 3},
 	})
 
 	req, err := http.NewRequest(http.MethodGet, dealsURL()+"/deals/drafts/"+draftID.String(), nil)
@@ -370,8 +367,8 @@ func TestGetDraftByIDWithItems(t *testing.T) {
 	var draft dealstypes.Draft
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&draft))
 	require.Equal(t, draftID, draft.Id)
-	require.Len(t, draft.Items, 1)
-	require.Equal(t, itemID, draft.Items[0].Id)
+	require.Len(t, draft.Offers, 1)
+	require.Equal(t, offerID, draft.Offers[0].Id)
 }
 
 func TestGetDraftByIDNotFound(t *testing.T) {
