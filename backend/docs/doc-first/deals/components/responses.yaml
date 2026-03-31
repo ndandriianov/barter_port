@@ -31,20 +31,20 @@ GetMyDraftDealsResponse:
 
 
 
-ListItemsResponse:
+ListOffersResponse:
   type: object
   required:
-    - items
+    - offers
   properties:
-    items:
+    offers:
       type: array
-      description: List of items
+      description: List of offers
       items:
-        $ref: 'schemas.yaml#/Item'
+        $ref: 'schemas.yaml#/Offer'
     nextCursor:
       nullable: true
       allOf:
-        - $ref: 'schemas.yaml#/ItemsCursor'
+        - $ref: 'schemas.yaml#/OffersCursor'
       description: Cursor for fetching the next page; null if there is no next page
 
 

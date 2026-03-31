@@ -236,22 +236,22 @@ paths:
                 $ref: './components/responses.yaml#/ErrorResponse'
 
 
-  /items:
+  /offers:
     get:
       tags:
-        - items
-      summary: List items
+        - offers
+      summary: List offers
       description: |
-        Returns a paginated list of items.
+        Returns a paginated list of offers.
 
         Supported sorting modes:
-        - `created_at`: newest items first
-        - `popularity`: most viewed items first
+        - `created_at`: newest offers first
+        - `popularity`: most viewed offers first
 
         Cursor fields depend on the selected sorting mode:
         - for `created_at`: use `cursor_created_at` + `cursor_id`
         - for `popularity`: use `cursor_views` + `cursor_id`
-      operationId: listItems
+      operationId: listOffers
       security:
         - bearerAuth: [ ]
       parameters:
@@ -262,11 +262,11 @@ paths:
         - $ref: './components/parameters.yaml#/Limit'
       responses:
         '200':
-          description: Items page
+          description: Offers page
           content:
             application/json:
               schema:
-                $ref: './components/responses.yaml#/ListItemsResponse'
+                $ref: './components/responses.yaml#/ListOffersResponse'
         '400':
           description: Invalid query parameters
           content:
@@ -288,10 +288,10 @@ paths:
 
     post:
       tags:
-        - items
-      summary: Create item
-      description: Creates a new barter item
-      operationId: createItem
+        - offers
+      summary: Create offer
+      description: Creates a new barter offer
+      operationId: createOffers
       security:
         - bearerAuth: [ ]
       requestBody:
@@ -299,14 +299,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: './components/requests.yaml#/CreateItemRequest'
+              $ref: './components/requests.yaml#/CreateOfferRequest'
       responses:
         '201':
-          description: Item created
+          description: Offers created
           content:
             application/json:
               schema:
-                $ref: './components/schemas.yaml#/Item'
+                $ref: './components/schemas.yaml#/Offer'
         '400':
           description: Invalid request body
           content:

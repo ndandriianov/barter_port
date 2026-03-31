@@ -36,7 +36,7 @@ func (h *ItemsHandlers) HandleCreateItem(w http.ResponseWriter, r *http.Request)
 	log := logger.LogFrom(r.Context(), slog.Default())
 	log.Info("handling register request")
 
-	var req types.CreateItemRequest
+	var req types.CreateOfferRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		log.Error("error decoding request", slog.Any("error", err))
 		httpx.WriteError(w, http.StatusBadRequest, httpx.ErrCannotDecodeRequestBody)
@@ -134,18 +134,18 @@ func (h *ItemsHandlers) HandleGetItems(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	respItems := make([]types.Item, len(items))
+	respItems := make([]types.Offer, len(items))
 	for i, item := range items {
 		respItems[i] = item.ToDto()
 	}
 
-	var respCursor *types.ItemsCursor
+	var respCursor *types.OffersCursor
 	if nextCursor != nil {
 		respCursor = new(nextCursor.ToDto())
 	}
 
-	httpx.WriteJSON(w, http.StatusOK, types.ListItemsResponse{
-		Items:      respItems,
+	httpx.WriteJSON(w, http.StatusOK, types.ListOffersResponse{
+		Offers:     respItems,
 		NextCursor: respCursor,
 	})
 }

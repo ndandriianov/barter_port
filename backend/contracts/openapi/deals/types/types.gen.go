@@ -13,24 +13,6 @@ const (
 	BearerAuthScopes = "bearerAuth.Scopes"
 )
 
-// Defines values for ItemAction.
-const (
-	Give ItemAction = "give"
-	Take ItemAction = "take"
-)
-
-// Valid indicates whether the value is a known member of the ItemAction enum.
-func (e ItemAction) Valid() bool {
-	switch e {
-	case Give:
-		return true
-	case Take:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for ItemType.
 const (
 	Good    ItemType = "good"
@@ -43,6 +25,24 @@ func (e ItemType) Valid() bool {
 	case Good:
 		return true
 	case Service:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for OfferAction.
+const (
+	Give OfferAction = "give"
+	Take OfferAction = "take"
+)
+
+// Valid indicates whether the value is a known member of the OfferAction enum.
+func (e OfferAction) Valid() bool {
+	switch e {
+	case Give:
+		return true
+	case Take:
 		return true
 	default:
 		return false
@@ -67,18 +67,18 @@ func (e SortType) Valid() bool {
 	}
 }
 
-// Defines values for ListItemsParamsSort.
+// Defines values for ListOffersParamsSort.
 const (
-	ListItemsParamsSortByPopularity ListItemsParamsSort = "ByPopularity"
-	ListItemsParamsSortByTime       ListItemsParamsSort = "ByTime"
+	ListOffersParamsSortByPopularity ListOffersParamsSort = "ByPopularity"
+	ListOffersParamsSortByTime       ListOffersParamsSort = "ByTime"
 )
 
-// Valid indicates whether the value is a known member of the ListItemsParamsSort enum.
-func (e ListItemsParamsSort) Valid() bool {
+// Valid indicates whether the value is a known member of the ListOffersParamsSort enum.
+func (e ListOffersParamsSort) Valid() bool {
 	switch e {
-	case ListItemsParamsSortByPopularity:
+	case ListOffersParamsSortByPopularity:
 		return true
-	case ListItemsParamsSortByTime:
+	case ListOffersParamsSortByTime:
 		return true
 	default:
 		return false
@@ -113,12 +113,12 @@ type CreateDraftDealResponse struct {
 	Id openapi_types.UUID `json:"id"`
 }
 
-// CreateItemRequest defines model for CreateItemRequest.
-type CreateItemRequest struct {
+// CreateOfferRequest defines model for CreateOfferRequest.
+type CreateOfferRequest struct {
 	// Action Whether the user offers or requests something
-	Action      ItemAction `json:"action"`
-	Description string     `json:"description"`
-	Name        string     `json:"name"`
+	Action      OfferAction `json:"action"`
+	Description string      `json:"description"`
+	Name        string      `json:"name"`
 
 	// Type Type of barter item
 	Type ItemType `json:"type"`
@@ -158,36 +158,6 @@ type GetMyDraftDealsResponse struct {
 	Data *[]openapi_types.UUID `json:"data,omitempty"`
 }
 
-// Item defines model for Item.
-type Item struct {
-	// Action Whether the user offers or requests something
-	Action ItemAction `json:"action"`
-
-	// AuthorId Unique identifier of the user who created the item
-	AuthorId openapi_types.UUID `json:"authorId"`
-
-	// CreatedAt Item creation timestamp
-	CreatedAt time.Time `json:"createdAt"`
-
-	// Description Detailed item description
-	Description string `json:"description"`
-
-	// Id Unique item identifier
-	Id openapi_types.UUID `json:"id"`
-
-	// Name Short item title
-	Name string `json:"name"`
-
-	// Type Type of barter item
-	Type ItemType `json:"type"`
-
-	// Views Number of item views
-	Views int64 `json:"views"`
-}
-
-// ItemAction Whether the user offers or requests something
-type ItemAction string
-
 // ItemIDAndInfo defines model for ItemIDAndInfo.
 type ItemIDAndInfo struct {
 	// ItemID The ID of the item to include in the draft deal
@@ -219,7 +189,7 @@ type ItemType string
 // ItemWithInfo defines model for ItemWithInfo.
 type ItemWithInfo struct {
 	// Action Whether the user offers or requests something
-	Action ItemAction `json:"action"`
+	Action OfferAction `json:"action"`
 
 	// AuthorId Unique identifier of the user who created the item
 	AuthorId openapi_types.UUID `json:"authorId"`
@@ -251,20 +221,50 @@ type ItemWithInfo struct {
 	Views int64 `json:"views"`
 }
 
-// ItemsCursor Cursor for stable pagination
-type ItemsCursor struct {
+// ListOffersResponse defines model for ListOffersResponse.
+type ListOffersResponse struct {
+	// NextCursor Cursor for fetching the next page; null if there is no next page
+	NextCursor *OffersCursor `json:"nextCursor,omitempty"`
+
+	// Offers List of offers
+	Offers []Offer `json:"offers"`
+}
+
+// Offer defines model for Offer.
+type Offer struct {
+	// Action Whether the user offers or requests something
+	Action OfferAction `json:"action"`
+
+	// AuthorId Unique identifier of the user who created the item
+	AuthorId openapi_types.UUID `json:"authorId"`
+
+	// CreatedAt Item creation timestamp
+	CreatedAt time.Time `json:"createdAt"`
+
+	// Description Detailed item description
+	Description string `json:"description"`
+
+	// Id Unique item identifier
+	Id openapi_types.UUID `json:"id"`
+
+	// Name Short item title
+	Name string `json:"name"`
+
+	// Type Type of barter item
+	Type ItemType `json:"type"`
+
+	// Views Number of item views
+	Views int64 `json:"views"`
+}
+
+// OfferAction Whether the user offers or requests something
+type OfferAction string
+
+// OffersCursor Cursor for stable pagination
+type OffersCursor struct {
 	CreatedAt *time.Time         `json:"createdAt,omitempty"`
 	Id        openapi_types.UUID `json:"id"`
 	Views     *int64             `json:"views,omitempty"`
-}
-
-// ListItemsResponse defines model for ListItemsResponse.
-type ListItemsResponse struct {
-	// Items List of items
-	Items []Item `json:"items"`
-
-	// NextCursor Cursor for fetching the next page; null if there is no next page
-	NextCursor *ItemsCursor `json:"nextCursor,omitempty"`
 }
 
 // CursorCreatedAt defines model for CursorCreatedAt.
@@ -282,10 +282,10 @@ type Limit = int
 // SortType defines model for SortType.
 type SortType string
 
-// ListItemsParams defines parameters for ListItems.
-type ListItemsParams struct {
+// ListOffersParams defines parameters for ListOffers.
+type ListOffersParams struct {
 	// Sort Sorting mode for items list
-	Sort ListItemsParamsSort `form:"sort" json:"sort"`
+	Sort ListOffersParamsSort `form:"sort" json:"sort"`
 
 	// CursorCreatedAt Cursor creation timestamp in RFC3339 format.
 	// Used together with `cursor_id` when `sort=created_at`.
@@ -302,11 +302,11 @@ type ListItemsParams struct {
 	CursorLimit *Limit `form:"cursor_limit,omitempty" json:"cursor_limit,omitempty"`
 }
 
-// ListItemsParamsSort defines parameters for ListItems.
-type ListItemsParamsSort string
+// ListOffersParamsSort defines parameters for ListOffers.
+type ListOffersParamsSort string
 
 // CreateDraftDealJSONRequestBody defines body for CreateDraftDeal for application/json ContentType.
 type CreateDraftDealJSONRequestBody = CreateDraftDealRequest
 
-// CreateItemJSONRequestBody defines body for CreateItem for application/json ContentType.
-type CreateItemJSONRequestBody = CreateItemRequest
+// CreateOffersJSONRequestBody defines body for CreateOffers for application/json ContentType.
+type CreateOffersJSONRequestBody = CreateOfferRequest
