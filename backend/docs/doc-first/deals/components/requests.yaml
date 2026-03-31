@@ -10,25 +10,7 @@ CreateDraftDealRequest:
     items:
       type: array
       items:
-        type: object
-        required:
-          - itemID
-          - quantity
-        properties:
-          itemID:
-            type: string
-            format: uuid
-            description: The ID of the item to include in the draft deal
-          quantity:
-            type: integer
-            description: The quantity of the item to include in the draft deal
-          receiverID:
-            type: string
-            format: uuid
-            description: |
-              The ID of the user who will receive this item in the deal.
-              If not provided, it is assumed that the item is offered by the current user
-              and any of other participants may choose to be a receiver.
+        $ref: 'schemas.yaml#/ItemIDAndInfo'
   required:
     - items
 

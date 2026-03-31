@@ -67,7 +67,7 @@ type Fixture struct {
 	Users testcontainers.Container
 
 	AuthURL  string
-	ItemsURL string
+	DealsURL string
 	UsersURL string
 }
 
@@ -141,7 +141,7 @@ func NewFixture(t *testing.T, opts FixtureOptions) *Fixture {
 		req.Env = serviceEnv()
 		req.Env["CONFIG_SERVICE"] = "/app/config/deals.yaml"
 		f.Items = startContainer(ctx, t, req)
-		f.ItemsURL = containerBaseURL(ctx, t, f.Items, itemsHTTPPort)
+		f.DealsURL = containerBaseURL(ctx, t, f.Items, itemsHTTPPort)
 	}
 	if opts.NeedUsers {
 		req := buildServiceRequest(net, "users", string(usersHTTPPort))
@@ -210,7 +210,7 @@ func newSharedFixture(
 		if err != nil {
 			return f, fmt.Errorf("items base url: %w", err)
 		}
-		f.ItemsURL = url
+		f.DealsURL = url
 	}
 	if opts.NeedUsers {
 		c, err := launchUsers(ctx, net)

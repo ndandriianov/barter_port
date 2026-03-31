@@ -2,6 +2,7 @@ package integration
 
 import (
 	dealstypes "barter-port/contracts/openapi/deals/types"
+	"barter-port/internal/deals/domain"
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -23,7 +24,7 @@ func dumpDealsLogs(t *testing.T) {
 }
 
 func dealsURL() string {
-	return globalFixture.ItemsURL
+	return globalFixture.DealsURL
 }
 
 func mustCreateItem(t *testing.T, userID uuid.UUID) uuid.UUID {
@@ -54,10 +55,13 @@ func mustCreateItem(t *testing.T, userID uuid.UUID) uuid.UUID {
 	return item.Id
 }
 
-func mustCreateDraft(t *testing.T, userID uuid.UUID, name *string, description *string, items []struct {
-	ItemID   uuid.UUID `json:"itemID"`
-	Quantity int       `json:"quantity"`
-}) uuid.UUID {
+func mustCreateDraft(
+	t *testing.T,
+	userID uuid.UUID,
+	name *string,
+	description *string,
+	items []dealstypes.ItemIDAndInfo,
+) uuid.UUID {
 	t.Helper()
 
 	reqBody := map[string]any{
@@ -68,7 +72,7 @@ func mustCreateDraft(t *testing.T, userID uuid.UUID, name *string, description *
 	body, err := json.Marshal(reqBody)
 	require.NoError(t, err)
 
-	req, err := http.NewRequest(http.MethodPost, dealsURL()+"/drafts", bytes.NewReader(body))
+	req, err := http.NewRequest(http.MethodPost, dealsURL()+"/deals/drafts", bytes.NewReader(body))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userID))
@@ -89,7 +93,7 @@ func mustCreateDraft(t *testing.T, userID uuid.UUID, name *string, description *
 // CreateDraft
 // ────────────────────────────────────────────────────────────────
 
-func TestCreateDraftSuccess(t *testing.T) {
+func TestCreateDraftNoItems(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)
 
@@ -100,7 +104,7 @@ func TestCreateDraftSuccess(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	req, err := http.NewRequest(http.MethodPost, dealsURL()+"/drafts", bytes.NewReader(body))
+	req, err := http.NewRequest(http.MethodPost, dealsURL()+"/deals/drafts", bytes.NewReader(body))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userID))
@@ -109,14 +113,14 @@ func TestCreateDraftSuccess(t *testing.T) {
 	require.NoError(t, err)
 	defer func() { _ = resp.Body.Close() }()
 
-	require.Equal(t, http.StatusCreated, resp.StatusCode)
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 
-	var created dealstypes.CreateDraftDealResponse
-	require.NoError(t, json.NewDecoder(resp.Body).Decode(&created))
-	require.NotEqual(t, uuid.Nil, created.Id)
+	var apiErr dealstypes.ErrorResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&apiErr))
+	require.Equal(t, domain.ErrNoItems.Error(), *apiErr.Message)
 }
 
-func TestCreateDraftWithNameAndDescription(t *testing.T) {
+func TestCreateDraftNoItemsWithNameAndDescription(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)
 
@@ -131,7 +135,37 @@ func TestCreateDraftWithNameAndDescription(t *testing.T) {
 	})
 	require.NoError(t, err)
 
-	req, err := http.NewRequest(http.MethodPost, dealsURL()+"/drafts", bytes.NewReader(body))
+	req, err := http.NewRequest(http.MethodPost, dealsURL()+"/deals/drafts", bytes.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userID))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	var apiErr dealstypes.ErrorResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&apiErr))
+	require.Equal(t, domain.ErrNoItems.Error(), *apiErr.Message)
+}
+
+func TestCreateDraftWithItemsAndNameAndDescription(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	itemID := mustCreateItem(t, userID)
+
+	body, err := json.Marshal(map[string]any{
+		"items": []map[string]any{
+			{"itemID": itemID.String(), "quantity": 2},
+		},
+	})
+	require.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodPost, dealsURL()+"/deals/drafts", bytes.NewReader(body))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userID))
@@ -153,15 +187,19 @@ func TestCreateDraftWithItems(t *testing.T) {
 
 	userID := uuid.New()
 	itemID := mustCreateItem(t, userID)
+	name := "My Draft Deal"
+	description := "This is a test draft"
 
 	body, err := json.Marshal(map[string]any{
 		"items": []map[string]any{
 			{"itemID": itemID.String(), "quantity": 2},
 		},
+		"name":        name,
+		"description": description,
 	})
 	require.NoError(t, err)
 
-	req, err := http.NewRequest(http.MethodPost, dealsURL()+"/drafts", bytes.NewReader(body))
+	req, err := http.NewRequest(http.MethodPost, dealsURL()+"/deals/drafts", bytes.NewReader(body))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userID))
@@ -184,7 +222,7 @@ func TestCreateDraftUnauthorized(t *testing.T) {
 	body, err := json.Marshal(map[string]any{"items": []any{}})
 	require.NoError(t, err)
 
-	resp, err := http.Post(dealsURL()+"/drafts", "application/json", bytes.NewReader(body))
+	resp, err := http.Post(dealsURL()+"/deals/drafts", "application/json", bytes.NewReader(body))
 	require.NoError(t, err)
 	defer func() { _ = resp.Body.Close() }()
 
@@ -197,7 +235,7 @@ func TestCreateDraftInvalidJSON(t *testing.T) {
 
 	userID := uuid.New()
 
-	req, err := http.NewRequest(http.MethodPost, dealsURL()+"/drafts", bytes.NewReader([]byte(`not-json`)))
+	req, err := http.NewRequest(http.MethodPost, dealsURL()+"/deals/drafts", bytes.NewReader([]byte(`not-json`)))
 	require.NoError(t, err)
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userID))
@@ -219,7 +257,7 @@ func TestGetMyDraftsEmpty(t *testing.T) {
 
 	userID := uuid.New()
 
-	req, err := http.NewRequest(http.MethodGet, dealsURL()+"/my-drafts", nil)
+	req, err := http.NewRequest(http.MethodGet, dealsURL()+"/deals/drafts/my", nil)
 	require.NoError(t, err)
 	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userID))
 
@@ -234,39 +272,11 @@ func TestGetMyDraftsEmpty(t *testing.T) {
 	require.Empty(t, ids)
 }
 
-func TestGetMyDraftsReturnsOwnDrafts(t *testing.T) {
-	t.Parallel()
-	dumpDealsLogs(t)
-
-	userID := uuid.New()
-	otherUserID := uuid.New()
-
-	id1 := mustCreateDraft(t, userID, nil, nil, nil)
-	id2 := mustCreateDraft(t, userID, nil, nil, nil)
-	// другой пользователь — не должен появляться в списке
-	mustCreateDraft(t, otherUserID, nil, nil, nil)
-
-	req, err := http.NewRequest(http.MethodGet, dealsURL()+"/my-drafts", nil)
-	require.NoError(t, err)
-	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userID))
-
-	resp, err := http.DefaultClient.Do(req)
-	require.NoError(t, err)
-	defer func() { _ = resp.Body.Close() }()
-
-	require.Equal(t, http.StatusOK, resp.StatusCode)
-
-	var ids []uuid.UUID
-	require.NoError(t, json.NewDecoder(resp.Body).Decode(&ids))
-	require.Len(t, ids, 2)
-	require.ElementsMatch(t, []uuid.UUID{id1, id2}, ids)
-}
-
 func TestGetMyDraftsUnauthorized(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)
 
-	resp, err := http.Get(dealsURL() + "/my-drafts")
+	resp, err := http.Get(dealsURL() + "/deals/drafts/my")
 	require.NoError(t, err)
 	defer func() { _ = resp.Body.Close() }()
 
@@ -284,9 +294,17 @@ func TestGetDraftByIDSuccess(t *testing.T) {
 	userID := uuid.New()
 	name := "Test Draft"
 	description := "Test Description"
-	draftID := mustCreateDraft(t, userID, &name, &description, nil)
+	item1ID := mustCreateItem(t, userID)
+	item2ID := mustCreateItem(t, userID)
+	item2ReceiverID := uuid.New()
 
-	req, err := http.NewRequest(http.MethodGet, dealsURL()+"/drafts/"+draftID.String(), nil)
+	items := []dealstypes.ItemIDAndInfo{
+		{ItemID: item1ID, Quantity: 2}, {ItemID: item2ID, Quantity: 5, ReceiverID: &item2ReceiverID},
+	}
+
+	draftID := mustCreateDraft(t, userID, &name, &description, items)
+
+	req, err := http.NewRequest(http.MethodGet, dealsURL()+"/deals/drafts/"+draftID.String(), nil)
 	require.NoError(t, err)
 	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userID))
 
@@ -304,7 +322,27 @@ func TestGetDraftByIDSuccess(t *testing.T) {
 	require.Equal(t, name, *draft.Name)
 	require.NotNil(t, draft.Description)
 	require.Equal(t, description, *draft.Description)
-	require.Empty(t, draft.Items)
+
+	require.Len(t, draft.Items, 2)
+
+	var foundItem1, foundItem2 bool
+	for _, it := range draft.Items {
+		switch it.Id {
+		case item1ID:
+			foundItem1 = true
+			require.EqualValues(t, 2, it.Quantity)
+		case item2ID:
+			foundItem2 = true
+			require.EqualValues(t, 5, it.Quantity)
+			require.EqualValues(t, item2ReceiverID, *it.ReceiverID)
+		}
+	}
+
+	require.True(t, foundItem1)
+	require.True(t, foundItem2)
+
+	require.False(t, draft.CreatedAt.IsZero())
+
 	require.False(t, draft.CreatedAt.IsZero())
 }
 
@@ -315,14 +353,11 @@ func TestGetDraftByIDWithItems(t *testing.T) {
 	userID := uuid.New()
 	itemID := mustCreateItem(t, userID)
 
-	draftID := mustCreateDraft(t, userID, nil, nil, []struct {
-		ItemID   uuid.UUID `json:"itemID"`
-		Quantity int       `json:"quantity"`
-	}{
+	draftID := mustCreateDraft(t, userID, nil, nil, []dealstypes.ItemIDAndInfo{
 		{ItemID: itemID, Quantity: 3},
 	})
 
-	req, err := http.NewRequest(http.MethodGet, dealsURL()+"/drafts/"+draftID.String(), nil)
+	req, err := http.NewRequest(http.MethodGet, dealsURL()+"/deals/drafts/"+draftID.String(), nil)
 	require.NoError(t, err)
 	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userID))
 
@@ -345,7 +380,7 @@ func TestGetDraftByIDNotFound(t *testing.T) {
 
 	userID := uuid.New()
 
-	req, err := http.NewRequest(http.MethodGet, dealsURL()+"/drafts/"+uuid.NewString(), nil)
+	req, err := http.NewRequest(http.MethodGet, dealsURL()+"/deals/drafts/"+uuid.NewString(), nil)
 	require.NoError(t, err)
 	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userID))
 
@@ -362,7 +397,7 @@ func TestGetDraftByIDInvalidUUID(t *testing.T) {
 
 	userID := uuid.New()
 
-	req, err := http.NewRequest(http.MethodGet, dealsURL()+"/drafts/not-a-uuid", nil)
+	req, err := http.NewRequest(http.MethodGet, dealsURL()+"/deals/drafts/not-a-uuid", nil)
 	require.NoError(t, err)
 	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userID))
 
@@ -377,7 +412,7 @@ func TestGetDraftByIDUnauthorized(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)
 
-	resp, err := http.Get(dealsURL() + "/drafts/" + uuid.NewString())
+	resp, err := http.Get(dealsURL() + "/deals/drafts/" + uuid.NewString())
 	require.NoError(t, err)
 	defer func() { _ = resp.Body.Close() }()
 

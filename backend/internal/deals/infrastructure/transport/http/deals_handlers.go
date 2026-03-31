@@ -56,14 +56,21 @@ func (h *DealsHandlers) CreateDraft(w http.ResponseWriter, r *http.Request) {
 	items := make([]domain.ItemIDsAndInfo, len(req.Items))
 	for i, item := range req.Items {
 		items[i] = domain.ItemIDsAndInfo{
-			ID:         item.ItemID,
-			Quantity:   item.Quantity,
-			ReceiverID: item.ReceiverID,
+			ID: item.ItemID,
+			Info: domain.ItemInfo{
+				Quantity:   item.Quantity,
+				ReceiverID: item.ReceiverID,
+			},
 		}
 	}
 
 	id, err := h.dealsService.CreateDraft(r.Context(), authorID, req.Name, req.Description, items)
 	if err != nil {
+		if errors.Is(err, domain.ErrNoItems) {
+			log.Warn("no items in request")
+			httpx.WriteError(w, http.StatusBadRequest, err)
+			return
+		}
 		log.Error("error creating draft", slog.Any("error", err))
 		httpx.WriteEmptyError(w, http.StatusInternalServerError)
 		return
