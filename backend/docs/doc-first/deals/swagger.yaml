@@ -9,15 +9,15 @@ servers:
 
 paths:
   /deals/drafts:
-    $ref: './paths/deals.yaml#/~1deals~1drafts'
+    $ref: './paths/deals.yaml#/dealsDrafts'
   /deals/drafts/my:
-    $ref: './paths/deals.yaml#/~1deals~1drafts~1my'
+    $ref: './paths/deals.yaml#/dealsDraftsMy'
   /deals/drafts/{draftId}:
-    $ref: './paths/deals.yaml#/~1deals~1drafts~1{draftId}'
+    $ref: './paths/deals.yaml#/dealsDraftsById'
   /deals/drafts/{draftId}/cancel:
-    $ref: './paths/deals.yaml#/~1deals~1drafts~1{draftId}~1cancel'
+    $ref: './paths/deals.yaml#/dealsDraftsCancel'
   /offers:
-    $ref: './paths/offers.yaml#/~1offers'
+    $ref: './paths/offers.yaml#/offers'
 
 components:
   securitySchemes:

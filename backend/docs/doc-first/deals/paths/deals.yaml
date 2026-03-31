@@ -1,4 +1,4 @@
-/deals/drafts:
+dealsDrafts:
   post:
     tags:
       - drafts
@@ -52,7 +52,7 @@
               $ref: '../components/responses.yaml#/ErrorResponse'
 
 
-/deals/drafts/my:
+dealsDraftsMy:
   get:
     tags:
       - drafts
@@ -81,7 +81,7 @@
               $ref: '../components/responses.yaml#/ErrorResponse'
 
 
-/deals/drafts/{draftId}:
+dealsDraftsById:
   get:
     tags:
       - drafts
@@ -182,7 +182,7 @@
               $ref: '../components/responses.yaml#/ErrorResponse'
 
 
-/deals/drafts/{draftId}/cancel:
+dealsDraftsCancel:
   patch:
     tags:
       - drafts
