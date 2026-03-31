@@ -134,6 +134,26 @@ func (s *Service) ConfirmDraft(ctx context.Context, id uuid.UUID, userID uuid.UU
 }
 
 // ================================================================================
+// CANCEL DRAFT
+// ================================================================================
+
+// CancelDraft allows a user to cancel participation in a draft deal.
+//
+// Errors:
+//   - domain.ErrDraftNotFound
+//   - domain.ErrUserNotInDraft
+func (s *Service) CancelDraft(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
+	return db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
+		err := s.draftsRepository.UnconfirmDraftByID(ctx, tx, id, userID)
+		if err != nil {
+			return fmt.Errorf("could not cancel draft: %w", err)
+		}
+
+		return nil
+	})
+}
+
+// ================================================================================
 // HELPER METHODS
 // ================================================================================
 
