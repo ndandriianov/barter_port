@@ -58,15 +58,4 @@ ConfirmDraftDealResponse:
       type: array
       description: Список пользователей, которые подтвердили/не подтвердили свое участие в сделке
       items:
-        type: object
-        required:
-          - userId
-          - confirmed
-        properties:
-          userId:
-            type: string
-            format: uuid
-            description: Уникальный идентификатор пользователя
-          confirmed:
-            type: boolean
-            description: Статус подтверждения участия пользователя в сделке
+        $ref: 'schemas.yaml#/UserConfirm'

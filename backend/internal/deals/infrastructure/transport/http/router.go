@@ -56,6 +56,7 @@ func NewRouter(logg *slog.Logger, validator *validators.LocalJWT, h *OffersHandl
 			r.Post("/drafts", dh.CreateDraft)
 			r.Get("/drafts/my", dh.GetMyDrafts)
 			r.Get("/drafts/{draftId}", dh.GetDraftByID)
+			r.Patch("/drafts/{draftId}", dh.ConfirmDraft)
 		})
 	})
 

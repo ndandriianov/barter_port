@@ -88,13 +88,7 @@ func (e ListOffersParamsSort) Valid() bool {
 // ConfirmDraftDealResponse defines model for ConfirmDraftDealResponse.
 type ConfirmDraftDealResponse struct {
 	// Users Список пользователей, которые подтвердили/не подтвердили свое участие в сделке
-	Users []struct {
-		// Confirmed Статус подтверждения участия пользователя в сделке
-		Confirmed bool `json:"confirmed"`
-
-		// UserId Уникальный идентификатор пользователя
-		UserId openapi_types.UUID `json:"userId"`
-	} `json:"users"`
+	Users []UserConfirm `json:"users"`
 }
 
 // CreateDraftDealRequest defines model for CreateDraftDealRequest.
@@ -256,6 +250,15 @@ type OffersCursor struct {
 	CreatedAt *time.Time         `json:"createdAt,omitempty"`
 	Id        openapi_types.UUID `json:"id"`
 	Views     *int64             `json:"views,omitempty"`
+}
+
+// UserConfirm defines model for UserConfirm.
+type UserConfirm struct {
+	// Confirmed Статус подтверждения участия пользователя в сделке
+	Confirmed bool `json:"confirmed"`
+
+	// UserId Уникальный идентификатор пользователя
+	UserId openapi_types.UUID `json:"userId"`
 }
 
 // CursorCreatedAt defines model for CursorCreatedAt.

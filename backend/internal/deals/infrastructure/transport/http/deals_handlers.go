@@ -139,3 +139,62 @@ func (h *DealsHandlers) GetDraftByID(w http.ResponseWriter, r *http.Request) {
 
 	httpx.WriteJSON(w, http.StatusOK, draft.ToDTO())
 }
+
+// ================================================================================
+// CONFIRM DRAFT
+// ================================================================================
+
+func (h *DealsHandlers) ConfirmDraft(w http.ResponseWriter, r *http.Request) {
+	log := logger.LogFrom(r.Context(), h.log).With(slog.String("handler", "ConfirmDraft"))
+	log.Info("handling confirm draft request")
+
+	idStr := chi.URLParam(r, "draftId")
+	if idStr == "" {
+		log.Error("draftId is required")
+		httpx.WriteEmptyError(w, http.StatusBadRequest)
+		return
+	}
+
+	draftID, err := uuid.Parse(idStr)
+	if err != nil {
+		log.Error("error parsing draft id", slog.Any("error", err))
+		httpx.WriteEmptyError(w, http.StatusBadRequest)
+		return
+	}
+
+	userID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		log.Error("failed to get userID from context")
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
+	users, err := h.dealsService.ConfirmDraft(r.Context(), draftID, userID)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrDraftNotFound):
+			log.Info("draft not found", slog.String("draftId", idStr))
+			httpx.WriteEmptyError(w, http.StatusNotFound)
+			return
+		case errors.Is(err, domain.ErrUserNotInDraft):
+			log.Info("user is not in draft", slog.String("draftId", idStr), slog.String("userID", userID.String()))
+			httpx.WriteEmptyError(w, http.StatusForbidden)
+			return
+		default:
+			log.Error("error confirming draft", slog.Any("error", err))
+			httpx.WriteEmptyError(w, http.StatusInternalServerError)
+			return
+		}
+	}
+
+	respUsers := make([]types.UserConfirm, 0, len(users))
+
+	for _, user := range users {
+		respUsers = append(respUsers, types.UserConfirm{
+			Confirmed: user.Confirmed,
+			UserId:    user.UserID,
+		})
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, types.ConfirmDraftDealResponse{Users: respUsers})
+}
