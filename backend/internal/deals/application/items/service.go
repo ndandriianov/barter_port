@@ -2,6 +2,7 @@ package items
 
 import (
 	"barter-port/internal/deals/domain"
+	offersrep "barter-port/internal/deals/infrastructure/repository/offers"
 	"barter-port/pkg/logger"
 	"fmt"
 	"log/slog"
@@ -11,32 +12,16 @@ import (
 	"golang.org/x/net/context"
 )
 
-type Repository interface {
-	AddItem(ctx context.Context, item domain.Offer) error
-
-	GetItemsOrderByTime(
-		ctx context.Context,
-		cursor *domain.TimeCursor,
-		limit int,
-	) ([]domain.Offer, *domain.TimeCursor, error)
-
-	GetItemsOrderByPopularity(
-		ctx context.Context,
-		cursor *domain.PopularityCursor,
-		limit int,
-	) ([]domain.Offer, *domain.PopularityCursor, error)
-}
-
 type Service struct {
-	repo           Repository
+	repo           *offersrep.Repository
 	fallbackLogger *slog.Logger
 }
 
-func NewItemService(itemRepository Repository, fallbackLogger *slog.Logger) *Service {
-	return &Service{repo: itemRepository, fallbackLogger: fallbackLogger}
+func NewItemService(offerRepository *offersrep.Repository, fallbackLogger *slog.Logger) *Service {
+	return &Service{repo: offerRepository, fallbackLogger: fallbackLogger}
 }
 
-func (s *Service) CreateItem(
+func (s *Service) CreateOffer(
 	ctx context.Context,
 	userID uuid.UUID,
 	name string,
@@ -59,7 +44,7 @@ func (s *Service) CreateItem(
 		Views:       0,
 	}
 
-	err := s.repo.AddItem(ctx, item)
+	err := s.repo.AddOffer(ctx, item)
 	if err != nil {
 		return nil, err
 	}
@@ -67,11 +52,11 @@ func (s *Service) CreateItem(
 	return &item, nil
 }
 
-// GetItems retrieves items based on the provided query parameters.
+// GetOffers retrieves items based on the provided query parameters.
 // It supports pagination through the nextCursor and limit parameters, and sorting based on the sortType.
 //
 // Errors: only internal
-func (s *Service) GetItems(
+func (s *Service) GetOffers(
 	ctx context.Context,
 	sortType domain.SortType,
 	cursor *domain.UniversalCursor,
@@ -92,7 +77,7 @@ func (s *Service) GetItems(
 			log.Debug("time cursor is not specified, starting from the beginning", slog.Any("error", err))
 		}
 
-		items, newCursor, err := s.repo.GetItemsOrderByTime(ctx, timeCursor, limit)
+		offers, newCursor, err := s.repo.GetOffersOrderByTime(ctx, timeCursor, limit)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -102,7 +87,7 @@ func (s *Service) GetItems(
 			universalCursor = newCursor.ToUniversalCursor()
 		}
 
-		return items, universalCursor, nil
+		return offers, universalCursor, nil
 
 	case domain.ByPopularity:
 		var popularityCursor *domain.PopularityCursor
@@ -115,7 +100,7 @@ func (s *Service) GetItems(
 			log.Debug("popularity cursor is not specified, starting from the beginning", slog.Any("error", err))
 		}
 
-		items, newCursor, err := s.repo.GetItemsOrderByPopularity(ctx, popularityCursor, limit)
+		offers, newCursor, err := s.repo.GetItemsOrderByPopularity(ctx, popularityCursor, limit)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -125,7 +110,7 @@ func (s *Service) GetItems(
 			universalCursor = newCursor.ToUniversalCursor()
 		}
 
-		return items, universalCursor, nil
+		return offers, universalCursor, nil
 
 	default:
 		return nil, nil, fmt.Errorf("invalid sort type: %v", sortType)

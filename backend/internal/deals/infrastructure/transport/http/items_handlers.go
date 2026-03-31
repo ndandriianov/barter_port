@@ -2,39 +2,32 @@ package http
 
 import (
 	"barter-port/contracts/openapi/deals/types"
+	"barter-port/internal/deals/application/items"
 	"barter-port/internal/deals/domain"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/httpx"
 	"barter-port/pkg/logger"
-	"context"
 	"errors"
 	"log/slog"
 	"net/http"
 	"strconv"
-
-	"github.com/google/uuid"
 )
 
-type itemService interface {
-	CreateItem(ctx context.Context, userID uuid.UUID, name string, itemType domain.ItemType, action domain.OfferAction, description string) (*domain.Offer, error)
-	GetItems(ctx context.Context, sortType domain.SortType, cursor *domain.UniversalCursor, limit int) ([]domain.Offer, *domain.UniversalCursor, error)
-}
-
 type ItemsHandlers struct {
-	itemService itemService
+	offerService *items.Service
 }
 
-func NewHandlers(itemService itemService) *ItemsHandlers {
-	return &ItemsHandlers{itemService: itemService}
+func NewHandlers(offerService *items.Service) *ItemsHandlers {
+	return &ItemsHandlers{offerService: offerService}
 }
 
 // ================================================================================
-// CREATE ITEM
+// CREATE OFFER
 // ================================================================================
 
-func (h *ItemsHandlers) HandleCreateItem(w http.ResponseWriter, r *http.Request) {
+func (h *ItemsHandlers) HandleCreateOffer(w http.ResponseWriter, r *http.Request) {
 	log := logger.LogFrom(r.Context(), slog.Default())
-	log.Info("handling register request")
+	log.Info("handling create offer request")
 
 	var req types.CreateOfferRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
@@ -44,7 +37,7 @@ func (h *ItemsHandlers) HandleCreateItem(w http.ResponseWriter, r *http.Request)
 	}
 
 	log = log.With(slog.Any("request", req))
-	log.Debug("decoded create item request")
+	log.Debug("decoded create offer request")
 
 	itemType, err := domain.ItemTypeString(string(req.Type))
 	if err != nil {
@@ -55,8 +48,8 @@ func (h *ItemsHandlers) HandleCreateItem(w http.ResponseWriter, r *http.Request)
 
 	action, err := domain.OfferActionString(string(req.Action))
 	if err != nil {
-		log.Error("invalid item action", slog.String("action", string(req.Action)), slog.Any("error", err))
-		httpx.WriteErrorStr(w, http.StatusBadRequest, "invalid item action")
+		log.Error("invalid offer action", slog.String("action", string(req.Action)), slog.Any("error", err))
+		httpx.WriteErrorStr(w, http.StatusBadRequest, "invalid offer action")
 		return
 	}
 
@@ -67,26 +60,26 @@ func (h *ItemsHandlers) HandleCreateItem(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	item, err := h.itemService.CreateItem(r.Context(), userID, req.Name, itemType, action, req.Description)
+	offer, err := h.offerService.CreateOffer(r.Context(), userID, req.Name, itemType, action, req.Description)
 	if err != nil {
 		if errors.Is(err, domain.ErrInvalidItemName) {
-			log.Warn("invalid item name", slog.Any("error", err))
+			log.Warn("invalid offer name", slog.Any("error", err))
 			httpx.WriteError(w, http.StatusBadRequest, domain.ErrInvalidItemName)
 			return
 		}
-		log.Error("failed to create item", slog.Any("error", err))
+		log.Error("failed to create offer", slog.Any("error", err))
 		httpx.WriteEmptyError(w, http.StatusInternalServerError)
 		return
 	}
 
-	httpx.WriteJSON(w, http.StatusCreated, item.ToDto())
+	httpx.WriteJSON(w, http.StatusCreated, offer.ToDto())
 }
 
 // ================================================================================
-// GET ITEMS
+// GET OFFERS
 // ================================================================================
 
-func (h *ItemsHandlers) HandleGetItems(w http.ResponseWriter, r *http.Request) {
+func (h *ItemsHandlers) HandleGetOffers(w http.ResponseWriter, r *http.Request) {
 	log := logger.LogFrom(r.Context(), slog.Default())
 
 	// Parse query parameters
@@ -103,7 +96,7 @@ func (h *ItemsHandlers) HandleGetItems(w http.ResponseWriter, r *http.Request) {
 		slog.String("idStr", idStr),
 		slog.String("limitStr", limitStr),
 	)
-	log.Info("handling get items request")
+	log.Info("handling get offers request")
 
 	sortType, err := domain.SortTypeString(sortTypeStr)
 	if err != nil {
@@ -114,7 +107,7 @@ func (h *ItemsHandlers) HandleGetItems(w http.ResponseWriter, r *http.Request) {
 
 	cursor, err := domain.NewUniversalCursor(createdAtStr, viewsStr, idStr)
 	if err != nil {
-		log.Error("failed to create items cursor", slog.Any("error", err))
+		log.Error("failed to create offers cursor", slog.Any("error", err))
 		cursor = nil
 	}
 
@@ -126,17 +119,17 @@ func (h *ItemsHandlers) HandleGetItems(w http.ResponseWriter, r *http.Request) {
 
 	log.Debug("parsing finished", slog.Any("cursor", cursor), slog.Int("limit", limit))
 
-	// Fetch items from the service
-	items, nextCursor, err := h.itemService.GetItems(r.Context(), sortType, cursor, limit)
+	// Fetch offers from the service
+	offers, nextCursor, err := h.offerService.GetOffers(r.Context(), sortType, cursor, limit)
 	if err != nil {
 		log.Error("failed to get items", slog.Any("error", err))
 		httpx.WriteEmptyError(w, http.StatusInternalServerError)
 		return
 	}
 
-	respItems := make([]types.Offer, len(items))
-	for i, item := range items {
-		respItems[i] = item.ToDto()
+	respOffers := make([]types.Offer, len(offers))
+	for i, offer := range offers {
+		respOffers[i] = offer.ToDto()
 	}
 
 	var respCursor *types.OffersCursor
@@ -145,7 +138,7 @@ func (h *ItemsHandlers) HandleGetItems(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpx.WriteJSON(w, http.StatusOK, types.ListOffersResponse{
-		Offers:     respItems,
+		Offers:     respOffers,
 		NextCursor: respCursor,
 	})
 }

@@ -51,13 +51,13 @@ func NewUniversalCursor(createdAtStr, viewsStr, idStr string) (*UniversalCursor,
 	}, nil
 }
 
-func (c *UniversalCursor) ToDto() types.ItemsCursor {
+func (c *UniversalCursor) ToDto() types.OffersCursor {
 	var views *int64
 	if c.Views != nil {
 		views = new(int64(*c.Views))
 	}
 
-	return types.ItemsCursor{
+	return types.OffersCursor{
 		CreatedAt: c.CreatedAt,
 		Id:        openapitypes.UUID{},
 		Views:     views,
