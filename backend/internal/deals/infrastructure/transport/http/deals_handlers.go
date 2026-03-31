@@ -53,13 +53,12 @@ func (h *DealsHandlers) CreateDraft(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	items := make([]domain.ItemIDsAndInfo, len(req.Items))
+	items := make([]domain.OfferIDAndInfo, len(req.Items))
 	for i, item := range req.Items {
-		items[i] = domain.ItemIDsAndInfo{
+		items[i] = domain.OfferIDAndInfo{
 			ID: item.ItemID,
-			Info: domain.ItemInfo{
-				Quantity:   item.Quantity,
-				ReceiverID: item.ReceiverID,
+			Info: domain.OfferInfo{
+				Quantity: item.Quantity,
 			},
 		}
 	}
