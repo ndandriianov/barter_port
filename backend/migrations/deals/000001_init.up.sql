@@ -1,4 +1,4 @@
-CREATE TABLE items
+CREATE TABLE offers
 (
     id          UUID PRIMARY KEY,
     author_id   UUID        NOT NULL,
@@ -10,8 +10,8 @@ CREATE TABLE items
     updated_at  TIMESTAMPTZ,
     views       INTEGER     NOT NULL DEFAULT 0,
 
-    CONSTRAINT items_type_check CHECK (type IN ('good', 'service')),
-    CONSTRAINT items_action_check CHECK (action IN ('give', 'take'))
+    CONSTRAINT offers_type_check CHECK (type IN ('good', 'service')),
+    CONSTRAINT offers_action_check CHECK (action IN ('give', 'take'))
 );
 
 CREATE TABLE draft_deals
@@ -24,15 +24,39 @@ CREATE TABLE draft_deals
     updated_at  TIMESTAMPTZ
 );
 
-CREATE TABLE draft_deal_items
+CREATE TABLE draft_deal_offers
 (
     draft_deal_id UUID    NOT NULL,
-    item_id       UUID    NOT NULL,
+    offer_id      UUID    NOT NULL,
     quantity      INTEGER NOT NULL,
     confirmed     BOOLEAN NOT NULL DEFAULT FALSE,
-    receiver_id   UUID,
 
     FOREIGN KEY (draft_deal_id) REFERENCES draft_deals (id) ON DELETE CASCADE,
-    FOREIGN KEY (item_id) REFERENCES items (id) ON DELETE CASCADE,
-    PRIMARY KEY (draft_deal_id, item_id)
+    FOREIGN KEY (offer_id) REFERENCES offers (id) ON DELETE CASCADE,
+    PRIMARY KEY (draft_deal_id, offer_id)
 );
+
+CREATE TABLE deals
+(
+    id          UUID PRIMARY KEY     DEFAULT gen_random_uuid(),
+    name        TEXT,
+    description TEXT,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at  TIMESTAMPTZ
+);
+
+CREATE TABLE items
+(
+    id          UUID PRIMARY KEY     DEFAULT gen_random_uuid(),
+    deal_id     UUID        NOT NULL,
+    author_id   UUID        NOT NULL,
+    receiver_id UUID        NOT NULL,
+    name        TEXT,
+    description TEXT,
+    action      TEXT        NOT NULL,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at  TIMESTAMPTZ,
+
+    CONSTRAINT items_action_check CHECK (action IN ('give', 'take')),
+    FOREIGN KEY (deal_id) REFERENCES deals (id) ON DELETE CASCADE
+)
