@@ -118,6 +118,27 @@ type CreateOfferRequest struct {
 	Type ItemType `json:"type"`
 }
 
+// Deal defines model for Deal.
+type Deal struct {
+	// CreatedAt Временная метка создания сделки
+	CreatedAt time.Time `json:"createdAt"`
+
+	// Description Описание сделки
+	Description *string `json:"description,omitempty"`
+
+	// Id Уникальный идентификатор сделки
+	Id openapi_types.UUID `json:"id"`
+
+	// Items Список позиций сделки
+	Items []Item `json:"items"`
+
+	// Name Название сделки
+	Name *string `json:"name,omitempty"`
+
+	// UpdatedAt Временная метка последнего обновления сделки
+	UpdatedAt *time.Time `json:"updatedAt,omitempty"`
+}
+
 // Draft defines model for Draft.
 type Draft struct {
 	// AuthorId The unique identifier of the user who created the draft deal
@@ -147,9 +168,41 @@ type ErrorResponse struct {
 	Message *string `json:"message,omitempty"`
 }
 
+// GetDealsResponse defines model for GetDealsResponse.
+type GetDealsResponse struct {
+	Data *[]openapi_types.UUID `json:"data,omitempty"`
+}
+
 // GetMyDraftDealsResponse defines model for GetMyDraftDealsResponse.
 type GetMyDraftDealsResponse struct {
 	Data *[]openapi_types.UUID `json:"data,omitempty"`
+}
+
+// Item defines model for Item.
+type Item struct {
+	// AuthorId Уникальный идентификатор пользователя, который предложил эту позицию в сделке
+	AuthorId openapi_types.UUID `json:"authorId"`
+
+	// Description Подробное описание позиции сделки
+	Description string `json:"description"`
+
+	// Id Уникальный идентификатор позиции сделки
+	Id openapi_types.UUID `json:"id"`
+
+	// Name Краткое название позиции сделки
+	Name string `json:"name"`
+
+	// ProviderId Уникальный идентификатор пользователя, который отдает эту позицию в сделке
+	ProviderId *openapi_types.UUID `json:"providerId,omitempty"`
+
+	// ReceiverId Уникальный идентификатор пользователя, который получает эту позицию в сделке
+	ReceiverId *openapi_types.UUID `json:"receiverId,omitempty"`
+
+	// Type Type of barter item
+	Type ItemType `json:"type"`
+
+	// UpdatedAt Временная метка последнего обновления позиции сделки
+	UpdatedAt *time.Time `json:"updatedAt,omitempty"`
 }
 
 // ItemType Type of barter item
@@ -275,6 +328,15 @@ type Limit = int
 
 // SortType defines model for SortType.
 type SortType string
+
+// GetDealsParams defines parameters for GetDeals.
+type GetDealsParams struct {
+	// My False by default. Если true, возвращает только сделки, в которых текущий пользователь является участником
+	My *bool `form:"my,omitempty" json:"my,omitempty"`
+
+	// Open False by default. Если true, возвращает только открытые сделки
+	Open *bool `form:"open,omitempty" json:"open,omitempty"`
+}
 
 // ListOffersParams defines parameters for ListOffers.
 type ListOffersParams struct {
