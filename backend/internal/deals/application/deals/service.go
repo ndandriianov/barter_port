@@ -154,6 +154,33 @@ func (s *Service) CancelDraft(ctx context.Context, id uuid.UUID, userID uuid.UUI
 }
 
 // ================================================================================
+// GET DEALS
+// ================================================================================
+
+// GetDeals returns deal IDs. If my is true, filters to only deals the user participates in.
+//
+// No domain errors.
+func (s *Service) GetDeals(ctx context.Context, userID uuid.UUID, my bool) ([]uuid.UUID, error) {
+	var filterUserID *uuid.UUID
+	if my {
+		filterUserID = &userID
+	}
+	return s.dealsRepository.GetDealIDs(ctx, s.db, filterUserID)
+}
+
+// ================================================================================
+// GET DEAL BY ID
+// ================================================================================
+
+// GetDealByID returns a deal by its ID.
+//
+// Domain errors:
+//   - domain.ErrDealNotFound: if no deal with the specified ID exists.
+func (s *Service) GetDealByID(ctx context.Context, id uuid.UUID) (domain.Deal, error) {
+	return s.dealsRepository.GetDealByID(ctx, s.db, id)
+}
+
+// ================================================================================
 // HELPER METHODS
 // ================================================================================
 
