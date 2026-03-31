@@ -1,0 +1,238 @@
+/deals/drafts:
+  post:
+    tags:
+      - drafts
+    summary: Создать новый черновой договор из объявлений
+    description: |
+      Для каждого объявления, которое должно войти в черновой договор необходимо указать список из:
+      
+      - `offerID` id объявления, которое должно войти в черновой договор.
+      - `quantity` количество единиц товара из объявления, которое должно войти в черновой договор.
+      
+      В ответе придет созданный черновой договор с его `id`, который можно будет использовать для дальнейших действий
+    operationId: createDraftDeal
+    security:
+      - bearerAuth: [ ]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/requests.yaml#/CreateDraftDealRequest'
+    responses:
+      '201':
+        description: Draft deal created
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/CreateDraftDealResponse'
+      '400':
+        description: Invalid request body
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: One or more items not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+/deals/drafts/my:
+  get:
+    tags:
+      - drafts
+    summary: Получить ID всех черновых договоров, созданных текущим пользователем
+    operationId: getMyDraftDeals
+    security:
+      - bearerAuth: [ ]
+    responses:
+      '200':
+        description: OK
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/GetMyDraftDealsResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+/deals/drafts/{draftId}:
+  get:
+    tags:
+      - drafts
+    summary: Получить черновой договор по его ID
+    operationId: getDraftDealById
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - name: draftId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: OK
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Draft'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Draft deal not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+  patch:
+    tags:
+      - drafts
+    summary: Подтвердить участие в сделке
+    description: |
+      Подтверждает участие текущего пользователя в сделке.
+      После того, как все участники черновика подтвердят свое участие, создается сделка,
+      используемые в ней items превращаются в сущность item сделки, а не просто объявления.
+      
+      Запрос идемпотентный.
+    operationId: confirmDraftDeal
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - name: draftId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: OK
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ConfirmDraftDealResponse'
+      '400':
+        description: Invalid request
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: Forbidden. User is not a participant of the draft deal'
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Draft deal not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+/deals/drafts/{draftId}/cancel:
+  patch:
+    tags:
+      - drafts
+    summary: Отменить участие в сделке
+    description: |
+      Отменяет участие текущего пользователя в сделке.
+      После того, как один из участников черновика отменит свое участие, черновой договор удаляется,
+      а его участники получают нотификацию об отмене сделки.
+      
+      Запрос идемпотентный. Возможен только на стадии черновика, после создания сделки отменить участие нельзя.
+    operationId: cancelDraftDeal
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - name: draftId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: OK
+      '400':
+        description: Invalid request
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: Forbidden. User is not a participant of the draft deal'
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Draft deal not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
