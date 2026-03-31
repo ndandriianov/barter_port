@@ -1,0 +1,45 @@
+deals:
+  get:
+    tags:
+      - Deals
+    summary: Получить все сделки
+    description: |
+      Получить все сделки.
+      
+      - Если указать параметр my=true, то будут возвращены только сделки, в которых текущий пользователь является участником.
+      - Если указать параметр open=true, то будут возвращены только открытые сделки
+    operationId: getDeals
+    parameters:
+      - name: my
+        in: query
+        description: False by default. Если true, возвращает только сделки, в которых текущий пользователь является участником
+        required: false
+        schema:
+          type: boolean
+      - name: open
+        in: query
+        description: False by default. Если true, возвращает только открытые сделки
+        required: false
+        schema:
+          type: boolean
+    security:
+      - bearerAuth: [ ]
+    responses:
+      '200':
+        description: OK
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/GetDealsResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
