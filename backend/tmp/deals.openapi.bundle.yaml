@@ -387,14 +387,14 @@ components:
       type: string
       description: Type of barter item
       enum:
-        - itemTypeGood
-        - itemTypeService
+        - good
+        - service
     OfferAction:
       type: string
       description: Whether the user offers or requests something
       enum:
-        - offerActionGive
-        - offerActionTake
+        - give
+        - take
     Offer:
       type: object
       required:

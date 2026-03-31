@@ -1,6 +1,6 @@
 package enums
 
-//go:generate enumer -type=ItemType -json -text -sql -transform=lower
+//go:generate enumer -type=ItemType -json -text -sql -transform=lower -trimprefix=ItemType
 type ItemType int
 
 const (
@@ -8,7 +8,7 @@ const (
 	ItemTypeService
 )
 
-//go:generate enumer -type=OfferAction -json -text -sql -transform=lower
+//go:generate enumer -type=OfferAction -json -text -sql -transform=lower -trimprefix=OfferAction
 type OfferAction int
 
 const (
@@ -16,7 +16,7 @@ const (
 	OfferActionTake
 )
 
-//go:generate enumer -type=SortType -json -text -sql
+//go:generate enumer -type=SortType -json -text -sql -trimprefix=SortType
 type SortType int
 
 const (

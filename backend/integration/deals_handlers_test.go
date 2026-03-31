@@ -33,8 +33,8 @@ func mustCreateOffer(t *testing.T, userID uuid.UUID) uuid.UUID {
 	body, err := json.Marshal(dealstypes.CreateOfferRequest{
 		Name:        fmt.Sprintf("offer-%d", time.Now().UnixNano()),
 		Description: "test offer",
-		Type:        dealstypes.ItemTypeGood,
-		Action:      dealstypes.OfferActionGive,
+		Type:        dealstypes.Good,
+		Action:      dealstypes.Give,
 	})
 	require.NoError(t, err)
 
