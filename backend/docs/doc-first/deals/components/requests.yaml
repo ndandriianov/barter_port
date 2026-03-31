@@ -7,12 +7,12 @@ CreateDraftDealRequest:
     description:
       type: string
       description: An optional description for the draft deal
-    items:
+    offers:
       type: array
       items:
-        $ref: 'schemas.yaml#/ItemIDAndInfo'
+        $ref: 'schemas.yaml#/OfferIDAndQuantity'
   required:
-    - items
+    - offers
 
 
 

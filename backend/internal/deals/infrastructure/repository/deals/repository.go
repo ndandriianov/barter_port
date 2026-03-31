@@ -174,7 +174,7 @@ func (r *Repository) GetDraftByID(ctx context.Context, exec db.DB, id uuid.UUID)
 			return domain.Draft{}, fmt.Errorf("item type: %w", err)
 		}
 
-		itemActionValue, err := domain.OfferActionString(*offerAction)
+		offerActionValue, err := domain.OfferActionString(*offerAction)
 		if err != nil {
 			return domain.Draft{}, fmt.Errorf("item action: %w", err)
 		}
@@ -185,7 +185,7 @@ func (r *Repository) GetDraftByID(ctx context.Context, exec db.DB, id uuid.UUID)
 				AuthorId:    *offerAuthorID,
 				Name:        *offerName,
 				Type:        itemTypeValue,
-				Action:      itemActionValue,
+				Action:      offerActionValue,
 				Description: *offerDescription,
 				CreatedAt:   *offerCreatedAt,
 				Views:       *offerViews,

@@ -2,7 +2,7 @@ package main
 
 import (
 	dealssvc "barter-port/internal/deals/application/deals"
-	"barter-port/internal/deals/application/items"
+	"barter-port/internal/deals/application/offers"
 	dealsrepo "barter-port/internal/deals/infrastructure/repository/deals"
 	offersr "barter-port/internal/deals/infrastructure/repository/offers"
 	transporthttp "barter-port/internal/deals/infrastructure/transport/http"
@@ -39,7 +39,7 @@ func main() {
 	logg := logger.NewJSONLogger(slog.LevelDebug, "deals-service", "")
 
 	offersRepo := offersr.NewRepository(db)
-	offersService := items.NewItemService(offersRepo, logg)
+	offersService := offers.NewService(offersRepo, logg)
 
 	dealsRepo := dealsrepo.NewRepository()
 	dealsService := dealssvc.NewService(db, dealsRepo)

@@ -47,8 +47,8 @@ func (i *Offer) ToDto() types.Offer {
 	}
 }
 
-func (i *Offer) ToDTOWithInfo(info OfferInfo) types.ItemWithInfo {
-	return types.ItemWithInfo{
+func (i *Offer) ToDTOWithInfo(info OfferInfo) types.OfferWithInfo {
+	return types.OfferWithInfo{
 		Action:      types.OfferAction(i.Action.String()),
 		AuthorId:    i.AuthorId,
 		CreatedAt:   i.CreatedAt,

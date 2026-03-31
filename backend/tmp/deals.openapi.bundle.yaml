@@ -14,7 +14,7 @@ paths:
       description: |
         Для каждого объявления, которое должно войти в черновой договор необходимо указать список из:
 
-        - `itemID` id объявления, которое должно войти в черновой договор.
+        - `offerID` id объявления, которое должно войти в черновой договор.
         - `quantity` количество единиц товара из объявления, которое должно войти в черновой договор.
 
         В ответе придет созданный черновой договор с его `id`, который можно будет использовать для дальнейших действий
@@ -319,32 +319,19 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
-    ItemInfo:
+    OfferIDAndQuantity:
       type: object
       required:
+        - offerID
         - quantity
       properties:
-        quantity:
-          type: integer
-          description: The quantity of the item to include in the draft deal
-        receiverID:
+        offerID:
           type: string
           format: uuid
-          description: |
-            The ID of the user who will receive this item in the deal.
-            If not provided, it is assumed that the item is offered by the current user
-            and any of other participants may choose to be a receiver.
-    ItemIDAndInfo:
-      allOf:
-        - type: object
-          required:
-            - itemID
-          properties:
-            itemID:
-              type: string
-              format: uuid
-              description: The ID of the item to include in the draft deal
-        - $ref: '#/components/schemas/ItemInfo'
+          description: The ID of the offer to include in the draft deal
+        quantity:
+          type: integer
+          description: The quantity of the offer to include in the draft deal
     CreateDraftDealRequest:
       type: object
       properties:
@@ -354,12 +341,12 @@ components:
         description:
           type: string
           description: An optional description for the draft deal
-        items:
+        offers:
           type: array
           items:
-            $ref: '#/components/schemas/ItemIDAndInfo'
+            $ref: '#/components/schemas/OfferIDAndQuantity'
       required:
-        - items
+        - offers
     CreateDraftDealResponse:
       type: object
       required:
@@ -439,17 +426,28 @@ components:
           format: date-time
           description: Item creation timestamp
           example: '2026-03-04T12:00:00Z'
-    ItemWithInfo:
+    OfferInfo:
+      type: object
+      required:
+        - quantity
+      properties:
+        quantity:
+          type: integer
+          description: The quantity of the offer to include in the draft deal
+        confirmed:
+          type: boolean
+          description: Whether the offer has been confirmed for the draft deal.
+    OfferWithInfo:
       allOf:
         - $ref: '#/components/schemas/Offer'
-        - $ref: '#/components/schemas/ItemInfo'
+        - $ref: '#/components/schemas/OfferInfo'
     Draft:
       type: object
       required:
         - id
         - authorId
         - createdAt
-        - items
+        - offers
       properties:
         id:
           type: string
@@ -473,11 +471,11 @@ components:
           type: string
           format: date-time
           description: The timestamp when the draft deal was last updated
-        items:
+        offers:
           type: array
-          description: A list of items included in the draft deal
+          description: A list of offers included in the draft deal
           items:
-            $ref: '#/components/schemas/ItemWithInfo'
+            $ref: '#/components/schemas/OfferWithInfo'
     ConfirmDraftDealResponse:
       type: object
       required:

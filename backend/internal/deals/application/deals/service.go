@@ -27,24 +27,24 @@ func NewService(db *pgxpool.Pool, repo *deals.Repository) *Service {
 // CreateDraft inserts a new draft deal into the database and returns its ID.
 //
 // Errors:
-//   - domain.ErrNoItems: if the items list is empty.
+//   - domain.ErrNoOffers: if the items list is empty.
 func (s *Service) CreateDraft(
 	ctx context.Context,
 	authorID uuid.UUID,
 	name *string,
 	description *string,
-	items []domain.OfferIDAndInfo,
+	offers []domain.OfferIDAndInfo,
 ) (uuid.UUID, error) {
 	var id uuid.UUID
 	var err error
 
 	txErr := db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
-		if len(items) == 0 {
-			return domain.ErrNoItems
+		if len(offers) == 0 {
+			return domain.ErrNoOffers
 		}
-		// TODO: проверить items
+		// TODO: проверить offers
 
-		id, err = s.dealsRepository.CreateDraft(ctx, tx, authorID, name, description, items)
+		id, err = s.dealsRepository.CreateDraft(ctx, tx, authorID, name, description, offers)
 		return err
 	})
 
