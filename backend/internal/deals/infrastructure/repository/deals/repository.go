@@ -45,11 +45,11 @@ func (r *Repository) CreateDraft(
 	}
 
 	dealsItemsQuery := `
-		INSERT INTO draft_deal_items (draft_deal_id, item_id, quantity, receiver_id)
-		VALUES ($1, $2, $3, $4);`
+		INSERT INTO draft_deal_offers (draft_deal_id, offer_id, quantity)
+		VALUES ($1, $2, $3);`
 
 	for _, item := range items {
-		_, err = tx.Exec(ctx, dealsItemsQuery, id, item.ID, item.Info.Quantity, item.Info.ReceiverID)
+		_, err = tx.Exec(ctx, dealsItemsQuery, id, item.ID, item.Info.Quantity)
 		if err != nil {
 			return uuid.Nil, fmt.Errorf("sql: deals items: %w, itemID: %s", err, item.ID)
 		}
@@ -110,11 +110,10 @@ func (r *Repository) GetDraftByID(ctx context.Context, exec db.DB, id uuid.UUID)
 		       i.description,
 		       i.created_at,
 		       i.views,
-		       ddi.quantity,
-		       ddi.receiver_id
+		       ddi.quantity
 		FROM draft_deals d
-		LEFT JOIN draft_deal_items ddi ON ddi.draft_deal_id = d.id
-		LEFT JOIN items i ON i.id = ddi.item_id
+		LEFT JOIN draft_deal_offers ddi ON ddi.draft_deal_id = d.id
+		LEFT JOIN offers i ON i.id = ddi.offer_id
 		WHERE d.id = $1;`
 
 	rows, err := exec.Query(ctx, query, id)
@@ -136,7 +135,6 @@ func (r *Repository) GetDraftByID(ctx context.Context, exec db.DB, id uuid.UUID)
 		var itemCreatedAt *time.Time
 		var itemViews *int
 		var itemQuantity *int
-		var itemReceiverID *uuid.UUID
 
 		if err = rows.Scan(
 			&draft.ID,
@@ -154,7 +152,6 @@ func (r *Repository) GetDraftByID(ctx context.Context, exec db.DB, id uuid.UUID)
 			&itemCreatedAt,
 			&itemViews,
 			&itemQuantity,
-			&itemReceiverID,
 		); err != nil {
 			return domain.Draft{}, fmt.Errorf("scan draft item: %w", err)
 		}
@@ -191,8 +188,7 @@ func (r *Repository) GetDraftByID(ctx context.Context, exec db.DB, id uuid.UUID)
 				Views:       *itemViews,
 			},
 			Info: domain.ItemInfo{
-				Quantity:   *itemQuantity,
-				ReceiverID: itemReceiverID,
+				Quantity: *itemQuantity,
 			},
 		})
 	}
