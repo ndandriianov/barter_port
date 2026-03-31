@@ -165,3 +165,77 @@ UserConfirm:
     confirmed:
       type: boolean
       description: Статус подтверждения участия пользователя в сделке
+
+
+
+Deal:
+  type: object
+  required:
+    - id
+    - createdAt
+    - items
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор сделки
+    name:
+      type: string
+      description: Название сделки
+    description:
+      type: string
+      description: Описание сделки
+    createdAt:
+      type: string
+      format: date-time
+      description: Временная метка создания сделки
+    updatedAt:
+      type: string
+      format: date-time
+      description: Временная метка последнего обновления сделки
+    items:
+      type: array
+      description: Список позиций сделки
+      items:
+        $ref: '#/Item'
+
+
+Item:
+    type: object
+    required:
+      - id
+      - authorId
+      - name
+      - description
+      - type
+    properties:
+      id:
+        type: string
+        format: uuid
+        description: Уникальный идентификатор позиции сделки
+      authorId:
+        type: string
+        format: uuid
+        description: Уникальный идентификатор пользователя, который предложил эту позицию в сделке
+      providerId:
+        type: string
+        format: uuid
+        description: Уникальный идентификатор пользователя, который отдает эту позицию в сделке
+      receiverId:
+        type: string
+        format: uuid
+        description: Уникальный идентификатор пользователя, который получает эту позицию в сделке
+      name:
+        type: string
+        description: Краткое название позиции сделки
+        example: Ремонт велосипеда
+      description:
+        type: string
+        description: Подробное описание позиции сделки
+        example: Я могу помочь починить городские велосипеды и заменить тормозные колодки
+      type:
+        $ref: '#/ItemType'
+      updatedAt:
+        type: string
+        format: date-time
+        description: Временная метка последнего обновления позиции сделки
