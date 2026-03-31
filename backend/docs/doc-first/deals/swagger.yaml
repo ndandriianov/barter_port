@@ -18,6 +18,8 @@ paths:
     $ref: './paths/drafts.yaml#/dealsDraftsCancel'
   /deals:
     $ref: './paths/deals.yaml#/deals'
+  /deals/{dealId}:
+    $ref: './paths/deals.yaml#/dealById'
   /offers:
     $ref: './paths/offers.yaml#/offers'
 
