@@ -211,6 +211,10 @@ func (r *Repository) GetDraftByID(ctx context.Context, exec db.DB, id uuid.UUID)
 	return draft, nil
 }
 
+// ================================================================================
+// ConfirmDraftByID
+// ================================================================================
+
 // ConfirmDraftByID marks current user's offer in the draft as confirmed.
 //
 // Errors:
@@ -266,6 +270,10 @@ func (r *Repository) ConfirmDraftByID(ctx context.Context, exec db.DB, id uuid.U
 
 	return nil
 }
+
+// ================================================================================
+// UnconfirmDraftByID
+// ================================================================================
 
 // UnconfirmDraftByID marks current user's offer in the draft as unconfirmed.
 //
@@ -323,6 +331,10 @@ func (r *Repository) UnconfirmDraftByID(ctx context.Context, exec db.DB, id uuid
 	return nil
 }
 
+// ================================================================================
+// GetConfirms
+// ================================================================================
+
 // GetConfirms returns confirm flags of all participants in a draft deal.
 //
 // No domain errors
@@ -364,4 +376,29 @@ func (r *Repository) GetConfirms(ctx context.Context, exec db.DB, draftID uuid.U
 	}
 
 	return users, nil
+}
+
+// ================================================================================
+// DeleteDraft
+// ================================================================================
+
+// DeleteDraft deletes a draft deal by its ID.
+//
+// Errors:
+//   - domain.ErrDraftNotFound
+//   - SQL errors are wrapped.
+func (r *Repository) DeleteDraft(ctx context.Context, exec db.DB, id uuid.UUID) error {
+	query := `
+		DELETE FROM draft_deal_offers ddo
+		WHERE draft_deal_id = $1;`
+
+	tags, err := exec.Exec(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("sql delete draft: %w", err)
+	}
+	if tags.RowsAffected() == 0 {
+		return domain.ErrDraftNotFound
+	}
+
+	return nil
 }

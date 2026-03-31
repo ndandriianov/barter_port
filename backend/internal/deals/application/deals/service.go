@@ -163,7 +163,8 @@ func (s *Service) CancelDraft(ctx context.Context, id uuid.UUID, userID uuid.UUI
 
 // createDeal creates a new deal based on the provided draft and its associated offers.
 //
-// No domain Errors
+// Errors:
+//   - domain.ErrDraftNotFound
 func (s *Service) createDeal(ctx context.Context, tx pgx.Tx, draft domain.Draft) (uuid.UUID, error) {
 	items := make([]domain.Item, len(draft.Offers))
 	for i, o := range draft.Offers {
@@ -194,6 +195,11 @@ func (s *Service) createDeal(ctx context.Context, tx pgx.Tx, draft domain.Draft)
 	})
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("failed to create deal: %w", err)
+	}
+
+	err = s.draftsRepository.DeleteDraft(ctx, tx, draft.ID)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("failed to delete draft: %w", err)
 	}
 
 	return id, nil
