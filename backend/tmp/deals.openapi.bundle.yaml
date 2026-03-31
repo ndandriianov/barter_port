@@ -236,6 +236,98 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /deals:
+    get:
+      tags:
+        - Deals
+      summary: Получить все сделки
+      description: |
+        Получить все сделки.
+
+        - Если указать параметр my=true, то будут возвращены только сделки, в которых текущий пользователь является участником.
+        - Если указать параметр open=true, то будут возвращены только открытые сделки
+      operationId: getDeals
+      parameters:
+        - name: my
+          in: query
+          description: False by default. Если true, возвращает только сделки, в которых текущий пользователь является участником
+          required: false
+          schema:
+            type: boolean
+        - name: open
+          in: query
+          description: False by default. Если true, возвращает только открытые сделки
+          required: false
+          schema:
+            type: boolean
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetDealsResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /deals/{dealId}:
+    get:
+      tags:
+        - Deals
+      summary: Получить сделку по ее ID
+      description: Получить сделку по ее ID
+      operationId: getDealById
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deal'
+        '400':
+          description: Invalid deal ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Deal not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /offers:
     get:
       tags:
@@ -511,6 +603,84 @@ components:
           description: Список пользователей, которые подтвердили/не подтвердили свое участие в сделке
           items:
             $ref: '#/components/schemas/UserConfirm'
+    GetDealsResponse:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            type: string
+            format: uuid
+            description: The unique identifier of a deal
+    Item:
+      type: object
+      required:
+        - id
+        - authorId
+        - name
+        - description
+        - type
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор позиции сделки
+        authorId:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор пользователя, который предложил эту позицию в сделке
+        providerId:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор пользователя, который отдает эту позицию в сделке
+        receiverId:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор пользователя, который получает эту позицию в сделке
+        name:
+          type: string
+          description: Краткое название позиции сделки
+          example: Ремонт велосипеда
+        description:
+          type: string
+          description: Подробное описание позиции сделки
+          example: Я могу помочь починить городские велосипеды и заменить тормозные колодки
+        type:
+          $ref: '#/components/schemas/ItemType'
+        updatedAt:
+          type: string
+          format: date-time
+          description: Временная метка последнего обновления позиции сделки
+    Deal:
+      type: object
+      required:
+        - id
+        - createdAt
+        - items
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор сделки
+        name:
+          type: string
+          description: Название сделки
+        description:
+          type: string
+          description: Описание сделки
+        createdAt:
+          type: string
+          format: date-time
+          description: Временная метка создания сделки
+        updatedAt:
+          type: string
+          format: date-time
+          description: Временная метка последнего обновления сделки
+        items:
+          type: array
+          description: Список позиций сделки
+          items:
+            $ref: '#/components/schemas/Item'
     OffersCursor:
       type: object
       description: Cursor for stable pagination
