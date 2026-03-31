@@ -476,6 +476,19 @@ components:
           description: A list of offers included in the draft deal
           items:
             $ref: '#/components/schemas/OfferWithInfo'
+    UserConfirm:
+      type: object
+      required:
+        - userId
+        - confirmed
+      properties:
+        userId:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор пользователя
+        confirmed:
+          type: boolean
+          description: Статус подтверждения участия пользователя в сделке
     ConfirmDraftDealResponse:
       type: object
       required:
@@ -485,18 +498,7 @@ components:
           type: array
           description: Список пользователей, которые подтвердили/не подтвердили свое участие в сделке
           items:
-            type: object
-            required:
-              - userId
-              - confirmed
-            properties:
-              userId:
-                type: string
-                format: uuid
-                description: Уникальный идентификатор пользователя
-              confirmed:
-                type: boolean
-                description: Статус подтверждения участия пользователя в сделке
+            $ref: '#/components/schemas/UserConfirm'
     OffersCursor:
       type: object
       description: Cursor for stable pagination
