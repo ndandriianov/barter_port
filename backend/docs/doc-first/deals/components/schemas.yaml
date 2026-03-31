@@ -37,7 +37,7 @@ Draft:
 
 ItemWithInfo:
   allOf:
-    - $ref: '#/Item'
+    - $ref: '#/Offer'
     - $ref: '#/ItemInfo'
 
 
@@ -73,7 +73,7 @@ ItemInfo:
 
 
 
-Item:
+Offer:
   type: object
   required:
     - id
@@ -104,7 +104,7 @@ Item:
     type:
       $ref: '#/ItemType'
     action:
-      $ref: '#/ItemAction'
+      $ref: '#/OfferAction'
     views:
       type: integer
       format: int64
@@ -126,7 +126,7 @@ ItemType:
     - service
 
 
-ItemAction:
+OfferAction:
   type: string
   description: Whether the user offers or requests something
   enum:
@@ -134,7 +134,7 @@ ItemAction:
     - take
 
 
-ItemsCursor:
+OffersCursor:
   type: object
   description: Cursor for stable pagination
   required:

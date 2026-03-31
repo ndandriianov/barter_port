@@ -16,7 +16,7 @@ CreateDraftDealRequest:
 
 
 
-CreateItemRequest:
+CreateOfferRequest:
   type: object
   required:
     - name
@@ -33,4 +33,4 @@ CreateItemRequest:
     type:
       $ref: 'schemas.yaml#/ItemType'
     action:
-      $ref: 'schemas.yaml#/ItemAction'
+      $ref: 'schemas.yaml#/OfferAction'

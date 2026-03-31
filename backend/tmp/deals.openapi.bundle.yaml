@@ -224,22 +224,22 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /items:
+  /offers:
     get:
       tags:
-        - items
-      summary: List items
+        - offers
+      summary: List offers
       description: |
-        Returns a paginated list of items.
+        Returns a paginated list of offers.
 
         Supported sorting modes:
-        - `created_at`: newest items first
-        - `popularity`: most viewed items first
+        - `created_at`: newest offers first
+        - `popularity`: most viewed offers first
 
         Cursor fields depend on the selected sorting mode:
         - for `created_at`: use `cursor_created_at` + `cursor_id`
         - for `popularity`: use `cursor_views` + `cursor_id`
-      operationId: listItems
+      operationId: listOffers
       security:
         - bearerAuth: []
       parameters:
@@ -250,11 +250,11 @@ paths:
         - $ref: '#/components/parameters/Limit'
       responses:
         '200':
-          description: Items page
+          description: Offers page
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/ListItemsResponse'
+                $ref: '#/components/schemas/ListOffersResponse'
         '400':
           description: Invalid query parameters
           content:
@@ -275,10 +275,10 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
     post:
       tags:
-        - items
-      summary: Create item
-      description: Creates a new barter item
-      operationId: createItem
+        - offers
+      summary: Create offer
+      description: Creates a new barter offer
+      operationId: createOffers
       security:
         - bearerAuth: []
       requestBody:
@@ -286,14 +286,14 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/CreateItemRequest'
+              $ref: '#/components/schemas/CreateOfferRequest'
       responses:
         '201':
-          description: Item created
+          description: Offers created
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Item'
+                $ref: '#/components/schemas/Offer'
         '400':
           description: Invalid request body
           content:
@@ -390,13 +390,13 @@ components:
       enum:
         - good
         - service
-    ItemAction:
+    OfferAction:
       type: string
       description: Whether the user offers or requests something
       enum:
         - give
         - take
-    Item:
+    Offer:
       type: object
       required:
         - id
@@ -427,7 +427,7 @@ components:
         type:
           $ref: '#/components/schemas/ItemType'
         action:
-          $ref: '#/components/schemas/ItemAction'
+          $ref: '#/components/schemas/OfferAction'
         views:
           type: integer
           format: int64
@@ -441,7 +441,7 @@ components:
           example: '2026-03-04T12:00:00Z'
     ItemWithInfo:
       allOf:
-        - $ref: '#/components/schemas/Item'
+        - $ref: '#/components/schemas/Offer'
         - $ref: '#/components/schemas/ItemInfo'
     Draft:
       type: object
@@ -499,7 +499,7 @@ components:
               confirmed:
                 type: boolean
                 description: Статус подтверждения участия пользователя в сделке
-    ItemsCursor:
+    OffersCursor:
       type: object
       description: Cursor for stable pagination
       required:
@@ -517,22 +517,22 @@ components:
           type: string
           format: uuid
           example: 550e8400-e29b-41d4-a716-446655440000
-    ListItemsResponse:
+    ListOffersResponse:
       type: object
       required:
-        - items
+        - offers
       properties:
-        items:
+        offers:
           type: array
-          description: List of items
+          description: List of offers
           items:
-            $ref: '#/components/schemas/Item'
+            $ref: '#/components/schemas/Offer'
         nextCursor:
           nullable: true
           allOf:
-            - $ref: '#/components/schemas/ItemsCursor'
+            - $ref: '#/components/schemas/OffersCursor'
           description: Cursor for fetching the next page; null if there is no next page
-    CreateItemRequest:
+    CreateOfferRequest:
       type: object
       required:
         - name
@@ -549,7 +549,7 @@ components:
         type:
           $ref: '#/components/schemas/ItemType'
         action:
-          $ref: '#/components/schemas/ItemAction'
+          $ref: '#/components/schemas/OfferAction'
   parameters:
     SortType:
       name: sort
