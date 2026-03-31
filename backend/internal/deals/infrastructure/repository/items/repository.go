@@ -20,7 +20,7 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 // Returns an error if the insertion fails.
 func (r *Repository) AddItem(ctx context.Context, item domain.Item) error {
 	query := `
-		INSERT INTO items (id, author_id, name, type, action, description, created_at)
+		INSERT INTO offers (id, author_id, name, type, action, description, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
 
@@ -44,7 +44,7 @@ func (r *Repository) GetItemsOrderByTime(
 	if cursor == nil {
 		query = `
 		SELECT id, author_id, name, type, action, description, created_at, views
-		FROM items
+		FROM offers
 		ORDER BY created_at DESC
 		LIMIT $1
 		`
@@ -52,7 +52,7 @@ func (r *Repository) GetItemsOrderByTime(
 	} else {
 		query = `
 		SELECT id, author_id, name, type, action, description, created_at, views
-		FROM items
+		FROM offers
 		WHERE (created_at, id) < ($1, $2)
 		ORDER BY created_at DESC 
 		LIMIT $3
@@ -94,7 +94,7 @@ func (r *Repository) GetItemsOrderByPopularity(
 	if cursor == nil {
 		query = `
 		SELECT id, author_id, name, type, action, description, created_at, views
-		FROM items
+		FROM offers
 		ORDER BY created_at DESC
 		LIMIT $1
 		`
@@ -102,7 +102,7 @@ func (r *Repository) GetItemsOrderByPopularity(
 	} else {
 		query = `
 		SELECT id, author_id, name, type, action, description, created_at, views
-		FROM items
+		FROM offers
 		WHERE (views, id) < ($1, $2) 
 		ORDER BY views DESC 
 		LIMIT $3
