@@ -15,11 +15,11 @@ const (
 	Service
 )
 
-//go:generate enumer -type=ItemAction -json -text -sql -transform=lower
-type ItemAction int
+//go:generate enumer -type=OfferAction -json -text -sql -transform=lower
+type OfferAction int
 
 const (
-	Give ItemAction = iota
+	Give OfferAction = iota
 	Take
 )
 
@@ -28,7 +28,7 @@ type Offer struct {
 	AuthorId    uuid.UUID
 	Name        string
 	Type        ItemType
-	Action      ItemAction
+	Action      OfferAction
 	Description string
 	CreatedAt   time.Time
 	Views       int

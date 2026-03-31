@@ -41,7 +41,7 @@ func (s *Service) CreateItem(
 	userID uuid.UUID,
 	name string,
 	itemType domain.ItemType,
-	action domain.ItemAction,
+	action domain.OfferAction,
 	description string,
 ) (*domain.Offer, error) {
 	if name == "" {

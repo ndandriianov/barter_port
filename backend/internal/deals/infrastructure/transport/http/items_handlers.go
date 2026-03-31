@@ -16,7 +16,7 @@ import (
 )
 
 type itemService interface {
-	CreateItem(ctx context.Context, userID uuid.UUID, name string, itemType domain.ItemType, action domain.ItemAction, description string) (*domain.Offer, error)
+	CreateItem(ctx context.Context, userID uuid.UUID, name string, itemType domain.ItemType, action domain.OfferAction, description string) (*domain.Offer, error)
 	GetItems(ctx context.Context, sortType domain.SortType, cursor *domain.UniversalCursor, limit int) ([]domain.Offer, *domain.UniversalCursor, error)
 }
 
@@ -53,7 +53,7 @@ func (h *ItemsHandlers) HandleCreateItem(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	action, err := domain.ItemActionString(string(req.Action))
+	action, err := domain.OfferActionString(string(req.Action))
 	if err != nil {
 		log.Error("invalid item action", slog.String("action", string(req.Action)), slog.Any("error", err))
 		httpx.WriteErrorStr(w, http.StatusBadRequest, "invalid item action")
