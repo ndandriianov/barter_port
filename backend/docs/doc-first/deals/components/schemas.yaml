@@ -119,16 +119,16 @@ ItemType:
   type: string
   description: Type of barter item
   enum:
-    - good
-    - service
+    - itemTypeGood
+    - itemTypeService
 
 
 OfferAction:
   type: string
   description: Whether the user offers or requests something
   enum:
-    - give
-    - take
+    - offerActionGive
+    - offerActionTake
 
 
 OffersCursor:

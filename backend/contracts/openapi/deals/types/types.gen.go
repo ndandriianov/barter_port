@@ -15,16 +15,16 @@ const (
 
 // Defines values for ItemType.
 const (
-	Good    ItemType = "good"
-	Service ItemType = "service"
+	ItemTypeGood    ItemType = "itemTypeGood"
+	ItemTypeService ItemType = "itemTypeService"
 )
 
 // Valid indicates whether the value is a known member of the ItemType enum.
 func (e ItemType) Valid() bool {
 	switch e {
-	case Good:
+	case ItemTypeGood:
 		return true
-	case Service:
+	case ItemTypeService:
 		return true
 	default:
 		return false
@@ -33,16 +33,16 @@ func (e ItemType) Valid() bool {
 
 // Defines values for OfferAction.
 const (
-	Give OfferAction = "give"
-	Take OfferAction = "take"
+	OfferActionGive OfferAction = "offerActionGive"
+	OfferActionTake OfferAction = "offerActionTake"
 )
 
 // Valid indicates whether the value is a known member of the OfferAction enum.
 func (e OfferAction) Valid() bool {
 	switch e {
-	case Give:
+	case OfferActionGive:
 		return true
-	case Take:
+	case OfferActionTake:
 		return true
 	default:
 		return false

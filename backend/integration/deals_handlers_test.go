@@ -33,8 +33,8 @@ func mustCreateOffer(t *testing.T, userID uuid.UUID) uuid.UUID {
 	body, err := json.Marshal(dealstypes.CreateOfferRequest{
 		Name:        fmt.Sprintf("offer-%d", time.Now().UnixNano()),
 		Description: "test offer",
-		Type:        dealstypes.Good,
-		Action:      dealstypes.Give,
+		Type:        dealstypes.ItemTypeGood,
+		Action:      dealstypes.OfferActionGive,
 	})
 	require.NoError(t, err)
 
@@ -414,4 +414,162 @@ func TestGetDraftByIDUnauthorized(t *testing.T) {
 	defer func() { _ = resp.Body.Close() }()
 
 	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+}
+
+// ────────────────────────────────────────────────────────────────
+// ConfirmDraft
+// ────────────────────────────────────────────────────────────────
+
+func TestConfirmDraftSuccess(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	offerID := mustCreateOffer(t, userID)
+	draftID := mustCreateDraft(t, userID, nil, nil, []dealstypes.OfferIDAndQuantity{{OfferID: offerID, Quantity: 1}})
+
+	req, err := http.NewRequest(http.MethodPatch, dealsURL()+"/deals/drafts/"+draftID.String(), nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userID))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var confirmResp dealstypes.ConfirmDraftDealResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&confirmResp))
+	require.NotEmpty(t, confirmResp.Users)
+	require.Equal(t, userID, confirmResp.Users[0].UserId)
+	require.True(t, confirmResp.Users[0].Confirmed)
+}
+
+func TestConfirmDraftUnauthorized(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	resp, err := http.DefaultClient.Do(mustRequest(t, http.MethodPatch, dealsURL()+"/deals/drafts/"+uuid.NewString(), nil))
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+}
+
+func TestConfirmDraftInvalidUUID(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	req, err := http.NewRequest(http.MethodPatch, dealsURL()+"/deals/drafts/not-a-uuid", nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userID))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+// ────────────────────────────────────────────────────────────────
+// CancelDraft
+// ────────────────────────────────────────────────────────────────
+
+func TestCancelDraftSuccess(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	offerID := mustCreateOffer(t, userID)
+	draftID := mustCreateDraft(t, userID, nil, nil, []dealstypes.OfferIDAndQuantity{{OfferID: offerID, Quantity: 1}})
+
+	req, err := http.NewRequest(http.MethodPatch, dealsURL()+"/deals/drafts/"+draftID.String()+"/cancel", nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userID))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+func TestCancelDraftForbiddenForNonParticipant(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	ownerID := uuid.New()
+	nonParticipantID := uuid.New()
+	offerID := mustCreateOffer(t, ownerID)
+	draftID := mustCreateDraft(t, ownerID, nil, nil, []dealstypes.OfferIDAndQuantity{{OfferID: offerID, Quantity: 1}})
+
+	req, err := http.NewRequest(http.MethodPatch, dealsURL()+"/deals/drafts/"+draftID.String()+"/cancel", nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, nonParticipantID))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusForbidden, resp.StatusCode)
+}
+
+func TestCancelDraftForbiddenAfterAllConfirmed(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userA := uuid.New()
+	userB := uuid.New()
+	offerA := mustCreateOffer(t, userA)
+	offerB := mustCreateOffer(t, userB)
+
+	draftID := mustCreateDraft(t, userA, nil, nil, []dealstypes.OfferIDAndQuantity{
+		{OfferID: offerA, Quantity: 1},
+		{OfferID: offerB, Quantity: 1},
+	})
+
+	confirmA, err := http.NewRequest(http.MethodPatch, dealsURL()+"/deals/drafts/"+draftID.String(), nil)
+	require.NoError(t, err)
+	confirmA.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userA))
+
+	respA, err := http.DefaultClient.Do(confirmA)
+	require.NoError(t, err)
+	defer func() { _ = respA.Body.Close() }()
+	require.Equal(t, http.StatusOK, respA.StatusCode)
+
+	confirmB, err := http.NewRequest(http.MethodPatch, dealsURL()+"/deals/drafts/"+draftID.String(), nil)
+	require.NoError(t, err)
+	confirmB.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userB))
+
+	respB, err := http.DefaultClient.Do(confirmB)
+	require.NoError(t, err)
+	defer func() { _ = respB.Body.Close() }()
+	require.Equal(t, http.StatusOK, respB.StatusCode)
+
+	cancelReq, err := http.NewRequest(http.MethodPatch, dealsURL()+"/deals/drafts/"+draftID.String()+"/cancel", nil)
+	require.NoError(t, err)
+	cancelReq.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userA))
+
+	cancelResp, err := http.DefaultClient.Do(cancelReq)
+	require.NoError(t, err)
+	defer func() { _ = cancelResp.Body.Close() }()
+
+	require.Equal(t, http.StatusForbidden, cancelResp.StatusCode)
+}
+
+func mustRequest(t *testing.T, method, url string, body *bytes.Reader) *http.Request {
+	t.Helper()
+
+	var reqBody *bytes.Reader
+	if body == nil {
+		reqBody = bytes.NewReader(nil)
+	} else {
+		reqBody = body
+	}
+
+	req, err := http.NewRequest(method, url, reqBody)
+	require.NoError(t, err)
+
+	return req
 }
