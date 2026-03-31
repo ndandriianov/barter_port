@@ -59,3 +59,15 @@ ConfirmDraftDealResponse:
       description: Список пользователей, которые подтвердили/не подтвердили свое участие в сделке
       items:
         $ref: 'schemas.yaml#/UserConfirm'
+
+
+
+GetDealsResponse:
+  type: object
+  properties:
+    data:
+      type: array
+      items:
+        type: string
+        format: uuid
+        description: The unique identifier of a deal
