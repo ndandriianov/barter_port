@@ -228,6 +228,12 @@ paths:
             application/json:
               schema:
                 $ref: './components/responses.yaml#/ErrorResponse'
+        '403':
+          description: Forbidden. User is not a participant of the draft deal'
+          content:
+            application/json:
+              schema:
+                $ref: './components/responses.yaml#/ErrorResponse'
         '404':
           description: Draft deal not found
           content:
