@@ -48,9 +48,9 @@ func NewRouter(logg *slog.Logger, validator *validators.LocalJWT, h *ItemsHandle
 	r.Group(func(r chi.Router) {
 		r.Use(authkit.Middleware(logg, validator, nil))
 		r.Use(logger.Middleware(logg))
-		r.Route("/items", func(r chi.Router) {
-			r.Post("/", h.HandleCreateItem)
-			r.Get("/", h.HandleGetItems)
+		r.Route("/offers", func(r chi.Router) {
+			r.Post("/", h.HandleCreateOffer)
+			r.Get("/", h.HandleGetOffers)
 		})
 		r.Route("/deals", func(r chi.Router) {
 			r.Post("/drafts", dh.CreateDraft)

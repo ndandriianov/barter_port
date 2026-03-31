@@ -34,13 +34,13 @@ type Offer struct {
 	Views       int
 }
 
-func (i *Offer) ToDto() types.Item {
-	return types.Item{
+func (i *Offer) ToDto() types.Offer {
+	return types.Offer{
 		Id:          i.ID,
 		AuthorId:    i.AuthorId,
 		Name:        i.Name,
 		Type:        types.ItemType(i.Type.String()),
-		Action:      types.ItemAction(i.Action.String()),
+		Action:      types.OfferAction(i.Action.String()),
 		Description: i.Description,
 		CreatedAt:   i.CreatedAt,
 		Views:       int64(i.Views),
@@ -49,7 +49,7 @@ func (i *Offer) ToDto() types.Item {
 
 func (i *Offer) ToDTOWithInfo(info OfferInfo) types.ItemWithInfo {
 	return types.ItemWithInfo{
-		Action:      types.ItemAction(i.Action.String()),
+		Action:      types.OfferAction(i.Action.String()),
 		AuthorId:    i.AuthorId,
 		CreatedAt:   i.CreatedAt,
 		Description: i.Description,

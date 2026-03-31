@@ -1,4 +1,4 @@
-package items
+package offers
 
 import (
 	"barter-port/internal/deals/domain"
@@ -16,23 +16,23 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 	return &Repository{db: db}
 }
 
-// AddItem inserts a new item into the database.
+// AddOffer inserts a new item into the database.
 // Returns an error if the insertion fails.
-func (r *Repository) AddItem(ctx context.Context, item domain.Offer) error {
+func (r *Repository) AddOffer(ctx context.Context, offer domain.Offer) error {
 	query := `
 		INSERT INTO offers (id, author_id, name, type, action, description, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
 
-	_, err := r.db.Exec(ctx, query, item.ID, item.AuthorId, item.Name, item.Type.String(), item.Action.String(), item.Description, item.CreatedAt)
+	_, err := r.db.Exec(ctx, query, offer.ID, offer.AuthorId, offer.Name, offer.Type.String(), offer.Action.String(), offer.Description, offer.CreatedAt)
 	return err
 }
 
-// GetItemsOrderByTime retrieves items from the database ordered by creation time.
+// GetOffersOrderByTime retrieves items from the database ordered by creation time.
 // It supports cursor-based pagination using a TimeCursor.
 // If the cursor is nil, it retrieves the most recent items.
 // Returns a slice of items, a new TimeCursor for the next page, and an error if the query fails.
-func (r *Repository) GetItemsOrderByTime(
+func (r *Repository) GetOffersOrderByTime(
 	ctx context.Context,
 	cursor *domain.TimeCursor,
 	limit int,
@@ -60,22 +60,22 @@ func (r *Repository) GetItemsOrderByTime(
 		args = append(args, cursor.CreatedAt, cursor.Id, limit)
 	}
 
-	items, err := repox.FetchStructs[domain.Offer](ctx, r.db, query, args...)
+	offers, err := repox.FetchStructs[domain.Offer](ctx, r.db, query, args...)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	if len(items) == 0 {
-		return items, nil, nil
+	if len(offers) == 0 {
+		return offers, nil, nil
 	}
 
-	lastItem := items[len(items)-1]
+	lastOffer := offers[len(offers)-1]
 	newCursor := domain.TimeCursor{
-		CreatedAt: lastItem.CreatedAt,
-		Id:        lastItem.ID,
+		CreatedAt: lastOffer.CreatedAt,
+		Id:        lastOffer.ID,
 	}
 
-	return items, &newCursor, nil
+	return offers, &newCursor, nil
 }
 
 // GetItemsOrderByPopularity retrieves items from the database ordered by popularity (views).
@@ -110,20 +110,20 @@ func (r *Repository) GetItemsOrderByPopularity(
 		args = append(args, cursor.Views, cursor.Id, limit)
 	}
 
-	items, err := repox.FetchStructs[domain.Offer](ctx, r.db, query, args...)
+	offers, err := repox.FetchStructs[domain.Offer](ctx, r.db, query, args...)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	if len(items) == 0 {
-		return items, nil, nil
+	if len(offers) == 0 {
+		return offers, nil, nil
 	}
 
-	lastItem := items[len(items)-1]
+	lastOffer := offers[len(offers)-1]
 	newCursor := domain.PopularityCursor{
-		Views: lastItem.Views,
-		Id:    lastItem.ID,
+		Views: lastOffer.Views,
+		Id:    lastOffer.ID,
 	}
 
-	return items, &newCursor, nil
+	return offers, &newCursor, nil
 }

@@ -30,9 +30,9 @@ func dealsURL() string {
 func mustCreateItem(t *testing.T, userID uuid.UUID) uuid.UUID {
 	t.Helper()
 
-	body, err := json.Marshal(dealstypes.CreateItemRequest{
-		Name:        fmt.Sprintf("item-%d", time.Now().UnixNano()),
-		Description: "test item",
+	body, err := json.Marshal(dealstypes.CreateOfferRequest{
+		Name:        fmt.Sprintf("offer-%d", time.Now().UnixNano()),
+		Description: "test offer",
 		Type:        dealstypes.Good,
 		Action:      dealstypes.Give,
 	})
@@ -48,11 +48,11 @@ func mustCreateItem(t *testing.T, userID uuid.UUID) uuid.UUID {
 	defer func() { _ = resp.Body.Close() }()
 	require.Equal(t, http.StatusCreated, resp.StatusCode)
 
-	var item dealstypes.Item
-	require.NoError(t, json.NewDecoder(resp.Body).Decode(&item))
-	require.NotEqual(t, uuid.Nil, item.Id)
+	var offer dealstypes.Offer
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&offer))
+	require.NotEqual(t, uuid.Nil, offer.Id)
 
-	return item.Id
+	return offer.Id
 }
 
 func mustCreateDraft(
@@ -60,12 +60,12 @@ func mustCreateDraft(
 	userID uuid.UUID,
 	name *string,
 	description *string,
-	items []dealstypes.ItemIDAndInfo,
+	offers []dealstypes.ItemIDAndInfo,
 ) uuid.UUID {
 	t.Helper()
 
 	reqBody := map[string]any{
-		"items":       items,
+		"offers":      offers,
 		"name":        name,
 		"description": description,
 	}

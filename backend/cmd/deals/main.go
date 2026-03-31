@@ -4,7 +4,7 @@ import (
 	dealssvc "barter-port/internal/deals/application/deals"
 	"barter-port/internal/deals/application/items"
 	dealsrepo "barter-port/internal/deals/infrastructure/repository/deals"
-	itemsr "barter-port/internal/deals/infrastructure/repository/items"
+	offersr "barter-port/internal/deals/infrastructure/repository/offers"
 	transporthttp "barter-port/internal/deals/infrastructure/transport/http"
 	"barter-port/pkg/bootstrap"
 	"barter-port/pkg/logger"
@@ -38,8 +38,8 @@ func main() {
 
 	logg := logger.NewJSONLogger(slog.LevelDebug, "deals-service", "")
 
-	itemRepo := itemsr.NewRepository(db)
-	itemService := items.NewItemService(itemRepo, logg)
+	offersRepo := offersr.NewRepository(db)
+	offersService := items.NewItemService(offersRepo, logg)
 
 	dealsRepo := dealsrepo.NewRepository()
 	dealsService := dealssvc.NewService(db, dealsRepo)
@@ -49,7 +49,7 @@ func main() {
 		log.Fatal("failed to initialize JWT validator:", err)
 	}
 
-	handlers := transporthttp.NewHandlers(itemService)
+	handlers := transporthttp.NewHandlers(offersService)
 	dealsHandlers := transporthttp.NewDealsHandlers(logg, dealsService)
 	router := transporthttp.NewRouter(logg, validator, handlers, dealsHandlers)
 
