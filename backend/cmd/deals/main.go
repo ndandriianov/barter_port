@@ -3,7 +3,7 @@ package main
 import (
 	dealssvc "barter-port/internal/deals/application/deals"
 	"barter-port/internal/deals/application/offers"
-	dealsrepo "barter-port/internal/deals/infrastructure/repository/deals"
+	"barter-port/internal/deals/infrastructure/repository/drafts"
 	offersr "barter-port/internal/deals/infrastructure/repository/offers"
 	transporthttp "barter-port/internal/deals/infrastructure/transport/http"
 	"barter-port/pkg/bootstrap"
@@ -41,8 +41,8 @@ func main() {
 	offersRepo := offersr.NewRepository(db)
 	offersService := offers.NewService(offersRepo, logg)
 
-	dealsRepo := dealsrepo.NewRepository()
-	dealsService := dealssvc.NewService(db, dealsRepo)
+	draftsRepo := drafts.NewRepository()
+	dealsService := dealssvc.NewService(db, draftsRepo)
 
 	validator, err := bootstrap.InitLocalJWTFromConfig(cfg)
 	if err != nil {
