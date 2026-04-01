@@ -33,9 +33,6 @@ const authApi = createApi({
       }),
     }),
 
-    me: builder.query<{ userId: string }, void>({
-      query: () => "/auth/me",
-    }),
 
     logout: builder.mutation<void, void>({
       query: () => ({
