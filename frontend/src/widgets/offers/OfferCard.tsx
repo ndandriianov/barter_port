@@ -30,6 +30,8 @@ interface OfferCardProps {
 }
 
 function OfferCard({ offer }: OfferCardProps) {
+  const authorName = offer.authorName?.trim() || "Имя не указано";
+
   return (
     <Card variant="outlined" sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
       <CardContent sx={{ flexGrow: 1 }}>
@@ -40,6 +42,10 @@ function OfferCard({ offer }: OfferCardProps) {
 
         <Typography variant="h6" fontWeight={600} gutterBottom noWrap>
           {offer.name}
+        </Typography>
+
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }} noWrap>
+          Автор: {authorName}
         </Typography>
 
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>

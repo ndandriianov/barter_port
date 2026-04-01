@@ -6,6 +6,7 @@ export const offerActionSchema = z.enum(["give", "take"]);
 export const offerSchema = z.object({
   id: z.string(),
   authorId: z.string(),
+  authorName: z.string().nullish(),
   name: z.string(),
   description: z.string(),
   action: offerActionSchema,
