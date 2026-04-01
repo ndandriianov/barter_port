@@ -4,6 +4,7 @@ import (
 	authpb "barter-port/contracts/grpc/auth/v1"
 	"barter-port/internal/users/domain"
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -14,6 +15,7 @@ type UsersRepository interface {
 	GetUserById(ctx context.Context, id uuid.UUID) (*domain.User, error)
 	UpdateName(ctx context.Context, id uuid.UUID, name string) error
 	UpdateBio(ctx context.Context, id uuid.UUID, bio *string) error
+	GetNamesForUserIDs(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]string, error)
 }
 
 var ErrAuthClientNotConfigured = errors.New("auth grpc client is not configured")
@@ -82,4 +84,15 @@ func (s *Service) UpdateName(ctx context.Context, id uuid.UUID, name string) err
 //   - domain.ErrUserNotFound: Occurs if no user is found with the given id.
 func (s *Service) UpdateBio(ctx context.Context, id uuid.UUID, bio *string) error {
 	return s.repository.UpdateBio(ctx, id, bio)
+}
+
+// GetNamesForUserIDs returns a map of user IDs to their corresponding names.
+//
+// No domain Errors
+func (s *Service) GetNamesForUserIDs(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]string, error) {
+	names, err := s.repository.GetNamesForUserIDs(ctx, ids)
+	if err != nil {
+		return nil, fmt.Errorf("repository.GetNamesForUserIDs: %w", err)
+	}
+	return names, nil
 }
