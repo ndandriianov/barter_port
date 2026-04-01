@@ -90,6 +90,9 @@ Offer:
       type: string
       format: uuid
       description: Unique identifier of the user who created the item
+    authorName:
+      type: string
+      description: Name of the user who created the item
     name:
       type: string
       description: Short item title
@@ -201,41 +204,41 @@ Deal:
 
 
 Item:
-    type: object
-    required:
-      - id
-      - authorId
-      - name
-      - description
-      - type
-    properties:
-      id:
-        type: string
-        format: uuid
-        description: Уникальный идентификатор позиции сделки
-      authorId:
-        type: string
-        format: uuid
-        description: Уникальный идентификатор пользователя, который предложил эту позицию в сделке
-      providerId:
-        type: string
-        format: uuid
-        description: Уникальный идентификатор пользователя, который отдает эту позицию в сделке
-      receiverId:
-        type: string
-        format: uuid
-        description: Уникальный идентификатор пользователя, который получает эту позицию в сделке
-      name:
-        type: string
-        description: Краткое название позиции сделки
-        example: Ремонт велосипеда
-      description:
-        type: string
-        description: Подробное описание позиции сделки
-        example: Я могу помочь починить городские велосипеды и заменить тормозные колодки
-      type:
-        $ref: '#/ItemType'
-      updatedAt:
-        type: string
-        format: date-time
-        description: Временная метка последнего обновления позиции сделки
+  type: object
+  required:
+    - id
+    - authorId
+    - name
+    - description
+    - type
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор позиции сделки
+    authorId:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор пользователя, который предложил эту позицию в сделке
+    providerId:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор пользователя, который отдает эту позицию в сделке
+    receiverId:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор пользователя, который получает эту позицию в сделке
+    name:
+      type: string
+      description: Краткое название позиции сделки
+      example: Ремонт велосипеда
+    description:
+      type: string
+      description: Подробное описание позиции сделки
+      example: Я могу помочь починить городские велосипеды и заменить тормозные колодки
+    type:
+      $ref: '#/ItemType'
+    updatedAt:
+      type: string
+      format: date-time
+      description: Временная метка последнего обновления позиции сделки
