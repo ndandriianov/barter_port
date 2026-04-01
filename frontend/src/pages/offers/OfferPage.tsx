@@ -46,9 +46,6 @@ function OfferPage() {
   if (!offerId) return <div>Объявление не найдено</div>;
   if (!offer) return <div>Объявление не найдено в кеше RTK</div>;
 
-	console.log(meData);
-	console.log(offer);
-
   const canRespond = !!meData && offer.authorId !== meData.userId;
 
   return (
@@ -66,7 +63,6 @@ function OfferPage() {
 
 	  <RespondToOfferModal
 		targetOffer={offer}
-		currentUserId={meData?.userId ?? null}
 		isOpen={isRespondModalOpen}
 		onClose={() => setIsRespondModalOpen(false)}
 	  />
