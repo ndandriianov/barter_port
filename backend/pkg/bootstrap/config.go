@@ -52,9 +52,11 @@ type Config struct {
 		WriteTimeout            time.Duration `mapstructure:"write_timeout"`
 	} `mapstructure:"kafka"`
 
-	Port               int    `mapstructure:"port"`
-	AuthGRPCAddr       string `mapstructure:"auth_grpc_addr"`
-	AuthGRPCListenAddr string `mapstructure:"auth_grpc_listen_addr"`
+	Port                int    `mapstructure:"port"`
+	AuthGRPCAddr        string `mapstructure:"auth_grpc_addr"`
+	AuthGRPCListenAddr  string `mapstructure:"auth_grpc_listen_addr"`
+	UsersGRPCAddr       string `mapstructure:"users_grpc_addr"`
+	UsersGRPCListenAddr string `mapstructure:"users_grpc_listen_addr"`
 }
 
 type ConfigOptions struct {
