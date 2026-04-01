@@ -4,6 +4,7 @@ import {
   Alert,
   Box,
   Button,
+  Checkbox,
   CircularProgress,
   Dialog,
   DialogActions,
@@ -11,7 +12,7 @@ import {
   DialogTitle,
   FormControl,
   FormControlLabel,
-  Checkbox,
+  TextField,
   Typography,
 } from "@mui/material";
 import offersApi from "@/features/offers/api/offersApi";
@@ -26,10 +27,12 @@ interface RespondToOfferModalProps {
 
 function RespondToOfferModal({ targetOffer, isOpen, onClose }: RespondToOfferModalProps) {
   const [selectedOfferIds, setSelectedOfferIds] = useState<string[]>([]);
+  const [offerQuantities, setOfferQuantities] = useState<Record<string, string>>({});
   const navigate = useNavigate();
 
   const closeModal = () => {
     setSelectedOfferIds([]);
+    setOfferQuantities({});
     onClose();
   };
 
@@ -46,20 +49,57 @@ function RespondToOfferModal({ targetOffer, isOpen, onClose }: RespondToOfferMod
     [data?.offers, selectedOfferIds],
   );
 
+  const quantitiesByOfferId = useMemo(() => {
+    return Object.fromEntries(
+      selectedOfferIds.map((offerId) => {
+        const quantity = Number.parseInt(offerQuantities[offerId] ?? "1", 10);
+        return [offerId, Number.isInteger(quantity) && quantity >= 1 ? quantity : null];
+      }),
+    ) as Record<string, number | null>;
+  }, [offerQuantities, selectedOfferIds]);
+
+  const hasInvalidQuantity = selectedOfferIds.some((offerId) => quantitiesByOfferId[offerId] === null);
+
   const toggleSelectedOffer = (offerId: string) => {
-    setSelectedOfferIds((current) =>
-      current.includes(offerId)
-        ? current.filter((id) => id !== offerId)
-        : [...current, offerId],
-    );
+    setSelectedOfferIds((current) => {
+      const isSelected = current.includes(offerId);
+
+      if (isSelected) {
+        setOfferQuantities((quantities) => {
+          const next = {...quantities};
+          delete next[offerId];
+          return next;
+        });
+
+        return current.filter((id) => id !== offerId);
+      }
+
+      setOfferQuantities((quantities) => ({
+        ...quantities,
+        [offerId]: quantities[offerId] ?? "1",
+      }));
+
+      return [...current, offerId];
+    });
+  };
+
+  const updateOfferQuantity = (offerId: string, value: string) => {
+    setOfferQuantities((current) => ({
+      ...current,
+      [offerId]: value,
+    }));
   };
 
   const submit = async () => {
-    if (selectedOffers.length === 0) return;
+    if (selectedOffers.length === 0 || hasInvalidQuantity) return;
+
     const result = await createDraftDeal({
       offers: [
         { offerID: targetOffer.id, quantity: 1 },
-        ...selectedOffers.map((offer) => ({ offerID: offer.id, quantity: 1 })),
+        ...selectedOffers.map((offer) => ({
+          offerID: offer.id,
+          quantity: quantitiesByOfferId[offer.id] ?? 1,
+        })),
       ],
     }).unwrap();
     closeModal();
@@ -72,7 +112,7 @@ function RespondToOfferModal({ targetOffer, isOpen, onClose }: RespondToOfferMod
 
       <DialogContent dividers>
         <Typography variant="body2" color="text.secondary" mb={2}>
-          Выберите одно или несколько своих объявлений для обмена:
+          Выберите одно или несколько своих объявлений для обмена и укажите количество:
         </Typography>
 
         {isLoading && (
@@ -89,26 +129,54 @@ function RespondToOfferModal({ targetOffer, isOpen, onClose }: RespondToOfferMod
           ) : (
             <FormControl component="fieldset" fullWidth>
               <Box display="flex" flexDirection="column">
-                {data.offers.map((offer) => (
-                  <FormControlLabel
-                    key={offer.id}
-                    control={
-                      <Checkbox
-                        checked={selectedOfferIds.includes(offer.id)}
-                        onChange={() => toggleSelectedOffer(offer.id)}
+                {data.offers.map((offer) => {
+                  const isSelected = selectedOfferIds.includes(offer.id);
+                  const quantityError = isSelected && quantitiesByOfferId[offer.id] === null;
+
+                  return (
+                    <Box
+                      key={offer.id}
+                      display="flex"
+                      alignItems="flex-start"
+                      justifyContent="space-between"
+                      gap={2}
+                      py={1}
+                    >
+                      <FormControlLabel
+                        control={
+                          <Checkbox checked={isSelected} onChange={() => toggleSelectedOffer(offer.id)} />
+                        }
+                        label={
+                          <Box>
+                            <Typography variant="body1" fontWeight={500}>
+                              {offer.name}
+                            </Typography>
+                            {offer.description && (
+                              <Typography variant="body2" color="text.secondary">
+                                {offer.description}
+                              </Typography>
+                            )}
+                          </Box>
+                        }
+                        sx={{ alignItems: "flex-start", flex: 1, "& .MuiCheckbox-root": { mt: 0.5 } }}
                       />
-                    }
-                    label={
-                      <Box>
-                        <Typography variant="body1" fontWeight={500}>{offer.name}</Typography>
-                        {offer.description && (
-                          <Typography variant="body2" color="text.secondary">{offer.description}</Typography>
-                        )}
-                      </Box>
-                    }
-                    sx={{ mb: 1, alignItems: "flex-start", "& .MuiCheckbox-root": { mt: 0.5 } }}
-                  />
-                ))}
+
+                      {isSelected && (
+                        <TextField
+                          label="Количество"
+                          type="number"
+                          size="small"
+                          value={offerQuantities[offer.id] ?? "1"}
+                          onChange={(e) => updateOfferQuantity(offer.id, e.target.value)}
+                          error={quantityError}
+                          helperText={quantityError ? "Минимум 1" : " "}
+                          slotProps={{ htmlInput: { min: 1, step: 1 } }}
+                          sx={{ width: 140 }}
+                        />
+                      )}
+                    </Box>
+                  );
+                })}
               </Box>
             </FormControl>
           )
@@ -128,7 +196,7 @@ function RespondToOfferModal({ targetOffer, isOpen, onClose }: RespondToOfferMod
         <Button
           variant="contained"
           onClick={submit}
-          disabled={selectedOfferIds.length === 0 || isCreating || isLoading || !!error}
+          disabled={selectedOfferIds.length === 0 || isCreating || isLoading || !!error || hasInvalidQuantity}
         >
           {isCreating ? <CircularProgress size={20} color="inherit" /> : "Создать черновик"}
         </Button>
