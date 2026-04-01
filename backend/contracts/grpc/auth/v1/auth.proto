@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package linktracker.auth.v1;
+package linktracker.auth.v1; // TODO: заменить на barter port
 
 option go_package = "link-tracker/internal/contracts/grpc/auth/v1;authpb";
 
