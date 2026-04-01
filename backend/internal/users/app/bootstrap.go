@@ -2,16 +2,20 @@ package app
 
 import (
 	authpb "barter-port/contracts/grpc/auth/v1"
+	userspb "barter-port/contracts/grpc/users/v1"
 	authusers "barter-port/contracts/kafka/messages/auth-users"
+	"barter-port/internal/users/application/user"
 	userservice "barter-port/internal/users/application/user"
 	"barter-port/internal/users/infrastructure/kafka/consumer"
 	"barter-port/internal/users/infrastructure/kafka/producer"
+	grpctransport "barter-port/internal/users/infrastructure/transport/grpc"
 	httptransport "barter-port/internal/users/infrastructure/transport/http"
 	"barter-port/pkg/bootstrap"
 	"barter-port/pkg/db"
 	"barter-port/pkg/kafkax"
 	"errors"
 	"fmt"
+	"net"
 	"net/http"
 
 	"google.golang.org/grpc"
@@ -119,6 +123,25 @@ func (app *App) initHTTPServer(cfg bootstrap.Config, userService *userservice.Se
 		Addr:    bootstrap.InitPortStringFromConfig(cfg, 8082),
 		Handler: router,
 	}
+
+	return nil
+}
+
+func (app *App) initGRPCServer(cfg bootstrap.Config, usersService *user.Service) error {
+	if cfg.AuthGRPCListenAddr == "" {
+		return fmt.Errorf("failed to initialize grpc server: auth grpc listen address is not configured")
+	}
+
+	listener, err := net.Listen("tcp", cfg.AuthGRPCListenAddr)
+	if err != nil {
+		return fmt.Errorf("failed to listen grpc: %w", err)
+	}
+
+	server := grpc.NewServer()
+	userspb.RegisterUsersServiceServer(server, grpctransport.NewServer(usersService))
+
+	app.grpcServer = server
+	app.grpcListener = listener
 
 	return nil
 }
