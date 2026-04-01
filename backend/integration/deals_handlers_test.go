@@ -112,19 +112,12 @@ func mustGetOffers(t *testing.T, userID uuid.UUID, my *bool) dealstypes.ListOffe
 	return result
 }
 
-func mustGetDraftIDs(t *testing.T, userID uuid.UUID, createdByMe *bool, participating *bool) []uuid.UUID {
+func mustGetDraftIDs(t *testing.T, userID uuid.UUID, createdByMe *bool) []uuid.UUID {
 	t.Helper()
 
 	url := dealsURL() + "/deals/drafts"
-	query := "?"
 	if createdByMe != nil {
-		query += fmt.Sprintf("createdByMe=%t&", *createdByMe)
-	}
-	if participating != nil {
-		query += fmt.Sprintf("participating=%t&", *participating)
-	}
-	if query != "?" {
-		url += query[:len(query)-1]
+		url += fmt.Sprintf("?createdByMe=%t", *createdByMe)
 	}
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)
@@ -309,7 +302,7 @@ func TestGetDraftsEmpty(t *testing.T) {
 	dumpDealsLogs(t)
 
 	userID := uuid.New()
-	ids := mustGetDraftIDs(t, userID, nil, nil)
+	ids := mustGetDraftIDs(t, userID, nil)
 	require.Empty(t, ids)
 }
 
@@ -322,6 +315,75 @@ func TestGetDraftsUnauthorized(t *testing.T) {
 	defer func() { _ = resp.Body.Close() }()
 
 	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+}
+
+func TestGetDraftsCreatedByMeTrueReturnsOnlyAuthoredDrafts(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userA := uuid.New()
+	userB := uuid.New()
+	offerA := mustCreateOffer(t, userA)
+
+	draftByA := mustCreateDraft(t, userA, nil, nil, []dealstypes.OfferIDAndQuantity{{OfferID: offerA, Quantity: 1}})
+	draftByBWithOfferA := mustCreateDraft(t, userB, nil, nil, []dealstypes.OfferIDAndQuantity{{OfferID: offerA, Quantity: 1}})
+
+	createdByMe := true
+	ids := mustGetDraftIDs(t, userA, &createdByMe)
+
+	require.Contains(t, ids, draftByA)
+	require.NotContains(t, ids, draftByBWithOfferA)
+}
+
+func TestGetDraftsCreatedByMeFalseReturnsParticipatingDrafts(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userA := uuid.New()
+	userB := uuid.New()
+	offerA := mustCreateOffer(t, userA)
+	offerB := mustCreateOffer(t, userB)
+
+	draftByBWithOfferA := mustCreateDraft(t, userB, nil, nil, []dealstypes.OfferIDAndQuantity{{OfferID: offerA, Quantity: 1}})
+	draftByBWithOfferB := mustCreateDraft(t, userB, nil, nil, []dealstypes.OfferIDAndQuantity{{OfferID: offerB, Quantity: 1}})
+
+	createdByMe := false
+	ids := mustGetDraftIDs(t, userA, &createdByMe)
+
+	require.Contains(t, ids, draftByBWithOfferA)
+	require.NotContains(t, ids, draftByBWithOfferB)
+}
+
+func TestGetDraftsCreatedByMeDefaultFalse(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userA := uuid.New()
+	userB := uuid.New()
+	offerA := mustCreateOffer(t, userA)
+	_ = mustCreateDraft(t, userB, nil, nil, []dealstypes.OfferIDAndQuantity{{OfferID: offerA, Quantity: 1}})
+
+	idsDefault := mustGetDraftIDs(t, userA, nil)
+	createdByMe := false
+	idsFalse := mustGetDraftIDs(t, userA, &createdByMe)
+
+	require.ElementsMatch(t, idsFalse, idsDefault)
+}
+
+func TestGetDraftsInvalidCreatedByMeReturnsBadRequest(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	req, err := http.NewRequest(http.MethodGet, dealsURL()+"/deals/drafts?createdByMe=not-bool", nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userID))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 }
 
 // ────────────────────────────────────────────────────────────────
