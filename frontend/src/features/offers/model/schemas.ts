@@ -1,26 +1,27 @@
 import {z} from "zod";
 
-export const itemTypeSchema = z.enum(["good", "service"]);
-export const itemActionSchema = z.enum(["give", "take"]);
+export const offerTypeSchema = z.enum(["good", "service"]);
+export const offerActionSchema = z.enum(["give", "take"]);
 
-export const itemSchema = z.object({
+export const offerSchema = z.object({
   id: z.string(),
   authorId: z.string(),
   name: z.string(),
   description: z.string(),
-  action: itemActionSchema,
-  type: itemTypeSchema,
+  action: offerActionSchema,
+  type: offerTypeSchema,
   views: z.number(),
   createdAt: z.string(),
-})
+});
 
 export const universalCursorSchema = z.object({
   id: z.string(),
   createdAt: z.string().nullable().optional(),
   views: z.number().nullable().optional(),
-})
+});
 
-export const getItemsResponseSchema = z.object({
-  items: z.array(itemSchema),
+export const getOffersResponseSchema = z.object({
+  offers: z.array(offerSchema),
   nextCursor: z.nullable(universalCursorSchema),
-})
+});
+
