@@ -6,6 +6,8 @@ offers:
     description: |
       Returns a paginated list of offers.
       
+      - If `my=true`, only offers created by the current user are returned.
+      
       Supported sorting modes:
       - `created_at`: newest offers first
       - `popularity`: most viewed offers first
@@ -17,6 +19,12 @@ offers:
     security:
       - bearerAuth: [ ]
     parameters:
+      - name: my
+        in: query
+        required: false
+        description: False by default. If true, returns only offers created by the current user.
+        schema:
+          type: boolean
       - $ref: '../components/parameters.yaml#/SortType'
       - $ref: '../components/parameters.yaml#/CursorCreatedAt'
       - $ref: '../components/parameters.yaml#/CursorViews'
