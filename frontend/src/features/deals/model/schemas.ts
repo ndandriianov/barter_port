@@ -46,16 +46,7 @@ export const createDraftDealResponseSchema = z.object({
 
 const idsListSchema = z.array(z.string());
 
-export const getMyDraftDealsRawResponseSchema = z.union([
-  z.object({
-    data: idsListSchema,
-  }),
-  idsListSchema,
-]);
-
-export const getMyDraftDealsResponseSchema = z.object({
-  data: idsListSchema,
-});
+export const getMyDraftDealsResponseSchema = idsListSchema;
 
 export const itemSchema = z.object({
   id: z.string(),
@@ -80,4 +71,3 @@ export const dealSchema = z.object({
 export const getDealsResponseSchema = z.object({
   data: z.array(z.string()),
 });
-

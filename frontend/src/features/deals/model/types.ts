@@ -27,6 +27,12 @@ export interface CreateDraftDealRequest {
 
 export type CreateDraftDealResponse = z.Infer<typeof createDraftDealResponseSchema>;
 export type GetMyDraftDealsResponse = z.Infer<typeof getMyDraftDealsResponseSchema>;
+
+export interface GetMyDraftDealsParams {
+  createdByMe?: boolean;
+  participating?: boolean;
+}
+
 export type UserConfirm = z.Infer<typeof userConfirmSchema>;
 export type ConfirmDraftDealResponse = z.Infer<typeof confirmDraftDealResponseSchema>;
 
@@ -38,5 +44,4 @@ export interface GetDealsParams {
 export type GetDealsResponse = z.Infer<typeof getDealsResponseSchema>;
 export type Item = z.Infer<typeof itemSchema>;
 export type Deal = z.Infer<typeof dealSchema>;
-
 

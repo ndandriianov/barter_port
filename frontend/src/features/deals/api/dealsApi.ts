@@ -6,7 +6,6 @@ import {
   dealSchema,
   draftSchema,
   getDealsResponseSchema,
-  getMyDraftDealsRawResponseSchema,
   getMyDraftDealsResponseSchema,
 } from "@/features/deals/model/schemas.ts";
 import type {
@@ -17,6 +16,7 @@ import type {
   Draft,
   GetDealsParams,
   GetDealsResponse,
+  GetMyDraftDealsParams,
   GetMyDraftDealsResponse,
 } from "@/features/deals/model/types.ts";
 
@@ -35,14 +35,15 @@ const dealsApi = createApi({
       invalidatesTags: ["DraftDeals"],
     }),
 
-    getMyDraftDeals: builder.query<GetMyDraftDealsResponse, void>({
-      query: () => "/deals/drafts/my",
-      transformResponse: (response: unknown) => {
-        const parsed = getMyDraftDealsRawResponseSchema.parse(response);
-        const normalized = Array.isArray(parsed) ? {data: parsed} : parsed;
-
-        return getMyDraftDealsResponseSchema.parse(normalized);
-      },
+    getMyDraftDeals: builder.query<GetMyDraftDealsResponse, GetMyDraftDealsParams | void>({
+      query: (params) =>
+        params
+          ? {
+              url: "/deals/drafts",
+              params,
+            }
+          : "/deals/drafts",
+      transformResponse: (response: unknown) => getMyDraftDealsResponseSchema.parse(response),
       providesTags: ["DraftDeals"],
     }),
 
@@ -96,5 +97,4 @@ const dealsApi = createApi({
 });
 
 export default dealsApi;
-
 
