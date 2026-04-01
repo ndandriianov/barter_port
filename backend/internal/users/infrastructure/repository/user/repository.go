@@ -120,7 +120,7 @@ func (r *Repository) UpdateBio(ctx context.Context, id uuid.UUID, bio *string) e
 // GetNamesForUserIDs returns a map of user IDs to their corresponding names.
 //
 // No domain Errors
-func (r *Repository) GetNamesForUserIDs(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]string, error) {
+func (r *Repository) GetNamesForUserIDs(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]*string, error) {
 	query := `
 		SELECT id, name
 		FROM users
@@ -133,10 +133,10 @@ func (r *Repository) GetNamesForUserIDs(ctx context.Context, ids []uuid.UUID) (m
 	}
 	defer rows.Close()
 
-	names := make(map[uuid.UUID]string)
+	names := make(map[uuid.UUID]*string)
 	for rows.Next() {
 		var id uuid.UUID
-		var name string
+		var name *string
 
 		err = rows.Scan(&id, &name)
 		if err != nil {

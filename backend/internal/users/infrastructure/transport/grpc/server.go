@@ -35,9 +35,12 @@ func (s Server) GetUsersWithInfo(ctx context.Context, request *userspb.GetUsersW
 
 	info := make([]*userspb.UserInfo, len(request.Ids))
 	for i, id := range request.Ids {
+		if names[ids[i]] == nil {
+			continue
+		}
 		info[i] = &userspb.UserInfo{
 			Id:   id,
-			Name: names[ids[i]],
+			Name: *names[ids[i]],
 		}
 	}
 
