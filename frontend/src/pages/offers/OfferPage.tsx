@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { Alert, Box, Button, Divider, Typography } from "@mui/material";
 import { useAppSelector } from "@/hooks/redux";
 import offersApi from "@/features/offers/api/offersApi";
-import authApi from "@/features/auth/api/authApi";
+import usersApi from "@/features/users/api/usersApi";
 import type { GetOffersResponse, Offer } from "@/features/offers/model/types";
 import OfferCard from "@/widgets/offers/OfferCard";
 import RespondToOfferModal from "@/widgets/offers/RespondToOfferModal";
@@ -25,7 +25,7 @@ function isGetOffersResponse(data: unknown): data is GetOffersResponse {
 function OfferPage() {
   const { offerId } = useParams<{ offerId: string }>();
   const [isRespondModalOpen, setIsRespondModalOpen] = useState(false);
-  const { data: meData } = authApi.useMeQuery();
+  const { data: meData } = usersApi.useGetCurrentUserQuery();
 
   const offer = useAppSelector((state) => {
     const queries = state[offersApi.reducerPath].queries;
@@ -46,7 +46,7 @@ function OfferPage() {
     return <Alert severity="warning">Объявление не найдено</Alert>;
   }
 
-  const canRespond = !!meData && offer.authorId !== meData.userId;
+  const canRespond = !!meData && offer.authorId !== meData.id;
 
   return (
     <Box maxWidth={700} mx="auto">
