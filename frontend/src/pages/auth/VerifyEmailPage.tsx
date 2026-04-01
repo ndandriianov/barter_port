@@ -1,21 +1,22 @@
-import {useSearchParams} from "react-router-dom";
-import authApi from "@/features/auth/api/authApi.ts";
-import {useEffect, useState} from "react";
+import { useSearchParams } from "react-router-dom";
+import authApi from "@/features/auth/api/authApi";
+import { useEffect, useState } from "react";
+import { Alert, Box, CircularProgress, Typography } from "@mui/material";
 
-type verifyStatus = "pending" | "success" | "error"
+type VerifyStatus = "pending" | "success" | "error";
 
 function VerifyEmailPage() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token") || "";
 
-  const [verifyEmail, {isLoading}] = authApi.useVerifyEmailMutation();
-  const [status, setStatus] = useState<verifyStatus>("pending")
+  const [verifyEmail, { isLoading }] = authApi.useVerifyEmailMutation();
+  const [status, setStatus] = useState<VerifyStatus>("pending");
 
   useEffect(() => {
     async function verify() {
       if (token) {
         try {
-          await verifyEmail({token}).unwrap();
+          await verifyEmail({ token }).unwrap();
           setStatus("success");
         } catch {
           setStatus("error");
@@ -27,23 +28,31 @@ function VerifyEmailPage() {
 
     verify().catch((error) => {
       console.error("Error verifying email:", error);
-    })
+    });
   }, [token, verifyEmail]);
 
-  if (isLoading) {
-    return <div>Verifying your email...</div>;
-  }
-
-  if (status === "success") {
-    return <div>Your email has been successfully verified!</div>;
-  }
-
-  if (status === "error") {
-    return <div>Invalid or expired verification link. Please request a new one.</div>;
-  }
-
   return (
-    <div></div>
+    <Box textAlign="center">
+      <Typography variant="h5" fontWeight={700} mb={3}>
+        Подтверждение email
+      </Typography>
+
+      {isLoading && (
+        <Box display="flex" justifyContent="center" mt={2}>
+          <CircularProgress />
+        </Box>
+      )}
+
+      {!isLoading && status === "success" && (
+        <Alert severity="success">Email успешно подтверждён!</Alert>
+      )}
+
+      {!isLoading && status === "error" && (
+        <Alert severity="error">
+          Недействительная или устаревшая ссылка подтверждения.
+        </Alert>
+      )}
+    </Box>
   );
 }
 
