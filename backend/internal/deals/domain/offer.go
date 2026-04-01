@@ -9,21 +9,23 @@ import (
 )
 
 type Offer struct {
-	ID          uuid.UUID
-	AuthorId    uuid.UUID
-	Name        string
-	Type        enums.ItemType
-	Action      enums.OfferAction
-	Description string
-	CreatedAt   time.Time
+	ID          uuid.UUID         `db:"id"`
+	AuthorId    uuid.UUID         `db:"author_id"`
+	AuthorName  *string           `db:"-"`
+	Name        string            `db:"name"`
+	Type        enums.ItemType    `db:"type"`
+	Action      enums.OfferAction `db:"action"`
+	Description string            `db:"description"`
+	CreatedAt   time.Time         `db:"created_at"`
 	// TODO: добавить updated at
-	Views int
+	Views int `db:"views"`
 }
 
 func (i *Offer) ToDto() types.Offer {
 	return types.Offer{
 		Id:          i.ID,
 		AuthorId:    i.AuthorId,
+		AuthorName:  i.AuthorName,
 		Name:        i.Name,
 		Type:        types.ItemType(i.Type.String()),
 		Action:      types.OfferAction(i.Action.String()),
@@ -37,6 +39,7 @@ func (i *Offer) ToDTOWithInfo(info OfferInfo) types.OfferWithInfo {
 	return types.OfferWithInfo{
 		Action:      types.OfferAction(i.Action.String()),
 		AuthorId:    i.AuthorId,
+		AuthorName:  i.AuthorName,
 		CreatedAt:   i.CreatedAt,
 		Description: i.Description,
 		Id:          i.ID,

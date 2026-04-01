@@ -131,8 +131,8 @@ func (s *Service) GetOffers(
 		if info == nil {
 			continue // буду считать что пользователь с неуказанным именем
 		}
-		if offers[i].ID.String() == info.Id {
-			offers[i].Name = info.Name
+		if offers[i].AuthorId.String() == info.Id {
+			offers[i].AuthorName = &info.Name
 		}
 	}
 
