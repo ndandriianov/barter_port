@@ -11,8 +11,7 @@ import {
   DialogTitle,
   FormControl,
   FormControlLabel,
-  Radio,
-  RadioGroup,
+  Checkbox,
   Typography,
 } from "@mui/material";
 import offersApi from "@/features/offers/api/offersApi";
@@ -26,11 +25,11 @@ interface RespondToOfferModalProps {
 }
 
 function RespondToOfferModal({ targetOffer, isOpen, onClose }: RespondToOfferModalProps) {
-  const [selectedOfferId, setSelectedOfferId] = useState<string | null>(null);
+  const [selectedOfferIds, setSelectedOfferIds] = useState<string[]>([]);
   const navigate = useNavigate();
 
   const closeModal = () => {
-    setSelectedOfferId(null);
+    setSelectedOfferIds([]);
     onClose();
   };
 
@@ -42,17 +41,25 @@ function RespondToOfferModal({ targetOffer, isOpen, onClose }: RespondToOfferMod
   const [createDraftDeal, { isLoading: isCreating, error: createError }] =
     dealsApi.useCreateDraftDealMutation();
 
-  const selectedOffer = useMemo(
-    () => data?.offers.find((entry) => entry.id === selectedOfferId),
-    [data?.offers, selectedOfferId],
+  const selectedOffers = useMemo(
+    () => data?.offers.filter((entry) => selectedOfferIds.includes(entry.id)) ?? [],
+    [data?.offers, selectedOfferIds],
   );
 
+  const toggleSelectedOffer = (offerId: string) => {
+    setSelectedOfferIds((current) =>
+      current.includes(offerId)
+        ? current.filter((id) => id !== offerId)
+        : [...current, offerId],
+    );
+  };
+
   const submit = async () => {
-    if (!selectedOffer) return;
+    if (selectedOffers.length === 0) return;
     const result = await createDraftDeal({
       offers: [
         { offerID: targetOffer.id, quantity: 1 },
-        { offerID: selectedOffer.id, quantity: 1 },
+        ...selectedOffers.map((offer) => ({ offerID: offer.id, quantity: 1 })),
       ],
     }).unwrap();
     closeModal();
@@ -65,7 +72,7 @@ function RespondToOfferModal({ targetOffer, isOpen, onClose }: RespondToOfferMod
 
       <DialogContent dividers>
         <Typography variant="body2" color="text.secondary" mb={2}>
-          Выберите своё объявление для обмена:
+          Выберите одно или несколько своих объявлений для обмена:
         </Typography>
 
         {isLoading && (
@@ -81,15 +88,16 @@ function RespondToOfferModal({ targetOffer, isOpen, onClose }: RespondToOfferMod
             <Typography color="text.secondary">У вас пока нет объявлений для отклика</Typography>
           ) : (
             <FormControl component="fieldset" fullWidth>
-              <RadioGroup
-                value={selectedOfferId ?? ""}
-                onChange={(e) => setSelectedOfferId(e.target.value)}
-              >
+              <Box display="flex" flexDirection="column">
                 {data.offers.map((offer) => (
                   <FormControlLabel
                     key={offer.id}
-                    value={offer.id}
-                    control={<Radio />}
+                    control={
+                      <Checkbox
+                        checked={selectedOfferIds.includes(offer.id)}
+                        onChange={() => toggleSelectedOffer(offer.id)}
+                      />
+                    }
                     label={
                       <Box>
                         <Typography variant="body1" fontWeight={500}>{offer.name}</Typography>
@@ -98,10 +106,10 @@ function RespondToOfferModal({ targetOffer, isOpen, onClose }: RespondToOfferMod
                         )}
                       </Box>
                     }
-                    sx={{ mb: 1, alignItems: "flex-start", "& .MuiRadio-root": { mt: 0.5 } }}
+                    sx={{ mb: 1, alignItems: "flex-start", "& .MuiCheckbox-root": { mt: 0.5 } }}
                   />
                 ))}
-              </RadioGroup>
+              </Box>
             </FormControl>
           )
         )}
@@ -120,7 +128,7 @@ function RespondToOfferModal({ targetOffer, isOpen, onClose }: RespondToOfferMod
         <Button
           variant="contained"
           onClick={submit}
-          disabled={!selectedOfferId || isCreating || isLoading || !!error}
+          disabled={selectedOfferIds.length === 0 || isCreating || isLoading || !!error}
         >
           {isCreating ? <CircularProgress size={20} color="inherit" /> : "Создать черновик"}
         </Button>
