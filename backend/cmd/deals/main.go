@@ -1,6 +1,7 @@
 package main
 
 import (
+	"barter-port/internal/deals/app"
 	dealssvc "barter-port/internal/deals/application/deals"
 	"barter-port/internal/deals/application/offers"
 	"barter-port/internal/deals/infrastructure/repository/deals"
@@ -40,7 +41,14 @@ func main() {
 	logg := logger.NewJSONLogger(slog.LevelDebug, "deals-service", "")
 
 	offersRepo := offersr.NewRepository(db)
-	offersService := offers.NewService(offersRepo, logg)
+
+	usersClient, conn, err := app.InitUsersGRPCClient(cfg)
+	if err != nil {
+		log.Fatal("failed to initialize users grpc client:", err)
+	}
+	defer conn.Close()
+
+	offersService := offers.NewService(offersRepo, usersClient, logg)
 
 	draftsRepo := drafts.NewRepository()
 	dealsRepo := deals.NewRepository()

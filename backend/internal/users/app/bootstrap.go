@@ -128,11 +128,11 @@ func (app *App) initHTTPServer(cfg bootstrap.Config, userService *userservice.Se
 }
 
 func (app *App) initGRPCServer(cfg bootstrap.Config, usersService *user.Service) error {
-	if cfg.AuthGRPCListenAddr == "" {
-		return fmt.Errorf("failed to initialize grpc server: auth grpc listen address is not configured")
+	if cfg.UsersGRPCListenAddr == "" {
+		return fmt.Errorf("failed to initialize grpc server: users grpc listen address is not configured")
 	}
 
-	listener, err := net.Listen("tcp", cfg.AuthGRPCListenAddr)
+	listener, err := net.Listen("tcp", cfg.UsersGRPCListenAddr)
 	if err != nil {
 		return fmt.Errorf("failed to listen grpc: %w", err)
 	}

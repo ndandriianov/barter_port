@@ -1,6 +1,7 @@
 package offers
 
 import (
+	userspb "barter-port/contracts/grpc/users/v1"
 	"barter-port/internal/deals/domain"
 	"barter-port/internal/deals/domain/enums"
 	offersrep "barter-port/internal/deals/infrastructure/repository/offers"
@@ -15,11 +16,12 @@ import (
 
 type Service struct {
 	repo           *offersrep.Repository
+	usersClient    userspb.UsersServiceClient
 	fallbackLogger *slog.Logger
 }
 
-func NewService(offerRepository *offersrep.Repository, fallbackLogger *slog.Logger) *Service {
-	return &Service{repo: offerRepository, fallbackLogger: fallbackLogger}
+func NewService(offerRepository *offersrep.Repository, usersClient userspb.UsersServiceClient, fallbackLogger *slog.Logger) *Service {
+	return &Service{repo: offerRepository, usersClient: usersClient, fallbackLogger: fallbackLogger}
 }
 
 func (s *Service) CreateOffer(
@@ -67,6 +69,9 @@ func (s *Service) GetOffers(
 
 	log := logger.LogFrom(ctx, s.fallbackLogger)
 
+	var universalCursor *domain.UniversalCursor
+	var offers []domain.Offer
+
 	switch sortType {
 	case enums.SortTypeByTime:
 		var timeCursor *domain.TimeCursor
@@ -79,17 +84,14 @@ func (s *Service) GetOffers(
 			log.Debug("time cursor is not specified, starting from the beginning", slog.Any("error", err))
 		}
 
-		offers, newCursor, err := s.repo.GetOffersOrderByTime(ctx, timeCursor, limit, authorID)
+		offers, timeCursor, err = s.repo.GetOffersOrderByTime(ctx, timeCursor, limit, authorID)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		var universalCursor *domain.UniversalCursor
-		if newCursor != nil {
-			universalCursor = newCursor.ToUniversalCursor()
+		if timeCursor != nil {
+			universalCursor = timeCursor.ToUniversalCursor()
 		}
-
-		return offers, universalCursor, nil
 
 	case enums.SortTypeByPopularity:
 		var popularityCursor *domain.PopularityCursor
@@ -102,21 +104,39 @@ func (s *Service) GetOffers(
 			log.Debug("popularity cursor is not specified, starting from the beginning", slog.Any("error", err))
 		}
 
-		offers, newCursor, err := s.repo.GetOffersOrderByPopularity(ctx, popularityCursor, limit, authorID)
+		offers, popularityCursor, err = s.repo.GetOffersOrderByPopularity(ctx, popularityCursor, limit, authorID)
 		if err != nil {
 			return nil, nil, err
 		}
 
-		var universalCursor *domain.UniversalCursor
-		if newCursor != nil {
-			universalCursor = newCursor.ToUniversalCursor()
+		if popularityCursor != nil {
+			universalCursor = popularityCursor.ToUniversalCursor()
 		}
-
-		return offers, universalCursor, nil
 
 	default:
 		return nil, nil, fmt.Errorf("invalid sort type: %v", sortType)
 	}
+
+	ids := make([]string, len(offers))
+	for i, o := range offers {
+		ids[i] = o.AuthorId.String()
+	}
+
+	response, err := s.usersClient.GetUsersWithInfo(ctx, &userspb.GetUsersWithInfoRequest{Ids: ids})
+	if err != nil {
+		return nil, nil, fmt.Errorf("failed to get author names: %w", err)
+	}
+
+	for i, info := range response.Users {
+		if info == nil {
+			continue // буду считать что пользователь с неуказанным именем
+		}
+		if offers[i].ID.String() == info.Id {
+			offers[i].Name = info.Name
+		}
+	}
+
+	return offers, universalCursor, nil
 }
 
 // TODO: hide
