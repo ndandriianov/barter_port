@@ -1,56 +1,103 @@
-import {Link} from "react-router-dom";
-import {useState} from "react";
-import dealsApi from "@/features/deals/api/dealsApi.ts";
+import { useState } from "react";
+import { Link as RouterLink } from "react-router-dom";
+import {
+  Alert,
+  Box,
+  Checkbox,
+  CircularProgress,
+  FormControlLabel,
+  FormGroup,
+  IconButton,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText,
+  Tooltip,
+  Typography,
+} from "@mui/material";
+import RefreshIcon from "@mui/icons-material/Refresh";
+import dealsApi from "@/features/deals/api/dealsApi";
 
 function DealsList() {
   const [myOnly, setMyOnly] = useState(false);
   const [openOnly, setOpenOnly] = useState(false);
 
-  const {data, isLoading, isFetching, error, refetch} = dealsApi.useGetDealsQuery({
+  const { data, isLoading, isFetching, error, refetch } = dealsApi.useGetDealsQuery({
     my: myOnly || undefined,
     open: openOnly || undefined,
   });
 
-  if (isLoading) return <div>Загрузка сделок...</div>;
-  if (error) return <div>Не удалось загрузить сделки</div>;
-  if (!data) return <div>Список сделок недоступен</div>;
+  if (isLoading) {
+    return (
+      <Box display="flex" justifyContent="center" py={6}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return <Alert severity="error">Не удалось загрузить сделки</Alert>;
+  }
+
+  if (!data) {
+    return <Alert severity="info">Список сделок недоступен</Alert>;
+  }
 
   return (
-    <section>
-      <div>
-        <label>
-          <input
-            type="checkbox"
-            checked={myOnly}
-            onChange={(e) => setMyOnly(e.target.checked)}
+    <Box>
+      <Box display="flex" alignItems="center" gap={2} mb={2} flexWrap="wrap">
+        <FormGroup row>
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={myOnly}
+                onChange={(e) => setMyOnly(e.target.checked)}
+                size="small"
+              />
+            }
+            label="Только мои"
           />
-          Только мои
-        </label>
-        <label>
-          <input
-            type="checkbox"
-            checked={openOnly}
-            onChange={(e) => setOpenOnly(e.target.checked)}
+          <FormControlLabel
+            control={
+              <Checkbox
+                checked={openOnly}
+                onChange={(e) => setOpenOnly(e.target.checked)}
+                size="small"
+              />
+            }
+            label="Только открытые"
           />
-          Только открытые
-        </label>
-        <button type="button" onClick={() => refetch()} disabled={isFetching}>
-          Обновить
-        </button>
-      </div>
+        </FormGroup>
+
+        <Tooltip title="Обновить">
+          <span>
+            <IconButton onClick={() => refetch()} disabled={isFetching} size="small">
+              <RefreshIcon />
+            </IconButton>
+          </span>
+        </Tooltip>
+      </Box>
 
       {data.data.length === 0 ? (
-        <div>Сделок пока нет</div>
+        <Typography color="text.secondary" textAlign="center" py={4}>
+          Сделок пока нет
+        </Typography>
       ) : (
-        data.data.map((dealId) => (
-          <div key={dealId}>
-            <Link to={`/deals/${dealId}`}>{dealId}</Link>
-          </div>
-        ))
+        <List disablePadding>
+          {data.data.map((dealId) => (
+            <ListItem key={dealId} disablePadding divider>
+              <ListItemButton component={RouterLink} to={`/deals/${dealId}`}>
+                <ListItemText
+                  primary={dealId}
+                  primaryTypographyProps={{ variant: "body2", fontFamily: "monospace" }}
+                />
+              </ListItemButton>
+            </ListItem>
+          ))}
+        </List>
       )}
-    </section>
+    </Box>
   );
 }
 
 export default DealsList;
-

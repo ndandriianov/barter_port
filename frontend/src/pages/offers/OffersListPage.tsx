@@ -1,15 +1,27 @@
-import {Link} from "react-router-dom";
-import OffersList from "@/widgets/offers/OffersList.tsx";
+import { Link as RouterLink } from "react-router-dom";
+import { Box, Button, Typography } from "@mui/material";
+import AddIcon from "@mui/icons-material/Add";
+import OffersList from "@/widgets/offers/OffersList";
 
 function OffersListPage() {
   return (
-	<section>
-	  <h1>Список offers</h1>
-	  <Link to="/offers/create">Создать offer</Link>
-	  <OffersList />
-	</section>
+    <Box>
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h4" fontWeight={700}>
+          Объявления
+        </Typography>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          component={RouterLink}
+          to="/offers/create"
+        >
+          Создать
+        </Button>
+      </Box>
+      <OffersList />
+    </Box>
   );
 }
 
 export default OffersListPage;
-

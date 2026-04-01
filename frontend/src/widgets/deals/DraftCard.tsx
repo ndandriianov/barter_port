@@ -1,4 +1,15 @@
-import type {Draft} from "@/features/deals/model/types.ts";
+import {
+  Box,
+  Card,
+  CardContent,
+  Chip,
+  Divider,
+  List,
+  ListItem,
+  ListItemText,
+  Typography,
+} from "@mui/material";
+import type { Draft } from "@/features/deals/model/types";
 
 const formatDateTime = (value: string) =>
   new Intl.DateTimeFormat("ru-RU", {
@@ -9,41 +20,87 @@ const formatDateTime = (value: string) =>
     minute: "2-digit",
   }).format(new Date(value));
 
+function confirmChip(confirmed: boolean | undefined) {
+  if (confirmed === undefined)
+    return <Chip label="Ожидает подтверждения" size="small" color="default" />;
+  if (confirmed) return <Chip label="Подтверждено" size="small" color="success" />;
+  return <Chip label="Отклонено" size="small" color="error" />;
+}
+
 interface DraftCardProps {
   draft: Draft;
 }
 
-function DraftCard({draft}: DraftCardProps) {
+function DraftCard({ draft }: DraftCardProps) {
   return (
-    <article>
-      <h2>{draft.name ?? "Черновик сделки"}</h2>
-      {draft.description && <p>{draft.description}</p>}
-      <div>id: {draft.id}</div>
-      <div>authorId: {draft.authorId}</div>
-      <div>Создан: {formatDateTime(draft.createdAt)}</div>
-      {draft.updatedAt && <div>Обновлен: {formatDateTime(draft.updatedAt)}</div>}
+    <Card variant="outlined">
+      <CardContent>
+        <Typography variant="h6" fontWeight={600} gutterBottom>
+          {draft.name ?? "Черновик сделки"}
+        </Typography>
 
-      <h3>Объявления в черновике</h3>
-      {draft.offers.length === 0 ? (
-        <div>Пусто</div>
-      ) : (
-        draft.offers.map((offer) => (
-          <div key={offer.id}>
-            <div>{offer.name}</div>
-            <div>offerId: {offer.id}</div>
-            <div>Количество: {offer.quantity}</div>
-            <div>
-              Подтверждено:{" "}
-              {offer.confirmed === undefined
-                ? "ожидает подтверждения"
-                : offer.confirmed
-                ? "да"
-                : "нет"}
-            </div>
-          </div>
-        ))
-      )}
-    </article>
+        {draft.description && (
+          <Typography variant="body2" color="text.secondary" mb={2}>
+            {draft.description}
+          </Typography>
+        )}
+
+        <Box display="flex" gap={2} mb={2} flexWrap="wrap">
+          <Typography variant="caption" color="text.disabled">
+            ID: {draft.id}
+          </Typography>
+          <Typography variant="caption" color="text.disabled">
+            Создан: {formatDateTime(draft.createdAt)}
+          </Typography>
+          {draft.updatedAt && (
+            <Typography variant="caption" color="text.disabled">
+              Обновлён: {formatDateTime(draft.updatedAt)}
+            </Typography>
+          )}
+        </Box>
+
+        <Divider sx={{ mb: 2 }} />
+
+        <Typography variant="subtitle2" fontWeight={600} mb={1}>
+          Объявления в черновике
+        </Typography>
+
+        {draft.offers.length === 0 ? (
+          <Typography variant="body2" color="text.secondary">
+            Пусто
+          </Typography>
+        ) : (
+          <List dense disablePadding>
+            {draft.offers.map((offer) => (
+              <ListItem
+                key={offer.id}
+                disableGutters
+                sx={{ borderBottom: "1px solid", borderColor: "divider", pb: 1, mb: 1 }}
+              >
+                <ListItemText
+                  primary={
+                    <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
+                      <Typography variant="body2" fontWeight={500}>
+                        {offer.name}
+                      </Typography>
+                      <Typography variant="caption" color="text.disabled">
+                        ×{offer.quantity}
+                      </Typography>
+                      {confirmChip(offer.confirmed)}
+                    </Box>
+                  }
+                  secondary={
+                    <Typography variant="caption" color="text.disabled">
+                      ID: {offer.id}
+                    </Typography>
+                  }
+                />
+              </ListItem>
+            ))}
+          </List>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

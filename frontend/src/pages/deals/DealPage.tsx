@@ -1,26 +1,36 @@
-import {useParams} from "react-router-dom";
-import dealsApi from "@/features/deals/api/dealsApi.ts";
-import DealCard from "@/widgets/deals/DealCard.tsx";
+import { useParams } from "react-router-dom";
+import { Alert, Box, CircularProgress, Typography } from "@mui/material";
+import dealsApi from "@/features/deals/api/dealsApi";
+import DealCard from "@/widgets/deals/DealCard";
 
 function DealPage() {
-  const {dealId} = useParams<{ dealId: string }>();
+  const { dealId } = useParams<{ dealId: string }>();
 
-  const {data, isLoading, error} = dealsApi.useGetDealByIdQuery(dealId ?? "", {
+  const { data, isLoading, error } = dealsApi.useGetDealByIdQuery(dealId ?? "", {
     skip: !dealId,
   });
 
-  if (!dealId) return <div>Сделка не найдена</div>;
-  if (isLoading) return <div>Загрузка сделки...</div>;
-  if (error) return <div>Не удалось загрузить сделку</div>;
-  if (!data) return <div>Сделка не найдена</div>;
+  if (!dealId) return <Alert severity="warning">Сделка не найдена</Alert>;
+
+  if (isLoading) {
+    return (
+      <Box display="flex" justifyContent="center" py={6}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) return <Alert severity="error">Не удалось загрузить сделку</Alert>;
+  if (!data) return <Alert severity="warning">Сделка не найдена</Alert>;
 
   return (
-    <section>
-      <h1>Детали сделки</h1>
+    <Box maxWidth={700} mx="auto">
+      <Typography variant="h4" fontWeight={700} mb={3}>
+        Детали сделки
+      </Typography>
       <DealCard deal={data} />
-    </section>
+    </Box>
   );
 }
 
 export default DealPage;
-

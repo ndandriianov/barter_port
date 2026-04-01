@@ -1,11 +1,12 @@
-import {useState} from "react";
-import {useParams} from "react-router-dom";
-import {useAppSelector} from "@/hooks/redux.ts";
-import offersApi from "@/features/offers/api/offersApi.ts";
-import authApi from "@/features/auth/api/authApi.ts";
-import type {GetOffersResponse, Offer} from "@/features/offers/model/types.ts";
-import OfferCard from "@/widgets/offers/OfferCard.tsx";
-import RespondToOfferModal from "@/widgets/offers/RespondToOfferModal.tsx";
+import { useState } from "react";
+import { useParams } from "react-router-dom";
+import { Alert, Box, Button, Divider, Typography } from "@mui/material";
+import { useAppSelector } from "@/hooks/redux";
+import offersApi from "@/features/offers/api/offersApi";
+import authApi from "@/features/auth/api/authApi";
+import type { GetOffersResponse, Offer } from "@/features/offers/model/types";
+import OfferCard from "@/widgets/offers/OfferCard";
+import RespondToOfferModal from "@/widgets/offers/RespondToOfferModal";
 
 interface CachedQueryState {
   endpointName?: string;
@@ -14,59 +15,66 @@ interface CachedQueryState {
 
 function isGetOffersResponse(data: unknown): data is GetOffersResponse {
   return (
-	typeof data === "object" &&
-	data !== null &&
-	"offers" in data &&
-	Array.isArray(data.offers)
+    typeof data === "object" &&
+    data !== null &&
+    "offers" in data &&
+    Array.isArray(data.offers)
   );
 }
 
 function OfferPage() {
-  const {offerId} = useParams<{offerId: string}>();
+  const { offerId } = useParams<{ offerId: string }>();
   const [isRespondModalOpen, setIsRespondModalOpen] = useState(false);
-  const {data: meData} = authApi.useMeQuery();
+  const { data: meData } = authApi.useMeQuery();
 
   const offer = useAppSelector((state) => {
-	const queries = state[offersApi.reducerPath].queries;
-	const queryStates = Object.values(queries) as CachedQueryState[];
+    const queries = state[offersApi.reducerPath].queries;
+    const queryStates = Object.values(queries) as CachedQueryState[];
 
-	for (const queryState of queryStates) {
-	  if (queryState?.endpointName !== "getOffers" || !isGetOffersResponse(queryState.data)) {
-		continue;
-	  }
+    for (const queryState of queryStates) {
+      if (queryState?.endpointName !== "getOffers" || !isGetOffersResponse(queryState.data)) {
+        continue;
+      }
+      const match = queryState.data.offers.find((entry: Offer) => entry.id === offerId);
+      if (match) return match;
+    }
 
-	  const match = queryState.data.offers.find((entry: Offer) => entry.id === offerId);
-
-	  if (match) return match;
-	}
-
-	return null;
+    return null;
   });
 
-  if (!offerId) return <div>Объявление не найдено</div>;
-  if (!offer) return <div>Объявление не найдено в кеше RTK</div>;
+  if (!offerId || !offer) {
+    return <Alert severity="warning">Объявление не найдено</Alert>;
+  }
 
   const canRespond = !!meData && offer.authorId !== meData.userId;
 
   return (
-	<section>
-	  <h1>{offer.name}</h1>
-	  <OfferCard offer={offer} />
-	  <div>
-		{canRespond && (
-		  <button type="button" onClick={() => setIsRespondModalOpen(true)}>
-			Откликнуться
-		  </button>
-		)}
-		<button type="button">Пожаловаться</button>
-	  </div>
+    <Box maxWidth={700} mx="auto">
+      <Typography variant="h4" fontWeight={700} mb={3}>
+        {offer.name}
+      </Typography>
 
-	  <RespondToOfferModal
-		targetOffer={offer}
-		isOpen={isRespondModalOpen}
-		onClose={() => setIsRespondModalOpen(false)}
-	  />
-	</section>
+      <OfferCard offer={offer} />
+
+      <Divider sx={{ my: 3 }} />
+
+      <Box display="flex" gap={2}>
+        {canRespond && (
+          <Button variant="contained" onClick={() => setIsRespondModalOpen(true)}>
+            Откликнуться
+          </Button>
+        )}
+        <Button variant="outlined" color="error">
+          Пожаловаться
+        </Button>
+      </Box>
+
+      <RespondToOfferModal
+        targetOffer={offer}
+        isOpen={isRespondModalOpen}
+        onClose={() => setIsRespondModalOpen(false)}
+      />
+    </Box>
   );
 }
 

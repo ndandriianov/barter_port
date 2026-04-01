@@ -1,4 +1,16 @@
-import type {Deal} from "@/features/deals/model/types.ts";
+import {
+  Box,
+  Card,
+  CardContent,
+  Chip,
+  Divider,
+  List,
+  ListItem,
+  ListItemText,
+  Typography,
+} from "@mui/material";
+import type { Deal } from "@/features/deals/model/types";
+
 const formatDateTime = (value: string) =>
   new Intl.DateTimeFormat("ru-RU", {
     day: "2-digit",
@@ -7,33 +19,75 @@ const formatDateTime = (value: string) =>
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value));
+
 interface DealCardProps {
   deal: Deal;
 }
-function DealCard({deal}: DealCardProps) {
+
+function DealCard({ deal }: DealCardProps) {
   return (
-    <article>
-      <h2>{deal.name ?? "Сделка"}</h2>
-      {deal.description && <p>{deal.description}</p>}
-      <div>id: {deal.id}</div>
-      <div>Создана: {formatDateTime(deal.createdAt)}</div>
-      {deal.updatedAt && <div>Обновлена: {formatDateTime(deal.updatedAt)}</div>}
-      <h3>Позиции сделки</h3>
-      {deal.items.length === 0 ? (
-        <div>Позиции отсутствуют</div>
-      ) : (
-        deal.items.map((item) => (
-          <div key={item.id}>
-            <div>{item.name}</div>
-            <div>{item.description}</div>
-            <div>Тип: {item.type}</div>
-            <div>authorId: {item.authorId}</div>
-            {item.providerId && <div>providerId: {item.providerId}</div>}
-            {item.receiverId && <div>receiverId: {item.receiverId}</div>}
-          </div>
-        ))
-      )}
-    </article>
+    <Card variant="outlined">
+      <CardContent>
+        <Typography variant="h6" fontWeight={600} gutterBottom>
+          {deal.name ?? "Сделка"}
+        </Typography>
+
+        {deal.description && (
+          <Typography variant="body2" color="text.secondary" mb={2}>
+            {deal.description}
+          </Typography>
+        )}
+
+        <Box display="flex" gap={2} mb={2} flexWrap="wrap">
+          <Typography variant="caption" color="text.disabled">
+            ID: {deal.id}
+          </Typography>
+          <Typography variant="caption" color="text.disabled">
+            Создана: {formatDateTime(deal.createdAt)}
+          </Typography>
+          {deal.updatedAt && (
+            <Typography variant="caption" color="text.disabled">
+              Обновлена: {formatDateTime(deal.updatedAt)}
+            </Typography>
+          )}
+        </Box>
+
+        <Divider sx={{ mb: 2 }} />
+
+        <Typography variant="subtitle2" fontWeight={600} mb={1}>
+          Позиции сделки
+        </Typography>
+
+        {deal.items.length === 0 ? (
+          <Typography variant="body2" color="text.secondary">
+            Позиции отсутствуют
+          </Typography>
+        ) : (
+          <List dense disablePadding>
+            {deal.items.map((item) => (
+              <ListItem
+                key={item.id}
+                disableGutters
+                sx={{ borderBottom: "1px solid", borderColor: "divider", pb: 1, mb: 1 }}
+              >
+                <ListItemText
+                  primary={
+                    <Box display="flex" alignItems="center" gap={1}>
+                      <Typography variant="body2" fontWeight={500}>
+                        {item.name}
+                      </Typography>
+                      <Chip label={item.type} size="small" variant="outlined" />
+                    </Box>
+                  }
+                  secondary={item.description}
+                />
+              </ListItem>
+            ))}
+          </List>
+        )}
+      </CardContent>
+    </Card>
   );
 }
+
 export default DealCard;

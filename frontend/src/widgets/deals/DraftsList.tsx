@@ -1,32 +1,72 @@
-import {Link} from "react-router-dom";
-import dealsApi from "@/features/deals/api/dealsApi.ts";
+import { Link as RouterLink } from "react-router-dom";
+import {
+  Alert,
+  Box,
+  CircularProgress,
+  IconButton,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText,
+  Tooltip,
+  Typography,
+} from "@mui/material";
+import RefreshIcon from "@mui/icons-material/Refresh";
+import dealsApi from "@/features/deals/api/dealsApi";
 
 function DraftsList() {
-  const {data, isLoading, error, refetch, isFetching} = dealsApi.useGetMyDraftDealsQuery({
+  const { data, isLoading, error, refetch, isFetching } = dealsApi.useGetMyDraftDealsQuery({
     createdByMe: false,
-    participating: true
+    participating: true,
   });
 
-  if (isLoading) return <div>Загрузка черновиков...</div>;
-  if (error) return <div>Не удалось загрузить черновики</div>;
-  if (!data) return <div>Черновики недоступны</div>;
+  if (isLoading) {
+    return (
+      <Box display="flex" justifyContent="center" py={6}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return <Alert severity="error">Не удалось загрузить черновики</Alert>;
+  }
+
+  if (!data) {
+    return <Alert severity="info">Черновики недоступны</Alert>;
+  }
 
   return (
-    <section>
-      <button type="button" onClick={() => refetch()} disabled={isFetching}>
-        Обновить
-      </button>
+    <Box>
+      <Box display="flex" justifyContent="flex-end" mb={1}>
+        <Tooltip title="Обновить">
+          <span>
+            <IconButton onClick={() => refetch()} disabled={isFetching} size="small">
+              <RefreshIcon />
+            </IconButton>
+          </span>
+        </Tooltip>
+      </Box>
 
       {data.length === 0 ? (
-        <div>У вас пока нет черновых договоров</div>
+        <Typography color="text.secondary" textAlign="center" py={4}>
+          У вас пока нет черновых договоров
+        </Typography>
       ) : (
-        data.map((draftId) => (
-          <div key={draftId}>
-            <Link to={`/deals/drafts/${draftId}`}>{draftId}</Link>
-          </div>
-        ))
+        <List disablePadding>
+          {data.map((draftId) => (
+            <ListItem key={draftId} disablePadding divider>
+              <ListItemButton component={RouterLink} to={`/deals/drafts/${draftId}`}>
+                <ListItemText
+                  primary={draftId}
+                  primaryTypographyProps={{ variant: "body2", fontFamily: "monospace" }}
+                />
+              </ListItemButton>
+            </ListItem>
+          ))}
+        </List>
       )}
-    </section>
+    </Box>
   );
 }
 
