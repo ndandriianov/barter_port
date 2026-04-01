@@ -10,6 +10,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -86,13 +87,29 @@ func (h *DealsHandlers) GetDrafts(w http.ResponseWriter, r *http.Request) {
 	log := logger.LogFrom(r.Context(), h.log).With(slog.String("handler", "GetDrafts"))
 	log.Info("handling get drafts request")
 
-	// createdByMe
-	createdByMeStr := chi.URLParam(r, "createdByMe")
-	createdByMe := createdByMeStr == "true"
+	createdByMe := false
+	createdByMeStr := r.URL.Query().Get("createdByMe")
+	if createdByMeStr != "" {
+		parsed, err := strconv.ParseBool(createdByMeStr)
+		if err != nil {
+			log.Warn("invalid createdByMe query param", slog.String("createdByMe", createdByMeStr), slog.Any("error", err))
+			httpx.WriteErrorStr(w, http.StatusBadRequest, "invalid createdByMe")
+			return
+		}
+		createdByMe = parsed
+	}
 
-	// participating
-	participatingStr := chi.URLParam(r, "participating")
-	participating := participatingStr == "true"
+	participating := true
+	participatingStr := r.URL.Query().Get("participating")
+	if participatingStr != "" {
+		parsed, err := strconv.ParseBool(participatingStr)
+		if err != nil {
+			log.Warn("invalid participating query param", slog.String("participating", participatingStr), slog.Any("error", err))
+			httpx.WriteErrorStr(w, http.StatusBadRequest, "invalid participating")
+			return
+		}
+		participating = parsed
+	}
 
 	_ = participating // TODO: если админ и false, то выдать все
 
