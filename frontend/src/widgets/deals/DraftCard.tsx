@@ -32,9 +32,14 @@ function DraftCard({draft}: DraftCardProps) {
             <div>{offer.name}</div>
             <div>offerId: {offer.id}</div>
             <div>Количество: {offer.quantity}</div>
-            {typeof offer.confirmed === "boolean" && (
-              <div>Подтверждено: {offer.confirmed ? "да" : "нет"}</div>
-            )}
+            <div>
+              Подтверждено:{" "}
+              {offer.confirmed === undefined
+                ? "ожидает подтверждения"
+                : offer.confirmed
+                ? "да"
+                : "нет"}
+            </div>
           </div>
         ))
       )}
@@ -43,4 +48,3 @@ function DraftCard({draft}: DraftCardProps) {
 }
 
 export default DraftCard;
-
