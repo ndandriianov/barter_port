@@ -13,11 +13,14 @@ function Header() {
 
   return (
     <div>
-      <Link to={"/login"}>Login</Link>
-      <Link to={"/profile"}>Profile</Link>
-      <Link to={"/register"}>Register</Link>
-      <Link to={"/offers"}>Offers</Link>
-      <Link to={"/offers/create"}>Create Offer</Link>
+      <Link to="/login">Login</Link>
+      <Link to="/profile">Profile</Link>
+      <Link to="/register">Register</Link>
+      <Link to="/offers">Offers</Link>
+      <Link to="/offers/create">Create Offer</Link>
+      <Link to="/deals">Deals</Link>
+      <Link to="/deals/drafts">Drafts</Link>
+      <Link to="/deals/drafts/create">Create Draft</Link>
       <button onClick={handleLogout}>Logout</button>
     </div>
   );
