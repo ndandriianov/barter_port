@@ -44,5 +44,6 @@ func (i *Offer) ToDTOWithInfo(info OfferInfo) types.OfferWithInfo {
 		Quantity:    info.Quantity,
 		Type:        types.ItemType(i.Type.String()),
 		Views:       int64(i.Views),
+		Confirmed:   info.Confirmed,
 	}
 }
