@@ -174,9 +174,7 @@ type GetDealsResponse struct {
 }
 
 // GetMyDraftDealsResponse defines model for GetMyDraftDealsResponse.
-type GetMyDraftDealsResponse struct {
-	Data *[]openapi_types.UUID `json:"data,omitempty"`
-}
+type GetMyDraftDealsResponse = []openapi_types.UUID
 
 // Item defines model for Item.
 type Item struct {
@@ -336,6 +334,12 @@ type GetDealsParams struct {
 
 	// Open False by default. Если true, возвращает только открытые сделки
 	Open *bool `form:"open,omitempty" json:"open,omitempty"`
+}
+
+// GetMyDraftDealsParams defines parameters for GetMyDraftDeals.
+type GetMyDraftDealsParams struct {
+	CreatedByMe   *bool `form:"createdByMe,omitempty" json:"createdByMe,omitempty"`
+	Participating *bool `form:"participating,omitempty" json:"participating,omitempty"`
 }
 
 // ListOffersParams defines parameters for ListOffers.

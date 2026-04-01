@@ -65,8 +65,8 @@ func (s *Service) CreateDraft(
 // GetDraftIDsByAuthor returns a list of draft deal IDs created by the specified author.
 //
 // No domain errors
-func (s *Service) GetDraftIDsByAuthor(ctx context.Context, authorID uuid.UUID) ([]uuid.UUID, error) {
-	return s.draftsRepository.GetDraftIDsByAuthor(ctx, s.db, authorID)
+func (s *Service) GetDraftIDsByAuthor(ctx context.Context, authorID uuid.UUID, createdByMe bool) ([]uuid.UUID, error) {
+	return s.draftsRepository.GetDraftIDsByAuthor(ctx, s.db, authorID, createdByMe)
 }
 
 // ================================================================================

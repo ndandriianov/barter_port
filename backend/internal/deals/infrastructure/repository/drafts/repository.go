@@ -67,11 +67,21 @@ func (r *Repository) CreateDraft(
 // GetDraftIDsByAuthor retrieves the IDs of draft deals created by a specific author.
 //
 // No domain errors
-func (r *Repository) GetDraftIDsByAuthor(ctx context.Context, exec db.DB, authorID uuid.UUID) ([]uuid.UUID, error) {
-	query := `
-		SELECT id
-		FROM draft_deals
-		WHERE author_id = $1;`
+func (r *Repository) GetDraftIDsByAuthor(ctx context.Context, exec db.DB, authorID uuid.UUID, createdByMe bool) ([]uuid.UUID, error) {
+	var query string
+	if createdByMe {
+		query = `
+			SELECT id
+			FROM draft_deals
+			WHERE author_id = $1;`
+	} else {
+		query = `
+			SELECT DISTINCT dd.id
+			FROM draft_deals dd
+			JOIN draft_deal_offers ddo ON dd.id = ddo.draft_deal_id
+			JOIN offers o ON o.id = ddo.offer_id 
+			WHERE o.author_id = $1;`
+	}
 
 	rows, err := exec.Query(ctx, query, authorID)
 	if err != nil {

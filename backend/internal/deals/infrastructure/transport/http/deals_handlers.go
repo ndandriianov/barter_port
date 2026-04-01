@@ -79,12 +79,22 @@ func (h *DealsHandlers) CreateDraft(w http.ResponseWriter, r *http.Request) {
 }
 
 // ================================================================================
-// GET MY DRAFTS
+// GET DRAFTS
 // ================================================================================
 
-func (h *DealsHandlers) GetMyDrafts(w http.ResponseWriter, r *http.Request) {
-	log := logger.LogFrom(r.Context(), h.log).With(slog.String("handler", "GetMyDrafts"))
-	log.Info("handling get my draft request")
+func (h *DealsHandlers) GetDrafts(w http.ResponseWriter, r *http.Request) {
+	log := logger.LogFrom(r.Context(), h.log).With(slog.String("handler", "GetDrafts"))
+	log.Info("handling get drafts request")
+
+	// createdByMe
+	createdByMeStr := chi.URLParam(r, "createdByMe")
+	createdByMe := createdByMeStr == "true"
+
+	// participating
+	participatingStr := chi.URLParam(r, "participating")
+	participating := participatingStr == "true"
+
+	_ = participating // TODO: если админ и false, то выдать все
 
 	authorID, ok := authkit.UserIDFromContext(r.Context())
 	if !ok {
@@ -93,7 +103,15 @@ func (h *DealsHandlers) GetMyDrafts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	draftsIDs, err := h.dealsService.GetDraftIDsByAuthor(r.Context(), authorID)
+	log.Debug("parsed query params",
+		slog.String("createdByMeStr", createdByMeStr),
+		slog.Bool("createdByMe", createdByMe),
+		slog.String("participatingStr", participatingStr),
+		slog.Bool("participating", participating),
+	)
+
+	// вызов сервиса
+	draftsIDs, err := h.dealsService.GetDraftIDsByAuthor(r.Context(), authorID, createdByMe)
 	if err != nil {
 		log.Error("error getting drafts", slog.Any("error", err))
 		httpx.WriteEmptyError(w, http.StatusInternalServerError)

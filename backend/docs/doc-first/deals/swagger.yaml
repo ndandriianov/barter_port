@@ -10,8 +10,6 @@ servers:
 paths:
   /deals/drafts:
     $ref: './paths/drafts.yaml#/dealsDrafts'
-  /deals/drafts/my:
-    $ref: './paths/drafts.yaml#/dealsDraftsMy'
   /deals/drafts/{draftId}:
     $ref: './paths/drafts.yaml#/dealsDraftsById'
   /deals/drafts/{draftId}/cancel:
