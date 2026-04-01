@@ -12,6 +12,8 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+
+	"github.com/google/uuid"
 )
 
 type OffersHandlers struct {
@@ -85,13 +87,27 @@ func (h *OffersHandlers) HandleGetOffers(w http.ResponseWriter, r *http.Request)
 
 	// Parse query parameters
 	sortTypeStr := r.URL.Query().Get("sort")
+	myStr := r.URL.Query().Get("my")
 	createdAtStr := r.URL.Query().Get("cursor_created_at")
 	viewsStr := r.URL.Query().Get("cursor_views")
 	idStr := r.URL.Query().Get("cursor_id")
 	limitStr := r.URL.Query().Get("cursor_limit")
 
+	my := false
+	if myStr != "" {
+		parsedMy, err := strconv.ParseBool(myStr)
+		if err != nil {
+			log.Error("invalid my filter", slog.String("my", myStr), slog.Any("error", err))
+			httpx.WriteErrorStr(w, http.StatusBadRequest, "invalid my filter")
+			return
+		}
+		my = parsedMy
+	}
+
 	log = log.With(
 		slog.String("sortTypeStr", sortTypeStr),
+		slog.String("myStr", myStr),
+		slog.Bool("my", my),
 		slog.String("createdAtStr", createdAtStr),
 		slog.String("viewsStr", viewsStr),
 		slog.String("idStr", idStr),
@@ -118,18 +134,29 @@ func (h *OffersHandlers) HandleGetOffers(w http.ResponseWriter, r *http.Request)
 		limit = 10
 	}
 
-	log.Debug("parsing finished", slog.Any("cursor", cursor), slog.Int("limit", limit))
+	log.Debug("parsing finished", slog.Any("cursor", cursor), slog.Int("limit", limit), slog.Bool("my", my))
+
+	var authorID *uuid.UUID
+	if my {
+		userID, ok := authkit.UserIDFromContext(r.Context())
+		if !ok {
+			log.Error("failed to get userID from context")
+			httpx.WriteEmptyError(w, http.StatusInternalServerError)
+			return
+		}
+		authorID = &userID
+	}
 
 	// Fetch offers from the service
-	offers, nextCursor, err := h.offerService.GetOffers(r.Context(), sortType, cursor, limit)
+	offerList, nextCursor, err := h.offerService.GetOffers(r.Context(), sortType, cursor, limit, authorID)
 	if err != nil {
 		log.Error("failed to get items", slog.Any("error", err))
 		httpx.WriteEmptyError(w, http.StatusInternalServerError)
 		return
 	}
 
-	respOffers := make([]types.Offer, len(offers))
-	for i, offer := range offers {
+	respOffers := make([]types.Offer, len(offerList))
+	for i, offer := range offerList {
 		respOffers[i] = offer.ToDto()
 	}
 

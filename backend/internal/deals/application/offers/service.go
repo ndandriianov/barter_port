@@ -62,6 +62,7 @@ func (s *Service) GetOffers(
 	sortType enums.SortType,
 	cursor *domain.UniversalCursor,
 	limit int,
+	authorID *uuid.UUID,
 ) ([]domain.Offer, *domain.UniversalCursor, error) {
 
 	log := logger.LogFrom(ctx, s.fallbackLogger)
@@ -78,7 +79,7 @@ func (s *Service) GetOffers(
 			log.Debug("time cursor is not specified, starting from the beginning", slog.Any("error", err))
 		}
 
-		offers, newCursor, err := s.repo.GetOffersOrderByTime(ctx, timeCursor, limit)
+		offers, newCursor, err := s.repo.GetOffersOrderByTime(ctx, timeCursor, limit, authorID)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -101,7 +102,7 @@ func (s *Service) GetOffers(
 			log.Debug("popularity cursor is not specified, starting from the beginning", slog.Any("error", err))
 		}
 
-		offers, newCursor, err := s.repo.GetOffersOrderByPopularity(ctx, popularityCursor, limit)
+		offers, newCursor, err := s.repo.GetOffersOrderByPopularity(ctx, popularityCursor, limit, authorID)
 		if err != nil {
 			return nil, nil, err
 		}
