@@ -11,7 +11,6 @@ import DealsListPage from "@/pages/deals/DealsListPage.tsx";
 import DealPage from "@/pages/deals/DealPage.tsx";
 import DraftsListPage from "@/pages/deals/DraftsListPage.tsx";
 import DraftPage from "@/pages/deals/DraftPage.tsx";
-import CreateDraftDealPage from "@/pages/deals/CreateDraftDealPage.tsx";
 
 function AppRouter() {
   return (
@@ -31,7 +30,6 @@ function AppRouter() {
         <Route path="/deals" element={<DealsListPage/>}/>
         <Route path="/deals/:dealId" element={<DealPage/>}/>
         <Route path="/deals/drafts" element={<DraftsListPage/>}/>
-        <Route path="/deals/drafts/create" element={<CreateDraftDealPage/>}/>
         <Route path="/deals/drafts/:draftId" element={<DraftPage/>}/>
 
         <Route path="*" element={<ProfilePage/>}/>
