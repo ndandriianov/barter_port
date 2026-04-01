@@ -112,6 +112,36 @@ func mustGetOffers(t *testing.T, userID uuid.UUID, my *bool) dealstypes.ListOffe
 	return result
 }
 
+func mustGetDraftIDs(t *testing.T, userID uuid.UUID, createdByMe *bool, participating *bool) []uuid.UUID {
+	t.Helper()
+
+	url := dealsURL() + "/deals/drafts"
+	query := "?"
+	if createdByMe != nil {
+		query += fmt.Sprintf("createdByMe=%t&", *createdByMe)
+	}
+	if participating != nil {
+		query += fmt.Sprintf("participating=%t&", *participating)
+	}
+	if query != "?" {
+		url += query[:len(query)-1]
+	}
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userID))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var ids []uuid.UUID
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&ids))
+	return ids
+}
+
 // ────────────────────────────────────────────────────────────────
 // CreateDraft
 // ────────────────────────────────────────────────────────────────
@@ -271,35 +301,23 @@ func TestCreateDraftInvalidJSON(t *testing.T) {
 }
 
 // ────────────────────────────────────────────────────────────────
-// GetMyDrafts
+// GetDrafts
 // ────────────────────────────────────────────────────────────────
 
-func TestGetMyDraftsEmpty(t *testing.T) {
+func TestGetDraftsEmpty(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)
 
 	userID := uuid.New()
-
-	req, err := http.NewRequest(http.MethodGet, dealsURL()+"/deals/drafts/my", nil)
-	require.NoError(t, err)
-	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userID))
-
-	resp, err := http.DefaultClient.Do(req)
-	require.NoError(t, err)
-	defer func() { _ = resp.Body.Close() }()
-
-	require.Equal(t, http.StatusOK, resp.StatusCode)
-
-	var ids []uuid.UUID
-	require.NoError(t, json.NewDecoder(resp.Body).Decode(&ids))
+	ids := mustGetDraftIDs(t, userID, nil, nil)
 	require.Empty(t, ids)
 }
 
-func TestGetMyDraftsUnauthorized(t *testing.T) {
+func TestGetDraftsUnauthorized(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)
 
-	resp, err := http.Get(dealsURL() + "/deals/drafts/my")
+	resp, err := http.Get(dealsURL() + "/deals/drafts")
 	require.NoError(t, err)
 	defer func() { _ = resp.Body.Close() }()
 
