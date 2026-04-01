@@ -17,6 +17,7 @@ export type SortType = "ByTime" | "ByPopularity";
 
 export interface GetOffersParams {
   sort: SortType;
+  my?: boolean;
   cursor_created_at?: string;
   cursor_views?: number;
   cursor_id?: string;
@@ -31,4 +32,3 @@ export interface CreateOfferRequest {
   action: OfferAction;
   type: OfferType;
 }
-
