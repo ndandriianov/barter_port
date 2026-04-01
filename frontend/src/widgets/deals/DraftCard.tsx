@@ -24,7 +24,7 @@ function confirmChip(confirmed: boolean | undefined) {
   if (confirmed === undefined)
     return <Chip label="Ожидает подтверждения" size="small" color="default" />;
   if (confirmed) return <Chip label="Подтверждено" size="small" color="success" />;
-  return <Chip label="Отклонено" size="small" color="error" />;
+  return <Chip label="Не подтверждено" size="small" color="error" />;
 }
 
 interface DraftCardProps {
