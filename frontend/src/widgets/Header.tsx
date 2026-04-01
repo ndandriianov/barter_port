@@ -20,7 +20,6 @@ function Header() {
       <Link to="/offers/create">Create Offer</Link>
       <Link to="/deals">Deals</Link>
       <Link to="/deals/drafts">Drafts</Link>
-      <Link to="/deals/drafts/create">Create Draft</Link>
       <button onClick={handleLogout}>Logout</button>
     </div>
   );
