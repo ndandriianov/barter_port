@@ -6,6 +6,7 @@ import {
   dealSchema,
   draftSchema,
   getDealsResponseSchema,
+  getMyDraftDealsRawResponseSchema,
   getMyDraftDealsResponseSchema,
 } from "@/features/deals/model/schemas.ts";
 import type {
@@ -36,7 +37,12 @@ const dealsApi = createApi({
 
     getMyDraftDeals: builder.query<GetMyDraftDealsResponse, void>({
       query: () => "/deals/drafts/my",
-      transformResponse: (response: unknown) => getMyDraftDealsResponseSchema.parse(response),
+      transformResponse: (response: unknown) => {
+        const parsed = getMyDraftDealsRawResponseSchema.parse(response);
+        const normalized = Array.isArray(parsed) ? {data: parsed} : parsed;
+
+        return getMyDraftDealsResponseSchema.parse(normalized);
+      },
       providesTags: ["DraftDeals"],
     }),
 
