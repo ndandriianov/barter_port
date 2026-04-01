@@ -6,12 +6,11 @@ import type {Offer} from "@/features/offers/model/types.ts";
 
 interface RespondToOfferModalProps {
   targetOffer: Offer;
-  currentUserId: string | null;
   isOpen: boolean;
   onClose: () => void;
 }
 
-function RespondToOfferModal({targetOffer, currentUserId, isOpen, onClose}: RespondToOfferModalProps) {
+function RespondToOfferModal({targetOffer, isOpen, onClose}: RespondToOfferModalProps) {
   const [selectedOfferId, setSelectedOfferId] = useState<string | null>(null);
   const navigate = useNavigate();
 
@@ -20,12 +19,10 @@ function RespondToOfferModal({targetOffer, currentUserId, isOpen, onClose}: Resp
     onClose();
   };
 
-  // TEMP STUB: backend does not have dedicated my-offers endpoint yet.
-  // We reuse cached /offers response and filter by authorId on client.
-  // TODO: switch to `useGetMyOffersQuery()` (or /offers?my=true) once backend endpoint is available.
   const {data, isLoading, error} = offersApi.useGetOffersQuery(
     {
       sort: "ByTime",
+      my: true,
       cursor_limit: 100,
     },
     {
@@ -35,14 +32,9 @@ function RespondToOfferModal({targetOffer, currentUserId, isOpen, onClose}: Resp
 
   const [createDraftDeal, {isLoading: isCreating, error: createError}] = dealsApi.useCreateDraftDealMutation();
 
-  const myOffers = useMemo(
-    () => data?.offers.filter((entry) => entry.authorId === currentUserId) ?? [],
-    [data?.offers, currentUserId],
-  );
-
   const selectedOffer = useMemo(
-    () => myOffers.find((entry) => entry.id === selectedOfferId),
-    [myOffers, selectedOfferId],
+    () => data?.offers.find((entry) => entry.id === selectedOfferId),
+    [data?.offers, selectedOfferId],
   );
 
   const submit = async () => {
@@ -86,10 +78,10 @@ function RespondToOfferModal({targetOffer, currentUserId, isOpen, onClose}: Resp
 
         {!isLoading && !error && data && (
           <div>
-            {myOffers.length === 0 ? (
+            {data.offers.length === 0 ? (
               <div>У вас пока нет объявлений для отклика</div>
             ) : (
-              myOffers.map((offer) => (
+              data.offers.map((offer) => (
                 <label key={offer.id} style={{display: "block", marginBottom: 8}}>
                   <input
                     type="radio"
