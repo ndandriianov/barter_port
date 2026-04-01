@@ -223,6 +223,9 @@ type Offer struct {
 	// AuthorId Unique identifier of the user who created the item
 	AuthorId openapi_types.UUID `json:"authorId"`
 
+	// AuthorName Name of the user who created the item
+	AuthorName *string `json:"authorName,omitempty"`
+
 	// CreatedAt Item creation timestamp
 	CreatedAt time.Time `json:"createdAt"`
 
@@ -270,6 +273,9 @@ type OfferWithInfo struct {
 
 	// AuthorId Unique identifier of the user who created the item
 	AuthorId openapi_types.UUID `json:"authorId"`
+
+	// AuthorName Name of the user who created the item
+	AuthorName *string `json:"authorName,omitempty"`
 
 	// Confirmed Whether the offer has been confirmed for the draft deal.
 	Confirmed *bool `json:"confirmed,omitempty"`

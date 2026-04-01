@@ -527,6 +527,9 @@ components:
           type: string
           format: uuid
           description: Unique identifier of the user who created the item
+        authorName:
+          type: string
+          description: Name of the user who created the item
         name:
           type: string
           description: Short item title
