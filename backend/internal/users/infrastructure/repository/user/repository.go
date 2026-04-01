@@ -5,6 +5,7 @@ import (
 	"barter-port/pkg/db"
 	"barter-port/pkg/repox"
 	"errors"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -114,4 +115,36 @@ func (r *Repository) UpdateBio(ctx context.Context, id uuid.UUID, bio *string) e
 	}
 
 	return nil
+}
+
+// GetNamesForUserIDs returns a map of user IDs to their corresponding names.
+//
+// No domain Errors
+func (r *Repository) GetNamesForUserIDs(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]string, error) {
+	query := `
+		SELECT id, name
+		FROM users
+		WHERE id = ANY($1)
+	`
+
+	rows, err := r.db.Query(ctx, query, ids)
+	if err != nil {
+		return nil, fmt.Errorf("sql: %w", err)
+	}
+	defer rows.Close()
+
+	names := make(map[uuid.UUID]string)
+	for rows.Next() {
+		var id uuid.UUID
+		var name string
+
+		err = rows.Scan(&id, &name)
+		if err != nil {
+			return nil, fmt.Errorf("scan: %w", err)
+		}
+
+		names[id] = name
+	}
+
+	return names, nil
 }
