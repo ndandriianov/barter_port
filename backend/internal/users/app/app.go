@@ -13,6 +13,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -32,6 +33,8 @@ type App struct {
 	authDB           *pgxpool.Pool
 	authGRPCConn     *grpc.ClientConn
 	server           *http.Server
+	grpcServer       *grpc.Server
+	grpcListener     net.Listener
 	inboxRepository  *ucinbox.Repository
 	inboxProcessor   *ucinboxP.Processor
 	ucEventConsumer  *consumer.UserCreationInboxConsumer
@@ -89,6 +92,11 @@ func NewApp(cfg bootstrap.Config) (*App, error) {
 		return nil, fmt.Errorf("failed to initialize http server: %w", err)
 	}
 
+	err = app.initGRPCServer(cfg, userService)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize grpc server: %w", err)
+	}
+
 	return app, nil
 }
 
@@ -106,6 +114,9 @@ func (app *App) Close() error {
 	}
 	if app.db != nil {
 		app.db.Close()
+	}
+	if app.grpcListener != nil {
+		_ = app.grpcListener.Close()
 	}
 
 	return err
@@ -148,6 +159,19 @@ func (app *App) Run() error {
 
 		if err := app.server.Shutdown(shutdownCtx); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			app.log.Error("failed to shutdown users server", slog.Any("error", err))
+		}
+	})
+
+	g.Add(func() error {
+		if app.grpcListener == nil || app.grpcServer == nil {
+			return errors.New("grpc server or listener is not initialized")
+		}
+
+		app.log.Info("users grpc server listening", slog.String("addr", app.grpcListener.Addr().String()))
+		return app.grpcServer.Serve(app.grpcListener)
+	}, func(error) {
+		if app.grpcServer != nil {
+			app.grpcServer.GracefulStop()
 		}
 	})
 
