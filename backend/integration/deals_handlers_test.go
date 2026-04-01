@@ -89,6 +89,29 @@ func mustCreateDraft(
 	return created.Id
 }
 
+func mustGetOffers(t *testing.T, userID uuid.UUID, my *bool) dealstypes.ListOffersResponse {
+	t.Helper()
+
+	url := dealsURL() + "/offers/?sort=ByTime&cursor_limit=100"
+	if my != nil {
+		url += fmt.Sprintf("&my=%t", *my)
+	}
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userID))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var result dealstypes.ListOffersResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
+	return result
+}
+
 // ────────────────────────────────────────────────────────────────
 // CreateDraft
 // ────────────────────────────────────────────────────────────────
@@ -758,4 +781,78 @@ func mustRequest(t *testing.T, method, url string, body *bytes.Reader) *http.Req
 	require.NoError(t, err)
 
 	return req
+}
+
+// ────────────────────────────────────────────────────────────────
+// GetOffers
+// ────────────────────────────────────────────────────────────────
+
+func TestGetOffersMyDefaultFalseIncludesOtherUsersOffers(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userA := uuid.New()
+	userB := uuid.New()
+	offerA := mustCreateOffer(t, userA)
+	offerB := mustCreateOffer(t, userB)
+
+	result := mustGetOffers(t, userA, nil)
+	require.NotEmpty(t, result.Offers)
+
+	var foundA, foundB bool
+	for _, offer := range result.Offers {
+		if offer.Id == offerA {
+			foundA = true
+		}
+		if offer.Id == offerB {
+			foundB = true
+		}
+	}
+
+	require.True(t, foundA)
+	require.True(t, foundB)
+}
+
+func TestGetOffersMyTrueReturnsOnlyCurrentUserOffers(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userA := uuid.New()
+	userB := uuid.New()
+	offerA := mustCreateOffer(t, userA)
+	offerB := mustCreateOffer(t, userB)
+
+	my := true
+	result := mustGetOffers(t, userA, &my)
+	require.NotEmpty(t, result.Offers)
+
+	var foundA, foundB bool
+	for _, offer := range result.Offers {
+		if offer.Id == offerA {
+			foundA = true
+		}
+		if offer.Id == offerB {
+			foundB = true
+		}
+		require.Equal(t, userA, offer.AuthorId)
+	}
+
+	require.True(t, foundA)
+	require.False(t, foundB)
+}
+
+func TestGetOffersInvalidMyReturnsBadRequest(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	req, err := http.NewRequest(http.MethodGet, dealsURL()+"/offers/?sort=ByTime&my=not-bool", nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userID))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 }
