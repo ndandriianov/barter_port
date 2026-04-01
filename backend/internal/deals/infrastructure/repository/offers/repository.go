@@ -48,28 +48,51 @@ func (r *Repository) GetOffersOrderByTime(
 	ctx context.Context,
 	cursor *domain.TimeCursor,
 	limit int,
+	authorID *uuid.UUID,
 ) ([]domain.Offer, *domain.TimeCursor, error) {
 
 	var query string
 	var args []interface{}
 
-	if cursor == nil {
-		query = `
+	if authorID == nil {
+		if cursor == nil {
+			query = `
 		SELECT id, author_id, name, type, action, description, created_at, views
 		FROM offers
 		ORDER BY created_at DESC
 		LIMIT $1
 		`
-		args = append(args, limit)
-	} else {
-		query = `
+			args = append(args, limit)
+		} else {
+			query = `
 		SELECT id, author_id, name, type, action, description, created_at, views
 		FROM offers
 		WHERE (created_at, id) < ($1, $2)
 		ORDER BY created_at DESC 
 		LIMIT $3
 		`
-		args = append(args, cursor.CreatedAt, cursor.Id, limit)
+			args = append(args, cursor.CreatedAt, cursor.Id, limit)
+		}
+	} else {
+		if cursor == nil {
+			query = `
+		SELECT id, author_id, name, type, action, description, created_at, views
+		FROM offers
+		WHERE author_id = $1
+		ORDER BY created_at DESC
+		LIMIT $2
+		`
+			args = append(args, *authorID, limit)
+		} else {
+			query = `
+		SELECT id, author_id, name, type, action, description, created_at, views
+		FROM offers
+		WHERE author_id = $1 AND (created_at, id) < ($2, $3)
+		ORDER BY created_at DESC
+		LIMIT $4
+		`
+			args = append(args, *authorID, cursor.CreatedAt, cursor.Id, limit)
+		}
 	}
 
 	offers, err := repox.FetchStructs[domain.Offer](ctx, r.db, query, args...)
@@ -102,28 +125,51 @@ func (r *Repository) GetOffersOrderByPopularity(
 	ctx context.Context,
 	cursor *domain.PopularityCursor,
 	limit int,
+	authorID *uuid.UUID,
 ) ([]domain.Offer, *domain.PopularityCursor, error) {
 
 	var query string
 	var args []interface{}
 
-	if cursor == nil {
-		query = `
+	if authorID == nil {
+		if cursor == nil {
+			query = `
 		SELECT id, author_id, name, type, action, description, created_at, views
 		FROM offers
 		ORDER BY created_at DESC
 		LIMIT $1
 		`
-		args = append(args, limit)
-	} else {
-		query = `
+			args = append(args, limit)
+		} else {
+			query = `
 		SELECT id, author_id, name, type, action, description, created_at, views
 		FROM offers
 		WHERE (views, id) < ($1, $2) 
 		ORDER BY views DESC 
 		LIMIT $3
 		`
-		args = append(args, cursor.Views, cursor.Id, limit)
+			args = append(args, cursor.Views, cursor.Id, limit)
+		}
+	} else {
+		if cursor == nil {
+			query = `
+		SELECT id, author_id, name, type, action, description, created_at, views
+		FROM offers
+		WHERE author_id = $1
+		ORDER BY created_at DESC
+		LIMIT $2
+		`
+			args = append(args, *authorID, limit)
+		} else {
+			query = `
+		SELECT id, author_id, name, type, action, description, created_at, views
+		FROM offers
+		WHERE author_id = $1 AND (views, id) < ($2, $3)
+		ORDER BY views DESC
+		LIMIT $4
+		`
+			args = append(args, *authorID, cursor.Views, cursor.Id, limit)
+		}
 	}
 
 	offers, err := repox.FetchStructs[domain.Offer](ctx, r.db, query, args...)

@@ -340,6 +340,9 @@ type GetDealsParams struct {
 
 // ListOffersParams defines parameters for ListOffers.
 type ListOffersParams struct {
+	// My False by default. If true, returns only offers created by the current user.
+	My *bool `form:"my,omitempty" json:"my,omitempty"`
+
 	// Sort Sorting mode for items list
 	Sort ListOffersParamsSort `form:"sort" json:"sort"`
 
