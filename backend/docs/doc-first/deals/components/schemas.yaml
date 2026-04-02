@@ -211,6 +211,7 @@ Item:
     - name
     - description
     - type
+    - quantity
   properties:
     id:
       type: string
@@ -242,3 +243,6 @@ Item:
       type: string
       format: date-time
       description: Временная метка последнего обновления позиции сделки
+    quantity:
+      type: integer
+      description: Количество позиций этого типа в сделке

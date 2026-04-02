@@ -193,6 +193,9 @@ type Item struct {
 	// ProviderId Уникальный идентификатор пользователя, который отдает эту позицию в сделке
 	ProviderId *openapi_types.UUID `json:"providerId,omitempty"`
 
+	// Quantity Количество позиций этого типа в сделке
+	Quantity int `json:"quantity"`
+
 	// ReceiverId Уникальный идентификатор пользователя, который получает эту позицию в сделке
 	ReceiverId *openapi_types.UUID `json:"receiverId,omitempty"`
 

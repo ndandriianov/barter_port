@@ -38,11 +38,21 @@ func (r *Repository) CreateDeal(ctx context.Context, tx pgx.Tx, deal domain.Deal
 	}
 
 	offersQuery := `
-		INSERT INTO items (deal_id, author_id, receiver_id, name, description, type) 
-		VALUES ($1, $2, $3, $4, $5, $6)`
+		INSERT INTO items (deal_id, author_id, receiver_id, name, description, type, quantity) 
+		VALUES ($1, $2, $3, $4, $5, $6, $7)`
 
 	for _, item := range deal.Items {
-		_, err = tx.Exec(ctx, offersQuery, id, item.AuthorID, item.ReceiverID, item.Name, item.Description, item.Type)
+		_, err = tx.Exec(
+			ctx,
+			offersQuery,
+			id,
+			item.AuthorID,
+			item.ReceiverID,
+			item.Name,
+			item.Description,
+			item.Type,
+			item.Quantity,
+		)
 		if err != nil {
 			return uuid.Nil, fmt.Errorf("sql items: %w", err)
 		}
@@ -94,7 +104,7 @@ func (r *Repository) GetDealByID(ctx context.Context, exec db.DB, id uuid.UUID) 
 	query := `
 		SELECT d.id, d.name, d.description, d.created_at, d.updated_at,
 		       i.id, i.author_id, i.provider_id, i.receiver_id,
-		       i.name, i.description, i.type, i.updated_at
+		       i.name, i.description, i.type, i.updated_at, i.quantity
 		FROM deals d
 		LEFT JOIN items i ON i.deal_id = d.id
 		WHERE d.id = $1`
@@ -117,6 +127,7 @@ func (r *Repository) GetDealByID(ctx context.Context, exec db.DB, id uuid.UUID) 
 		var itemDescription *string
 		var itemType *string
 		var itemUpdatedAt *time.Time
+		var itemQuantity *int64
 
 		if err = rows.Scan(
 			&deal.ID,
@@ -132,6 +143,7 @@ func (r *Repository) GetDealByID(ctx context.Context, exec db.DB, id uuid.UUID) 
 			&itemDescription,
 			&itemType,
 			&itemUpdatedAt,
+			&itemQuantity,
 		); err != nil {
 			return domain.Deal{}, fmt.Errorf("scan deal row: %w", err)
 		}
@@ -160,6 +172,7 @@ func (r *Repository) GetDealByID(ctx context.Context, exec db.DB, id uuid.UUID) 
 			Description: *itemDescription,
 			Type:        itemTypeValue,
 			UpdatedAt:   itemUpdatedAt,
+			Quantity:    int(*itemQuantity),
 		})
 	}
 
