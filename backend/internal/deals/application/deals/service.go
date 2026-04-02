@@ -212,6 +212,7 @@ func (s *Service) createDeal(ctx context.Context, tx pgx.Tx, draft domain.Draft)
 			Name:        o.Offer.Name,
 			Description: o.Offer.Description,
 			Type:        o.Offer.Type,
+			Quantity:    o.Info.Quantity,
 		}
 	}
 

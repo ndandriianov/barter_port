@@ -17,6 +17,7 @@ type Item struct {
 	Description string
 	Type        enums.ItemType
 	UpdatedAt   *time.Time
+	Quantity    int
 }
 
 func (i *Item) ToDTO() types.Item {
@@ -29,5 +30,6 @@ func (i *Item) ToDTO() types.Item {
 		Description: i.Description,
 		Type:        types.ItemType(i.Type.String()),
 		UpdatedAt:   i.UpdatedAt,
+		Quantity:    i.Quantity,
 	}
 }
