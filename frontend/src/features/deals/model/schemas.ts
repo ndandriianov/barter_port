@@ -57,6 +57,7 @@ export const itemSchema = z.object({
   description: z.string(),
   type: itemTypeSchema,
   updatedAt: z.string().optional(),
+  quantity: z.number().int(),
 });
 
 export const dealSchema = z.object({

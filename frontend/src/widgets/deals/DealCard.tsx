@@ -76,6 +76,9 @@ function DealCard({ deal }: DealCardProps) {
                       <Typography variant="body2" fontWeight={500}>
                         {item.name}
                       </Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        x{item.quantity}
+                      </Typography>
                       <Chip label={item.type} size="small" variant="outlined" />
                     </Box>
                   }
