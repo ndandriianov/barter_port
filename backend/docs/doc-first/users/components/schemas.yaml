@@ -9,7 +9,7 @@ Me:
       $ref: './properties.yaml#/UserId'
     email:
       type: string
-      format: email
+#      format: email // TODO: раскомментировать при запуске без bypass
       description: User email
       example: 'email@example.com'
     createdAt:

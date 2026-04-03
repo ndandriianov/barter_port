@@ -14,7 +14,6 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
-	openapitypes "github.com/oapi-codegen/runtime/types"
 )
 
 type Handlers struct {
@@ -165,7 +164,7 @@ func (h *Handlers) getMe(ctx context.Context, userID uuid.UUID) (types.Me, error
 		Id:        me.Id,
 		Name:      me.Name,
 		Bio:       me.Bio,
-		Email:     openapitypes.Email(me.Email),
+		Email:     me.Email, // TODO: конвертировать при отключенном bypass
 		CreatedAt: me.CreatedAt,
 	}, nil
 }
