@@ -145,7 +145,6 @@ components:
           $ref: '#/components/schemas/UserId'
         email:
           type: string
-          format: email
           description: User email
           example: email@example.com
         createdAt:

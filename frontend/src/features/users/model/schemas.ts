@@ -7,7 +7,7 @@ export const userSchema = z.object({
 });
 
 export const meSchema = userSchema.extend({
-  email: z.string().email(),
+  email: z.string(),
   createdAt: z.string(),
 });
 

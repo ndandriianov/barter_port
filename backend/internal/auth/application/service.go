@@ -121,8 +121,10 @@ func (s *Service) Register(ctx context.Context, email, password string) (Registe
 
 	log := s.logger.With(slog.String("func", funcName), slog.String("type", typeName))
 
-	if err := s.validateCredentials(email, password); err != nil {
-		return RegisterResult{}, err
+	if !s.emailBypassMode {
+		if err := s.validateCredentials(email, password); err != nil {
+			return RegisterResult{}, err
+		}
 	}
 
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcryptCost)
@@ -358,8 +360,10 @@ func (s *Service) Login(ctx context.Context, email, password string) (uuid.UUID,
 func (s *Service) verifyCredentials(ctx context.Context, email, password string) (domain.User, error) {
 	email = strings.TrimSpace(strings.ToLower(email))
 
-	if err := s.validateCredentials(email, password); err != nil {
-		return domain.User{}, domain.ErrInvalidCredentials
+	if !s.emailBypassMode {
+		if err := s.validateCredentials(email, password); err != nil {
+			return domain.User{}, domain.ErrInvalidCredentials
+		}
 	}
 
 	u, err := s.users.GetByEmail(ctx, s.db, email)
