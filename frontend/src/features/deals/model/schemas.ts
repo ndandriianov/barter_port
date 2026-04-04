@@ -76,6 +76,10 @@ export const updateDealItemRequestSchema = z.object({
   name: z.string().optional(),
   description: z.string().optional(),
   quantity: z.number().int().min(1).optional(),
+  claimProvider: z.boolean().optional(),
+  releaseProvider: z.boolean().optional(),
+  claimReceiver: z.boolean().optional(),
+  releaseReceiver: z.boolean().optional(),
 });
 
 export const dealIdAndParticipantsSchema = z.object({

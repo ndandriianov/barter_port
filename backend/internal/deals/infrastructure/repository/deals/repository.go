@@ -236,24 +236,8 @@ func (r *Repository) UpdateItem(
 
 	row := exec.QueryRow(ctx, updateQuery, itemID, dealID, userID, patch.Name, patch.Description, patch.Quantity)
 
-	var item domain.Item
-	var itemType string
-	err := row.Scan(
-		&item.ID,
-		&item.AuthorID,
-		&item.ProviderID,
-		&item.ReceiverID,
-		&item.Name,
-		&item.Description,
-		&itemType,
-		&item.UpdatedAt,
-		&item.Quantity,
-	)
+	item, err := scanItem(row)
 	if err == nil {
-		item.Type, err = enums.ItemTypeString(itemType)
-		if err != nil {
-			return domain.Item{}, fmt.Errorf("item type: %w", err)
-		}
 		return item, nil
 	}
 	if err != pgx.ErrNoRows {
@@ -275,4 +259,120 @@ func (r *Repository) UpdateItem(
 	}
 
 	return domain.Item{}, domain.ErrForbidden
+}
+
+// ================================================================================
+// CLAIM / RELEASE PROVIDER & RECEIVER
+// ================================================================================
+
+// ClaimItemProvider sets provider_id = userID if the slot is currently empty.
+//
+// Domain errors:
+//   - domain.ErrItemNotFound: item does not exist in this deal.
+//   - domain.ErrRoleAlreadyTaken: provider_id is already set to another user.
+func (r *Repository) ClaimItemProvider(ctx context.Context, exec db.DB, dealID, itemID, userID uuid.UUID) (domain.Item, error) {
+	return r.updateItemRole(ctx, exec, dealID, itemID, userID,
+		`SET provider_id = $3, updated_at = NOW() WHERE id = $1 AND deal_id = $2 AND provider_id IS NULL`,
+		`SELECT provider_id FROM items WHERE id = $1 AND deal_id = $2`,
+		domain.ErrRoleAlreadyTaken,
+	)
+}
+
+// ReleaseItemProvider sets provider_id = NULL if it currently equals userID.
+//
+// Domain errors:
+//   - domain.ErrItemNotFound: item does not exist in this deal.
+//   - domain.ErrNotRoleHolder: provider_id is not set to this user.
+func (r *Repository) ReleaseItemProvider(ctx context.Context, exec db.DB, dealID, itemID, userID uuid.UUID) (domain.Item, error) {
+	return r.updateItemRole(ctx, exec, dealID, itemID, userID,
+		`SET provider_id = NULL, updated_at = NOW() WHERE id = $1 AND deal_id = $2 AND provider_id = $3`,
+		`SELECT provider_id FROM items WHERE id = $1 AND deal_id = $2`,
+		domain.ErrNotRoleHolder,
+	)
+}
+
+// ClaimItemReceiver sets receiver_id = userID if the slot is currently empty.
+//
+// Domain errors:
+//   - domain.ErrItemNotFound: item does not exist in this deal.
+//   - domain.ErrRoleAlreadyTaken: receiver_id is already set to another user.
+func (r *Repository) ClaimItemReceiver(ctx context.Context, exec db.DB, dealID, itemID, userID uuid.UUID) (domain.Item, error) {
+	return r.updateItemRole(ctx, exec, dealID, itemID, userID,
+		`SET receiver_id = $3, updated_at = NOW() WHERE id = $1 AND deal_id = $2 AND receiver_id IS NULL`,
+		`SELECT receiver_id FROM items WHERE id = $1 AND deal_id = $2`,
+		domain.ErrRoleAlreadyTaken,
+	)
+}
+
+// ReleaseItemReceiver sets receiver_id = NULL if it currently equals userID.
+//
+// Domain errors:
+//   - domain.ErrItemNotFound: item does not exist in this deal.
+//   - domain.ErrNotRoleHolder: receiver_id is not set to this user.
+func (r *Repository) ReleaseItemReceiver(ctx context.Context, exec db.DB, dealID, itemID, userID uuid.UUID) (domain.Item, error) {
+	return r.updateItemRole(ctx, exec, dealID, itemID, userID,
+		`SET receiver_id = NULL, updated_at = NOW() WHERE id = $1 AND deal_id = $2 AND receiver_id = $3`,
+		`SELECT receiver_id FROM items WHERE id = $1 AND deal_id = $2`,
+		domain.ErrNotRoleHolder,
+	)
+}
+
+// updateItemRole is a helper that runs an UPDATE on items and falls back to a
+// diagnostic SELECT when no rows are updated, returning the appropriate error.
+func (r *Repository) updateItemRole(
+	ctx context.Context,
+	exec db.DB,
+	dealID, itemID, userID uuid.UUID,
+	setClause string,
+	checkQuery string,
+	conflictErr error,
+) (domain.Item, error) {
+	query := `UPDATE items ` + setClause + `
+		RETURNING id, author_id, provider_id, receiver_id,
+		          name, description, type, updated_at, quantity`
+
+	row := exec.QueryRow(ctx, query, itemID, dealID, userID)
+	item, err := scanItem(row)
+	if err == nil {
+		return item, nil
+	}
+	if err != pgx.ErrNoRows {
+		return domain.Item{}, fmt.Errorf("sql update item role: %w", err)
+	}
+
+	// No rows updated — determine why
+	var placeholder *uuid.UUID
+	checkErr := exec.QueryRow(ctx, checkQuery, itemID, dealID).Scan(&placeholder)
+	if checkErr == pgx.ErrNoRows {
+		return domain.Item{}, domain.ErrItemNotFound
+	}
+	if checkErr != nil {
+		return domain.Item{}, fmt.Errorf("sql check item role: %w", checkErr)
+	}
+	return domain.Item{}, conflictErr
+}
+
+// scanItem scans an item row returned from an UPDATE … RETURNING or SELECT query.
+func scanItem(row interface{ Scan(...any) error }) (domain.Item, error) {
+	var item domain.Item
+	var itemType string
+	err := row.Scan(
+		&item.ID,
+		&item.AuthorID,
+		&item.ProviderID,
+		&item.ReceiverID,
+		&item.Name,
+		&item.Description,
+		&itemType,
+		&item.UpdatedAt,
+		&item.Quantity,
+	)
+	if err != nil {
+		return domain.Item{}, err
+	}
+	item.Type, err = enums.ItemTypeString(itemType)
+	if err != nil {
+		return domain.Item{}, fmt.Errorf("item type: %w", err)
+	}
+	return item, nil
 }

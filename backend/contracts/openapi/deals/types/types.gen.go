@@ -395,14 +395,26 @@ type ListOffersParamsSort string
 
 // UpdateDealItemRequest defines model for UpdateDealItemRequest.
 type UpdateDealItemRequest struct {
-	// Description Новое описание позиции
+	// Description Новое описание позиции (только для автора)
 	Description *string `json:"description,omitempty"`
 
-	// Name Новое название позиции
+	// Name Новое название позиции (только для автора)
 	Name *string `json:"name,omitempty"`
 
-	// Quantity Новое количество
+	// Quantity Новое количество (только для автора)
 	Quantity *int `json:"quantity,omitempty"`
+
+	// ClaimProvider Назначить текущего пользователя поставщиком (только если слот свободен)
+	ClaimProvider *bool `json:"claimProvider,omitempty"`
+
+	// ReleaseProvider Освободить слот поставщика (только если текущий пользователь является поставщиком)
+	ReleaseProvider *bool `json:"releaseProvider,omitempty"`
+
+	// ClaimReceiver Назначить текущего пользователя получателем (только если слот свободен)
+	ClaimReceiver *bool `json:"claimReceiver,omitempty"`
+
+	// ReleaseReceiver Освободить слот получателя (только если текущий пользователь является получателем)
+	ReleaseReceiver *bool `json:"releaseReceiver,omitempty"`
 }
 
 // UpdateDealItemParams defines parameters for UpdateDealItem.

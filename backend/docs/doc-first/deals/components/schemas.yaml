@@ -210,14 +210,26 @@ UpdateDealItemRequest:
   properties:
     name:
       type: string
-      description: Новое название позиции
+      description: Новое название позиции (только для автора)
     description:
       type: string
-      description: Новое описание позиции
+      description: Новое описание позиции (только для автора)
     quantity:
       type: integer
       minimum: 1
-      description: Новое количество
+      description: Новое количество (только для автора)
+    claimProvider:
+      type: boolean
+      description: Назначить текущего пользователя поставщиком (только если слот свободен)
+    releaseProvider:
+      type: boolean
+      description: Освободить слот поставщика (только если текущий пользователь является поставщиком)
+    claimReceiver:
+      type: boolean
+      description: Назначить текущего пользователя получателем (только если слот свободен)
+    releaseReceiver:
+      type: boolean
+      description: Освободить слот получателя (только если текущий пользователь является получателем)
 
 
 Item:
