@@ -185,6 +185,29 @@ func (s *Service) GetDealByID(ctx context.Context, id uuid.UUID) (domain.Deal, e
 }
 
 // ================================================================================
+// UPDATE DEAL ITEM
+// ================================================================================
+
+// UpdateDealItem applies a partial update to a deal item.
+//
+// Domain errors:
+//   - domain.ErrDealNotFound: if no deal with the specified ID exists.
+//   - domain.ErrItemNotFound: if no item with the specified ID exists in the deal.
+//   - domain.ErrForbidden: if the user is not the author of the item.
+func (s *Service) UpdateDealItem(
+	ctx context.Context,
+	userID uuid.UUID,
+	dealID uuid.UUID,
+	itemID uuid.UUID,
+	patch htypes.ItemPatch,
+) (domain.Item, error) {
+	if _, err := s.dealsRepository.GetDealByID(ctx, s.db, dealID); err != nil {
+		return domain.Item{}, err
+	}
+	return s.dealsRepository.UpdateItem(ctx, s.db, dealID, itemID, userID, patch)
+}
+
+// ================================================================================
 // HELPER METHODS
 // ================================================================================
 

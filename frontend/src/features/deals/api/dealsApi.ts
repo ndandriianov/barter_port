@@ -7,6 +7,7 @@ import {
   draftSchema,
   getDealsResponseSchema,
   getMyDraftDealsResponseSchema,
+  itemSchema,
 } from "@/features/deals/model/schemas.ts";
 import type {
   ConfirmDraftDealResponse,
@@ -18,6 +19,8 @@ import type {
   GetDealsResponse,
   GetMyDraftDealsParams,
   GetMyDraftDealsResponse,
+  Item,
+  UpdateDealItemRequest,
 } from "@/features/deals/model/types.ts";
 
 const dealsApi = createApi({
@@ -92,6 +95,16 @@ const dealsApi = createApi({
       query: (dealId) => `/deals/${dealId}`,
       transformResponse: (response: unknown) => dealSchema.parse(response),
       providesTags: (_result, _error, dealId) => [{type: "Deals", id: dealId}],
+    }),
+
+    updateDealItem: builder.mutation<Item, { dealId: string; itemId: string; body: UpdateDealItemRequest }>({
+      query: ({ dealId, itemId, body }) => ({
+        url: `/deals/${dealId}/items/${itemId}`,
+        method: "PATCH",
+        body,
+      }),
+      transformResponse: (response: unknown) => itemSchema.parse(response),
+      invalidatesTags: (_result, _error, { dealId }) => [{type: "Deals", id: dealId}],
     }),
   }),
 });
