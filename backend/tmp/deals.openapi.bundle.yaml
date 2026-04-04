@@ -641,15 +641,27 @@ components:
           description: Список пользователей, которые подтвердили/не подтвердили свое участие в сделке
           items:
             $ref: '#/components/schemas/UserConfirm'
-    GetDealsResponse:
+    GetDealsResponseItem:
       type: object
+      required:
+        - id
+        - participants
       properties:
-        data:
+        id:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор сделки
+        participants:
           type: array
+          description: Список ID всех пользователей, участвующих в этой сделке
           items:
             type: string
             format: uuid
-            description: The unique identifier of a deal
+            description: Уникальный идентификатор пользователя
+    GetDealsResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/GetDealsResponseItem'
     Item:
       type: object
       required:

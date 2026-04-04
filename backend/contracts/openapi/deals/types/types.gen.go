@@ -169,8 +169,15 @@ type ErrorResponse struct {
 }
 
 // GetDealsResponse defines model for GetDealsResponse.
-type GetDealsResponse struct {
-	Data *[]openapi_types.UUID `json:"data,omitempty"`
+type GetDealsResponse = []GetDealsResponseItem
+
+// GetDealsResponseItem defines model for GetDealsResponseItem.
+type GetDealsResponseItem struct {
+	// Id Уникальный идентификатор сделки
+	Id openapi_types.UUID `json:"id"`
+
+	// Participants Список ID всех пользователей, участвующих в этой сделке
+	Participants []openapi_types.UUID `json:"participants"`
 }
 
 // GetMyDraftDealsResponse defines model for GetMyDraftDealsResponse.

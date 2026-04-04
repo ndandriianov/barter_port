@@ -161,10 +161,10 @@ func (s *Service) CancelDraft(ctx context.Context, id uuid.UUID, userID uuid.UUI
 // GET DEALS
 // ================================================================================
 
-// GetDeals returns deal IDs. If my is true, filters to only deals the user participates in.
+// GetDeals returns deal IDs with participant UUIDs. If my is true, filters to only deals the user participates in.
 //
 // No domain errors.
-func (s *Service) GetDeals(ctx context.Context, userID uuid.UUID, my bool) ([]uuid.UUID, error) {
+func (s *Service) GetDeals(ctx context.Context, userID uuid.UUID, my bool) ([]htypes.DealIDWithParticipantIDs, error) {
 	var filterUserID *uuid.UUID
 	if my {
 		filterUserID = &userID

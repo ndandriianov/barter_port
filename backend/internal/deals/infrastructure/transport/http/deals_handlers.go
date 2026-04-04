@@ -2,7 +2,7 @@ package http
 
 import (
 	"barter-port/contracts/openapi/deals/types"
-	"barter-port/internal/deals/application/deals"
+	dealssvc "barter-port/internal/deals/application/deals"
 	"barter-port/internal/deals/domain"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/httpx"
@@ -18,10 +18,10 @@ import (
 
 type DealsHandlers struct {
 	log          *slog.Logger
-	dealsService *deals.Service
+	dealsService *dealssvc.Service
 }
 
-func NewDealsHandlers(log *slog.Logger, dealsService *deals.Service) *DealsHandlers {
+func NewDealsHandlers(log *slog.Logger, dealsService *dealssvc.Service) *DealsHandlers {
 	return &DealsHandlers{
 		log:          log,
 		dealsService: dealsService,
@@ -253,14 +253,14 @@ func (h *DealsHandlers) GetDeals(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ids, err := h.dealsService.GetDeals(r.Context(), userID, my)
+	deals, err := h.dealsService.GetDeals(r.Context(), userID, my)
 	if err != nil {
 		log.Error("error getting deals", slog.Any("error", err))
 		httpx.WriteEmptyError(w, http.StatusInternalServerError)
 		return
 	}
 
-	httpx.WriteJSON(w, http.StatusOK, types.GetDealsResponse{Data: &ids})
+	httpx.WriteJSON(w, http.StatusOK, mapDealIDsWithParticipantIDsToDTO(deals))
 }
 
 // ================================================================================

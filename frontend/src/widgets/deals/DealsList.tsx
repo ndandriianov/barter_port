@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import {
   Alert,
@@ -17,8 +17,12 @@ import {
 } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import dealsApi from "@/features/deals/api/dealsApi";
+import usersApi from "@/features/users/api/usersApi.ts";
+import { useAppDispatch, useAppSelector } from "@/hooks/redux.ts";
+import type { User } from "@/features/users/model/types.ts";
 
 function DealsList() {
+  const dispatch = useAppDispatch();
   const [myOnly, setMyOnly] = useState(false);
   const [openOnly, setOpenOnly] = useState(false);
 
@@ -26,6 +30,42 @@ function DealsList() {
     my: myOnly || undefined,
     open: openOnly || undefined,
   });
+
+  const participantIds = useMemo(
+    () => [...new Set((data ?? []).flatMap((deal) => deal.participants))],
+    [data],
+  );
+
+  useEffect(() => {
+    if (participantIds.length === 0) {
+      return;
+    }
+
+    const subscriptions = participantIds.map((id) =>
+      dispatch(usersApi.endpoints.getUserById.initiate(id)),
+    );
+
+    return () => {
+      subscriptions.forEach((subscription) => subscription.unsubscribe());
+    };
+  }, [dispatch, participantIds]);
+
+  const usersById = useAppSelector((state) =>
+    participantIds.reduce<Record<string, User | undefined>>((acc, id) => {
+      acc[id] = usersApi.endpoints.getUserById.select(id)(state).data;
+      return acc;
+    }, {}),
+  );
+
+  const getParticipantNames = (ids: string[]) =>
+    ids.length === 0
+      ? "имя не указано"
+      : ids
+          .map((id) => {
+            const name = usersById[id]?.name?.trim();
+            return name ? name : "имя не указано";
+          })
+          .join(", ");
 
   if (isLoading) {
     return (
@@ -78,18 +118,17 @@ function DealsList() {
         </Tooltip>
       </Box>
 
-      {data.data.length === 0 ? (
+      {data.length === 0 ? (
         <Typography color="text.secondary" textAlign="center" py={4}>
           Сделок пока нет
         </Typography>
       ) : (
         <List disablePadding>
-          {data.data.map((dealId) => (
-            <ListItem key={dealId} disablePadding divider>
-              <ListItemButton component={RouterLink} to={`/deals/${dealId}`}>
+          {data.map((deal) => (
+            <ListItem key={deal.id} disablePadding divider>
+              <ListItemButton component={RouterLink} to={`/deals/${deal.id}`}>
                 <ListItemText
-                  primary={dealId}
-                  primaryTypographyProps={{ variant: "body2", fontFamily: "monospace" }}
+                  primary={getParticipantNames(deal.participants)}
                 />
               </ListItemButton>
             </ListItem>

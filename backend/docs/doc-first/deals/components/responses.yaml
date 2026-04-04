@@ -76,11 +76,24 @@ ConfirmDraftDealResponse:
 
 
 GetDealsResponse:
+  type: array
+  items:
+    $ref: '#/GetDealsResponseItem'
+
+GetDealsResponseItem:
   type: object
+  required:
+    - id
+    - participants
   properties:
-    data:
+    id:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор сделки
+    participants:
       type: array
+      description: Список ID всех пользователей, участвующих в этой сделке
       items:
         type: string
         format: uuid
-        description: The unique identifier of a deal
+        description: Уникальный идентификатор пользователя
