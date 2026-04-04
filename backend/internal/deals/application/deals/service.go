@@ -62,11 +62,15 @@ func (s *Service) CreateDraft(
 // GET DRAFT IDS BY AUTHOR
 // ================================================================================
 
-// GetDraftIDsByAuthor returns a list of draft deal IDs created by the specified author.
+// GetDraftsByAuthor returns a list of draft deal IDs created by the specified author.
 //
 // No domain errors
-func (s *Service) GetDraftIDsByAuthor(ctx context.Context, authorID uuid.UUID, createdByMe bool) ([]uuid.UUID, error) {
-	return s.draftsRepository.GetDraftIDsByAuthor(ctx, s.db, authorID, createdByMe)
+func (s *Service) GetDraftsByAuthor(
+	ctx context.Context,
+	authorID uuid.UUID,
+	createdByMe bool,
+) ([]htypes.DraftIDWithAuthorIDs, error) {
+	return s.draftsRepository.GetDraftsByAuthor(ctx, s.db, authorID, createdByMe)
 }
 
 // ================================================================================

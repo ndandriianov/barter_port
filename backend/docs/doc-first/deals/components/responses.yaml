@@ -22,9 +22,19 @@ CreateDraftDealResponse:
 GetMyDraftDealsResponse:
   type: array
   items:
-    type: string
-    format: uuid
-    description: The unique identifier of a draft deal
+    type: object
+    properties:
+      id:
+        type: string
+        format: uuid
+        description: Уникальный идентификатор черновой сделки
+      userIds:
+        type: array
+        description: Список ID всех пользователей, участвующих в этой сделке
+        items:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор пользователя
 
 
 

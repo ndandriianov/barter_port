@@ -61,26 +61,40 @@ func (r *Repository) CreateDraft(
 }
 
 // ================================================================================
-// GetDraftIDsByAuthor
+// GetDraftsByAuthor
 // ================================================================================
 
-// GetDraftIDsByAuthor retrieves the IDs of draft deals created by a specific author.
+// GetDraftsByAuthor retrieves the IDs of draft deals created by a specific author.
 //
 // No domain errors
-func (r *Repository) GetDraftIDsByAuthor(ctx context.Context, exec db.DB, authorID uuid.UUID, createdByMe bool) ([]uuid.UUID, error) {
+func (r *Repository) GetDraftsByAuthor(
+	ctx context.Context,
+	exec db.DB,
+	authorID uuid.UUID,
+	createdByMe bool,
+) ([]htypes.DraftIDWithAuthorIDs, error) {
 	var query string
 	if createdByMe {
 		query = `
-			SELECT id
-			FROM draft_deals
-			WHERE author_id = $1;`
+			SELECT dd.id, array_agg(DISTINCT o.author_id) AS participant_ids
+			FROM draft_deals dd
+			JOIN draft_deal_offers ddo ON dd.id = ddo.draft_deal_id
+			JOIN offers o ON o.id = ddo.offer_id
+			WHERE dd.author_id = $1
+			GROUP BY dd.id;`
 	} else {
 		query = `
-			SELECT DISTINCT dd.id
+			SELECT dd.id, array_agg(DISTINCT o.author_id) AS participant_ids
 			FROM draft_deals dd
 			JOIN draft_deal_offers ddo ON dd.id = ddo.draft_deal_id
 			JOIN offers o ON o.id = ddo.offer_id 
-			WHERE o.author_id = $1;`
+			WHERE EXISTS(
+			    SELECT 1
+			    FROM draft_deal_offers ddo2 
+			    JOIN offers o2 ON o2.id = ddo2.offer_id
+			    WHERE o2.author_id = $1 AND ddo2.draft_deal_id = dd.id
+			)
+			GROUP BY dd.id;`
 	}
 
 	rows, err := exec.Query(ctx, query, authorID)
@@ -89,12 +103,23 @@ func (r *Repository) GetDraftIDsByAuthor(ctx context.Context, exec db.DB, author
 	}
 	defer rows.Close()
 
-	ids, err := pgx.CollectRows(rows, pgx.RowTo[uuid.UUID])
-	if err != nil {
-		return nil, fmt.Errorf("collect rows: %w", err)
+	var drafts []htypes.DraftIDWithAuthorIDs
+	for rows.Next() {
+		var id uuid.UUID
+		var participantIDs []uuid.UUID
+
+		err = rows.Scan(&id, &participantIDs)
+		if err != nil {
+			return nil, fmt.Errorf("scan: %w", err)
+		}
+
+		drafts = append(drafts, htypes.DraftIDWithAuthorIDs{
+			ID:             id,
+			ParticipantIDs: participantIDs,
+		})
 	}
 
-	return ids, nil
+	return drafts, nil
 }
 
 // ================================================================================

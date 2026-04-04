@@ -174,7 +174,17 @@ type GetDealsResponse struct {
 }
 
 // GetMyDraftDealsResponse defines model for GetMyDraftDealsResponse.
-type GetMyDraftDealsResponse = []openapi_types.UUID
+type GetMyDraftDealsResponse struct {
+	// Drafts Список ID черновиков сделок, в которых участвует пользователь,
+	// к каждому ID сделки прилагается список ID всех пользователей, участвующих в этой сделке
+	Drafts []struct {
+		// Id Уникальный идентификатор черновой сделки
+		Id interface{} `json:"id,omitempty"`
+
+		// UserIds Список ID всех пользователей, участвующих в этой сделке
+		UserIds *[]openapi_types.UUID `json:"userIds,omitempty"`
+	} `json:"drafts"`
+}
 
 // Item defines model for Item.
 type Item struct {

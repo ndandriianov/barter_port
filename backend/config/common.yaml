@@ -6,7 +6,7 @@ db:
 
 jwt:
   access_ttl: 10m
-  refresh_ttl: 30m
+  refresh_ttl: 90m
 
 kafka:
   brokers:

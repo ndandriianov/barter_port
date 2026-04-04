@@ -128,7 +128,7 @@ func (h *DealsHandlers) GetDrafts(w http.ResponseWriter, r *http.Request) {
 	)
 
 	// вызов сервиса
-	draftsIDs, err := h.dealsService.GetDraftIDsByAuthor(r.Context(), authorID, createdByMe)
+	draftsIDs, err := h.dealsService.GetDraftsByAuthor(r.Context(), authorID, createdByMe)
 	if err != nil {
 		log.Error("error getting drafts", slog.Any("error", err))
 		httpx.WriteEmptyError(w, http.StatusInternalServerError)
