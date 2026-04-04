@@ -190,10 +190,15 @@ func (s *Service) GetDealByID(ctx context.Context, id uuid.UUID) (domain.Deal, e
 
 // UpdateDealItem applies a partial update to a deal item.
 //
+// Content fields (Name, Description, Quantity) may only be changed by the item author.
+// Provider/receiver roles follow claim/release rules (see domain errors below).
+//
 // Domain errors:
-//   - domain.ErrDealNotFound: if no deal with the specified ID exists.
-//   - domain.ErrItemNotFound: if no item with the specified ID exists in the deal.
-//   - domain.ErrForbidden: if the user is not the author of the item.
+//   - domain.ErrDealNotFound
+//   - domain.ErrItemNotFound
+//   - domain.ErrForbidden        — not the author (content change)
+//   - domain.ErrRoleAlreadyTaken — slot occupied by another user (claim)
+//   - domain.ErrNotRoleHolder    — user does not hold the role (release)
 func (s *Service) UpdateDealItem(
 	ctx context.Context,
 	userID uuid.UUID,
@@ -204,7 +209,46 @@ func (s *Service) UpdateDealItem(
 	if _, err := s.dealsRepository.GetDealByID(ctx, s.db, dealID); err != nil {
 		return domain.Item{}, err
 	}
-	return s.dealsRepository.UpdateItem(ctx, s.db, dealID, itemID, userID, patch)
+
+	var (
+		item domain.Item
+		err  error
+	)
+
+	hasContent := patch.Name != nil || patch.Description != nil || patch.Quantity != nil
+	if hasContent {
+		item, err = s.dealsRepository.UpdateItem(ctx, s.db, dealID, itemID, userID, patch)
+		if err != nil {
+			return domain.Item{}, err
+		}
+	}
+
+	if patch.ClaimProvider {
+		item, err = s.dealsRepository.ClaimItemProvider(ctx, s.db, dealID, itemID, userID)
+		if err != nil {
+			return domain.Item{}, err
+		}
+	}
+	if patch.ReleaseProvider {
+		item, err = s.dealsRepository.ReleaseItemProvider(ctx, s.db, dealID, itemID, userID)
+		if err != nil {
+			return domain.Item{}, err
+		}
+	}
+	if patch.ClaimReceiver {
+		item, err = s.dealsRepository.ClaimItemReceiver(ctx, s.db, dealID, itemID, userID)
+		if err != nil {
+			return domain.Item{}, err
+		}
+	}
+	if patch.ReleaseReceiver {
+		item, err = s.dealsRepository.ReleaseItemReceiver(ctx, s.db, dealID, itemID, userID)
+		if err != nil {
+			return domain.Item{}, err
+		}
+	}
+
+	return item, nil
 }
 
 // ================================================================================

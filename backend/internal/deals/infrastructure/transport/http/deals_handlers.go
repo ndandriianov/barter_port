@@ -333,7 +333,14 @@ func (h *DealsHandlers) UpdateDealItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Name == nil && req.Description == nil && req.Quantity == nil {
+	claimProvider := req.ClaimProvider != nil && *req.ClaimProvider
+	releaseProvider := req.ReleaseProvider != nil && *req.ReleaseProvider
+	claimReceiver := req.ClaimReceiver != nil && *req.ClaimReceiver
+	releaseReceiver := req.ReleaseReceiver != nil && *req.ReleaseReceiver
+
+	hasContent := req.Name != nil || req.Description != nil || req.Quantity != nil
+	hasRole := claimProvider || releaseProvider || claimReceiver || releaseReceiver
+	if !hasContent && !hasRole {
 		httpx.WriteEmptyError(w, http.StatusBadRequest)
 		return
 	}
@@ -346,19 +353,23 @@ func (h *DealsHandlers) UpdateDealItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	patch := htypes.ItemPatch{
-		Name:        req.Name,
-		Description: req.Description,
-		Quantity:    req.Quantity,
+		Name:            req.Name,
+		Description:     req.Description,
+		Quantity:        req.Quantity,
+		ClaimProvider:   claimProvider,
+		ReleaseProvider: releaseProvider,
+		ClaimReceiver:   claimReceiver,
+		ReleaseReceiver: releaseReceiver,
 	}
 
 	item, err := h.dealsService.UpdateDealItem(r.Context(), userID, dealID, itemID, patch)
 	if err != nil {
 		switch {
-		case errors.Is(err, domain.ErrDealNotFound):
+		case errors.Is(err, domain.ErrDealNotFound), errors.Is(err, domain.ErrItemNotFound):
 			httpx.WriteEmptyError(w, http.StatusNotFound)
-		case errors.Is(err, domain.ErrItemNotFound):
-			httpx.WriteEmptyError(w, http.StatusNotFound)
-		case errors.Is(err, domain.ErrForbidden):
+		case errors.Is(err, domain.ErrForbidden),
+			errors.Is(err, domain.ErrRoleAlreadyTaken),
+			errors.Is(err, domain.ErrNotRoleHolder):
 			httpx.WriteEmptyError(w, http.StatusForbidden)
 		default:
 			log.Error("error updating deal item", slog.Any("error", err))

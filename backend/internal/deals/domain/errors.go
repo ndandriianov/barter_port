@@ -11,4 +11,6 @@ var (
 	ErrOfferNotFound    = errors.New("offer not found")
 	ErrUserNotInDraft   = errors.New("user not in draft")
 	ErrForbidden        = errors.New("forbidden")
+	ErrRoleAlreadyTaken = errors.New("role already taken by another user")
+	ErrNotRoleHolder    = errors.New("user does not hold this role")
 )
