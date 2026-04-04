@@ -45,6 +45,67 @@ deals:
               $ref: '../components/responses.yaml#/ErrorResponse'
 
 
+dealItemById:
+  patch:
+    tags:
+      - Deals
+    summary: Редактировать позицию сделки
+    description: Редактировать позицию сделки. Доступно только автору позиции (author_id).
+    operationId: updateDealItem
+    parameters:
+      - name: dealId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    security:
+      - bearerAuth: []
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas.yaml#/UpdateDealItemRequest'
+    responses:
+      '200':
+        description: Обновлённая позиция сделки
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Item'
+      '400':
+        description: Некорректный запрос (пустое тело)
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: Нет прав (пользователь не является автором этой позиции)
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Сделка или позиция не найдена
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+
 dealById:
   get:
     tags:

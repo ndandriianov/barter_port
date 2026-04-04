@@ -203,6 +203,23 @@ Deal:
         $ref: '#/Item'
 
 
+UpdateDealItemRequest:
+  type: object
+  minProperties: 1
+  description: Хотя бы одно поле обязательно
+  properties:
+    name:
+      type: string
+      description: Новое название позиции
+    description:
+      type: string
+      description: Новое описание позиции
+    quantity:
+      type: integer
+      minimum: 1
+      description: Новое количество
+
+
 Item:
   type: object
   required:

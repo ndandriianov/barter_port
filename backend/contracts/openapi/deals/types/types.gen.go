@@ -393,6 +393,27 @@ type ListOffersParams struct {
 // ListOffersParamsSort defines parameters for ListOffers.
 type ListOffersParamsSort string
 
+// UpdateDealItemRequest defines model for UpdateDealItemRequest.
+type UpdateDealItemRequest struct {
+	// Description Новое описание позиции
+	Description *string `json:"description,omitempty"`
+
+	// Name Новое название позиции
+	Name *string `json:"name,omitempty"`
+
+	// Quantity Новое количество
+	Quantity *int `json:"quantity,omitempty"`
+}
+
+// UpdateDealItemParams defines parameters for UpdateDealItem.
+type UpdateDealItemParams struct {
+	DealId openapi_types.UUID `json:"dealId"`
+	ItemId openapi_types.UUID `json:"itemId"`
+}
+
+// UpdateDealItemJSONRequestBody defines body for UpdateDealItem for application/json ContentType.
+type UpdateDealItemJSONRequestBody = UpdateDealItemRequest
+
 // CreateDraftDealJSONRequestBody defines body for CreateDraftDeal for application/json ContentType.
 type CreateDraftDealJSONRequestBody = CreateDraftDealRequest
 

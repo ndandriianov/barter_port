@@ -203,3 +203,75 @@ func (r *Repository) GetDealByID(ctx context.Context, exec db.DB, id uuid.UUID) 
 
 	return deal, nil
 }
+
+// ================================================================================
+// UPDATE ITEM
+// ================================================================================
+
+// UpdateItem applies a partial update to an item. Only fields set in patch are updated.
+//
+// Domain errors:
+//   - domain.ErrItemNotFound: if no item with the specified ID exists in the deal.
+//   - domain.ErrForbidden: if the item exists but userID is not its author.
+func (r *Repository) UpdateItem(
+	ctx context.Context,
+	exec db.DB,
+	dealID uuid.UUID,
+	itemID uuid.UUID,
+	userID uuid.UUID,
+	patch htypes.ItemPatch,
+) (domain.Item, error) {
+	updateQuery := `
+		UPDATE items
+		SET name        = COALESCE($4, name),
+		    description = COALESCE($5, description),
+		    quantity    = COALESCE($6, quantity),
+		    updated_at  = NOW()
+		WHERE id = $1
+		  AND deal_id   = $2
+		  AND author_id = $3
+		RETURNING id, author_id, provider_id, receiver_id,
+		          name, description, type, updated_at, quantity`
+
+	row := exec.QueryRow(ctx, updateQuery, itemID, dealID, userID, patch.Name, patch.Description, patch.Quantity)
+
+	var item domain.Item
+	var itemType string
+	err := row.Scan(
+		&item.ID,
+		&item.AuthorID,
+		&item.ProviderID,
+		&item.ReceiverID,
+		&item.Name,
+		&item.Description,
+		&itemType,
+		&item.UpdatedAt,
+		&item.Quantity,
+	)
+	if err == nil {
+		item.Type, err = enums.ItemTypeString(itemType)
+		if err != nil {
+			return domain.Item{}, fmt.Errorf("item type: %w", err)
+		}
+		return item, nil
+	}
+	if err != pgx.ErrNoRows {
+		return domain.Item{}, fmt.Errorf("sql update item: %w", err)
+	}
+
+	// No rows updated — determine why: item doesn't exist or user is not author
+	var authorID uuid.UUID
+	checkErr := exec.QueryRow(ctx,
+		`SELECT author_id FROM items WHERE id = $1 AND deal_id = $2`,
+		itemID, dealID,
+	).Scan(&authorID)
+
+	if checkErr == pgx.ErrNoRows {
+		return domain.Item{}, domain.ErrItemNotFound
+	}
+	if checkErr != nil {
+		return domain.Item{}, fmt.Errorf("sql check item: %w", checkErr)
+	}
+
+	return domain.Item{}, domain.ErrForbidden
+}

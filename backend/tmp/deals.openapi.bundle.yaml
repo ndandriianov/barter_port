@@ -343,6 +343,65 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /deals/{dealId}/items/{itemId}:
+    patch:
+      tags:
+        - Deals
+      summary: Редактировать позицию сделки
+      description: Редактировать позицию сделки. Доступно только автору позиции (author_id).
+      operationId: updateDealItem
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDealItemRequest'
+      responses:
+        '200':
+          description: Обновлённая позиция сделки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+        '400':
+          description: Некорректный запрос (пустое тело)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Нет прав (пользователь не является автором этой позиции)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Сделка или позиция не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /offers:
     get:
       tags:
@@ -735,6 +794,21 @@ components:
           description: Список позиций сделки
           items:
             $ref: '#/components/schemas/Item'
+    UpdateDealItemRequest:
+      type: object
+      minProperties: 1
+      description: Хотя бы одно поле обязательно
+      properties:
+        name:
+          type: string
+          description: Новое название позиции
+        description:
+          type: string
+          description: Новое описание позиции
+        quantity:
+          type: integer
+          minimum: 1
+          description: Новое количество
     OffersCursor:
       type: object
       description: Cursor for stable pagination

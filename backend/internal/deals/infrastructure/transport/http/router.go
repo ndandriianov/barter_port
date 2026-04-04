@@ -55,6 +55,7 @@ func NewRouter(logg *slog.Logger, validator *validators.LocalJWT, h *OffersHandl
 		r.Route("/deals", func(r chi.Router) {
 			r.Get("/", dh.GetDeals)
 			r.Get("/{dealId}", dh.GetDealByID)
+			r.Patch("/{dealId}/items/{itemId}", dh.UpdateDealItem)
 			r.Post("/drafts", dh.CreateDraft)
 			r.Get("/drafts", dh.GetDrafts)
 			r.Get("/drafts/{draftId}", dh.GetDraftByID)

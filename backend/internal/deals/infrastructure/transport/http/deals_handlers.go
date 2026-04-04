@@ -4,6 +4,7 @@ import (
 	"barter-port/contracts/openapi/deals/types"
 	dealssvc "barter-port/internal/deals/application/deals"
 	"barter-port/internal/deals/domain"
+	"barter-port/internal/deals/domain/htypes"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/httpx"
 	"barter-port/pkg/logger"
@@ -298,6 +299,75 @@ func (h *DealsHandlers) GetDealByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpx.WriteJSON(w, http.StatusOK, deal.ToDTO())
+}
+
+// ================================================================================
+// UPDATE DEAL ITEM
+// ================================================================================
+
+func (h *DealsHandlers) UpdateDealItem(w http.ResponseWriter, r *http.Request) {
+	log := logger.LogFrom(r.Context(), h.log).With(slog.String("handler", "UpdateDealItem"))
+	log.Info("handling update deal item request")
+
+	dealIDStr := chi.URLParam(r, "dealId")
+	itemIDStr := chi.URLParam(r, "itemId")
+
+	dealID, err := uuid.Parse(dealIDStr)
+	if err != nil {
+		log.Error("error parsing deal id")
+		httpx.WriteEmptyError(w, http.StatusBadRequest)
+		return
+	}
+
+	itemID, err := uuid.Parse(itemIDStr)
+	if err != nil {
+		log.Error("error parsing item id")
+		httpx.WriteEmptyError(w, http.StatusBadRequest)
+		return
+	}
+
+	var req types.UpdateDealItemRequest
+	if err = httpx.DecodeJSON(r, &req); err != nil {
+		log.Error("error decoding request", slog.Any("error", err))
+		httpx.WriteError(w, http.StatusBadRequest, httpx.ErrCannotDecodeRequestBody)
+		return
+	}
+
+	if req.Name == nil && req.Description == nil && req.Quantity == nil {
+		httpx.WriteEmptyError(w, http.StatusBadRequest)
+		return
+	}
+
+	userID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		log.Error("failed to get userID from context")
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
+	patch := htypes.ItemPatch{
+		Name:        req.Name,
+		Description: req.Description,
+		Quantity:    req.Quantity,
+	}
+
+	item, err := h.dealsService.UpdateDealItem(r.Context(), userID, dealID, itemID, patch)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrDealNotFound):
+			httpx.WriteEmptyError(w, http.StatusNotFound)
+		case errors.Is(err, domain.ErrItemNotFound):
+			httpx.WriteEmptyError(w, http.StatusNotFound)
+		case errors.Is(err, domain.ErrForbidden):
+			httpx.WriteEmptyError(w, http.StatusForbidden)
+		default:
+			log.Error("error updating deal item", slog.Any("error", err))
+			httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, item.ToDTO())
 }
 
 // ================================================================================

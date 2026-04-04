@@ -72,6 +72,12 @@ export const dealSchema = z.object({
   items: z.array(itemSchema),
 });
 
+export const updateDealItemRequestSchema = z.object({
+  name: z.string().optional(),
+  description: z.string().optional(),
+  quantity: z.number().int().min(1).optional(),
+});
+
 export const dealIdAndParticipantsSchema = z.object({
   id: z.string(),
   participants: z.array(z.string()),

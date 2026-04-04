@@ -18,6 +18,8 @@ paths:
     $ref: './paths/deals.yaml#/deals'
   /deals/{dealId}:
     $ref: './paths/deals.yaml#/dealById'
+  /deals/{dealId}/items/{itemId}:
+    $ref: './paths/deals.yaml#/dealItemById'
   /offers:
     $ref: './paths/offers.yaml#/offers'
 
