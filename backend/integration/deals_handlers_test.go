@@ -130,8 +130,14 @@ func mustGetDraftIDs(t *testing.T, userID uuid.UUID, createdByMe *bool) []uuid.U
 
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
-	var ids []uuid.UUID
-	require.NoError(t, json.NewDecoder(resp.Body).Decode(&ids))
+	var drafts dealstypes.GetMyDraftDealsResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&drafts))
+
+	ids := make([]uuid.UUID, 0, len(drafts))
+	for _, draft := range drafts {
+		ids = append(ids, draft.Id)
+	}
+
 	return ids
 }
 
