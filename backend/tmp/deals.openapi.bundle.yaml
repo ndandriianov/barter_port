@@ -447,28 +447,21 @@ components:
       bearerFormat: JWT
   schemas:
     GetMyDraftDealsResponse:
-      type: object
-      required:
-        - drafts
-      properties:
-        drafts:
-          type: array
-          description: |
-            Список ID черновиков сделок, в которых участвует пользователь,
-            к каждому ID сделки прилагается список ID всех пользователей, участвующих в этой сделке
-          items:
-            type: object
-            properties:
-              id:
-                format: uuid
-                description: Уникальный идентификатор черновой сделки
-              userIds:
-                type: array
-                description: Список ID всех пользователей, участвующих в этой сделке
-                items:
-                  type: string
-                  format: uuid
-                  description: Уникальный идентификатор пользователя
+      type: array
+      items:
+        type: object
+        properties:
+          id:
+            type: string
+            format: uuid
+            description: Уникальный идентификатор черновой сделки
+          userIds:
+            type: array
+            description: Список ID всех пользователей, участвующих в этой сделке
+            items:
+              type: string
+              format: uuid
+              description: Уникальный идентификатор пользователя
     ErrorResponse:
       type: object
       properties:
