@@ -44,9 +44,12 @@ export const createDraftDealResponseSchema = z.object({
   id: z.string(),
 });
 
-const idsListSchema = z.array(z.string());
+export const draftIdAndParticipantsSchema = z.object({
+  id: z.string(),
+  participants: z.array(z.string()),
+});
 
-export const getMyDraftDealsResponseSchema = idsListSchema;
+export const getMyDraftDealsResponseSchema = z.array(draftIdAndParticipantsSchema);
 
 export const itemSchema = z.object({
   id: z.string(),

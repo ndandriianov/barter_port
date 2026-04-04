@@ -446,22 +446,27 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    GetMyDraftDealsResponseItem:
+      type: object
+      required:
+        - id
+        - participants
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор черновой сделки
+        participants:
+          type: array
+          description: Список ID всех пользователей, участвующих в этой сделке
+          items:
+            type: string
+            format: uuid
+            description: Уникальный идентификатор пользователя
     GetMyDraftDealsResponse:
       type: array
       items:
-        type: object
-        properties:
-          id:
-            type: string
-            format: uuid
-            description: Уникальный идентификатор черновой сделки
-          userIds:
-            type: array
-            description: Список ID всех пользователей, участвующих в этой сделке
-            items:
-              type: string
-              format: uuid
-              description: Уникальный идентификатор пользователя
+        $ref: '#/components/schemas/GetMyDraftDealsResponseItem'
     ErrorResponse:
       type: object
       properties:

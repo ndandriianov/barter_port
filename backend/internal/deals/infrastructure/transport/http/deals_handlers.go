@@ -135,7 +135,7 @@ func (h *DealsHandlers) GetDrafts(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.WriteJSON(w, http.StatusOK, draftsIDs)
+	httpx.WriteJSON(w, http.StatusOK, mapDraftIDsWithAuthorIDsToDTO(draftsIDs))
 }
 
 // ================================================================================
