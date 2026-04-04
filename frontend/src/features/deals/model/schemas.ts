@@ -72,6 +72,9 @@ export const dealSchema = z.object({
   items: z.array(itemSchema),
 });
 
-export const getDealsResponseSchema = z.object({
-  data: z.array(z.string()),
+export const dealIdAndParticipantsSchema = z.object({
+  id: z.string(),
+  participants: z.array(z.string()),
 });
+
+export const getDealsResponseSchema = z.array(dealIdAndParticipantsSchema);

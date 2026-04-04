@@ -3,6 +3,7 @@ import {
   confirmDraftDealResponseSchema,
   createDraftDealResponseSchema,
   dealSchema,
+  dealIdAndParticipantsSchema,
   draftSchema,
   getDealsResponseSchema,
   getMyDraftDealsResponseSchema,
@@ -43,6 +44,7 @@ export interface GetDealsParams {
   open?: boolean;
 }
 
+export type DealIdAndParticipants = z.Infer<typeof dealIdAndParticipantsSchema>;
 export type GetDealsResponse = z.Infer<typeof getDealsResponseSchema>;
 export type Item = z.Infer<typeof itemSchema>;
 export type Deal = z.Infer<typeof dealSchema>;

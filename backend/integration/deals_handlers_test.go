@@ -833,11 +833,12 @@ func mustGetDealIDs(t *testing.T, userID uuid.UUID, my bool) []uuid.UUID {
 	var result dealstypes.GetDealsResponse
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
 
-	if result.Data == nil {
-		return nil
+	ids := make([]uuid.UUID, 0, len(result))
+	for _, item := range result {
+		ids = append(ids, item.Id)
 	}
 
-	return *result.Data
+	return ids
 }
 
 func mustCreateDeal(t *testing.T, userID uuid.UUID) uuid.UUID {

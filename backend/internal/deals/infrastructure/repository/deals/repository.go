@@ -3,6 +3,7 @@ package deals
 import (
 	"barter-port/internal/deals/domain"
 	"barter-port/internal/deals/domain/enums"
+	"barter-port/internal/deals/domain/htypes"
 	"barter-port/pkg/db"
 	"context"
 	"fmt"
@@ -65,18 +66,22 @@ func (r *Repository) CreateDeal(ctx context.Context, tx pgx.Tx, deal domain.Deal
 // GET DEAL IDs
 // ================================================================================
 
-// GetDealIDs returns deal IDs. If userID is non-nil, returns only deals the user participates in.
+// GetDealIDs returns deal IDs with participant UUIDs. If userID is non-nil, returns only deals the user participates in.
 //
 // No domain errors.
-func (r *Repository) GetDealIDs(ctx context.Context, exec db.DB, userID *uuid.UUID) ([]uuid.UUID, error) {
+func (r *Repository) GetDealIDs(ctx context.Context, exec db.DB, userID *uuid.UUID) ([]htypes.DealIDWithParticipantIDs, error) {
 	query := `
-		SELECT DISTINCT d.id
+		SELECT d.id,
+			   COALESCE(array_agg(DISTINCT p) FILTER (WHERE p IS NOT NULL), '{}') AS participant_ids
 		FROM deals d
-		LEFT JOIN items i ON i.deal_id = d.id
+				 LEFT JOIN items i ON i.deal_id = d.id
+				 LEFT JOIN LATERAL (VALUES (i.author_id), (i.provider_id), (i.receiver_id)) AS t(p) ON true
 		WHERE ($1::uuid IS NULL
-		   OR i.author_id = $1
-		   OR i.provider_id = $1
-		   OR i.receiver_id = $1)`
+			OR EXISTS(SELECT 1
+					  FROM items i2
+					  WHERE i2.deal_id = d.id
+						AND (i2.author_id = $1 OR i2.provider_id = $1 OR i2.receiver_id = $1)))
+		GROUP BY d.id`
 
 	rows, err := exec.Query(ctx, query, userID)
 	if err != nil {
@@ -84,12 +89,24 @@ func (r *Repository) GetDealIDs(ctx context.Context, exec db.DB, userID *uuid.UU
 	}
 	defer rows.Close()
 
-	ids, err := pgx.CollectRows(rows, pgx.RowTo[uuid.UUID])
-	if err != nil {
-		return nil, fmt.Errorf("collect rows: %w", err)
+	var result []htypes.DealIDWithParticipantIDs
+	for rows.Next() {
+		var id uuid.UUID
+		var participantIDs []uuid.UUID
+		if err = rows.Scan(&id, &participantIDs); err != nil {
+			return nil, fmt.Errorf("scan deal id row: %w", err)
+		}
+		result = append(result, htypes.DealIDWithParticipantIDs{
+			ID:             id,
+			ParticipantIDs: participantIDs,
+		})
 	}
 
-	return ids, nil
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows: %w", err)
+	}
+
+	return result, nil
 }
 
 // ================================================================================
