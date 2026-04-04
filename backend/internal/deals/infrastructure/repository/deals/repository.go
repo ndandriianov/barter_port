@@ -39,8 +39,8 @@ func (r *Repository) CreateDeal(ctx context.Context, tx pgx.Tx, deal domain.Deal
 	}
 
 	offersQuery := `
-		INSERT INTO items (deal_id, author_id, receiver_id, name, description, type, quantity) 
-		VALUES ($1, $2, $3, $4, $5, $6, $7)`
+		INSERT INTO items (deal_id, author_id, receiver_id, provider_id, name, description, type, quantity) 
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
 
 	for _, item := range deal.Items {
 		_, err = tx.Exec(
@@ -49,6 +49,7 @@ func (r *Repository) CreateDeal(ctx context.Context, tx pgx.Tx, deal domain.Deal
 			id,
 			item.AuthorID,
 			item.ReceiverID,
+			item.ProviderID,
 			item.Name,
 			item.Description,
 			item.Type,
