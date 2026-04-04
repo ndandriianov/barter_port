@@ -22,19 +22,25 @@ CreateDraftDealResponse:
 GetMyDraftDealsResponse:
   type: array
   items:
-    type: object
-    properties:
-      id:
+    $ref: '#/GetMyDraftDealsResponseItem'
+
+GetMyDraftDealsResponseItem:
+  type: object
+  required:
+    - id
+    - participants
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор черновой сделки
+    participants:
+      type: array
+      description: Список ID всех пользователей, участвующих в этой сделке
+      items:
         type: string
         format: uuid
-        description: Уникальный идентификатор черновой сделки
-      userIds:
-        type: array
-        description: Список ID всех пользователей, участвующих в этой сделке
-        items:
-          type: string
-          format: uuid
-          description: Уникальный идентификатор пользователя
+        description: Уникальный идентификатор пользователя
 
 
 

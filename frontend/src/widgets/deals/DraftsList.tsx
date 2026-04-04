@@ -54,11 +54,12 @@ function DraftsList() {
         </Typography>
       ) : (
         <List disablePadding>
-          {data.map((draftId) => (
-            <ListItem key={draftId} disablePadding divider>
-              <ListItemButton component={RouterLink} to={`/deals/drafts/${draftId}`}>
+          {data.map((draft) => (
+            <ListItem key={draft.id} disablePadding divider>
+              <ListItemButton component={RouterLink} to={`/deals/drafts/${draft.id}`}>
                 <ListItemText
-                  primary={draftId}
+                  primary={draft.id}
+                  secondary={draft.participants.length > 0 ? `Участники: ${draft.participants.join(", ")}` : "Без участников"}
                   primaryTypographyProps={{ variant: "body2", fontFamily: "monospace" }}
                 />
               </ListItemButton>

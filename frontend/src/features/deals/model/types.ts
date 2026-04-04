@@ -9,6 +9,7 @@ import {
   itemSchema,
   offerWithInfoSchema,
   userConfirmSchema,
+  draftIdAndParticipantsSchema,
 } from "@/features/deals/model/schemas.ts";
 
 export type OfferWithInfo = z.Infer<typeof offerWithInfoSchema>;
@@ -26,6 +27,7 @@ export interface CreateDraftDealRequest {
 }
 
 export type CreateDraftDealResponse = z.Infer<typeof createDraftDealResponseSchema>;
+export type DraftIdAndParticipants = z.Infer<typeof draftIdAndParticipantsSchema>;
 export type GetMyDraftDealsResponse = z.Infer<typeof getMyDraftDealsResponseSchema>;
 
 export interface GetMyDraftDealsParams {
