@@ -97,9 +97,10 @@ interface RoleRowProps {
   onClaim: () => void;
   onRelease: () => void;
   isLoading: boolean;
+  canClaim?: boolean;
 }
 
-function RoleRow({ label, userId, myId, isParticipant, getUserName, onClaim, onRelease, isLoading }: RoleRowProps) {
+function RoleRow({ label, userId, myId, isParticipant, getUserName, onClaim, onRelease, isLoading, canClaim = true }: RoleRowProps) {
   const isMe = userId !== undefined && userId === myId;
   const isEmpty = userId === undefined;
 
@@ -117,7 +118,7 @@ function RoleRow({ label, userId, myId, isParticipant, getUserName, onClaim, onR
         <Button size="small" variant="text" color="error" sx={{ minWidth: 0, p: 0, fontSize: 11 }} onClick={onRelease}>
           снять себя
         </Button>
-      ) : isEmpty && isParticipant ? (
+      ) : isEmpty && isParticipant && canClaim ? (
         <Button size="small" variant="text" sx={{ minWidth: 0, p: 0, fontSize: 11 }} onClick={onClaim}>
           стать
         </Button>
@@ -139,6 +140,9 @@ interface ItemRowProps {
 
 function ItemRow({ item, dealId, myId, isParticipant, getUserName, onEditClick }: ItemRowProps) {
   const [updateDealItem, { isLoading }] = dealsApi.useUpdateDealItemMutation();
+
+  const canClaimProvider = myId !== undefined && item.receiverId !== myId;
+  const canClaimReceiver = myId !== undefined && item.providerId !== myId;
 
   const handleClaim = (field: "claimProvider" | "claimReceiver") => () =>
     updateDealItem({ dealId, itemId: item.id, body: { [field]: true } });
@@ -180,6 +184,7 @@ function ItemRow({ item, dealId, myId, isParticipant, getUserName, onEditClick }
           onClaim={handleClaim("claimProvider")}
           onRelease={handleRelease("releaseProvider")}
           isLoading={isLoading}
+          canClaim={canClaimProvider}
         />
         <RoleRow
           label="Получатель"
@@ -190,6 +195,7 @@ function ItemRow({ item, dealId, myId, isParticipant, getUserName, onEditClick }
           onClaim={handleClaim("claimReceiver")}
           onRelease={handleRelease("releaseReceiver")}
           isLoading={isLoading}
+          canClaim={canClaimReceiver}
         />
       </Box>
     </ListItem>
