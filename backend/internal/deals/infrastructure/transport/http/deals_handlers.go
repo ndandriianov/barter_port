@@ -369,7 +369,8 @@ func (h *DealsHandlers) UpdateDealItem(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteEmptyError(w, http.StatusNotFound)
 		case errors.Is(err, domain.ErrForbidden),
 			errors.Is(err, domain.ErrRoleAlreadyTaken),
-			errors.Is(err, domain.ErrNotRoleHolder):
+			errors.Is(err, domain.ErrNotRoleHolder),
+			errors.Is(err, domain.ErrDuplicateRole):
 			httpx.WriteEmptyError(w, http.StatusForbidden)
 		default:
 			log.Error("error updating deal item", slog.Any("error", err))
