@@ -521,13 +521,12 @@ func (r *Repository) GetStatusVotes(ctx context.Context, exec db.DB, dealID uuid
 
 // GetParticipants returns all unique user IDs that hold any role (author/provider/receiver) in the deal's items.
 func (r *Repository) GetParticipants(ctx context.Context, exec db.DB, dealID uuid.UUID) ([]uuid.UUID, error) {
-	rows, err := exec.Query(ctx, `
-		SELECT DISTINCT p
-		FROM items
-		CROSS JOIN LATERAL (VALUES (author_id), (provider_id), (receiver_id)) AS t(p)
-		WHERE deal_id = $1 AND p IS NOT NULL`,
-		dealID,
-	)
+	query := `
+		SELECT user_id
+		FROM participants
+		WHERE deal_id = $1`
+
+	rows, err := exec.Query(ctx, query, dealID)
 	if err != nil {
 		return nil, fmt.Errorf("sql get participants: %w", err)
 	}
