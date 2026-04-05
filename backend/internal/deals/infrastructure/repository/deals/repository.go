@@ -46,7 +46,7 @@ func (r *Repository) CreateDeal(ctx context.Context, tx pgx.Tx, deal domain.Deal
 
 	offersQuery := `
 		INSERT INTO items (deal_id, author_id, receiver_id, provider_id, name, description, type, quantity) 
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8);`
 
 	for _, item := range deal.Items {
 		_, err = tx.Exec(
@@ -63,6 +63,26 @@ func (r *Repository) CreateDeal(ctx context.Context, tx pgx.Tx, deal domain.Deal
 		)
 		if err != nil {
 			return uuid.Nil, fmt.Errorf("sql items: %w", err)
+		}
+	}
+
+	participantsQuery := `
+		INSERT INTO participants (deal_id, user_id)
+		VALUES ($1, $2);`
+
+	participants := make([]uuid.UUID, 0)
+	seen := make(map[uuid.UUID]struct{})
+	for _, item := range deal.Items {
+		if _, ok := seen[item.AuthorID]; !ok {
+			seen[item.AuthorID] = struct{}{}
+			participants = append(participants, item.AuthorID)
+		}
+	}
+
+	for _, participant := range participants {
+		_, err = tx.Exec(ctx, participantsQuery, id, participant)
+		if err != nil {
+			return uuid.Nil, fmt.Errorf("sql participants: %w", err)
 		}
 	}
 
