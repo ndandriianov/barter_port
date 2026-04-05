@@ -400,6 +400,11 @@ func (s *Service) confirmDeal(ctx context.Context, id uuid.UUID, userID uuid.UUI
 			if err = s.dealsRepository.DeleteStatusVotes(ctx, tx, id); err != nil {
 				return err
 			}
+			if targetStatus == enums.DealStatusDiscussion {
+				if err = s.joinsRepository.DeleteAllRequests(ctx, tx, id); err != nil {
+					return err
+				}
+			}
 		}
 
 		deal, err = s.dealsRepository.GetDealByID(ctx, tx, id)
