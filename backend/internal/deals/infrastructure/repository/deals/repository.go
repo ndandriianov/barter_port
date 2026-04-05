@@ -241,9 +241,9 @@ func (r *Repository) getItemRoleID(
 	var query string
 	switch column {
 	case ReceiverID:
-		query = `SELECT receiver_id FROM items WHERE id = $1 AND deal_id = $2`
+		query = `SELECT receiver_id FROM items WHERE id = $1 AND deal_id = $2 FOR UPDATE`
 	case ProviderID:
-		query = `SELECT provider_id FROM items WHERE id = $1 AND deal_id = $2`
+		query = `SELECT provider_id FROM items WHERE id = $1 AND deal_id = $2 FOR UPDATE`
 	default:
 		return nil, fmt.Errorf("unsupported role column: %s", column)
 	}
