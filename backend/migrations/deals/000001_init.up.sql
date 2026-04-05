@@ -78,3 +78,23 @@ CREATE TABLE participants
     requested_status deal_status,
     PRIMARY KEY (deal_id, user_id)
 );
+
+CREATE TABLE join_requests
+(
+    user_id UUID NOT NULL,
+    deal_id UUID NOT NULL REFERENCES deals (id) ON DELETE CASCADE,
+    PRIMARY KEY (user_id, deal_id)
+);
+
+CREATE TABLE join_requests_votes
+(
+    user_id UUID NOT NULL,
+    deal_id UUID NOT NULL REFERENCES deals (id) ON DELETE CASCADE,
+    voter_id UUID NOT NULL,
+    vote BOOLEAN NOT NULL,
+
+    FOREIGN KEY (user_id, deal_id) REFERENCES join_requests (user_id, deal_id) ON DELETE CASCADE,
+    FOREIGN KEY (deal_id, voter_id) REFERENCES participants (deal_id, user_id) ON DELETE CASCADE,
+
+    PRIMARY KEY (user_id, deal_id, voter_id)
+);
