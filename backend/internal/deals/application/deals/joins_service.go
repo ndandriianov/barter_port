@@ -54,6 +54,17 @@ func (s *Service) LeaveDeal(ctx context.Context, dealID, userID uuid.UUID) error
 		return domain.ErrInvalidDealStatus
 	}
 
+	userParticipating := false
+	for _, participantID := range deal.Participants {
+		if participantID == userID {
+			userParticipating = true
+		}
+	}
+
+	if userParticipating {
+		return s.dealsRepository.DeleteParticipant(ctx, s.db, dealID, userID)
+	}
+
 	return s.joinsRepository.DeleteJoinRequest(ctx, s.db, userID, dealID)
 }
 
