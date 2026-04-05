@@ -160,6 +160,8 @@ func (h *Handlers) UpdateDealItem(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case errors.Is(err, domain.ErrDealNotFound), errors.Is(err, domain.ErrItemNotFound):
 			httpx.WriteEmptyError(w, http.StatusNotFound)
+		case errors.Is(err, domain.ErrInvalidDealStatus):
+			httpx.WriteEmptyError(w, http.StatusBadRequest)
 		case errors.Is(err, domain.ErrForbidden),
 			errors.Is(err, domain.ErrRoleAlreadyTaken),
 			errors.Is(err, domain.ErrNotRoleHolder),

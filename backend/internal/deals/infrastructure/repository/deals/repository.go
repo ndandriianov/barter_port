@@ -277,6 +277,10 @@ func (r *Repository) UpdateItem(
 	userID uuid.UUID,
 	patch htypes.ItemPatch,
 ) (domain.Item, error) {
+	if err := r.ensureDealMutable(ctx, exec, dealID); err != nil {
+		return domain.Item{}, err
+	}
+
 	updateQuery := `
 		UPDATE items
 		SET name        = COALESCE($4, name),
@@ -382,6 +386,10 @@ func (r *Repository) updateItemRole(
 	checkQuery string,
 	conflictErr error,
 ) (domain.Item, error) {
+	if err := r.ensureDealMutable(ctx, exec, dealID); err != nil {
+		return domain.Item{}, err
+	}
+
 	query := `UPDATE items ` + setClause + `
 		RETURNING id, author_id, provider_id, receiver_id,
 		          name, description, type, updated_at, quantity`
@@ -485,6 +493,10 @@ func (r *Repository) GetParticipants(ctx context.Context, exec db.DB, dealID uui
 
 // UpdateDealStatus sets the deal's status and updated_at.
 func (r *Repository) UpdateDealStatus(ctx context.Context, tx pgx.Tx, dealID uuid.UUID, status enums.DealStatus) error {
+	if err := r.ensureDealMutable(ctx, tx, dealID); err != nil {
+		return err
+	}
+
 	_, err := tx.Exec(ctx, `
 		UPDATE deals SET status = $2, updated_at = NOW() WHERE id = $1`,
 		dealID, status,
@@ -493,6 +505,24 @@ func (r *Repository) UpdateDealStatus(ctx context.Context, tx pgx.Tx, dealID uui
 		return fmt.Errorf("sql update deal status: %w", err)
 	}
 	return nil
+}
+
+func (r *Repository) ensureDealMutable(ctx context.Context, exec db.DB, dealID uuid.UUID) error {
+	var status enums.DealStatus
+	err := exec.QueryRow(ctx, `SELECT status FROM deals WHERE id = $1`, dealID).Scan(&status)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.ErrDealNotFound
+	}
+	if err != nil {
+		return fmt.Errorf("sql get deal status: %w", err)
+	}
+
+	switch status {
+	case enums.DealStatusCompleted, enums.DealStatusCancelled, enums.DealStatusFailed:
+		return domain.ErrInvalidDealStatus
+	default:
+		return nil
+	}
 }
 
 // DeleteStatusVotes removes all votes for a deal (called after a status transition).
