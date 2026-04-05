@@ -35,6 +35,18 @@ const formatDateTime = (value: string) =>
     minute: "2-digit",
   }).format(new Date(value));
 
+const dealStatusMeta: Record<
+  Deal["status"],
+  { label: string; color: "default" | "primary" | "secondary" | "success" | "error" | "info" | "warning" }
+> = {
+  LookingForParticipants: { label: "Поиск участников", color: "info" },
+  Discussion: { label: "Обсуждение", color: "warning" },
+  Confirmed: { label: "Подтверждена", color: "primary" },
+  Completed: { label: "Завершена", color: "success" },
+  Cancelled: { label: "Отменена", color: "default" },
+  Failed: { label: "Провалена", color: "error" },
+};
+
 // ─── Edit content dialog ────────────────────────────────────────────────────
 
 interface EditItemDialogProps {
@@ -253,6 +265,15 @@ function DealCard({ deal }: DealCardProps) {
           {deal.name ?? "Сделка"}
         </Typography>
 
+        <Box mb={1.5}>
+          <Chip
+            size="small"
+            label={`Статус: ${dealStatusMeta[deal.status].label}`}
+            color={dealStatusMeta[deal.status].color}
+            variant="outlined"
+          />
+        </Box>
+
         {deal.description && (
           <Typography variant="body2" color="text.secondary" mb={2}>
             {deal.description}
@@ -260,7 +281,6 @@ function DealCard({ deal }: DealCardProps) {
         )}
 
         <Box display="flex" gap={2} mb={2} flexWrap="wrap">
-          <Typography variant="caption" color="text.disabled">ID: {deal.id}</Typography>
           <Typography variant="caption" color="text.disabled">Создана: {formatDateTime(deal.createdAt)}</Typography>
           {deal.updatedAt && (
             <Typography variant="caption" color="text.disabled">Обновлена: {formatDateTime(deal.updatedAt)}</Typography>
