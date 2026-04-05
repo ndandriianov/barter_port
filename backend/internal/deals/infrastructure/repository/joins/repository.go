@@ -137,3 +137,16 @@ func (r *Repository) AddParticipant(ctx context.Context, exec db.DB, dealID, use
 
 	return nil
 }
+
+func (r *Repository) DeleteAllRequests(ctx context.Context, exec db.DB, dealID uuid.UUID) error {
+	query := `
+		DELETE FROM join_requests
+		WHERE deal_id = $1;`
+
+	_, err := exec.Exec(ctx, query, dealID)
+	if err != nil {
+		return fmt.Errorf("sql delete all join requests: %w", err)
+	}
+
+	return nil
+}
