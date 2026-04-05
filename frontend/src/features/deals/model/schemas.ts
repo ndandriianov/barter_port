@@ -69,6 +69,7 @@ export const dealSchema = z.object({
   description: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string().optional(),
+  status: z.enum(['LookingForParticipants', 'Discussion', 'Confirmed', 'Completed', 'Cancelled', 'Failed']),
   items: z.array(itemSchema),
 });
 
