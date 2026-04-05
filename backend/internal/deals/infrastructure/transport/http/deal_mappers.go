@@ -2,6 +2,8 @@ package http
 
 import (
 	"barter-port/contracts/openapi/deals/types"
+	"barter-port/internal/deals/domain"
+	"barter-port/internal/deals/domain/enums"
 	"barter-port/internal/deals/domain/htypes"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -25,4 +27,37 @@ func mapDealIDsWithParticipantIDsToDTO(deals []htypes.DealIDWithParticipantIDs) 
 		result = append(result, mapDealIDWithParticipantIDsToDTO(deal))
 	}
 	return result
+}
+
+func mapDealToDTO(deal domain.Deal) types.Deal {
+	itemsDTO := make([]types.Item, len(deal.Items))
+	for i, item := range deal.Items {
+		itemsDTO[i] = item.ToDTO()
+	}
+
+	var status types.DealStatus
+	switch deal.Status {
+	case enums.DealStatusLookingForParticipants:
+		status = types.LookingForParticipants
+	case enums.DealStatusDiscussion:
+		status = types.Discussion
+	case enums.DealStatusConfirmed:
+		status = types.Confirmed
+	case enums.DealStatusCompleted:
+		status = types.Completed
+	case enums.DealStatusCancelled:
+		status = types.Cancelled
+	case enums.DealStatusFailed:
+		status = types.Failed
+	}
+
+	return types.Deal{
+		Id:          deal.ID,
+		Name:        deal.Name,
+		Description: deal.Description,
+		CreatedAt:   deal.CreatedAt,
+		UpdatedAt:   deal.UpdatedAt,
+		Status:      status,
+		Items:       itemsDTO,
+	}
 }

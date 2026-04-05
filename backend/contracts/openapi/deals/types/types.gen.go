@@ -13,6 +13,36 @@ const (
 	BearerAuthScopes = "bearerAuth.Scopes"
 )
 
+// Defines values for DealStatus.
+const (
+	Cancelled              DealStatus = "Cancelled"
+	Completed              DealStatus = "Completed"
+	Confirmed              DealStatus = "Confirmed"
+	Discussion             DealStatus = "Discussion"
+	Failed                 DealStatus = "Failed"
+	LookingForParticipants DealStatus = "LookingForParticipants"
+)
+
+// Valid indicates whether the value is a known member of the DealStatus enum.
+func (e DealStatus) Valid() bool {
+	switch e {
+	case Cancelled:
+		return true
+	case Completed:
+		return true
+	case Confirmed:
+		return true
+	case Discussion:
+		return true
+	case Failed:
+		return true
+	case LookingForParticipants:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ItemType.
 const (
 	Good    ItemType = "good"
@@ -85,6 +115,12 @@ func (e ListOffersParamsSort) Valid() bool {
 	}
 }
 
+// ConfirmDealRequest defines model for ConfirmDealRequest.
+type ConfirmDealRequest struct {
+	// ExpectedCurrentStatus Статус сделки
+	ExpectedCurrentStatus DealStatus `json:"expectedCurrentStatus"`
+}
+
 // ConfirmDraftDealResponse defines model for ConfirmDraftDealResponse.
 type ConfirmDraftDealResponse struct {
 	// Users Список пользователей, которые подтвердили/не подтвердили свое участие в сделке
@@ -135,9 +171,15 @@ type Deal struct {
 	// Name Название сделки
 	Name *string `json:"name,omitempty"`
 
+	// Status Статус сделки
+	Status DealStatus `json:"status"`
+
 	// UpdatedAt Временная метка последнего обновления сделки
 	UpdatedAt *time.Time `json:"updatedAt,omitempty"`
 }
+
+// DealStatus Статус сделки
+type DealStatus string
 
 // Draft defines model for Draft.
 type Draft struct {
@@ -328,12 +370,13 @@ type OffersCursor struct {
 	Views     *int64             `json:"views,omitempty"`
 }
 
-// UpdateDealItemRequest Хотя бы одно поле обязательно
+// UpdateDealItemRequest Хотя бы одно поле обязательно.
+// Один и тот же пользователь не может одновременно быть `provider` и `receiver` для одной позиции.
 type UpdateDealItemRequest struct {
-	// ClaimProvider Назначить текущего пользователя поставщиком (только если слот свободен)
+	// ClaimProvider Назначить текущего пользователя поставщиком (только если слот свободен и пользователь не является receiver этой же позиции)
 	ClaimProvider *bool `json:"claimProvider,omitempty"`
 
-	// ClaimReceiver Назначить текущего пользователя получателем (только если слот свободен)
+	// ClaimReceiver Назначить текущего пользователя получателем (только если слот свободен и пользователь не является provider этой же позиции)
 	ClaimReceiver *bool `json:"claimReceiver,omitempty"`
 
 	// Description Новое описание позиции (только для автора)
@@ -419,6 +462,9 @@ type ListOffersParamsSort string
 
 // CreateDraftDealJSONRequestBody defines body for CreateDraftDeal for application/json ContentType.
 type CreateDraftDealJSONRequestBody = CreateDraftDealRequest
+
+// ConfirmDealJSONRequestBody defines body for ConfirmDeal for application/json ContentType.
+type ConfirmDealJSONRequestBody = ConfirmDealRequest
 
 // UpdateDealItemJSONRequestBody defines body for UpdateDealItem for application/json ContentType.
 type UpdateDealItemJSONRequestBody = UpdateDealItemRequest

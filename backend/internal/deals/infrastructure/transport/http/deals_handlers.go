@@ -298,7 +298,7 @@ func (h *DealsHandlers) GetDealByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.WriteJSON(w, http.StatusOK, deal.ToDTO())
+	httpx.WriteJSON(w, http.StatusOK, mapDealToDTO(deal))
 }
 
 // ================================================================================
