@@ -362,11 +362,16 @@ func (r *Repository) UpdateItem(
 //   - domain.ErrItemNotFound: item does not exist in this deal.
 //   - domain.ErrRoleAlreadyTaken: provider_id is already set to another user.
 func (r *Repository) ClaimItemProvider(ctx context.Context, exec db.DB, dealID, itemID, userID uuid.UUID) (domain.Item, error) {
-	return r.updateItemRole(ctx, exec, dealID, itemID, userID,
-		`SET provider_id = $3, updated_at = NOW() WHERE id = $1 AND deal_id = $2 AND provider_id IS NULL`,
-		`SELECT provider_id FROM items WHERE id = $1 AND deal_id = $2`,
-		domain.ErrRoleAlreadyTaken,
-	)
+	const query = `
+		UPDATE items
+		SET provider_id = $3, updated_at = NOW()
+		WHERE id = $1 AND deal_id = $2 AND provider_id IS NULL
+		RETURNING id, author_id, provider_id, receiver_id,
+				  name, description, type, updated_at, quantity`
+
+	const check = `SELECT provider_id FROM items WHERE id = $1 AND deal_id = $2`
+
+	return r.updateItemRole(ctx, exec, dealID, itemID, userID, query, check, domain.ErrRoleAlreadyTaken)
 }
 
 // ReleaseItemProvider sets provider_id = NULL if it currently equals userID.
@@ -375,11 +380,16 @@ func (r *Repository) ClaimItemProvider(ctx context.Context, exec db.DB, dealID, 
 //   - domain.ErrItemNotFound: item does not exist in this deal.
 //   - domain.ErrNotRoleHolder: provider_id is not set to this user.
 func (r *Repository) ReleaseItemProvider(ctx context.Context, exec db.DB, dealID, itemID, userID uuid.UUID) (domain.Item, error) {
-	return r.updateItemRole(ctx, exec, dealID, itemID, userID,
-		`SET provider_id = NULL, updated_at = NOW() WHERE id = $1 AND deal_id = $2 AND provider_id = $3`,
-		`SELECT provider_id FROM items WHERE id = $1 AND deal_id = $2`,
-		domain.ErrNotRoleHolder,
-	)
+	const query = `
+		UPDATE items
+		SET provider_id = NULL, updated_at = NOW()
+		WHERE id = $1 AND deal_id = $2 AND provider_id = $3
+		RETURNING id, author_id, provider_id, receiver_id,
+				  name, description, type, updated_at, quantity`
+
+	const check = `SELECT provider_id FROM items WHERE id = $1 AND deal_id = $2`
+
+	return r.updateItemRole(ctx, exec, dealID, itemID, userID, query, check, domain.ErrNotRoleHolder)
 }
 
 // ClaimItemReceiver sets receiver_id = userID if the slot is currently empty.
@@ -388,11 +398,16 @@ func (r *Repository) ReleaseItemProvider(ctx context.Context, exec db.DB, dealID
 //   - domain.ErrItemNotFound: item does not exist in this deal.
 //   - domain.ErrRoleAlreadyTaken: receiver_id is already set to another user.
 func (r *Repository) ClaimItemReceiver(ctx context.Context, exec db.DB, dealID, itemID, userID uuid.UUID) (domain.Item, error) {
-	return r.updateItemRole(ctx, exec, dealID, itemID, userID,
-		`SET receiver_id = $3, updated_at = NOW() WHERE id = $1 AND deal_id = $2 AND receiver_id IS NULL`,
-		`SELECT receiver_id FROM items WHERE id = $1 AND deal_id = $2`,
-		domain.ErrRoleAlreadyTaken,
-	)
+	const query = `
+		UPDATE items
+		SET receiver_id = $3, updated_at = NOW()
+		WHERE id = $1 AND deal_id = $2 AND receiver_id IS NULL
+		RETURNING id, author_id, provider_id, receiver_id,
+				  name, description, type, updated_at, quantity`
+
+	const check = `SELECT receiver_id FROM items WHERE id = $1 AND deal_id = $2`
+
+	return r.updateItemRole(ctx, exec, dealID, itemID, userID, query, check, domain.ErrRoleAlreadyTaken)
 }
 
 // ReleaseItemReceiver sets receiver_id = NULL if it currently equals userID.
@@ -401,11 +416,16 @@ func (r *Repository) ClaimItemReceiver(ctx context.Context, exec db.DB, dealID, 
 //   - domain.ErrItemNotFound: item does not exist in this deal.
 //   - domain.ErrNotRoleHolder: receiver_id is not set to this user.
 func (r *Repository) ReleaseItemReceiver(ctx context.Context, exec db.DB, dealID, itemID, userID uuid.UUID) (domain.Item, error) {
-	return r.updateItemRole(ctx, exec, dealID, itemID, userID,
-		`SET receiver_id = NULL, updated_at = NOW() WHERE id = $1 AND deal_id = $2 AND receiver_id = $3`,
-		`SELECT receiver_id FROM items WHERE id = $1 AND deal_id = $2`,
-		domain.ErrNotRoleHolder,
-	)
+	const query = `
+		UPDATE items
+		SET receiver_id = NULL, updated_at = NOW()
+		WHERE id = $1 AND deal_id = $2 AND receiver_id = $3
+		RETURNING id, author_id, provider_id, receiver_id,
+				  name, description, type, updated_at, quantity`
+
+	const check = `SELECT receiver_id FROM items WHERE id = $1 AND deal_id = $2`
+
+	return r.updateItemRole(ctx, exec, dealID, itemID, userID, query, check, domain.ErrNotRoleHolder)
 }
 
 // updateItemRole is a helper that runs an UPDATE on items and falls back to a
@@ -414,7 +434,7 @@ func (r *Repository) updateItemRole(
 	ctx context.Context,
 	exec db.DB,
 	dealID, itemID, userID uuid.UUID,
-	setClause string,
+	query string,
 	checkQuery string,
 	conflictErr error,
 ) (domain.Item, error) {
@@ -422,28 +442,26 @@ func (r *Repository) updateItemRole(
 		return domain.Item{}, err
 	}
 
-	query := `UPDATE items ` + setClause + `
-		RETURNING id, author_id, provider_id, receiver_id,
-		          name, description, type, updated_at, quantity`
-
 	row := exec.QueryRow(ctx, query, itemID, dealID, userID)
+
 	item, err := scanItem(row)
 	if err == nil {
 		return item, nil
 	}
-	if err != pgx.ErrNoRows {
+	if !errors.Is(err, pgx.ErrNoRows) {
 		return domain.Item{}, fmt.Errorf("sql update item role: %w", err)
 	}
 
-	// No rows updated — determine why
+	// диагностика причины
 	var placeholder *uuid.UUID
 	checkErr := exec.QueryRow(ctx, checkQuery, itemID, dealID).Scan(&placeholder)
-	if checkErr == pgx.ErrNoRows {
+	if errors.Is(checkErr, pgx.ErrNoRows) {
 		return domain.Item{}, domain.ErrItemNotFound
 	}
 	if checkErr != nil {
 		return domain.Item{}, fmt.Errorf("sql check item role: %w", checkErr)
 	}
+
 	return domain.Item{}, conflictErr
 }
 
