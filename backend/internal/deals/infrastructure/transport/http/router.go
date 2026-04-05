@@ -2,6 +2,9 @@ package http
 
 import (
 	dealsdocfirst "barter-port/docs/doc-first/deals"
+	"barter-port/internal/deals/infrastructure/transport/http/deals"
+	draftsh "barter-port/internal/deals/infrastructure/transport/http/drafts"
+	"barter-port/internal/deals/infrastructure/transport/http/offers"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/authkit/validators"
 	"barter-port/pkg/logger"
@@ -13,14 +16,23 @@ import (
 	"github.com/go-chi/chi/v5/middleware"
 )
 
-func NewRouter(logg *slog.Logger, validator *validators.LocalJWT, h *OffersHandlers, dh *DealsHandlers) http.Handler {
+func NewRouter(
+	logg *slog.Logger,
+	validator *validators.LocalJWT,
+	offersHandlers *offers.Handlers,
+	draftsHandlers *draftsh.Handlers,
+	dealsHandlers *deals.Handlers,
+) http.Handler {
 	if logg == nil {
 		log.Fatal("logger is required")
 	}
-	if h == nil {
-		log.Fatal("handlers are required")
+	if offersHandlers == nil {
+		log.Fatal("offers handlers are required")
 	}
-	if dh == nil {
+	if draftsHandlers == nil {
+		log.Fatal("drafts handlers are required")
+	}
+	if dealsHandlers == nil {
 		log.Fatal("deals handlers are required")
 	}
 
@@ -49,18 +61,18 @@ func NewRouter(logg *slog.Logger, validator *validators.LocalJWT, h *OffersHandl
 		r.Use(authkit.Middleware(logg, validator, nil))
 		r.Use(logger.Middleware(logg))
 		r.Route("/offers", func(r chi.Router) {
-			r.Post("/", h.HandleCreateOffer)
-			r.Get("/", h.HandleGetOffers)
+			r.Post("/", offersHandlers.HandleCreateOffer)
+			r.Get("/", offersHandlers.HandleGetOffers)
 		})
 		r.Route("/deals", func(r chi.Router) {
-			r.Get("/", dh.GetDeals)
-			r.Get("/{dealId}", dh.GetDealByID)
-			r.Patch("/{dealId}/items/{itemId}", dh.UpdateDealItem)
-			r.Post("/drafts", dh.CreateDraft)
-			r.Get("/drafts", dh.GetDrafts)
-			r.Get("/drafts/{draftId}", dh.GetDraftByID)
-			r.Patch("/drafts/{draftId}", dh.ConfirmDraft)
-			r.Patch("/drafts/{draftId}/cancel", dh.CancelDraft)
+			r.Get("/", dealsHandlers.GetDeals)
+			r.Get("/{dealId}", dealsHandlers.GetDealByID)
+			r.Patch("/{dealId}/items/{itemId}", dealsHandlers.UpdateDealItem)
+			r.Post("/drafts", draftsHandlers.CreateDraft)
+			r.Get("/drafts", draftsHandlers.GetDrafts)
+			r.Get("/drafts/{draftId}", draftsHandlers.GetDraftByID)
+			r.Patch("/drafts/{draftId}", draftsHandlers.ConfirmDraft)
+			r.Patch("/drafts/{draftId}/cancel", draftsHandlers.CancelDraft)
 		})
 	})
 

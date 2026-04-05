@@ -1,4 +1,4 @@
-package http
+package deals
 
 import (
 	"barter-port/contracts/openapi/deals/types"
@@ -6,11 +6,11 @@ import (
 	"barter-port/internal/deals/domain/enums"
 	"barter-port/internal/deals/domain/htypes"
 
-	openapi_types "github.com/oapi-codegen/runtime/types"
+	openapitypes "github.com/oapi-codegen/runtime/types"
 )
 
 func mapDealIDWithParticipantIDsToDTO(d htypes.DealIDWithParticipantIDs) types.GetDealsResponseItem {
-	participants := make([]openapi_types.UUID, 0, len(d.ParticipantIDs))
+	participants := make([]openapitypes.UUID, 0, len(d.ParticipantIDs))
 	for _, participantID := range d.ParticipantIDs {
 		participants = append(participants, participantID)
 	}

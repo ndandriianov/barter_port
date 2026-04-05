@@ -1,14 +1,14 @@
-package http
+package drafts
 
 import (
 	"barter-port/contracts/openapi/deals/types"
 	"barter-port/internal/deals/domain/htypes"
 
-	openapi_types "github.com/oapi-codegen/runtime/types"
+	openapitypes "github.com/oapi-codegen/runtime/types"
 )
 
 func mapDraftIDWithAuthorIDsToDTO(d htypes.DraftIDWithAuthorIDs) types.GetMyDraftDealsResponseItem {
-	participants := make([]openapi_types.UUID, 0, len(d.ParticipantIDs))
+	participants := make([]openapitypes.UUID, 0, len(d.ParticipantIDs))
 	for _, participantID := range d.ParticipantIDs {
 		participants = append(participants, participantID)
 	}
@@ -26,5 +26,3 @@ func mapDraftIDsWithAuthorIDsToDTO(drafts []htypes.DraftIDWithAuthorIDs) types.G
 	}
 	return result
 }
-
-

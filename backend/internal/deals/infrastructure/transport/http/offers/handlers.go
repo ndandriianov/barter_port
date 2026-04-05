@@ -1,4 +1,4 @@
-package http
+package offers
 
 import (
 	"barter-port/contracts/openapi/deals/types"
@@ -16,19 +16,19 @@ import (
 	"github.com/google/uuid"
 )
 
-type OffersHandlers struct {
+type Handlers struct {
 	offerService *offers.Service
 }
 
-func NewHandlers(offerService *offers.Service) *OffersHandlers {
-	return &OffersHandlers{offerService: offerService}
+func NewHandlers(offerService *offers.Service) *Handlers {
+	return &Handlers{offerService: offerService}
 }
 
 // ================================================================================
 // CREATE OFFER
 // ================================================================================
 
-func (h *OffersHandlers) HandleCreateOffer(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) HandleCreateOffer(w http.ResponseWriter, r *http.Request) {
 	log := logger.LogFrom(r.Context(), slog.Default())
 	log.Info("handling create offer request")
 
@@ -82,7 +82,7 @@ func (h *OffersHandlers) HandleCreateOffer(w http.ResponseWriter, r *http.Reques
 // GET OFFERS
 // ================================================================================
 
-func (h *OffersHandlers) HandleGetOffers(w http.ResponseWriter, r *http.Request) {
+func (h *Handlers) HandleGetOffers(w http.ResponseWriter, r *http.Request) {
 	log := logger.LogFrom(r.Context(), slog.Default())
 
 	// Parse query parameters
