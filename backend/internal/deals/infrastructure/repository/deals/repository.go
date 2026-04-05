@@ -431,26 +431,30 @@ func (r *Repository) updateItemRole(
 // DEAL STATUS VOTES
 // ================================================================================
 
-// UpsertStatusVote records or updates the user's requested status vote for a deal.
-func (r *Repository) UpsertStatusVote(ctx context.Context, tx pgx.Tx, dealID, userID uuid.UUID, status enums.DealStatus) error {
-	_, err := tx.Exec(ctx, `
-		INSERT INTO deal_status_votes (deal_id, user_id, requested_status)
-		VALUES ($1, $2, $3)
-		ON CONFLICT (deal_id, user_id) DO UPDATE SET requested_status = EXCLUDED.requested_status`,
-		dealID, userID, status,
-	)
+// SetStatusVote records or updates the user's requested status vote for a deal.
+func (r *Repository) SetStatusVote(ctx context.Context, tx pgx.Tx, dealID, userID uuid.UUID, status enums.DealStatus) error {
+	query := `
+		UPDATE participants
+		SET requested_status = $3
+		WHERE deal_id = $1
+		  AND user_id = $2`
+
+	_, err := tx.Exec(ctx, query, dealID, userID, status)
 	if err != nil {
-		return fmt.Errorf("sql upsert status vote: %w", err)
+		return fmt.Errorf("sql: %w", err)
 	}
 	return nil
 }
 
 // GetStatusVotes returns all votes for a deal as a map of userID → requestedStatus.
 func (r *Repository) GetStatusVotes(ctx context.Context, exec db.DB, dealID uuid.UUID) (map[uuid.UUID]enums.DealStatus, error) {
-	rows, err := exec.Query(ctx, `
-		SELECT user_id, requested_status FROM deal_status_votes WHERE deal_id = $1`,
-		dealID,
-	)
+	query := `
+		SELECT user_id, requested_status
+		FROM participants
+		WHERE deal_id = $1
+		  AND requested_status IS NOT NULL`
+
+	rows, err := exec.Query(ctx, query, dealID)
 	if err != nil {
 		return nil, fmt.Errorf("sql get status votes: %w", err)
 	}
@@ -460,9 +464,11 @@ func (r *Repository) GetStatusVotes(ctx context.Context, exec db.DB, dealID uuid
 	for rows.Next() {
 		var userID uuid.UUID
 		var statusStr string
+
 		if err = rows.Scan(&userID, &statusStr); err != nil {
 			return nil, fmt.Errorf("scan status vote: %w", err)
 		}
+
 		s, err := enums.DealStatusString(statusStr)
 		if err != nil {
 			return nil, fmt.Errorf("parse deal status: %w", err)
@@ -539,7 +545,11 @@ func (r *Repository) ensureDealMutable(ctx context.Context, exec db.DB, dealID u
 
 // DeleteStatusVotes removes all votes for a deal (called after a status transition).
 func (r *Repository) DeleteStatusVotes(ctx context.Context, tx pgx.Tx, dealID uuid.UUID) error {
-	_, err := tx.Exec(ctx, `DELETE FROM deal_status_votes WHERE deal_id = $1`, dealID)
+	query := `
+		DELETE FROM participants
+		WHERE deal_id = $1`
+
+	_, err := tx.Exec(ctx, query, dealID)
 	if err != nil {
 		return fmt.Errorf("sql delete status votes: %w", err)
 	}

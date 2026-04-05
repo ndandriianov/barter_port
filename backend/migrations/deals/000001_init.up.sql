@@ -71,10 +71,10 @@ CREATE TABLE items
     FOREIGN KEY (deal_id) REFERENCES deals (id) ON DELETE CASCADE
 );
 
-CREATE TABLE deal_status_votes
+CREATE TABLE participants
 (
     deal_id          UUID        NOT NULL REFERENCES deals (id) ON DELETE CASCADE,
     user_id          UUID        NOT NULL,
-    requested_status deal_status NOT NULL,
+    requested_status deal_status,
     PRIMARY KEY (deal_id, user_id)
 );
