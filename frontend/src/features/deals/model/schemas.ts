@@ -2,6 +2,14 @@ import {z} from "zod";
 
 export const itemTypeSchema = z.enum(["good", "service"]);
 export const offerActionSchema = z.enum(["give", "take"]);
+export const dealStatusSchema = z.enum([
+  "LookingForParticipants",
+  "Discussion",
+  "Confirmed",
+  "Completed",
+  "Cancelled",
+  "Failed",
+]);
 
 export const offerSchema = z.object({
   id: z.string(),
@@ -69,8 +77,12 @@ export const dealSchema = z.object({
   description: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string().optional(),
-  status: z.enum(['LookingForParticipants', 'Discussion', 'Confirmed', 'Completed', 'Cancelled', 'Failed']),
+  status: dealStatusSchema,
   items: z.array(itemSchema),
+});
+
+export const changeDealStatusRequestSchema = z.object({
+  expectedStatus: dealStatusSchema,
 });
 
 export const updateDealItemRequestSchema = z.object({
