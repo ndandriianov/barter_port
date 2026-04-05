@@ -269,6 +269,26 @@ func (s *Service) UpdateDealItem(
 }
 
 // ================================================================================
+// PROCESS DEAL STATUS UPDATE
+// ================================================================================
+
+func (s *Service) ProcessDealStatusUpdateRequest(
+	ctx context.Context,
+	dealID uuid.UUID,
+	userID uuid.UUID,
+	status enums.DealStatus,
+) (domain.Deal, error) {
+	switch status {
+	case enums.DealStatusDiscussion, enums.DealStatusConfirmed, enums.DealStatusCompleted:
+		return s.confirmDeal(ctx, dealID, userID)
+	case enums.DealStatusCancelled, enums.DealStatusFailed:
+		return s.cancelDeal(ctx, dealID, userID)
+	default:
+		return domain.Deal{}, fmt.Errorf("invalid status: %s", status)
+	}
+}
+
+// ================================================================================
 // HELPER METHODS
 // ================================================================================
 
@@ -319,4 +339,12 @@ func (s *Service) createDeal(ctx context.Context, tx pgx.Tx, draft domain.Draft)
 	}
 
 	return id, nil
+}
+
+func (s *Service) confirmDeal(ctx context.Context, id uuid.UUID, userID uuid.UUID) (domain.Deal, error) {
+
+}
+
+func (s *Service) cancelDeal(ctx context.Context, id uuid.UUID, userID uuid.UUID) (domain.Deal, error) {
+
 }
