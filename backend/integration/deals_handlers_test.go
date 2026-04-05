@@ -820,6 +820,8 @@ func TestGetDealByIDSuccess(t *testing.T) {
 	var deal dealstypes.Deal
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&deal))
 	require.Equal(t, dealIDs[0], deal.Id)
+	require.NotEmpty(t, deal.Status)
+	require.True(t, deal.Status.Valid())
 	require.False(t, deal.CreatedAt.IsZero())
 	require.Len(t, deal.Items, 1)
 	require.NotEqual(t, uuid.Nil, deal.Items[0].Id)
@@ -932,6 +934,8 @@ func mustGetDealByID(t *testing.T, userID uuid.UUID, dealID uuid.UUID) dealstype
 
 	var deal dealstypes.Deal
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&deal))
+	require.NotEmpty(t, deal.Status)
+	require.True(t, deal.Status.Valid())
 	return deal
 }
 

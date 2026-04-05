@@ -23,3 +23,15 @@ const (
 	SortTypeByTime SortType = iota
 	SortTypeByPopularity
 )
+
+//go:generate enumer -type=DealStatus -json -text -sql -trimprefix=DealStatus
+type DealStatus int
+
+const (
+	DealStatusLookingForParticipants DealStatus = iota
+	DealStatusDiscussion
+	DealStatusConfirmed
+	DealStatusCompleted
+	DealStatusCancelled
+	DealStatusFailed
+)

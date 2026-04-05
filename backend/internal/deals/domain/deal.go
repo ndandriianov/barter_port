@@ -1,7 +1,7 @@
 package domain
 
 import (
-	"barter-port/contracts/openapi/deals/types"
+	"barter-port/internal/deals/domain/enums"
 	"time"
 
 	"github.com/google/uuid"
@@ -13,20 +13,6 @@ type Deal struct {
 	Description *string
 	CreatedAt   time.Time
 	UpdatedAt   *time.Time
+	Status      enums.DealStatus
 	Items       []Item
-}
-
-func (d *Deal) ToDTO() types.Deal {
-	itemsDTO := make([]types.Item, len(d.Items))
-	for i, item := range d.Items {
-		itemsDTO[i] = item.ToDTO()
-	}
-	return types.Deal{
-		Id:          d.ID,
-		Name:        d.Name,
-		Description: d.Description,
-		CreatedAt:   d.CreatedAt,
-		UpdatedAt:   d.UpdatedAt,
-		Items:       itemsDTO,
-	}
 }

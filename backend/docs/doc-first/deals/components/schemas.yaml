@@ -177,6 +177,7 @@ Deal:
     - id
     - createdAt
     - items
+    - status
   properties:
     id:
       type: string
@@ -196,6 +197,8 @@ Deal:
       type: string
       format: date-time
       description: Временная метка последнего обновления сделки
+    status:
+      $ref: '#/DealStatus'
     items:
       type: array
       description: Список позиций сделки
@@ -281,12 +284,12 @@ Item:
 
 
 DealStatus:
-    type: string
-    description: Статус сделки
-    enum:
-        - looking_for_participants
-        - discussion
-        - confirmed
-        - completed
-        - cancelled
-        - failed
+  type: string
+  description: Статус сделки
+  enum:
+    - LookingForParticipants
+    - Discussion
+    - Confirmed
+    - Completed
+    - Cancelled
+    - Failed

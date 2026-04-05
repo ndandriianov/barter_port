@@ -126,7 +126,7 @@ func (r *Repository) GetDealIDs(ctx context.Context, exec db.DB, userID *uuid.UU
 //   - domain.ErrDealNotFound: if no deal with the specified ID exists.
 func (r *Repository) GetDealByID(ctx context.Context, exec db.DB, id uuid.UUID) (domain.Deal, error) {
 	query := `
-		SELECT d.id, d.name, d.description, d.created_at, d.updated_at,
+		SELECT d.id, d.name, d.description, d.created_at, d.updated_at, d.status,
 		       i.id, i.author_id, i.provider_id, i.receiver_id,
 		       i.name, i.description, i.type, i.updated_at, i.quantity
 		FROM deals d
@@ -159,6 +159,7 @@ func (r *Repository) GetDealByID(ctx context.Context, exec db.DB, id uuid.UUID) 
 			&deal.Description,
 			&deal.CreatedAt,
 			&deal.UpdatedAt,
+			&deal.Status,
 			&itemID,
 			&itemAuthorID,
 			&itemProviderID,

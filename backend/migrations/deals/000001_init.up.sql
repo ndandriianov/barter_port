@@ -42,7 +42,11 @@ CREATE TABLE deals
     name        TEXT,
     description TEXT,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at  TIMESTAMPTZ
+    updated_at  TIMESTAMPTZ,
+    status      TEXT        NOT NULL DEFAULT 'LookingForParticipants',
+
+    CONSTRAINT deals_status_check CHECK (status IN ('LookingForParticipants', 'Discussion', 'Confirmed', 'Completed',
+                                                    'Cancelled', 'Failed'))
 );
 
 CREATE TABLE items

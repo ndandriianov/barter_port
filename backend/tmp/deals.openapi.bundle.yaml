@@ -343,12 +343,71 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /deals/{dealId}/confirm:
+    patch:
+      tags:
+        - Deals
+      summary: Подтвердить сделку
+      description: |
+        Подтвердить сделку. Сделка должна быть в статусе, предшествующем указанному в теле запроса,
+        за счет этого обеспечивается идемпотентность операции.
+      operationId: confirmDeal
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConfirmDealRequest'
+      responses:
+        '200':
+          description: Сделка успешно подтверждена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deal'
+        '400':
+          description: Некорректный запрос (например, сделка не в том статусе)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Deal not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /deals/{dealId}/items/{itemId}:
     patch:
       tags:
         - Deals
       summary: Редактировать позицию сделки
-      description: Редактировать позицию сделки. Доступно только автору позиции (author_id).
+      description: |
+        Редактировать позицию сделки.
+
+        - Поля `name`, `description`, `quantity` может менять только автор позиции (`author_id`).
+        - Роли `provider`/`receiver` можно claim/release по бизнес-правилам.
       operationId: updateDealItem
       parameters:
         - name: dealId
@@ -391,7 +450,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '403':
-          description: Нет прав (пользователь не является автором этой позиции)
+          description: |
+            Операция запрещена по бизнес-правилам:
+            - пользователь не является автором позиции при изменении контентных полей;
+            - роль уже занята другим пользователем;
+            - пользователь не владеет ролью при release;
+            - пользователь уже занимает другую роль (`provider`/`receiver`) для этой же позиции.
           content:
             application/json:
               schema:
@@ -721,6 +785,16 @@ components:
       type: array
       items:
         $ref: '#/components/schemas/GetDealsResponseItem'
+    DealStatus:
+      type: string
+      description: Статус сделки
+      enum:
+        - LookingForParticipants
+        - Discussion
+        - Confirmed
+        - Completed
+        - Cancelled
+        - Failed
     Item:
       type: object
       required:
@@ -770,6 +844,7 @@ components:
         - id
         - createdAt
         - items
+        - status
       properties:
         id:
           type: string
@@ -789,15 +864,26 @@ components:
           type: string
           format: date-time
           description: Временная метка последнего обновления сделки
+        status:
+          $ref: '#/components/schemas/DealStatus'
         items:
           type: array
           description: Список позиций сделки
           items:
             $ref: '#/components/schemas/Item'
+    ConfirmDealRequest:
+      type: object
+      required:
+        - expectedCurrentStatus
+      properties:
+        expectedCurrentStatus:
+          $ref: '#/components/schemas/DealStatus'
     UpdateDealItemRequest:
       type: object
       minProperties: 1
-      description: Хотя бы одно поле обязательно
+      description: |
+        Хотя бы одно поле обязательно.
+        Один и тот же пользователь не может одновременно быть `provider` и `receiver` для одной позиции.
       properties:
         name:
           type: string
@@ -811,13 +897,13 @@ components:
           description: Новое количество (только для автора)
         claimProvider:
           type: boolean
-          description: Назначить текущего пользователя поставщиком (только если слот свободен)
+          description: Назначить текущего пользователя поставщиком (только если слот свободен и пользователь не является receiver этой же позиции)
         releaseProvider:
           type: boolean
           description: Освободить слот поставщика (только если текущий пользователь является поставщиком)
         claimReceiver:
           type: boolean
-          description: Назначить текущего пользователя получателем (только если слот свободен)
+          description: Назначить текущего пользователя получателем (только если слот свободен и пользователь не является provider этой же позиции)
         releaseReceiver:
           type: boolean
           description: Освободить слот получателя (только если текущий пользователь является получателем)
