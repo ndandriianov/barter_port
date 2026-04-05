@@ -29,12 +29,17 @@ func dealsURL() string {
 
 func mustCreateOffer(t *testing.T, userID uuid.UUID) uuid.UUID {
 	t.Helper()
+	return mustCreateOfferWithAction(t, userID, dealstypes.Give)
+}
+
+func mustCreateOfferWithAction(t *testing.T, userID uuid.UUID, action dealstypes.OfferAction) uuid.UUID {
+	t.Helper()
 
 	body, err := json.Marshal(dealstypes.CreateOfferRequest{
 		Name:        fmt.Sprintf("offer-%d", time.Now().UnixNano()),
 		Description: "test offer",
 		Type:        dealstypes.Good,
-		Action:      dealstypes.Give,
+		Action:      action,
 	})
 	require.NoError(t, err)
 
@@ -334,8 +339,7 @@ func TestGetDraftsCreatedByMeTrueReturnsOnlyAuthoredDrafts(t *testing.T) {
 	draftByA := mustCreateDraft(t, userA, nil, nil, []dealstypes.OfferIDAndQuantity{{OfferID: offerA, Quantity: 1}})
 	draftByBWithOfferA := mustCreateDraft(t, userB, nil, nil, []dealstypes.OfferIDAndQuantity{{OfferID: offerA, Quantity: 1}})
 
-	createdByMe := true
-	ids := mustGetDraftIDs(t, userA, &createdByMe)
+	ids := mustGetDraftIDs(t, userA, new(true))
 
 	require.Contains(t, ids, draftByA)
 	require.NotContains(t, ids, draftByBWithOfferA)
@@ -353,8 +357,7 @@ func TestGetDraftsCreatedByMeFalseReturnsParticipatingDrafts(t *testing.T) {
 	draftByBWithOfferA := mustCreateDraft(t, userB, nil, nil, []dealstypes.OfferIDAndQuantity{{OfferID: offerA, Quantity: 1}})
 	draftByBWithOfferB := mustCreateDraft(t, userB, nil, nil, []dealstypes.OfferIDAndQuantity{{OfferID: offerB, Quantity: 1}})
 
-	createdByMe := false
-	ids := mustGetDraftIDs(t, userA, &createdByMe)
+	ids := mustGetDraftIDs(t, userA, new(false))
 
 	require.Contains(t, ids, draftByBWithOfferA)
 	require.NotContains(t, ids, draftByBWithOfferB)
@@ -370,8 +373,7 @@ func TestGetDraftsCreatedByMeDefaultFalse(t *testing.T) {
 	_ = mustCreateDraft(t, userB, nil, nil, []dealstypes.OfferIDAndQuantity{{OfferID: offerA, Quantity: 1}})
 
 	idsDefault := mustGetDraftIDs(t, userA, nil)
-	createdByMe := false
-	idsFalse := mustGetDraftIDs(t, userA, &createdByMe)
+	idsFalse := mustGetDraftIDs(t, userA, new(false))
 
 	require.ElementsMatch(t, idsFalse, idsDefault)
 }
@@ -382,6 +384,22 @@ func TestGetDraftsInvalidCreatedByMeReturnsBadRequest(t *testing.T) {
 
 	userID := uuid.New()
 	req, err := http.NewRequest(http.MethodGet, dealsURL()+"/deals/drafts?createdByMe=not-bool", nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userID))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestGetDraftsInvalidParticipatingReturnsBadRequest(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	req, err := http.NewRequest(http.MethodGet, dealsURL()+"/deals/drafts?participating=not-bool", nil)
 	require.NoError(t, err)
 	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userID))
 
@@ -550,8 +568,15 @@ func TestConfirmDraftSuccess(t *testing.T) {
 	var confirmResp dealstypes.ConfirmDraftDealResponse
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&confirmResp))
 	require.NotEmpty(t, confirmResp.Users)
-	require.Equal(t, userID, confirmResp.Users[0].UserId)
-	require.True(t, confirmResp.Users[0].Confirmed)
+
+	var found bool
+	for _, u := range confirmResp.Users {
+		if u.UserId == userID {
+			found = true
+			require.True(t, u.Confirmed)
+		}
+	}
+	require.True(t, found)
 }
 
 func TestConfirmDraftUnauthorized(t *testing.T) {
@@ -579,6 +604,42 @@ func TestConfirmDraftInvalidUUID(t *testing.T) {
 	defer func() { _ = resp.Body.Close() }()
 
 	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestConfirmDraftForbiddenForNonParticipant(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	ownerID := uuid.New()
+	nonParticipantID := uuid.New()
+	offerID := mustCreateOffer(t, ownerID)
+	draftID := mustCreateDraft(t, ownerID, nil, nil, []dealstypes.OfferIDAndQuantity{{OfferID: offerID, Quantity: 1}})
+
+	req, err := http.NewRequest(http.MethodPatch, dealsURL()+"/deals/drafts/"+draftID.String(), nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, nonParticipantID))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusForbidden, resp.StatusCode)
+}
+
+func TestConfirmDraftNotFound(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	req, err := http.NewRequest(http.MethodPatch, dealsURL()+"/deals/drafts/"+uuid.NewString(), nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userID))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusNotFound, resp.StatusCode)
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -622,6 +683,22 @@ func TestCancelDraftForbiddenForNonParticipant(t *testing.T) {
 	defer func() { _ = resp.Body.Close() }()
 
 	require.Equal(t, http.StatusForbidden, resp.StatusCode)
+}
+
+func TestCancelDraftNotFound(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	req, err := http.NewRequest(http.MethodPatch, dealsURL()+"/deals/drafts/"+uuid.NewString()+"/cancel", nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userID))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusNotFound, resp.StatusCode)
 }
 
 func TestCancelDraftForbiddenAfterAllConfirmed(t *testing.T) {
@@ -841,17 +918,86 @@ func mustGetDealIDs(t *testing.T, userID uuid.UUID, my bool) []uuid.UUID {
 	return ids
 }
 
+func mustGetDealByID(t *testing.T, userID uuid.UUID, dealID uuid.UUID) dealstypes.Deal {
+	t.Helper()
+
+	req, err := http.NewRequest(http.MethodGet, dealsURL()+"/deals/"+dealID.String(), nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userID))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var deal dealstypes.Deal
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&deal))
+	return deal
+}
+
 func mustCreateDeal(t *testing.T, userID uuid.UUID) uuid.UUID {
 	t.Helper()
+
+	before := mustGetDealIDs(t, userID, true)
+	beforeSet := make(map[uuid.UUID]struct{}, len(before))
+	for _, id := range before {
+		beforeSet[id] = struct{}{}
+	}
 
 	offerID := mustCreateOffer(t, userID)
 	draftID := mustCreateDraft(t, userID, nil, nil, []dealstypes.OfferIDAndQuantity{{OfferID: offerID, Quantity: 1}})
 	mustConfirmDraft(t, userID, draftID)
 
-	ids := mustGetDealIDs(t, userID, true)
-	require.NotEmpty(t, ids)
+	after := mustGetDealIDs(t, userID, true)
+	require.NotEmpty(t, after)
 
-	return ids[0]
+	for _, id := range after {
+		if _, ok := beforeSet[id]; !ok {
+			return id
+		}
+	}
+
+	return after[0]
+}
+
+func mustCreateTwoPartyDeal(t *testing.T, userA uuid.UUID, userB uuid.UUID) (uuid.UUID, uuid.UUID) {
+	t.Helper()
+
+	beforeA := mustGetDealIDs(t, userA, true)
+	beforeSet := make(map[uuid.UUID]struct{}, len(beforeA))
+	for _, id := range beforeA {
+		beforeSet[id] = struct{}{}
+	}
+
+	offerA := mustCreateOfferWithAction(t, userA, dealstypes.Give)
+	offerB := mustCreateOfferWithAction(t, userB, dealstypes.Give)
+	draftID := mustCreateDraft(t, userA, nil, nil, []dealstypes.OfferIDAndQuantity{
+		{OfferID: offerA, Quantity: 1},
+		{OfferID: offerB, Quantity: 1},
+	})
+	mustConfirmDraft(t, userA, draftID)
+	mustConfirmDraft(t, userB, draftID)
+
+	afterA := mustGetDealIDs(t, userA, true)
+	require.NotEmpty(t, afterA)
+
+	dealID := afterA[0]
+	for _, id := range afterA {
+		if _, ok := beforeSet[id]; !ok {
+			dealID = id
+			break
+		}
+	}
+
+	deal := mustGetDealByID(t, userA, dealID)
+	for _, item := range deal.Items {
+		if item.AuthorId == userA {
+			return dealID, item.Id
+		}
+	}
+
+	require.FailNow(t, "item authored by userA was not found in created deal")
+	return uuid.Nil, uuid.Nil
 }
 
 func mustRequest(t *testing.T, method, url string, body *bytes.Reader) *http.Request {
@@ -868,6 +1014,156 @@ func mustRequest(t *testing.T, method, url string, body *bytes.Reader) *http.Req
 	require.NoError(t, err)
 
 	return req
+}
+
+// ────────────────────────────────────────────────────────────────
+// UpdateDealItem
+// ────────────────────────────────────────────────────────────────
+
+func TestUpdateDealItemUnauthorized(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	body, err := json.Marshal(dealstypes.UpdateDealItemRequest{Name: func() *string { ; return new("x") }()})
+	require.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodPatch, dealsURL()+"/deals/"+uuid.NewString()+"/items/"+uuid.NewString(), bytes.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+}
+
+func TestUpdateDealItemEmptyPatchReturnsBadRequest(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	dealID := mustCreateDeal(t, userID)
+	deal := mustGetDealByID(t, userID, dealID)
+	require.NotEmpty(t, deal.Items)
+
+	body, err := json.Marshal(dealstypes.UpdateDealItemRequest{})
+	require.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodPatch, dealsURL()+"/deals/"+dealID.String()+"/items/"+deal.Items[0].Id.String(), bytes.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userID))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestUpdateDealItemAuthorCanEditContent(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	dealID := mustCreateDeal(t, userID)
+	deal := mustGetDealByID(t, userID, dealID)
+	require.NotEmpty(t, deal.Items)
+
+	newName := "updated item"
+	newDescription := "updated description"
+	newQty := 7
+	body, err := json.Marshal(dealstypes.UpdateDealItemRequest{
+		Name:        &newName,
+		Description: &newDescription,
+		Quantity:    &newQty,
+	})
+	require.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodPatch, dealsURL()+"/deals/"+dealID.String()+"/items/"+deal.Items[0].Id.String(), bytes.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userID))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var item dealstypes.Item
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&item))
+	require.Equal(t, deal.Items[0].Id, item.Id)
+	require.Equal(t, newName, item.Name)
+	require.Equal(t, newDescription, item.Description)
+	require.EqualValues(t, newQty, item.Quantity)
+}
+
+func TestUpdateDealItemNonAuthorCannotEditContent(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userA := uuid.New()
+	userB := uuid.New()
+	dealID, itemIDByA := mustCreateTwoPartyDeal(t, userA, userB)
+
+	body, err := json.Marshal(dealstypes.UpdateDealItemRequest{Name: new("forbidden update")})
+	require.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodPatch, dealsURL()+"/deals/"+dealID.String()+"/items/"+itemIDByA.String(), bytes.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userB))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusForbidden, resp.StatusCode)
+}
+
+func TestUpdateDealItemParticipantCanClaimAndReleaseReceiver(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userA := uuid.New()
+	userB := uuid.New()
+	dealID, itemIDByA := mustCreateTwoPartyDeal(t, userA, userB)
+
+	claimBody, err := json.Marshal(dealstypes.UpdateDealItemRequest{ClaimReceiver: new(true)})
+	require.NoError(t, err)
+
+	claimReq, err := http.NewRequest(http.MethodPatch, dealsURL()+"/deals/"+dealID.String()+"/items/"+itemIDByA.String(), bytes.NewReader(claimBody))
+	require.NoError(t, err)
+	claimReq.Header.Set("Content-Type", "application/json")
+	claimReq.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userB))
+
+	claimResp, err := http.DefaultClient.Do(claimReq)
+	require.NoError(t, err)
+	defer func() { _ = claimResp.Body.Close() }()
+	require.Equal(t, http.StatusOK, claimResp.StatusCode)
+
+	var claimed dealstypes.Item
+	require.NoError(t, json.NewDecoder(claimResp.Body).Decode(&claimed))
+	require.NotNil(t, claimed.ReceiverId)
+	require.Equal(t, userB, *claimed.ReceiverId)
+
+	releaseBody, err := json.Marshal(dealstypes.UpdateDealItemRequest{ReleaseReceiver: new(true)})
+	require.NoError(t, err)
+
+	releaseReq, err := http.NewRequest(http.MethodPatch, dealsURL()+"/deals/"+dealID.String()+"/items/"+itemIDByA.String(), bytes.NewReader(releaseBody))
+	require.NoError(t, err)
+	releaseReq.Header.Set("Content-Type", "application/json")
+	releaseReq.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userB))
+
+	releaseResp, err := http.DefaultClient.Do(releaseReq)
+	require.NoError(t, err)
+	defer func() { _ = releaseResp.Body.Close() }()
+	require.Equal(t, http.StatusOK, releaseResp.StatusCode)
+
+	var released dealstypes.Item
+	require.NoError(t, json.NewDecoder(releaseResp.Body).Decode(&released))
+	require.Nil(t, released.ReceiverId)
 }
 
 // ────────────────────────────────────────────────────────────────
@@ -909,8 +1205,7 @@ func TestGetOffersMyTrueReturnsOnlyCurrentUserOffers(t *testing.T) {
 	offerA := mustCreateOffer(t, userA)
 	offerB := mustCreateOffer(t, userB)
 
-	my := true
-	result := mustGetOffers(t, userA, &my)
+	result := mustGetOffers(t, userA, new(true))
 	require.NotEmpty(t, result.Offers)
 
 	var foundA, foundB bool
