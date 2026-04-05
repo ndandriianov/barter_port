@@ -357,7 +357,7 @@ func (s *Service) confirmDeal(ctx context.Context, id uuid.UUID, userID uuid.UUI
 			return domain.ErrInvalidDealStatus
 		}
 
-		if err = s.dealsRepository.UpsertStatusVote(ctx, tx, id, userID, targetStatus); err != nil {
+		if err = s.dealsRepository.SetStatusVote(ctx, tx, id, userID, targetStatus); err != nil {
 			return err
 		}
 
