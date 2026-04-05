@@ -628,7 +628,7 @@ func (r *Repository) ensureDealMutable(ctx context.Context, exec db.DB, dealID u
 // DeleteStatusVotes removes all votes for a deal (called after a status transition).
 func (r *Repository) DeleteStatusVotes(ctx context.Context, tx pgx.Tx, dealID uuid.UUID) error {
 	query := `
-		DELETE FROM participants
+		DELETE FROM join_requests_votes
 		WHERE deal_id = $1`
 
 	_, err := tx.Exec(ctx, query, dealID)
