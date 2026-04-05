@@ -6,6 +6,7 @@ import {
   createDraftDealResponseSchema,
   dealSchema,
   draftSchema,
+  getDealJoinRequestsResponseSchema,
   getDealsResponseSchema,
   getMyDraftDealsResponseSchema,
   itemSchema,
@@ -16,6 +17,7 @@ import type {
   CreateDraftDealRequest,
   CreateDraftDealResponse,
   Deal,
+  GetDealJoinRequestsResponse,
   Draft,
   GetDealsParams,
   GetDealsResponse,
@@ -28,7 +30,7 @@ import type {
 const dealsApi = createApi({
   reducerPath: "dealsApi",
   baseQuery: baseQueryWithReauth,
-  tagTypes: ["Deals", "DraftDeals"],
+  tagTypes: ["Deals", "DraftDeals", "DealJoins"],
   endpoints: (builder) => ({
     createDraftDeal: builder.mutation<CreateDraftDealResponse, CreateDraftDealRequest>({
       query: (body) => ({
@@ -97,6 +99,49 @@ const dealsApi = createApi({
       query: (dealId) => `/deals/${dealId}`,
       transformResponse: (response: unknown) => dealSchema.parse(response),
       providesTags: (_result, _error, dealId) => [{type: "Deals", id: dealId}],
+    }),
+
+    joinDeal: builder.mutation<void, string>({
+      query: (dealId) => ({
+        url: `/deals/${dealId}/joins`,
+        method: "POST",
+      }),
+      invalidatesTags: (_result, _error, dealId) => [
+        {type: "Deals", id: dealId},
+        {type: "DealJoins", id: dealId},
+        "Deals",
+      ],
+    }),
+
+    getDealJoins: builder.query<GetDealJoinRequestsResponse, string>({
+      query: (dealId) => `/deals/${dealId}/joins`,
+      transformResponse: (response: unknown) => getDealJoinRequestsResponseSchema.parse(response),
+      providesTags: (_result, _error, dealId) => [{type: "DealJoins", id: dealId}],
+    }),
+
+    leaveDeal: builder.mutation<void, string>({
+      query: (dealId) => ({
+        url: `/deals/${dealId}/joins`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (_result, _error, dealId) => [
+        {type: "Deals", id: dealId},
+        {type: "DealJoins", id: dealId},
+        "Deals",
+      ],
+    }),
+
+    processJoinRequest: builder.mutation<void, { dealId: string; userId: string; accept: boolean }>({
+      query: ({ dealId, userId, accept }) => ({
+        url: `/deals/${dealId}/joins/${userId}`,
+        method: "POST",
+        params: {accept},
+      }),
+      invalidatesTags: (_result, _error, { dealId }) => [
+        {type: "Deals", id: dealId},
+        {type: "DealJoins", id: dealId},
+        "Deals",
+      ],
     }),
 
     changeDealStatus: builder.mutation<Deal, { dealId: string; body: ChangeDealStatusRequest }>({

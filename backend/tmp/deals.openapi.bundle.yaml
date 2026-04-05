@@ -1034,6 +1034,7 @@ components:
         - createdAt
         - items
         - status
+        - participants
       properties:
         id:
           type: string
@@ -1060,6 +1061,13 @@ components:
           description: Список позиций сделки
           items:
             $ref: '#/components/schemas/Item'
+        participants:
+          type: array
+          description: Список участников сделки
+          items:
+            type: string
+            format: uuid
+            description: Уникальный идентификатор пользователя, участвующего в сделке
     ChangeDealStatusRequest:
       type: object
       required:

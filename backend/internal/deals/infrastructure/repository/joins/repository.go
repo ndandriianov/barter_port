@@ -110,7 +110,7 @@ func (r *Repository) GetJoinRequestVotesByDealID(ctx context.Context, exec db.DB
 	result := make([]htypes.JoinRequestVote, 0)
 	for rows.Next() {
 		var item htypes.JoinRequestVote
-		if err = rows.Scan(&item.UserID, &item.DealID, &item.VoterID, &item.Vote); err != nil {
+		if err = rows.Scan(&item.UserID, &item.DealID, &item.VoterID); err != nil {
 			return nil, fmt.Errorf("scan join request vote: %w", err)
 		}
 		result = append(result, item)

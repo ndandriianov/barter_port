@@ -178,6 +178,7 @@ Deal:
     - createdAt
     - items
     - status
+    - participants
   properties:
     id:
       type: string
@@ -204,6 +205,13 @@ Deal:
       description: Список позиций сделки
       items:
         $ref: '#/Item'
+    participants:
+      type: array
+      description: Список участников сделки
+      items:
+        type: string
+        format: uuid
+        description: Уникальный идентификатор пользователя, участвующего в сделке
 
 
 UpdateDealItemRequest:

@@ -234,19 +234,47 @@ function DealCard({ deal }: DealCardProps) {
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const { data: me } = usersApi.useGetCurrentUserQuery();
   const [changeDealStatus, { isLoading: isStatusLoading, error: changeStatusError }] = dealsApi.useChangeDealStatusMutation();
+  const [joinDeal, { isLoading: isJoinLoading, error: joinError }] = dealsApi.useJoinDealMutation();
+  const [leaveDeal, { isLoading: isLeaveLoading, error: leaveError }] = dealsApi.useLeaveDealMutation();
+  const [processJoinRequest, { isLoading: isProcessJoinLoading, error: processJoinError }] = dealsApi.useProcessJoinRequestMutation();
 
-  // Collect all unique user IDs referenced in items
-  const userIds = useMemo(
-    () => [
-      ...new Set(
+  const participantIds = useMemo(
+    () =>
+      new Set(
         deal.items.flatMap((item) => [
           item.authorId,
           ...(item.providerId ? [item.providerId] : []),
           ...(item.receiverId ? [item.receiverId] : []),
         ]),
       ),
-    ],
     [deal.items],
+  );
+
+  const isParticipant = me ? participantIds.has(me.id) : false;
+  const canSeeJoinRequests = Boolean(me && isParticipant && !isFinalStatus(deal.status));
+  const {
+    data: joinRequests,
+    isLoading: isJoinRequestsLoading,
+    error: joinRequestsError,
+  } = dealsApi.useGetDealJoinsQuery(deal.id, {
+    skip: !canSeeJoinRequests,
+  });
+
+  // Collect all unique user IDs referenced in items
+  const userIds = useMemo(
+    () => [
+      ...new Set(
+        [
+          ...deal.items.flatMap((item) => [
+            item.authorId,
+            ...(item.providerId ? [item.providerId] : []),
+            ...(item.receiverId ? [item.receiverId] : []),
+          ]),
+          ...(joinRequests?.flatMap((request) => [request.userId, ...request.voters]) ?? []),
+        ],
+      ),
+    ],
+    [deal.items, joinRequests],
   );
 
   // Prefetch user info for name resolution
@@ -265,14 +293,28 @@ function DealCard({ deal }: DealCardProps) {
 
   const getUserName = (id: string) => usersById[id]?.name?.trim() || "имя не указано";
 
-  // Current user is a participant if they authored at least one item
-  const isParticipant = me ? deal.items.some((item) => item.authorId === me.id) : false;
   const nextStatus: DealStatus | undefined = nextStatusByCurrent[deal.status as DealStatus];
   const canVoteForNextStatus = isParticipant && nextStatus !== undefined;
   const canCancelDeal = isParticipant && !isFinalStatus(deal.status);
+  const canJoinDeal = Boolean(me && !isParticipant && deal.status === "LookingForParticipants");
+  const canLeaveDeal = Boolean(me && isParticipant && !isFinalStatus(deal.status));
+  const canVoteJoinRequests = Boolean(me && isParticipant && deal.status === "LookingForParticipants");
+  const hasActions = canVoteForNextStatus || canCancelDeal || canJoinDeal || canLeaveDeal;
 
   const handleChangeStatus = async (expectedStatus: DealStatus) => {
     await changeDealStatus({ dealId: deal.id, body: { expectedStatus } }).unwrap();
+  };
+
+  const handleJoinDeal = async () => {
+    await joinDeal(deal.id).unwrap();
+  };
+
+  const handleLeaveDeal = async () => {
+    await leaveDeal(deal.id).unwrap();
+  };
+
+  const handleProcessJoin = async (userId: string, accept: boolean) => {
+    await processJoinRequest({ dealId: deal.id, userId, accept }).unwrap();
   };
 
   return (
@@ -290,7 +332,7 @@ function DealCard({ deal }: DealCardProps) {
             variant="outlined"
           />
 
-          {(canVoteForNextStatus || canCancelDeal) && (
+          {hasActions && (
             <Box mt={1.5} display="flex" gap={1} flexWrap="wrap">
               {canVoteForNextStatus && nextStatus && (
                 <Button
@@ -314,12 +356,54 @@ function DealCard({ deal }: DealCardProps) {
                   Отменить сделку
                 </Button>
               )}
+
+              {canJoinDeal && (
+                <Button
+                  size="small"
+                  variant="contained"
+                  color="success"
+                  onClick={() => void handleJoinDeal()}
+                  disabled={isJoinLoading}
+                >
+                  Откликнуться
+                </Button>
+              )}
+
+              {canLeaveDeal && (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color="warning"
+                  onClick={() => void handleLeaveDeal()}
+                  disabled={isLeaveLoading}
+                >
+                  Покинуть сделку
+                </Button>
+              )}
             </Box>
           )}
 
           {changeStatusError && (
             <Alert severity="error" sx={{ mt: 1.5 }}>
               Не удалось отправить голос за статус сделки
+            </Alert>
+          )}
+
+          {joinError && (
+            <Alert severity="error" sx={{ mt: 1.5 }}>
+              Не удалось откликнуться на сделку
+            </Alert>
+          )}
+
+          {leaveError && (
+            <Alert severity="error" sx={{ mt: 1.5 }}>
+              Не удалось покинуть сделку
+            </Alert>
+          )}
+
+          {processJoinError && (
+            <Alert severity="error" sx={{ mt: 1.5 }}>
+              Не удалось обработать заявку на вступление
             </Alert>
           )}
         </Box>
@@ -338,6 +422,74 @@ function DealCard({ deal }: DealCardProps) {
         </Box>
 
         <Divider sx={{ mb: 2 }} />
+
+        {canSeeJoinRequests && (
+          <Box mb={2}>
+            <Typography variant="subtitle2" fontWeight={600} mb={1}>
+              Заявки на вступление
+            </Typography>
+
+            {isJoinRequestsLoading ? (
+              <Box display="flex" justifyContent="center" py={1}>
+                <CircularProgress size={18} />
+              </Box>
+            ) : joinRequestsError ? (
+              <Alert severity="error" sx={{ mb: 1.5 }}>
+                Не удалось загрузить заявки на вступление
+              </Alert>
+            ) : !joinRequests || joinRequests.length === 0 ? (
+              <Typography variant="body2" color="text.secondary">
+                Заявок пока нет
+              </Typography>
+            ) : (
+              <Box display="flex" flexDirection="column" gap={1}>
+                {joinRequests.map((request) => {
+                  const hasVoted = Boolean(me && request.voters.includes(me.id));
+
+                  return (
+                    <Box
+                      key={request.userId}
+                      sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 1.5 }}
+                    >
+                      <Typography variant="body2" fontWeight={600}>
+                        {getUserName(request.userId)}
+                      </Typography>
+
+                      <Typography variant="caption" color="text.secondary" display="block" mt={0.5}>
+                        Голоса: {request.voters.length > 0 ? request.voters.map(getUserName).join(", ") : "пока нет"}
+                      </Typography>
+
+                      {canVoteJoinRequests && request.userId !== me?.id && (
+                        <Box display="flex" gap={1} mt={1}>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            color="success"
+                            onClick={() => void handleProcessJoin(request.userId, true)}
+                            disabled={isProcessJoinLoading || hasVoted}
+                          >
+                            Принять
+                          </Button>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            color="error"
+                            onClick={() => void handleProcessJoin(request.userId, false)}
+                            disabled={isProcessJoinLoading || hasVoted}
+                          >
+                            Отклонить
+                          </Button>
+                        </Box>
+                      )}
+                    </Box>
+                  );
+                })}
+              </Box>
+            )}
+
+            <Divider sx={{ mt: 2 }} />
+          </Box>
+        )}
 
         <Typography variant="subtitle2" fontWeight={600} mb={1}>
           Позиции сделки
