@@ -171,6 +171,9 @@ type Deal struct {
 	// Name Название сделки
 	Name *string `json:"name,omitempty"`
 
+	// Participants Список участников сделки
+	Participants []openapi_types.UUID `json:"participants"`
+
 	// Status Статус сделки
 	Status DealStatus `json:"status"`
 

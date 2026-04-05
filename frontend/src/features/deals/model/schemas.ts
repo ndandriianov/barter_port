@@ -95,6 +95,14 @@ export const updateDealItemRequestSchema = z.object({
   releaseReceiver: z.boolean().optional(),
 });
 
+export const dealJoinRequestSchema = z.object({
+  userId: z.string(),
+  dealId: z.string(),
+  voters: z.array(z.string()),
+});
+
+export const getDealJoinRequestsResponseSchema = z.array(dealJoinRequestSchema);
+
 export const dealIdAndParticipantsSchema = z.object({
   id: z.string(),
   status: dealStatusSchema,

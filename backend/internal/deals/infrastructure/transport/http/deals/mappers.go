@@ -76,12 +76,13 @@ func mapDealToDTO(deal domain.Deal) types.Deal {
 	}
 
 	return types.Deal{
-		Id:          deal.ID,
-		Name:        deal.Name,
-		Description: deal.Description,
-		CreatedAt:   deal.CreatedAt,
-		UpdatedAt:   deal.UpdatedAt,
-		Status:      mapDealStatusToDTO(deal.Status),
-		Items:       itemsDTO,
+		Id:           deal.ID,
+		Name:         deal.Name,
+		Description:  deal.Description,
+		CreatedAt:    deal.CreatedAt,
+		UpdatedAt:    deal.UpdatedAt,
+		Status:       mapDealStatusToDTO(deal.Status),
+		Items:        itemsDTO,
+		Participants: deal.Participants,
 	}
 }

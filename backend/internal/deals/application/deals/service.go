@@ -195,7 +195,17 @@ func (s *Service) GetDeals(ctx context.Context, userID uuid.UUID, my bool, open 
 // Domain errors:
 //   - domain.ErrDealNotFound: if no deal with the specified ID exists.
 func (s *Service) GetDealByID(ctx context.Context, id uuid.UUID) (domain.Deal, error) {
-	return s.dealsRepository.GetDealByID(ctx, s.db, id)
+	var deal domain.Deal
+	err := db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
+		var err error
+		deal, err = s.dealsRepository.GetDealByID(ctx, tx, id)
+		return err
+	})
+	if err != nil {
+		return domain.Deal{}, err
+	}
+
+	return deal, nil
 }
 
 // ================================================================================
@@ -220,63 +230,68 @@ func (s *Service) UpdateDealItem(
 	itemID uuid.UUID,
 	patch htypes.ItemPatch,
 ) (domain.Item, error) {
-	if _, err := s.dealsRepository.GetDealByID(ctx, s.db, dealID); err != nil {
+	var item domain.Item
+
+	err := db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
+		if _, err := s.dealsRepository.GetDealByID(ctx, tx, dealID); err != nil {
+			return err
+		}
+
+		hasContent := patch.Name != nil || patch.Description != nil || patch.Quantity != nil
+		if hasContent {
+			var err error
+			item, err = s.dealsRepository.UpdateItem(ctx, tx, dealID, itemID, userID, patch)
+			if err != nil {
+				return err
+			}
+		}
+
+		if patch.ClaimProvider {
+			id, err := s.dealsRepository.GetItemReceiverID(ctx, tx, dealID, itemID)
+			if err != nil {
+				return err
+			}
+			if id != nil && *id == userID {
+				return domain.ErrDuplicateRole
+			}
+
+			item, err = s.dealsRepository.ClaimItemProvider(ctx, tx, dealID, itemID, userID)
+			return err
+		}
+
+		if patch.ReleaseProvider {
+			var err error
+			item, err = s.dealsRepository.ReleaseItemProvider(ctx, tx, dealID, itemID, userID)
+			if err != nil {
+				return err
+			}
+		}
+
+		if patch.ClaimReceiver {
+			id, err := s.dealsRepository.GetItemProviderID(ctx, tx, dealID, itemID)
+			if err != nil {
+				return err
+			}
+			if id != nil && *id == userID {
+				return domain.ErrDuplicateRole
+			}
+
+			item, err = s.dealsRepository.ClaimItemReceiver(ctx, tx, dealID, itemID, userID)
+			return err
+		}
+
+		if patch.ReleaseReceiver {
+			var err error
+			item, err = s.dealsRepository.ReleaseItemReceiver(ctx, tx, dealID, itemID, userID)
+			if err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+	if err != nil {
 		return domain.Item{}, err
-	}
-
-	var (
-		id   *uuid.UUID
-		item domain.Item
-		err  error
-	)
-
-	hasContent := patch.Name != nil || patch.Description != nil || patch.Quantity != nil
-	if hasContent {
-		item, err = s.dealsRepository.UpdateItem(ctx, s.db, dealID, itemID, userID, patch)
-		if err != nil {
-			return domain.Item{}, err
-		}
-	}
-
-	if patch.ClaimProvider {
-		txErr := db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
-			id, err = s.dealsRepository.GetItemReceiverID(ctx, s.db, dealID, itemID)
-			if err != nil {
-				return err
-			}
-			if id != nil && *id == userID {
-				return domain.ErrDuplicateRole
-			}
-			item, err = s.dealsRepository.ClaimItemProvider(ctx, s.db, dealID, itemID, userID)
-			return err
-		})
-		return item, txErr
-	}
-	if patch.ReleaseProvider {
-		item, err = s.dealsRepository.ReleaseItemProvider(ctx, s.db, dealID, itemID, userID)
-		if err != nil {
-			return domain.Item{}, err
-		}
-	}
-	if patch.ClaimReceiver {
-		txErr := db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
-			id, err = s.dealsRepository.GetItemProviderID(ctx, s.db, dealID, itemID)
-			if err != nil {
-				return err
-			}
-			if id != nil && *id == userID {
-				return domain.ErrDuplicateRole
-			}
-			item, err = s.dealsRepository.ClaimItemReceiver(ctx, s.db, dealID, itemID, userID)
-			return err
-		})
-		return item, txErr
-	}
-	if patch.ReleaseReceiver {
-		item, err = s.dealsRepository.ReleaseItemReceiver(ctx, s.db, dealID, itemID, userID)
-		if err != nil {
-			return domain.Item{}, err
-		}
 	}
 
 	return item, nil

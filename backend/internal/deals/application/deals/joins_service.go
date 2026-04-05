@@ -45,67 +45,76 @@ func (s *Service) JoinDeal(ctx context.Context, dealID, userID uuid.UUID) error 
 
 // LeaveDeal removes user's join request from the deal.
 func (s *Service) LeaveDeal(ctx context.Context, dealID, userID uuid.UUID) error {
-	deal, err := s.dealsRepository.GetDealByID(ctx, s.db, dealID)
-	if err != nil {
-		return err
-	}
-
-	if deal.Status != enums.DealStatusLookingForParticipants {
-		return domain.ErrInvalidDealStatus
-	}
-
-	userParticipating := false
-	for _, participantID := range deal.Participants {
-		if participantID == userID {
-			userParticipating = true
+	return db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
+		deal, err := s.dealsRepository.GetDealByID(ctx, tx, dealID)
+		if err != nil {
+			return err
 		}
-	}
 
-	if userParticipating {
-		return s.dealsRepository.DeleteParticipant(ctx, s.db, dealID, userID)
-	}
+		if deal.Status != enums.DealStatusLookingForParticipants {
+			return domain.ErrInvalidDealStatus
+		}
 
-	return s.joinsRepository.DeleteJoinRequest(ctx, s.db, userID, dealID)
+		userParticipating := false
+		for _, participantID := range deal.Participants {
+			if participantID == userID {
+				userParticipating = true
+			}
+		}
+
+		if userParticipating {
+			return s.dealsRepository.DeleteParticipant(ctx, tx, dealID, userID)
+		}
+
+		return s.joinsRepository.DeleteJoinRequest(ctx, tx, userID, dealID)
+	})
 }
 
 // GetDealJoinRequests returns deal join requests with IDs of users that voted in favor.
 func (s *Service) GetDealJoinRequests(ctx context.Context, dealID, userID uuid.UUID) ([]htypes.JoinRequestWithVoters, error) {
-	if _, err := s.dealsRepository.GetDealByID(ctx, s.db, dealID); err != nil {
-		return nil, err
-	}
+	var result []htypes.JoinRequestWithVoters
 
-	participants, err := s.dealsRepository.GetParticipants(ctx, s.db, dealID)
-	if err != nil {
-		return nil, err
-	}
-	if !containsUserID(participants, userID) {
-		return nil, domain.ErrForbidden
-	}
-
-	requests, err := s.joinsRepository.GetJoinRequestsByDealID(ctx, s.db, dealID)
-	if err != nil {
-		return nil, err
-	}
-	votes, err := s.joinsRepository.GetJoinRequestVotesByDealID(ctx, s.db, dealID)
-	if err != nil {
-		return nil, err
-	}
-
-	votersByUser := make(map[uuid.UUID][]uuid.UUID, len(requests))
-	for _, v := range votes {
-		if !v.Vote {
-			continue
+	txErr := db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
+		if _, err := s.dealsRepository.GetDealByID(ctx, tx, dealID); err != nil {
+			return err
 		}
-		votersByUser[v.UserID] = append(votersByUser[v.UserID], v.VoterID)
-	}
 
-	result := make([]htypes.JoinRequestWithVoters, 0, len(requests))
-	for _, req := range requests {
-		result = append(result, htypes.JoinRequestWithVoters{
-			UserID:   req.UserID,
-			DealID:   req.DealID,
-			VoterIDs: votersByUser[req.UserID],
-		})
+		participants, err := s.dealsRepository.GetParticipants(ctx, tx, dealID)
+		if err != nil {
+			return err
+		}
+		if !containsUserID(participants, userID) {
+			return domain.ErrForbidden
+		}
+
+		requests, err := s.joinsRepository.GetJoinRequestsByDealID(ctx, tx, dealID)
+		if err != nil {
+			return err
+		}
+		votes, err := s.joinsRepository.GetJoinRequestVotesByDealID(ctx, tx, dealID)
+		if err != nil {
+			return err
+		}
+
+		votersByUser := make(map[uuid.UUID][]uuid.UUID, len(requests))
+		for _, v := range votes {
+			votersByUser[v.UserID] = append(votersByUser[v.UserID], v.VoterID)
+		}
+
+		result = make([]htypes.JoinRequestWithVoters, 0, len(requests))
+		for _, req := range requests {
+			result = append(result, htypes.JoinRequestWithVoters{
+				UserID:   req.UserID,
+				DealID:   req.DealID,
+				VoterIDs: votersByUser[req.UserID],
+			})
+		}
+
+		return nil
+	})
+
+	if txErr != nil {
+		return nil, txErr
 	}
 
 	return result, nil
@@ -155,34 +164,14 @@ func (s *Service) ProcessJoinRequest(ctx context.Context, dealID, requestedUserI
 			return err
 		}
 
-		votesByParticipant := make(map[uuid.UUID]bool, len(participants))
-		for _, v := range votes {
-			if v.UserID != requestedUserID {
-				continue
-			}
-			votesByParticipant[v.VoterID] = v.Vote
-		}
-
-		if len(votesByParticipant) != len(participants) {
-			return nil
-		}
-
-		allAccepted := true
-		for _, participantID := range participants {
-			vote, ok := votesByParticipant[participantID]
-			if !ok || !vote {
-				allAccepted = false
-				break
-			}
-		}
-
-		if allAccepted {
+		if len(votes) == len(participants) {
 			if err = s.joinsRepository.AddParticipant(ctx, tx, dealID, requestedUserID); err != nil {
 				return fmt.Errorf("add participant from join request: %w", err)
 			}
+			return s.joinsRepository.DeleteJoinRequest(ctx, tx, requestedUserID, dealID)
 		}
 
-		return s.joinsRepository.DeleteJoinRequest(ctx, tx, requestedUserID, dealID)
+		return nil
 	})
 }
 

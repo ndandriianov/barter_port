@@ -156,7 +156,7 @@ func (r *Repository) GetDealIDs(ctx context.Context, exec db.DB, userID *uuid.UU
 //
 // Domain errors:
 //   - domain.ErrDealNotFound: if no deal with the specified ID exists.
-func (r *Repository) GetDealByID(ctx context.Context, exec db.DB, id uuid.UUID) (domain.Deal, error) {
+func (r *Repository) GetDealByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (domain.Deal, error) {
 	query := `
 		SELECT d.id, d.name, d.description, d.created_at, d.updated_at, d.status,
 		       i.id, i.author_id, i.provider_id, i.receiver_id,
@@ -165,7 +165,7 @@ func (r *Repository) GetDealByID(ctx context.Context, exec db.DB, id uuid.UUID) 
 		LEFT JOIN items i ON i.deal_id = d.id
 		WHERE d.id = $1`
 
-	rows, err := exec.Query(ctx, query, id)
+	rows, err := tx.Query(ctx, query, id)
 	if err != nil {
 		return domain.Deal{}, fmt.Errorf("sql get deal by id: %w", err)
 	}
@@ -239,6 +239,29 @@ func (r *Repository) GetDealByID(ctx context.Context, exec db.DB, id uuid.UUID) 
 
 	if !found {
 		return domain.Deal{}, domain.ErrDealNotFound
+	}
+
+	participantsQuery := `
+		SELECT user_id
+		FROM participants
+		where deal_id = $1`
+
+	rows, err = tx.Query(ctx, participantsQuery, id)
+	if err != nil {
+		return domain.Deal{}, fmt.Errorf("sql get participants: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var userID uuid.UUID
+		if err = rows.Scan(&userID); err != nil {
+			return domain.Deal{}, fmt.Errorf("scan deal row: %w", err)
+		}
+		deal.Participants = append(deal.Participants, userID)
+	}
+
+	if err = rows.Err(); err != nil {
+		return domain.Deal{}, fmt.Errorf("rows: %w", err)
 	}
 
 	return deal, nil
