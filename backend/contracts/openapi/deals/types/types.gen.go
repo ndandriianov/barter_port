@@ -220,6 +220,9 @@ type GetDealsResponseItem struct {
 
 	// Participants Список ID всех пользователей, участвующих в этой сделке
 	Participants []openapi_types.UUID `json:"participants"`
+
+	// Status Статус сделки
+	Status *DealStatus `json:"status,omitempty"`
 }
 
 // GetMyDraftDealsResponse defines model for GetMyDraftDealsResponse.

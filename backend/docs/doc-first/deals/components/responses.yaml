@@ -90,6 +90,8 @@ GetDealsResponseItem:
       type: string
       format: uuid
       description: Уникальный идентификатор сделки
+    status:
+      $ref: 'schemas.yaml#/DealStatus'
     participants:
       type: array
       description: Список ID всех пользователей, участвующих в этой сделке
