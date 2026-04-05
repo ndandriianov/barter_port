@@ -36,6 +36,15 @@ CREATE TABLE draft_deal_offers
     PRIMARY KEY (draft_deal_id, offer_id)
 );
 
+CREATE TYPE deal_status AS ENUM (
+    'LookingForParticipants',
+    'Discussion',
+    'Confirmed',
+    'Completed',
+    'Cancelled',
+    'Failed'
+);
+
 CREATE TABLE deals
 (
     id          UUID PRIMARY KEY     DEFAULT gen_random_uuid(),
@@ -43,10 +52,7 @@ CREATE TABLE deals
     description TEXT,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at  TIMESTAMPTZ,
-    status      TEXT        NOT NULL DEFAULT 'LookingForParticipants',
-
-    CONSTRAINT deals_status_check CHECK (status IN ('LookingForParticipants', 'Discussion', 'Confirmed', 'Completed',
-                                                    'Cancelled', 'Failed'))
+    status      deal_status NOT NULL DEFAULT 'LookingForParticipants'
 );
 
 CREATE TABLE items
