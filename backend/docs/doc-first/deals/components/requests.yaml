@@ -34,3 +34,13 @@ CreateOfferRequest:
       $ref: 'schemas.yaml#/ItemType'
     action:
       $ref: 'schemas.yaml#/OfferAction'
+
+
+
+ConfirmDealRequest:
+  type: object
+  required:
+    - expectedCurrentStatus
+  properties:
+    expectedCurrentStatus:
+      $ref: 'schemas.yaml#/DealStatus'

@@ -162,3 +162,61 @@ dealById:
           application/json:
             schema:
               $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+
+dealConfirm:
+  patch:
+    tags:
+      - Deals
+    summary: Подтвердить сделку
+    description: |
+      Подтвердить сделку. Сделка должна быть в статусе, предшествующем указанному в теле запроса,
+      за счет этого обеспечивается идемпотентность операции.
+    operationId: confirmDeal
+    parameters:
+      - name: dealId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    security:
+      - bearerAuth: [ ]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/requests.yaml#/ConfirmDealRequest'
+    responses:
+      '200':
+        description: Сделка успешно подтверждена
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Deal'
+      '400':
+        description: Некорректный запрос (например, сделка не в том статусе)
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Deal not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'

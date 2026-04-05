@@ -277,3 +277,16 @@ Item:
     quantity:
       type: integer
       description: Количество позиций этого типа в сделке
+
+
+
+DealStatus:
+    type: string
+    description: Статус сделки
+    enum:
+        - looking_for_participants
+        - discussion
+        - confirmed
+        - completed
+        - cancelled
+        - failed
