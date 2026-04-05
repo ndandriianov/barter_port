@@ -519,6 +519,10 @@ func (r *Repository) GetStatusVotes(ctx context.Context, exec db.DB, dealID uuid
 	return votes, nil
 }
 
+// ================================================================================
+// PARTICIPANTS
+// ================================================================================
+
 // GetParticipants returns all unique user IDs that hold any role (author/provider/receiver) in the deal's items.
 func (r *Repository) GetParticipants(ctx context.Context, exec db.DB, dealID uuid.UUID) ([]uuid.UUID, error) {
 	query := `
@@ -545,6 +549,24 @@ func (r *Repository) GetParticipants(ctx context.Context, exec db.DB, dealID uui
 	}
 	return participants, nil
 }
+
+func (r *Repository) DeleteParticipant(ctx context.Context, exec db.DB, dealID, userID uuid.UUID) error {
+	query := `
+		DELETE
+		FROM participants
+		WHERE deal_id = $1
+		  AND user_id = $2;`
+
+	_, err := exec.Exec(ctx, query, dealID, userID)
+	if err != nil {
+		return fmt.Errorf("sql delete participant: %w", err)
+	}
+	return nil
+}
+
+// ================================================================================
+// DEAL STATUS
+// ================================================================================
 
 // UpdateDealStatus sets the deal's status and updated_at.
 func (r *Repository) UpdateDealStatus(ctx context.Context, tx pgx.Tx, dealID uuid.UUID, status enums.DealStatus) error {

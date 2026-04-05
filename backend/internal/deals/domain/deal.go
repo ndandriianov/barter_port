@@ -8,11 +8,12 @@ import (
 )
 
 type Deal struct {
-	ID          uuid.UUID
-	Name        *string
-	Description *string
-	CreatedAt   time.Time
-	UpdatedAt   *time.Time
-	Status      enums.DealStatus
-	Items       []Item
+	ID           uuid.UUID
+	Name         *string
+	Description  *string
+	CreatedAt    time.Time
+	UpdatedAt    *time.Time
+	Status       enums.DealStatus
+	Items        []Item
+	Participants []uuid.UUID
 }
