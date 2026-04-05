@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
+  Alert,
   Box,
   Button,
   Card,
@@ -20,7 +21,7 @@ import {
   Typography,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
-import type { Deal, Item, UpdateDealItemRequest } from "@/features/deals/model/types";
+import type { Deal, DealStatus, Item, UpdateDealItemRequest } from "@/features/deals/model/types";
 import dealsApi from "@/features/deals/api/dealsApi";
 import usersApi from "@/features/users/api/usersApi.ts";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux.ts";
@@ -46,6 +47,14 @@ const dealStatusMeta: Record<
   Cancelled: { label: "Отменена", color: "default" },
   Failed: { label: "Провалена", color: "error" },
 };
+
+const nextStatusByCurrent: Partial<Record<DealStatus, DealStatus>> = {
+  LookingForParticipants: "Discussion",
+  Discussion: "Confirmed",
+  Confirmed: "Completed",
+};
+
+const isFinalStatus = (status: DealStatus) => ["Completed", "Cancelled", "Failed"].includes(status);
 
 // ─── Edit content dialog ────────────────────────────────────────────────────
 
@@ -224,6 +233,7 @@ function DealCard({ deal }: DealCardProps) {
   const dispatch = useAppDispatch();
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const { data: me } = usersApi.useGetCurrentUserQuery();
+  const [changeDealStatus, { isLoading: isStatusLoading, error: changeStatusError }] = dealsApi.useChangeDealStatusMutation();
 
   // Collect all unique user IDs referenced in items
   const userIds = useMemo(
@@ -257,6 +267,13 @@ function DealCard({ deal }: DealCardProps) {
 
   // Current user is a participant if they authored at least one item
   const isParticipant = me ? deal.items.some((item) => item.authorId === me.id) : false;
+  const nextStatus: DealStatus | undefined = nextStatusByCurrent[deal.status as DealStatus];
+  const canVoteForNextStatus = isParticipant && nextStatus !== undefined;
+  const canCancelDeal = isParticipant && !isFinalStatus(deal.status);
+
+  const handleChangeStatus = async (expectedStatus: DealStatus) => {
+    await changeDealStatus({ dealId: deal.id, body: { expectedStatus } }).unwrap();
+  };
 
   return (
     <Card variant="outlined">
@@ -272,6 +289,39 @@ function DealCard({ deal }: DealCardProps) {
             color={dealStatusMeta[deal.status].color}
             variant="outlined"
           />
+
+          {(canVoteForNextStatus || canCancelDeal) && (
+            <Box mt={1.5} display="flex" gap={1} flexWrap="wrap">
+              {canVoteForNextStatus && nextStatus && (
+                <Button
+                  size="small"
+                  variant="contained"
+                  onClick={() => void handleChangeStatus(nextStatus)}
+                  disabled={isStatusLoading}
+                >
+                  Голосовать за "{dealStatusMeta[nextStatus as Deal["status"]].label}"
+                </Button>
+              )}
+
+              {canCancelDeal && (
+                <Button
+                  size="small"
+                  variant="outlined"
+                  color="error"
+                  onClick={() => void handleChangeStatus("Cancelled")}
+                  disabled={isStatusLoading || deal.status === "Cancelled"}
+                >
+                  Отменить сделку
+                </Button>
+              )}
+            </Box>
+          )}
+
+          {changeStatusError && (
+            <Alert severity="error" sx={{ mt: 1.5 }}>
+              Не удалось отправить голос за статус сделки
+            </Alert>
+          )}
         </Box>
 
         {deal.description && (
