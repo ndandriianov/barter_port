@@ -67,6 +67,7 @@ func NewRouter(
 		r.Route("/deals", func(r chi.Router) {
 			r.Get("/", dealsHandlers.GetDeals)
 			r.Get("/{dealId}", dealsHandlers.GetDealByID)
+			r.Patch("/{dealId}/status", dealsHandlers.ChangeDealStatus)
 			r.Patch("/{dealId}/items/{itemId}", dealsHandlers.UpdateDealItem)
 			r.Post("/drafts", draftsHandlers.CreateDraft)
 			r.Get("/drafts", draftsHandlers.GetDrafts)

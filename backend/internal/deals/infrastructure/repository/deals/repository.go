@@ -407,6 +407,103 @@ func (r *Repository) updateItemRole(
 	return domain.Item{}, conflictErr
 }
 
+// ================================================================================
+// DEAL STATUS VOTES
+// ================================================================================
+
+// UpsertStatusVote records or updates the user's requested status vote for a deal.
+func (r *Repository) UpsertStatusVote(ctx context.Context, tx pgx.Tx, dealID, userID uuid.UUID, status enums.DealStatus) error {
+	_, err := tx.Exec(ctx, `
+		INSERT INTO deal_status_votes (deal_id, user_id, requested_status)
+		VALUES ($1, $2, $3)
+		ON CONFLICT (deal_id, user_id) DO UPDATE SET requested_status = EXCLUDED.requested_status`,
+		dealID, userID, status,
+	)
+	if err != nil {
+		return fmt.Errorf("sql upsert status vote: %w", err)
+	}
+	return nil
+}
+
+// GetStatusVotes returns all votes for a deal as a map of userID → requestedStatus.
+func (r *Repository) GetStatusVotes(ctx context.Context, exec db.DB, dealID uuid.UUID) (map[uuid.UUID]enums.DealStatus, error) {
+	rows, err := exec.Query(ctx, `
+		SELECT user_id, requested_status FROM deal_status_votes WHERE deal_id = $1`,
+		dealID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("sql get status votes: %w", err)
+	}
+	defer rows.Close()
+
+	votes := make(map[uuid.UUID]enums.DealStatus)
+	for rows.Next() {
+		var userID uuid.UUID
+		var statusStr string
+		if err = rows.Scan(&userID, &statusStr); err != nil {
+			return nil, fmt.Errorf("scan status vote: %w", err)
+		}
+		s, err := enums.DealStatusString(statusStr)
+		if err != nil {
+			return nil, fmt.Errorf("parse deal status: %w", err)
+		}
+		votes[userID] = s
+	}
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows status votes: %w", err)
+	}
+	return votes, nil
+}
+
+// GetParticipants returns all unique user IDs that hold any role (author/provider/receiver) in the deal's items.
+func (r *Repository) GetParticipants(ctx context.Context, exec db.DB, dealID uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := exec.Query(ctx, `
+		SELECT DISTINCT p
+		FROM items
+		CROSS JOIN LATERAL (VALUES (author_id), (provider_id), (receiver_id)) AS t(p)
+		WHERE deal_id = $1 AND p IS NOT NULL`,
+		dealID,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("sql get participants: %w", err)
+	}
+	defer rows.Close()
+
+	var participants []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err = rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan participant: %w", err)
+		}
+		participants = append(participants, id)
+	}
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows participants: %w", err)
+	}
+	return participants, nil
+}
+
+// UpdateDealStatus sets the deal's status and updated_at.
+func (r *Repository) UpdateDealStatus(ctx context.Context, tx pgx.Tx, dealID uuid.UUID, status enums.DealStatus) error {
+	_, err := tx.Exec(ctx, `
+		UPDATE deals SET status = $2, updated_at = NOW() WHERE id = $1`,
+		dealID, status,
+	)
+	if err != nil {
+		return fmt.Errorf("sql update deal status: %w", err)
+	}
+	return nil
+}
+
+// DeleteStatusVotes removes all votes for a deal (called after a status transition).
+func (r *Repository) DeleteStatusVotes(ctx context.Context, tx pgx.Tx, dealID uuid.UUID) error {
+	_, err := tx.Exec(ctx, `DELETE FROM deal_status_votes WHERE deal_id = $1`, dealID)
+	if err != nil {
+		return fmt.Errorf("sql delete status votes: %w", err)
+	}
+	return nil
+}
+
 // scanItem scans an item row returned from an UPDATE … RETURNING or SELECT query.
 func scanItem(row interface{ Scan(...any) error }) (domain.Item, error) {
 	var item domain.Item

@@ -40,7 +40,7 @@ CreateOfferRequest:
 ChangeDealStatusRequest:
   type: object
   required:
-    - expectedCurrentStatus
+    - expectedStatus
   properties:
-    expectedCurrentStatus:
+    expectedStatus:
       $ref: 'schemas.yaml#/DealStatus'

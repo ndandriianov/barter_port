@@ -280,9 +280,9 @@ func (s *Service) ProcessDealStatusUpdateRequest(
 ) (domain.Deal, error) {
 	switch status {
 	case enums.DealStatusDiscussion, enums.DealStatusConfirmed, enums.DealStatusCompleted:
-		return s.confirmDeal(ctx, dealID, userID)
+		return s.confirmDeal(ctx, dealID, userID, status)
 	case enums.DealStatusCancelled, enums.DealStatusFailed:
-		return s.cancelDeal(ctx, dealID, userID)
+		return s.cancelDeal(ctx, dealID, status)
 	default:
 		return domain.Deal{}, fmt.Errorf("invalid status: %s", status)
 	}
@@ -341,10 +341,91 @@ func (s *Service) createDeal(ctx context.Context, tx pgx.Tx, draft domain.Draft)
 	return id, nil
 }
 
-func (s *Service) confirmDeal(ctx context.Context, id uuid.UUID, userID uuid.UUID) (domain.Deal, error) {
+func (s *Service) confirmDeal(ctx context.Context, id uuid.UUID, userID uuid.UUID, targetStatus enums.DealStatus) (domain.Deal, error) {
+	var deal domain.Deal
 
+	err := db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
+		var err error
+		deal, err = s.dealsRepository.GetDealByID(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+
+		if deal.Status+1 != targetStatus {
+			return domain.ErrInvalidDealStatus
+		}
+
+		if err = s.dealsRepository.UpsertStatusVote(ctx, tx, id, userID, targetStatus); err != nil {
+			return err
+		}
+
+		participants, err := s.dealsRepository.GetParticipants(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+
+		votes, err := s.dealsRepository.GetStatusVotes(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+
+		allVoted := len(votes) == len(participants)
+		if allVoted {
+			for _, v := range votes {
+				if v != targetStatus {
+					allVoted = false
+					break
+				}
+			}
+		}
+
+		if allVoted {
+			if err = s.dealsRepository.UpdateDealStatus(ctx, tx, id, targetStatus); err != nil {
+				return err
+			}
+			if err = s.dealsRepository.DeleteStatusVotes(ctx, tx, id); err != nil {
+				return err
+			}
+		}
+
+		deal, err = s.dealsRepository.GetDealByID(ctx, tx, id)
+		return err
+	})
+
+	return deal, err
 }
 
-func (s *Service) cancelDeal(ctx context.Context, id uuid.UUID, userID uuid.UUID) (domain.Deal, error) {
+func (s *Service) cancelDeal(ctx context.Context, id uuid.UUID, targetStatus enums.DealStatus) (domain.Deal, error) {
+	var deal domain.Deal
 
+	err := db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
+		var err error
+		deal, err = s.dealsRepository.GetDealByID(ctx, tx, id)
+		if err != nil {
+			return err
+		}
+
+		finalStatuses := []enums.DealStatus{
+			enums.DealStatusCompleted,
+			enums.DealStatusCancelled,
+			enums.DealStatusFailed,
+		}
+		for _, fs := range finalStatuses {
+			if deal.Status == fs {
+				return domain.ErrInvalidDealStatus
+			}
+		}
+
+		if err = s.dealsRepository.UpdateDealStatus(ctx, tx, id, targetStatus); err != nil {
+			return err
+		}
+		if err = s.dealsRepository.DeleteStatusVotes(ctx, tx, id); err != nil {
+			return err
+		}
+
+		deal, err = s.dealsRepository.GetDealByID(ctx, tx, id)
+		return err
+	})
+
+	return deal, err
 }

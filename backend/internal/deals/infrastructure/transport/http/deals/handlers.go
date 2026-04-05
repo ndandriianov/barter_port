@@ -174,3 +174,57 @@ func (h *Handlers) UpdateDealItem(w http.ResponseWriter, r *http.Request) {
 
 	httpx.WriteJSON(w, http.StatusOK, item.ToDTO())
 }
+
+// ================================================================================
+// CHANGE DEAL STATUS
+// ================================================================================
+
+func (h *Handlers) ChangeDealStatus(w http.ResponseWriter, r *http.Request) {
+	log := logger.LogFrom(r.Context(), h.log).With(slog.String("handler", "ChangeDealStatus"))
+	log.Info("handling change deal status request")
+
+	idStr := chi.URLParam(r, "dealId")
+	dealID, err := uuid.Parse(idStr)
+	if err != nil {
+		log.Error("error parsing deal id")
+		httpx.WriteEmptyError(w, http.StatusBadRequest)
+		return
+	}
+
+	userID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		log.Error("failed to get userID from context")
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
+	var req types.ChangeDealStatusRequest
+	if err = httpx.DecodeJSON(r, &req); err != nil {
+		log.Error("error decoding request", slog.Any("error", err))
+		httpx.WriteError(w, http.StatusBadRequest, httpx.ErrCannotDecodeRequestBody)
+		return
+	}
+
+	targetStatus, err := mapDealStatusFromDTO(req.ExpectedStatus)
+	if err != nil {
+		log.Error("unknown deal status", slog.Any("error", err))
+		httpx.WriteEmptyError(w, http.StatusBadRequest)
+		return
+	}
+
+	deal, err := h.dealsService.ProcessDealStatusUpdateRequest(r.Context(), dealID, userID, targetStatus)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrDealNotFound):
+			httpx.WriteEmptyError(w, http.StatusNotFound)
+		case errors.Is(err, domain.ErrInvalidDealStatus):
+			httpx.WriteEmptyError(w, http.StatusBadRequest)
+		default:
+			log.Error("error changing deal status", slog.Any("error", err))
+			httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, mapDealToDTO(deal))
+}
