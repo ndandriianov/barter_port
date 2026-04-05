@@ -210,6 +210,21 @@ type ErrorResponse struct {
 	Message *string `json:"message,omitempty"`
 }
 
+// GetDealJoinRequestsResponse defines model for GetDealJoinRequestsResponse.
+type GetDealJoinRequestsResponse = []GetDealJoinRequestsResponseItem
+
+// GetDealJoinRequestsResponseItem defines model for GetDealJoinRequestsResponseItem.
+type GetDealJoinRequestsResponseItem struct {
+	// DealId Уникальный идентификатор сделки, к которой пользователь хочет присоединиться
+	DealId openapi_types.UUID `json:"dealId"`
+
+	// UserId Уникальный идентификатор пользователя, который хочет присоединиться к сделке
+	UserId openapi_types.UUID `json:"userId"`
+
+	// Voters Список ID пользователей, которые поддерживают заявку на присоединение к сделке
+	Voters []openapi_types.UUID `json:"voters"`
+}
+
 // GetDealsResponse defines model for GetDealsResponse.
 type GetDealsResponse = []GetDealsResponseItem
 
@@ -435,6 +450,11 @@ type GetDealsParams struct {
 type GetMyDraftDealsParams struct {
 	CreatedByMe   *bool `form:"createdByMe,omitempty" json:"createdByMe,omitempty"`
 	Participating *bool `form:"participating,omitempty" json:"participating,omitempty"`
+}
+
+// ProcessJoinRequestParams defines parameters for ProcessJoinRequest.
+type ProcessJoinRequestParams struct {
+	Accept bool `form:"accept" json:"accept"`
 }
 
 // ListOffersParams defines parameters for ListOffers.

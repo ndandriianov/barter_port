@@ -6,10 +6,12 @@ import (
 	"barter-port/internal/deals/application/offers"
 	"barter-port/internal/deals/infrastructure/repository/deals"
 	"barter-port/internal/deals/infrastructure/repository/drafts"
+	"barter-port/internal/deals/infrastructure/repository/joins"
 	offersr "barter-port/internal/deals/infrastructure/repository/offers"
 	transporthttp "barter-port/internal/deals/infrastructure/transport/http"
 	dealsh "barter-port/internal/deals/infrastructure/transport/http/deals"
 	draftsh "barter-port/internal/deals/infrastructure/transport/http/drafts"
+	joinsh "barter-port/internal/deals/infrastructure/transport/http/joins"
 	offersh "barter-port/internal/deals/infrastructure/transport/http/offers"
 	"barter-port/pkg/bootstrap"
 	"barter-port/pkg/logger"
@@ -55,7 +57,8 @@ func main() {
 
 	draftsRepo := drafts.NewRepository()
 	dealsRepo := deals.NewRepository()
-	dealsService := dealssvc.NewService(db, draftsRepo, dealsRepo)
+	joinsRepo := joins.NewRepository()
+	dealsService := dealssvc.NewService(db, draftsRepo, dealsRepo, joinsRepo)
 
 	validator, err := bootstrap.InitLocalJWTFromConfig(cfg)
 	if err != nil {
@@ -65,7 +68,8 @@ func main() {
 	offersHandlers := offersh.NewHandlers(offersService)
 	draftsHandlers := draftsh.NewHandlers(logg, dealsService)
 	dealsHandlers := dealsh.NewHandlers(logg, dealsService)
-	router := transporthttp.NewRouter(logg, validator, offersHandlers, draftsHandlers, dealsHandlers)
+	joinsHandlers := joinsh.NewHandlers(logg, dealsService)
+	router := transporthttp.NewRouter(logg, validator, offersHandlers, draftsHandlers, dealsHandlers, joinsHandlers)
 
 	port := bootstrap.InitPortStringFromConfig(cfg, 8080)
 	log.Println("backend listening on", port)

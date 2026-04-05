@@ -154,8 +154,8 @@ processJoinRequest:
         in: path
         required: true
         schema:
-        type: string
-        format: uuid
+          type: string
+          format: uuid
       - name: accept
         in: query
         required: true
