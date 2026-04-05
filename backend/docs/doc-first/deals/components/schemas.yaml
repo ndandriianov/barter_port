@@ -206,7 +206,9 @@ Deal:
 UpdateDealItemRequest:
   type: object
   minProperties: 1
-  description: Хотя бы одно поле обязательно
+  description: |
+    Хотя бы одно поле обязательно.
+    Один и тот же пользователь не может одновременно быть `provider` и `receiver` для одной позиции.
   properties:
     name:
       type: string
@@ -220,13 +222,13 @@ UpdateDealItemRequest:
       description: Новое количество (только для автора)
     claimProvider:
       type: boolean
-      description: Назначить текущего пользователя поставщиком (только если слот свободен)
+      description: Назначить текущего пользователя поставщиком (только если слот свободен и пользователь не является receiver этой же позиции)
     releaseProvider:
       type: boolean
       description: Освободить слот поставщика (только если текущий пользователь является поставщиком)
     claimReceiver:
       type: boolean
-      description: Назначить текущего пользователя получателем (только если слот свободен)
+      description: Назначить текущего пользователя получателем (только если слот свободен и пользователь не является provider этой же позиции)
     releaseReceiver:
       type: boolean
       description: Освободить слот получателя (только если текущий пользователь является получателем)

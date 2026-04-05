@@ -6,11 +6,17 @@ import (
 	"barter-port/internal/deals/domain/htypes"
 	"barter-port/pkg/db"
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+)
+
+const (
+	ReceiverID = "receiver_id"
+	ProviderID = "provider_id"
 )
 
 type Repository struct{}
@@ -203,6 +209,54 @@ func (r *Repository) GetDealByID(ctx context.Context, exec db.DB, id uuid.UUID) 
 	}
 
 	return deal, nil
+}
+
+// ================================================================================
+// GET ITEM ROLE IDS
+// ================================================================================
+
+// GetItemReceiverID returns receiver_id for the specified item in the deal.
+//
+// Domain errors:
+//   - domain.ErrItemNotFound: if no item with the specified ID exists in the deal.
+func (r *Repository) GetItemReceiverID(ctx context.Context, exec db.DB, dealID, itemID uuid.UUID) (*uuid.UUID, error) {
+	return r.getItemRoleID(ctx, exec, dealID, itemID, ReceiverID)
+}
+
+// GetItemProviderID returns provider_id for the specified item in the deal.
+//
+// Domain errors:
+//   - domain.ErrItemNotFound: if no item with the specified ID exists in the deal.
+func (r *Repository) GetItemProviderID(ctx context.Context, exec db.DB, dealID, itemID uuid.UUID) (*uuid.UUID, error) {
+	return r.getItemRoleID(ctx, exec, dealID, itemID, ProviderID)
+}
+
+func (r *Repository) getItemRoleID(
+	ctx context.Context,
+	exec db.DB,
+	dealID, itemID uuid.UUID,
+	column string,
+) (*uuid.UUID, error) {
+	var query string
+	switch column {
+	case ReceiverID:
+		query = `SELECT receiver_id FROM items WHERE id = $1 AND deal_id = $2`
+	case ProviderID:
+		query = `SELECT provider_id FROM items WHERE id = $1 AND deal_id = $2`
+	default:
+		return nil, fmt.Errorf("unsupported role column: %s", column)
+	}
+
+	var roleID *uuid.UUID
+	err := exec.QueryRow(ctx, query, itemID, dealID).Scan(&roleID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, domain.ErrItemNotFound
+	}
+	if err != nil {
+		return nil, fmt.Errorf("sql get item %s: %w", column, err)
+	}
+
+	return roleID, nil
 }
 
 // ================================================================================

@@ -13,4 +13,5 @@ var (
 	ErrForbidden        = errors.New("forbidden")
 	ErrRoleAlreadyTaken = errors.New("role already taken by another user")
 	ErrNotRoleHolder    = errors.New("user does not hold this role")
+	ErrDuplicateRole    = errors.New("user already holds this item with other role")
 )

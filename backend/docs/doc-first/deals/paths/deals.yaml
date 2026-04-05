@@ -50,7 +50,11 @@ dealItemById:
     tags:
       - Deals
     summary: Редактировать позицию сделки
-    description: Редактировать позицию сделки. Доступно только автору позиции (author_id).
+    description: |
+      Редактировать позицию сделки.
+
+      - Поля `name`, `description`, `quantity` может менять только автор позиции (`author_id`).
+      - Роли `provider`/`receiver` можно claim/release по бизнес-правилам.
     operationId: updateDealItem
     parameters:
       - name: dealId
@@ -93,7 +97,12 @@ dealItemById:
             schema:
               $ref: '../components/responses.yaml#/ErrorResponse'
       '403':
-        description: Нет прав (пользователь не является автором этой позиции)
+        description: |
+          Операция запрещена по бизнес-правилам:
+          - пользователь не является автором позиции при изменении контентных полей;
+          - роль уже занята другим пользователем;
+          - пользователь не владеет ролью при release;
+          - пользователь уже занимает другую роль (`provider`/`receiver`) для этой же позиции.
         content:
           application/json:
             schema:
