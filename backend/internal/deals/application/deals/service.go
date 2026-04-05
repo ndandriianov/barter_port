@@ -373,7 +373,7 @@ func (s *Service) createDeal(ctx context.Context, tx pgx.Tx, draft domain.Draft)
 func (s *Service) confirmDeal(ctx context.Context, id uuid.UUID, userID uuid.UUID, targetStatus enums.DealStatus) (domain.Deal, error) {
 	var deal domain.Deal
 
-	err := db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
+	txErr := db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
 		var err error
 		deal, err = s.dealsRepository.GetDealByID(ctx, tx, id)
 		if err != nil {
@@ -409,16 +409,23 @@ func (s *Service) confirmDeal(ctx context.Context, id uuid.UUID, userID uuid.UUI
 		}
 
 		if allVoted {
+			if targetStatus == enums.DealStatusDiscussion {
+				ok, err := s.checkParticipants(ctx, tx, id)
+				if err != nil {
+					return err
+				}
+				if !ok {
+					return domain.ErrDealParticipantsUnready
+				}
+				if err = s.joinsRepository.DeleteAllRequests(ctx, tx, id); err != nil {
+					return err
+				}
+			}
 			if err = s.dealsRepository.UpdateDealStatus(ctx, tx, id, targetStatus); err != nil {
 				return err
 			}
 			if err = s.dealsRepository.DeleteStatusVotes(ctx, tx, id); err != nil {
 				return err
-			}
-			if targetStatus == enums.DealStatusDiscussion {
-				if err = s.joinsRepository.DeleteAllRequests(ctx, tx, id); err != nil {
-					return err
-				}
 			}
 		}
 
@@ -426,7 +433,48 @@ func (s *Service) confirmDeal(ctx context.Context, id uuid.UUID, userID uuid.UUI
 		return err
 	})
 
-	return deal, err
+	return deal, txErr
+}
+
+func (s *Service) checkParticipants(ctx context.Context, tx pgx.Tx, dealID uuid.UUID) (bool, error) {
+	deal, err := s.dealsRepository.GetDealByID(ctx, tx, dealID)
+	if err != nil {
+		return false, err
+	}
+
+	type participantStats struct {
+		hasProvider bool
+		hasReceiver bool
+	}
+
+	statsByParticipant := make(map[uuid.UUID]participantStats, len(deal.Participants))
+	for _, participantID := range deal.Participants {
+		statsByParticipant[participantID] = participantStats{}
+	}
+
+	for _, item := range deal.Items {
+		if item.ProviderID == nil || item.ReceiverID == nil {
+			return false, nil
+		}
+
+		if stats, ok := statsByParticipant[*item.ProviderID]; ok {
+			stats.hasProvider = true
+			statsByParticipant[*item.ProviderID] = stats
+		}
+
+		if stats, ok := statsByParticipant[*item.ReceiverID]; ok {
+			stats.hasReceiver = true
+			statsByParticipant[*item.ReceiverID] = stats
+		}
+	}
+
+	for _, stats := range statsByParticipant {
+		if !stats.hasProvider || !stats.hasReceiver {
+			return false, nil
+		}
+	}
+
+	return true, nil
 }
 
 func (s *Service) cancelDeal(ctx context.Context, id uuid.UUID, targetStatus enums.DealStatus) (domain.Deal, error) {

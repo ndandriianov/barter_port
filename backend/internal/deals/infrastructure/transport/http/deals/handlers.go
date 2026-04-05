@@ -220,6 +220,8 @@ func (h *Handlers) ChangeDealStatus(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteEmptyError(w, http.StatusNotFound)
 		case errors.Is(err, domain.ErrInvalidDealStatus):
 			httpx.WriteEmptyError(w, http.StatusBadRequest)
+		case errors.Is(err, domain.ErrDealParticipantsUnready):
+			httpx.WriteEmptyError(w, http.StatusForbidden)
 		default:
 			log.Error("error changing deal status", slog.Any("error", err))
 			httpx.WriteEmptyError(w, http.StatusInternalServerError)
