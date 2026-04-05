@@ -117,8 +117,8 @@ func (e ListOffersParamsSort) Valid() bool {
 
 // ChangeDealStatusRequest defines model for ChangeDealStatusRequest.
 type ChangeDealStatusRequest struct {
-	// ExpectedCurrentStatus Статус сделки
-	ExpectedCurrentStatus DealStatus `json:"expectedCurrentStatus"`
+	// ExpectedStatus Статус сделки
+	ExpectedStatus DealStatus `json:"expectedStatus"`
 }
 
 // ConfirmDraftDealResponse defines model for ConfirmDraftDealResponse.

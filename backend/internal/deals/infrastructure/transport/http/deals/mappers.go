@@ -5,9 +5,29 @@ import (
 	"barter-port/internal/deals/domain"
 	"barter-port/internal/deals/domain/enums"
 	"barter-port/internal/deals/domain/htypes"
+	"fmt"
 
 	openapitypes "github.com/oapi-codegen/runtime/types"
 )
+
+func mapDealStatusFromDTO(s types.DealStatus) (enums.DealStatus, error) {
+	switch s {
+	case types.LookingForParticipants:
+		return enums.DealStatusLookingForParticipants, nil
+	case types.Discussion:
+		return enums.DealStatusDiscussion, nil
+	case types.Confirmed:
+		return enums.DealStatusConfirmed, nil
+	case types.Completed:
+		return enums.DealStatusCompleted, nil
+	case types.Cancelled:
+		return enums.DealStatusCancelled, nil
+	case types.Failed:
+		return enums.DealStatusFailed, nil
+	default:
+		return 0, fmt.Errorf("unknown deal status: %s", s)
+	}
+}
 
 func mapDealIDWithParticipantIDsToDTO(d htypes.DealIDWithParticipantIDs) types.GetDealsResponseItem {
 	participants := make([]openapitypes.UUID, 0, len(d.ParticipantIDs))

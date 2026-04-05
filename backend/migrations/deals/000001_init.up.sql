@@ -67,8 +67,14 @@ CREATE TABLE items
     type             TEXT    NOT NULL,
     updated_at       TIMESTAMPTZ,
     quantity         INTEGER NOT NULL DEFAULT 1,
-    requested_status deal_status,
-
     CONSTRAINT offers_type_check CHECK (type IN ('good', 'service')),
     FOREIGN KEY (deal_id) REFERENCES deals (id) ON DELETE CASCADE
+);
+
+CREATE TABLE deal_status_votes
+(
+    deal_id          UUID        NOT NULL REFERENCES deals (id) ON DELETE CASCADE,
+    user_id          UUID        NOT NULL,
+    requested_status deal_status NOT NULL,
+    PRIMARY KEY (deal_id, user_id)
 );

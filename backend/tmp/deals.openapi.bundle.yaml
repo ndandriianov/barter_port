@@ -876,9 +876,9 @@ components:
     ChangeDealStatusRequest:
       type: object
       required:
-        - expectedCurrentStatus
+        - expectedStatus
       properties:
-        expectedCurrentStatus:
+        expectedStatus:
           $ref: '#/components/schemas/DealStatus'
     UpdateDealItemRequest:
       type: object
