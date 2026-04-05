@@ -411,6 +411,28 @@ function DealCard({ deal }: DealCardProps) {
 
         <Divider sx={{ mb: 2 }} />
 
+        <Box mb={2}>
+          <Typography variant="subtitle2" fontWeight={600} mb={1}>
+            Участники ({deal.participants.length})
+          </Typography>
+
+          {deal.participants.length === 0 ? (
+            <Typography variant="body2" color="text.secondary">
+              Участников пока нет
+            </Typography>
+          ) : (
+            <Box display="flex" flexDirection="column" gap={0.5}>
+              {deal.participants.map((participantId) => (
+                <Typography key={participantId} variant="body2">
+                  • {getUserName(participantId)}
+                </Typography>
+              ))}
+            </Box>
+          )}
+        </Box>
+
+        <Divider sx={{ mb: 2 }} />
+
         {canSeeJoinRequests && (
           <Box mb={2}>
             <Typography variant="subtitle2" fontWeight={600} mb={1}>
