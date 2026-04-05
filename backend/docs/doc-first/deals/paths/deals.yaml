@@ -165,17 +165,17 @@ dealById:
 
 
 
-dealConfirm:
+dealStatus:
   patch:
     tags:
       - Deals
-    summary: Подтвердить сделку
+    summary: Подтвердить/Отменить сделку
     description: |
-      Подтвердить переход к следующему статусу сделки.
+      Запросить переход к следующему статусу сделки.
       Когда все пользователи указали один и тот же статус сделки (вперед), то выполняется переход к новому статусу.
       Сделка должна быть в статусе, предшествующем указанному.
       Если пользователь выбирает статус отмены, то сделка сразу же переходит в статус отменён.
-    operationId: confirmDeal
+    operationId: ChangeDealStatus
     parameters:
       - name: dealId
         in: path
@@ -190,10 +190,10 @@ dealConfirm:
       content:
         application/json:
           schema:
-            $ref: '../components/requests.yaml#/ConfirmDealRequest'
+            $ref: '../components/requests.yaml#/ChangeDealStatusRequest'
     responses:
       '200':
-        description: Сделка успешно подтверждена
+        description: Запрос обработан, возвращает обновлённую сделку
         content:
           application/json:
             schema:

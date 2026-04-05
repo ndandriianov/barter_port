@@ -115,8 +115,8 @@ func (e ListOffersParamsSort) Valid() bool {
 	}
 }
 
-// ConfirmDealRequest defines model for ConfirmDealRequest.
-type ConfirmDealRequest struct {
+// ChangeDealStatusRequest defines model for ChangeDealStatusRequest.
+type ChangeDealStatusRequest struct {
 	// ExpectedCurrentStatus Статус сделки
 	ExpectedCurrentStatus DealStatus `json:"expectedCurrentStatus"`
 }
@@ -463,11 +463,11 @@ type ListOffersParamsSort string
 // CreateDraftDealJSONRequestBody defines body for CreateDraftDeal for application/json ContentType.
 type CreateDraftDealJSONRequestBody = CreateDraftDealRequest
 
-// ConfirmDealJSONRequestBody defines body for ConfirmDeal for application/json ContentType.
-type ConfirmDealJSONRequestBody = ConfirmDealRequest
-
 // UpdateDealItemJSONRequestBody defines body for UpdateDealItem for application/json ContentType.
 type UpdateDealItemJSONRequestBody = UpdateDealItemRequest
+
+// ChangeDealStatusJSONRequestBody defines body for ChangeDealStatus for application/json ContentType.
+type ChangeDealStatusJSONRequestBody = ChangeDealStatusRequest
 
 // CreateOffersJSONRequestBody defines body for CreateOffers for application/json ContentType.
 type CreateOffersJSONRequestBody = CreateOfferRequest

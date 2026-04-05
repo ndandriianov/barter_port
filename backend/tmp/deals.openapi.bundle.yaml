@@ -343,15 +343,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /deals/{dealId}/confirm:
+  /deals/{dealId}/status:
     patch:
       tags:
         - Deals
-      summary: Подтвердить сделку
+      summary: Подтвердить/Отменить сделку
       description: |
-        Подтвердить сделку. Сделка должна быть в статусе, предшествующем указанному в теле запроса,
-        за счет этого обеспечивается идемпотентность операции.
-      operationId: confirmDeal
+        Запросить переход к следующему статусу сделки.
+        Когда все пользователи указали один и тот же статус сделки (вперед), то выполняется переход к новому статусу.
+        Сделка должна быть в статусе, предшествующем указанному.
+        Если пользователь выбирает статус отмены, то сделка сразу же переходит в статус отменён.
+      operationId: ChangeDealStatus
       parameters:
         - name: dealId
           in: path
@@ -366,10 +368,10 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/ConfirmDealRequest'
+              $ref: '#/components/schemas/ChangeDealStatusRequest'
       responses:
         '200':
-          description: Сделка успешно подтверждена
+          description: Запрос обработан, возвращает обновлённую сделку
           content:
             application/json:
               schema:
@@ -871,7 +873,7 @@ components:
           description: Список позиций сделки
           items:
             $ref: '#/components/schemas/Item'
-    ConfirmDealRequest:
+    ChangeDealStatusRequest:
       type: object
       required:
         - expectedCurrentStatus
