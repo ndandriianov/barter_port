@@ -328,6 +328,30 @@ type OffersCursor struct {
 	Views     *int64             `json:"views,omitempty"`
 }
 
+// UpdateDealItemRequest Хотя бы одно поле обязательно
+type UpdateDealItemRequest struct {
+	// ClaimProvider Назначить текущего пользователя поставщиком (только если слот свободен)
+	ClaimProvider *bool `json:"claimProvider,omitempty"`
+
+	// ClaimReceiver Назначить текущего пользователя получателем (только если слот свободен)
+	ClaimReceiver *bool `json:"claimReceiver,omitempty"`
+
+	// Description Новое описание позиции (только для автора)
+	Description *string `json:"description,omitempty"`
+
+	// Name Новое название позиции (только для автора)
+	Name *string `json:"name,omitempty"`
+
+	// Quantity Новое количество (только для автора)
+	Quantity *int `json:"quantity,omitempty"`
+
+	// ReleaseProvider Освободить слот поставщика (только если текущий пользователь является поставщиком)
+	ReleaseProvider *bool `json:"releaseProvider,omitempty"`
+
+	// ReleaseReceiver Освободить слот получателя (только если текущий пользователь является получателем)
+	ReleaseReceiver *bool `json:"releaseReceiver,omitempty"`
+}
+
 // UserConfirm defines model for UserConfirm.
 type UserConfirm struct {
 	// Confirmed Статус подтверждения участия пользователя в сделке
@@ -393,41 +417,11 @@ type ListOffersParams struct {
 // ListOffersParamsSort defines parameters for ListOffers.
 type ListOffersParamsSort string
 
-// UpdateDealItemRequest defines model for UpdateDealItemRequest.
-type UpdateDealItemRequest struct {
-	// Description Новое описание позиции (только для автора)
-	Description *string `json:"description,omitempty"`
-
-	// Name Новое название позиции (только для автора)
-	Name *string `json:"name,omitempty"`
-
-	// Quantity Новое количество (только для автора)
-	Quantity *int `json:"quantity,omitempty"`
-
-	// ClaimProvider Назначить текущего пользователя поставщиком (только если слот свободен)
-	ClaimProvider *bool `json:"claimProvider,omitempty"`
-
-	// ReleaseProvider Освободить слот поставщика (только если текущий пользователь является поставщиком)
-	ReleaseProvider *bool `json:"releaseProvider,omitempty"`
-
-	// ClaimReceiver Назначить текущего пользователя получателем (только если слот свободен)
-	ClaimReceiver *bool `json:"claimReceiver,omitempty"`
-
-	// ReleaseReceiver Освободить слот получателя (только если текущий пользователь является получателем)
-	ReleaseReceiver *bool `json:"releaseReceiver,omitempty"`
-}
-
-// UpdateDealItemParams defines parameters for UpdateDealItem.
-type UpdateDealItemParams struct {
-	DealId openapi_types.UUID `json:"dealId"`
-	ItemId openapi_types.UUID `json:"itemId"`
-}
+// CreateDraftDealJSONRequestBody defines body for CreateDraftDeal for application/json ContentType.
+type CreateDraftDealJSONRequestBody = CreateDraftDealRequest
 
 // UpdateDealItemJSONRequestBody defines body for UpdateDealItem for application/json ContentType.
 type UpdateDealItemJSONRequestBody = UpdateDealItemRequest
-
-// CreateDraftDealJSONRequestBody defines body for CreateDraftDeal for application/json ContentType.
-type CreateDraftDealJSONRequestBody = CreateDraftDealRequest
 
 // CreateOffersJSONRequestBody defines body for CreateOffers for application/json ContentType.
 type CreateOffersJSONRequestBody = CreateOfferRequest
