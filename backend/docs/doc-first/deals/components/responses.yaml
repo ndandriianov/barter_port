@@ -99,3 +99,29 @@ GetDealsResponseItem:
         type: string
         format: uuid
         description: Уникальный идентификатор пользователя
+
+
+
+GetDealJoinRequestsResponse:
+  type: array
+  items:
+    $ref: '#/GetDealJoinRequestsResponseItem'
+
+GetDealJoinRequestsResponseItem:
+  type: object
+  properties:
+    userId:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор пользователя, который хочет присоединиться к сделке
+    dealId:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор сделки, к которой пользователь хочет присоединиться
+    voters:
+      type: array
+      description: Список ID пользователей, которые поддерживают заявку на присоединение к сделке
+      items:
+        type: string
+        format: uuid
+        description: Уникальный идентификатор пользователя, который поддерживает заявку на присоединение к сделке
