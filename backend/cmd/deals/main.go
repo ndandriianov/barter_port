@@ -8,6 +8,9 @@ import (
 	"barter-port/internal/deals/infrastructure/repository/drafts"
 	offersr "barter-port/internal/deals/infrastructure/repository/offers"
 	transporthttp "barter-port/internal/deals/infrastructure/transport/http"
+	dealsh "barter-port/internal/deals/infrastructure/transport/http/deals"
+	draftsh "barter-port/internal/deals/infrastructure/transport/http/drafts"
+	offersh "barter-port/internal/deals/infrastructure/transport/http/offers"
 	"barter-port/pkg/bootstrap"
 	"barter-port/pkg/logger"
 	"errors"
@@ -59,9 +62,10 @@ func main() {
 		log.Fatal("failed to initialize JWT validator:", err)
 	}
 
-	handlers := transporthttp.NewHandlers(offersService)
-	dealsHandlers := transporthttp.NewDealsHandlers(logg, dealsService)
-	router := transporthttp.NewRouter(logg, validator, handlers, dealsHandlers)
+	offersHandlers := offersh.NewHandlers(offersService)
+	draftsHandlers := draftsh.NewHandlers(logg, dealsService)
+	dealsHandlers := dealsh.NewHandlers(logg, dealsService)
+	router := transporthttp.NewRouter(logg, validator, offersHandlers, draftsHandlers, dealsHandlers)
 
 	port := bootstrap.InitPortStringFromConfig(cfg, 8080)
 	log.Println("backend listening on", port)
