@@ -79,6 +79,7 @@ export const dealSchema = z.object({
   updatedAt: z.string().optional(),
   status: dealStatusSchema,
   items: z.array(itemSchema),
+  participants: z.array(z.string()),
 });
 
 export const changeDealStatusRequestSchema = z.object({

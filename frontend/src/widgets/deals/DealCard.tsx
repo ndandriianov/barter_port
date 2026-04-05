@@ -238,19 +238,7 @@ function DealCard({ deal }: DealCardProps) {
   const [leaveDeal, { isLoading: isLeaveLoading, error: leaveError }] = dealsApi.useLeaveDealMutation();
   const [processJoinRequest, { isLoading: isProcessJoinLoading, error: processJoinError }] = dealsApi.useProcessJoinRequestMutation();
 
-  const participantIds = useMemo(
-    () =>
-      new Set(
-        deal.items.flatMap((item) => [
-          item.authorId,
-          ...(item.providerId ? [item.providerId] : []),
-          ...(item.receiverId ? [item.receiverId] : []),
-        ]),
-      ),
-    [deal.items],
-  );
-
-  const isParticipant = me ? participantIds.has(me.id) : false;
+  const isParticipant = me ? deal.participants.includes(me.id) : false;
   const canSeeJoinRequests = Boolean(me && isParticipant && !isFinalStatus(deal.status));
   const {
     data: joinRequests,
