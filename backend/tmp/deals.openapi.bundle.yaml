@@ -468,6 +468,191 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /deals/{dealId}/joins:
+    post:
+      tags:
+        - Joins
+      summary: Присоединиться к сделке
+      operationId: joinDeal
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Успешное присоединение к сделке
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deal'
+        '400':
+          description: Некорректный запрос (пустое тело)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Операция запрещена по бизнес-правилам
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Сделка не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags:
+        - Joins
+      summary: Получить список пользователей, желающих присоединиться к сделке
+      operationId: getDealJoinRequests
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Список пользователей, желающих присоединиться к сделке
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetDealJoinRequestsResponse'
+        '400':
+          description: Некорректный запрос (пустое тело)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Операция запрещена по бизнес-правилам
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Сделка не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - Joins
+      summary: Покинуть сделку
+      operationId: leaveDeal
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Успешный выход из сделки
+        '400':
+          description: Некорректный запрос (пустое тело)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Операция запрещена по бизнес-правилам
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Сделка не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /deals/{dealId}/joins/{userId}:
+    post:
+      tags:
+        - Joins
+      summary: Обработать заявку на присоединение к сделке
+      operationId: processJoinRequest
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: accept
+          in: query
+          required: true
+          schema:
+            type: boolean
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Заявка успешно обработана
+        '400':
+          description: Некорректный запрос (пустое тело)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Операция запрещена по бизнес-правилам
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Сделка или пользователь не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /offers:
     get:
       tags:
@@ -911,6 +1096,32 @@ components:
         releaseReceiver:
           type: boolean
           description: Освободить слот получателя (только если текущий пользователь является получателем)
+    GetDealJoinRequestsResponseItem:
+      type: object
+      required:
+        - userId
+        - dealId
+        - voters
+      properties:
+        userId:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор пользователя, который хочет присоединиться к сделке
+        dealId:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор сделки, к которой пользователь хочет присоединиться
+        voters:
+          type: array
+          description: Список ID пользователей, которые поддерживают заявку на присоединение к сделке
+          items:
+            type: string
+            format: uuid
+            description: Уникальный идентификатор пользователя, который поддерживает заявку на присоединение к сделке
+    GetDealJoinRequestsResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/GetDealJoinRequestsResponseItem'
     OffersCursor:
       type: object
       description: Cursor for stable pagination

@@ -4,6 +4,7 @@ import (
 	dealsdocfirst "barter-port/docs/doc-first/deals"
 	"barter-port/internal/deals/infrastructure/transport/http/deals"
 	draftsh "barter-port/internal/deals/infrastructure/transport/http/drafts"
+	joinsh "barter-port/internal/deals/infrastructure/transport/http/joins"
 	"barter-port/internal/deals/infrastructure/transport/http/offers"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/authkit/validators"
@@ -22,6 +23,7 @@ func NewRouter(
 	offersHandlers *offers.Handlers,
 	draftsHandlers *draftsh.Handlers,
 	dealsHandlers *deals.Handlers,
+	joinsHandlers *joinsh.Handlers,
 ) http.Handler {
 	if logg == nil {
 		log.Fatal("logger is required")
@@ -34,6 +36,9 @@ func NewRouter(
 	}
 	if dealsHandlers == nil {
 		log.Fatal("deals handlers are required")
+	}
+	if joinsHandlers == nil {
+		log.Fatal("joins handlers are required")
 	}
 
 	r := chi.NewRouter()
@@ -69,6 +74,10 @@ func NewRouter(
 			r.Get("/{dealId}", dealsHandlers.GetDealByID)
 			r.Patch("/{dealId}/status", dealsHandlers.ChangeDealStatus)
 			r.Patch("/{dealId}/items/{itemId}", dealsHandlers.UpdateDealItem)
+			r.Post("/{dealId}/joins", joinsHandlers.JoinDeal)
+			r.Get("/{dealId}/joins", joinsHandlers.GetDealJoinRequests)
+			r.Delete("/{dealId}/joins", joinsHandlers.LeaveDeal)
+			r.Post("/{dealId}/joins/{userId}", joinsHandlers.ProcessJoinRequest)
 			r.Post("/drafts", draftsHandlers.CreateDraft)
 			r.Get("/drafts", draftsHandlers.GetDrafts)
 			r.Get("/drafts/{draftId}", draftsHandlers.GetDraftByID)

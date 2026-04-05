@@ -6,6 +6,7 @@ import (
 	"barter-port/internal/deals/domain/htypes"
 	"barter-port/internal/deals/infrastructure/repository/deals"
 	"barter-port/internal/deals/infrastructure/repository/drafts"
+	"barter-port/internal/deals/infrastructure/repository/joins"
 	"barter-port/internal/deals/infrastructure/repository/offers"
 	"barter-port/pkg/db"
 	"context"
@@ -20,11 +21,22 @@ type Service struct {
 	db               *pgxpool.Pool
 	draftsRepository *drafts.Repository
 	dealsRepository  *deals.Repository
+	joinsRepository  *joins.Repository
 	offersRepository *offers.Repository
 }
 
-func NewService(db *pgxpool.Pool, draftsRepo *drafts.Repository, dealsRepo *deals.Repository) *Service {
-	return &Service{db: db, draftsRepository: draftsRepo, dealsRepository: dealsRepo}
+func NewService(
+	db *pgxpool.Pool,
+	draftsRepo *drafts.Repository,
+	dealsRepo *deals.Repository,
+	joinsRepo *joins.Repository,
+) *Service {
+	return &Service{
+		db:               db,
+		draftsRepository: draftsRepo,
+		dealsRepository:  dealsRepo,
+		joinsRepository:  joinsRepo,
+	}
 }
 
 // ================================================================================

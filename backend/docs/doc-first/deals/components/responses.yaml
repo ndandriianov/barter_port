@@ -109,6 +109,10 @@ GetDealJoinRequestsResponse:
 
 GetDealJoinRequestsResponseItem:
   type: object
+  required:
+    - userId
+    - dealId
+    - voters
   properties:
     userId:
       type: string
