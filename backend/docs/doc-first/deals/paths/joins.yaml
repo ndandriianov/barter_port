@@ -1,0 +1,192 @@
+join:
+  post:
+    tags:
+      - Joins
+    summary: Присоединиться к сделке
+    operationId: joinDeal
+    parameters:
+      - name: dealId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    security:
+      - bearerAuth: [ ]
+    responses:
+      '204':
+        description: Успешное присоединение к сделке
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Deal'
+      '400':
+        description: Некорректный запрос (пустое тело)
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: Операция запрещена по бизнес-правилам
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Сделка не найдена
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+  get:
+    tags:
+      - Joins
+    summary: Получить список пользователей, желающих присоединиться к сделке
+    operationId: getDealJoinRequests
+    parameters:
+      - name: dealId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    security:
+      - bearerAuth: [ ]
+    responses:
+      '200':
+        description: Список пользователей, желающих присоединиться к сделке
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/GetDealJoinRequestsResponse'
+      '400':
+        description: Некорректный запрос (пустое тело)
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: Операция запрещена по бизнес-правилам
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Сделка не найдена
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+  delete:
+    tags:
+      - Joins
+    summary: Покинуть сделку
+    operationId: leaveDeal
+    parameters:
+      - name: dealId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    security:
+      - bearerAuth: [ ]
+    responses:
+      '204':
+        description: Успешный выход из сделки
+      '400':
+        description: Некорректный запрос (пустое тело)
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: Операция запрещена по бизнес-правилам
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Сделка не найдена
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+
+processJoinRequest:
+  post:
+    tags:
+      - Joins
+    summary: Обработать заявку на присоединение к сделке
+    operationId: processJoinRequest
+    parameters:
+      - name: dealId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: userId
+        in: path
+        required: true
+        schema:
+        type: string
+        format: uuid
+      - name: accept
+        in: query
+        required: true
+        schema:
+          type: boolean
+    security:
+      - bearerAuth: [ ]
+    responses:
+      '204':
+        description: Заявка успешно обработана
+      '400':
+        description: Некорректный запрос (пустое тело)
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: Операция запрещена по бизнес-правилам
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Сделка или пользователь не найдены
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
