@@ -20,6 +20,27 @@ import dealsApi from "@/features/deals/api/dealsApi";
 import usersApi from "@/features/users/api/usersApi.ts";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux.ts";
 import type { User } from "@/features/users/model/types.ts";
+import type { DealStatus, GetDealsResponse } from "@/features/deals/model/types.ts";
+
+type DealListItem = GetDealsResponse[number];
+
+const dealStatusOrder: DealStatus[] = [
+  "LookingForParticipants",
+  "Discussion",
+  "Confirmed",
+  "Completed",
+  "Cancelled",
+  "Failed",
+];
+
+const dealStatusLabels: Record<DealStatus, string> = {
+  LookingForParticipants: "В поиске участников",
+  Discussion: "Обсуждение",
+  Confirmed: "Подтверждены",
+  Completed: "Завершены",
+  Cancelled: "Отменены",
+  Failed: "Не состоялись",
+};
 
 function DealsList() {
   const dispatch = useAppDispatch();
@@ -56,6 +77,31 @@ function DealsList() {
       return acc;
     }, {}),
   );
+
+  const groupedDeals = useMemo(() => {
+    const groups = dealStatusOrder.reduce<Record<DealStatus, DealListItem[]>>(
+      (acc, status) => {
+        acc[status] = [];
+        return acc;
+      },
+      {
+        LookingForParticipants: [],
+        Discussion: [],
+        Confirmed: [],
+        Completed: [],
+        Cancelled: [],
+        Failed: [],
+      },
+    );
+
+    (data ?? []).forEach((deal) => {
+      groups[deal.status].push(deal);
+    });
+
+    return dealStatusOrder
+      .map((status) => ({ status, deals: groups[status] }))
+      .filter((group) => group.deals.length > 0);
+  }, [data]);
 
   const getParticipantNames = (ids: string[]) =>
     ids.length === 0
@@ -123,17 +169,24 @@ function DealsList() {
           Сделок пока нет
         </Typography>
       ) : (
-        <List disablePadding>
-          {data.map((deal) => (
-            <ListItem key={deal.id} disablePadding divider>
-              <ListItemButton component={RouterLink} to={`/deals/${deal.id}`}>
-                <ListItemText
-                  primary={getParticipantNames(deal.participants)}
-                />
-              </ListItemButton>
-            </ListItem>
+        <Box display="flex" flexDirection="column" gap={3}>
+          {groupedDeals.map(({ status, deals }) => (
+            <Box key={status}>
+              <Typography variant="subtitle1" mb={1}>
+                {dealStatusLabels[status]}
+              </Typography>
+              <List disablePadding>
+                {deals.map((deal) => (
+                  <ListItem key={deal.id} disablePadding divider>
+                    <ListItemButton component={RouterLink} to={`/deals/${deal.id}`}>
+                      <ListItemText primary={getParticipantNames(deal.participants)} />
+                    </ListItemButton>
+                  </ListItem>
+                ))}
+              </List>
+            </Box>
           ))}
-        </List>
+        </Box>
       )}
     </Box>
   );

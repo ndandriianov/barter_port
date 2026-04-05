@@ -97,6 +97,7 @@ export const updateDealItemRequestSchema = z.object({
 
 export const dealIdAndParticipantsSchema = z.object({
   id: z.string(),
+  status: dealStatusSchema,
   participants: z.array(z.string()),
 });
 

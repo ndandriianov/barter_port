@@ -73,12 +73,15 @@ func (r *Repository) CreateDeal(ctx context.Context, tx pgx.Tx, deal domain.Deal
 // GET DEAL IDs
 // ================================================================================
 
-// GetDealIDs returns deal IDs with participant UUIDs. If userID is non-nil, returns only deals the user participates in.
+// GetDealIDs returns deal IDs with participant UUIDs.
+// If userID is non-nil, returns only deals the user participates in.
+// If open is true, returns only deals that are not in a final status.
 //
 // No domain errors.
-func (r *Repository) GetDealIDs(ctx context.Context, exec db.DB, userID *uuid.UUID) ([]htypes.DealIDWithParticipantIDs, error) {
+func (r *Repository) GetDealIDs(ctx context.Context, exec db.DB, userID *uuid.UUID, open bool) ([]htypes.DealIDWithParticipantIDs, error) {
 	query := `
 		SELECT d.id,
+		       d.status,
 			   COALESCE(array_agg(DISTINCT p) FILTER (WHERE p IS NOT NULL), '{}') AS participant_ids
 		FROM deals d
 				 LEFT JOIN items i ON i.deal_id = d.id
@@ -88,9 +91,10 @@ func (r *Repository) GetDealIDs(ctx context.Context, exec db.DB, userID *uuid.UU
 					  FROM items i2
 					  WHERE i2.deal_id = d.id
 						AND (i2.author_id = $1 OR i2.provider_id = $1 OR i2.receiver_id = $1)))
+		  AND (NOT $2::boolean OR d.status::text NOT IN ('Completed', 'Cancelled', 'Failed'))
 		GROUP BY d.id`
 
-	rows, err := exec.Query(ctx, query, userID)
+	rows, err := exec.Query(ctx, query, userID, open)
 	if err != nil {
 		return nil, fmt.Errorf("sql get deal ids: %w", err)
 	}
@@ -99,12 +103,20 @@ func (r *Repository) GetDealIDs(ctx context.Context, exec db.DB, userID *uuid.UU
 	var result []htypes.DealIDWithParticipantIDs
 	for rows.Next() {
 		var id uuid.UUID
+		var statusStr string
 		var participantIDs []uuid.UUID
-		if err = rows.Scan(&id, &participantIDs); err != nil {
+		if err = rows.Scan(&id, &statusStr, &participantIDs); err != nil {
 			return nil, fmt.Errorf("scan deal id row: %w", err)
 		}
+
+		status, err := enums.DealStatusString(statusStr)
+		if err != nil {
+			return nil, fmt.Errorf("parse deal status: %w", err)
+		}
+
 		result = append(result, htypes.DealIDWithParticipantIDs{
 			ID:             id,
+			Status:         status,
 			ParticipantIDs: participantIDs,
 		})
 	}

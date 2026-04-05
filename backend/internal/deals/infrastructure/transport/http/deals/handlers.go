@@ -37,8 +37,7 @@ func (h *Handlers) GetDeals(w http.ResponseWriter, r *http.Request) {
 	log.Info("handling get deals request")
 
 	my := r.URL.Query().Get("my") == "true"
-	// TODO: open deals filtering is not yet supported (no status field in schema)
-	_ = r.URL.Query().Get("open")
+	open := r.URL.Query().Get("open") == "true"
 
 	userID, ok := authkit.UserIDFromContext(r.Context())
 	if !ok {
@@ -47,7 +46,7 @@ func (h *Handlers) GetDeals(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	deals, err := h.dealsService.GetDeals(r.Context(), userID, my)
+	deals, err := h.dealsService.GetDeals(r.Context(), userID, my, open)
 	if err != nil {
 		log.Error("error getting deals", slog.Any("error", err))
 		httpx.WriteEmptyError(w, http.StatusInternalServerError)

@@ -766,6 +766,16 @@ components:
           description: Список пользователей, которые подтвердили/не подтвердили свое участие в сделке
           items:
             $ref: '#/components/schemas/UserConfirm'
+    DealStatus:
+      type: string
+      description: Статус сделки
+      enum:
+        - LookingForParticipants
+        - Discussion
+        - Confirmed
+        - Completed
+        - Cancelled
+        - Failed
     GetDealsResponseItem:
       type: object
       required:
@@ -776,6 +786,8 @@ components:
           type: string
           format: uuid
           description: Уникальный идентификатор сделки
+        status:
+          $ref: '#/components/schemas/DealStatus'
         participants:
           type: array
           description: Список ID всех пользователей, участвующих в этой сделке
@@ -787,16 +799,6 @@ components:
       type: array
       items:
         $ref: '#/components/schemas/GetDealsResponseItem'
-    DealStatus:
-      type: string
-      description: Статус сделки
-      enum:
-        - LookingForParticipants
-        - Discussion
-        - Confirmed
-        - Completed
-        - Cancelled
-        - Failed
     Item:
       type: object
       required:

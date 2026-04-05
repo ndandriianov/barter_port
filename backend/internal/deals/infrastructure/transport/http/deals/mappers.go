@@ -37,6 +37,7 @@ func mapDealIDWithParticipantIDsToDTO(d htypes.DealIDWithParticipantIDs) types.G
 
 	return types.GetDealsResponseItem{
 		Id:           d.ID,
+		Status:       new(mapDealStatusToDTO(d.Status)),
 		Participants: participants,
 	}
 }
@@ -49,26 +50,29 @@ func mapDealIDsWithParticipantIDsToDTO(deals []htypes.DealIDWithParticipantIDs) 
 	return result
 }
 
+func mapDealStatusToDTO(status enums.DealStatus) types.DealStatus {
+	switch status {
+	case enums.DealStatusLookingForParticipants:
+		return types.LookingForParticipants
+	case enums.DealStatusDiscussion:
+		return types.Discussion
+	case enums.DealStatusConfirmed:
+		return types.Confirmed
+	case enums.DealStatusCompleted:
+		return types.Completed
+	case enums.DealStatusCancelled:
+		return types.Cancelled
+	case enums.DealStatusFailed:
+		return types.Failed
+	default:
+		return ""
+	}
+}
+
 func mapDealToDTO(deal domain.Deal) types.Deal {
 	itemsDTO := make([]types.Item, len(deal.Items))
 	for i, item := range deal.Items {
 		itemsDTO[i] = item.ToDTO()
-	}
-
-	var status types.DealStatus
-	switch deal.Status {
-	case enums.DealStatusLookingForParticipants:
-		status = types.LookingForParticipants
-	case enums.DealStatusDiscussion:
-		status = types.Discussion
-	case enums.DealStatusConfirmed:
-		status = types.Confirmed
-	case enums.DealStatusCompleted:
-		status = types.Completed
-	case enums.DealStatusCancelled:
-		status = types.Cancelled
-	case enums.DealStatusFailed:
-		status = types.Failed
 	}
 
 	return types.Deal{
@@ -77,7 +81,7 @@ func mapDealToDTO(deal domain.Deal) types.Deal {
 		Description: deal.Description,
 		CreatedAt:   deal.CreatedAt,
 		UpdatedAt:   deal.UpdatedAt,
-		Status:      status,
+		Status:      mapDealStatusToDTO(deal.Status),
 		Items:       itemsDTO,
 	}
 }
