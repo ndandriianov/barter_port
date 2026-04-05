@@ -1004,6 +1004,46 @@ func mustCreateTwoPartyDeal(t *testing.T, userA uuid.UUID, userB uuid.UUID) (uui
 	return uuid.Nil, uuid.Nil
 }
 
+func doChangeDealStatus(t *testing.T, dealID uuid.UUID, userID *uuid.UUID, rawBody []byte) *http.Response {
+	t.Helper()
+
+	if rawBody == nil {
+		rawBody = []byte(`{}`)
+	}
+
+	req, err := http.NewRequest(
+		http.MethodPatch,
+		dealsURL()+"/deals/"+dealID.String()+"/status",
+		bytes.NewReader(rawBody),
+	)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	if userID != nil {
+		req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, *userID))
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+
+	return resp
+}
+
+func mustChangeDealStatus(t *testing.T, dealID uuid.UUID, userID uuid.UUID, status dealstypes.DealStatus) dealstypes.Deal {
+	t.Helper()
+
+	body, err := json.Marshal(dealstypes.ChangeDealStatusRequest{ExpectedStatus: status})
+	require.NoError(t, err)
+
+	resp := doChangeDealStatus(t, dealID, &userID, body)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var deal dealstypes.Deal
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&deal))
+
+	return deal
+}
+
 func mustRequest(t *testing.T, method, url string, body *bytes.Reader) *http.Request {
 	t.Helper()
 
@@ -1168,6 +1208,128 @@ func TestUpdateDealItemParticipantCanClaimAndReleaseReceiver(t *testing.T) {
 	var released dealstypes.Item
 	require.NoError(t, json.NewDecoder(releaseResp.Body).Decode(&released))
 	require.Nil(t, released.ReceiverId)
+}
+
+// ────────────────────────────────────────────────────────────────
+// ChangeDealStatus
+// ────────────────────────────────────────────────────────────────
+
+func TestChangeDealStatusUnauthorized(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	body := []byte(`{"expectedStatus":"Discussion"}`)
+	resp := doChangeDealStatus(t, uuid.New(), nil, body)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+}
+
+func TestChangeDealStatusInvalidUUID(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	body := []byte(`{"expectedStatus":"Discussion"}`)
+
+	req, err := http.NewRequest(
+		http.MethodPatch,
+		dealsURL()+"/deals/not-a-uuid/status",
+		bytes.NewReader(body),
+	)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userID))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestChangeDealStatusNotFound(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	body := []byte(`{"expectedStatus":"Discussion"}`)
+	resp := doChangeDealStatus(t, uuid.New(), &userID, body)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
+
+func TestChangeDealStatusInvalidJSONReturnsBadRequest(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	dealID := mustCreateDeal(t, userID)
+
+	resp := doChangeDealStatus(t, dealID, &userID, []byte(`not-json`))
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestChangeDealStatusUnknownStatusReturnsBadRequest(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	dealID := mustCreateDeal(t, userID)
+
+	resp := doChangeDealStatus(t, dealID, &userID, []byte(`{"expectedStatus":"unknown"}`))
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestChangeDealStatusInvalidTransitionReturnsBadRequest(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	dealID := mustCreateDeal(t, userID)
+
+	body, err := json.Marshal(dealstypes.ChangeDealStatusRequest{ExpectedStatus: dealstypes.Confirmed})
+	require.NoError(t, err)
+
+	resp := doChangeDealStatus(t, dealID, &userID, body)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestChangeDealStatusConsensusMovesToDiscussion(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userA := uuid.New()
+	userB := uuid.New()
+	dealID, _ := mustCreateTwoPartyDeal(t, userA, userB)
+
+	firstVote := mustChangeDealStatus(t, dealID, userA, dealstypes.Discussion)
+	require.Equal(t, dealstypes.LookingForParticipants, firstVote.Status)
+
+	secondVote := mustChangeDealStatus(t, dealID, userB, dealstypes.Discussion)
+	require.Equal(t, dealstypes.Discussion, secondVote.Status)
+}
+
+func TestChangeDealStatusCancelledAppliesImmediately(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userA := uuid.New()
+	userB := uuid.New()
+	dealID, _ := mustCreateTwoPartyDeal(t, userA, userB)
+
+	updated := mustChangeDealStatus(t, dealID, userA, dealstypes.Cancelled)
+	require.Equal(t, dealstypes.Cancelled, updated.Status)
+
+	dealAfter := mustGetDealByID(t, userB, dealID)
+	require.Equal(t, dealstypes.Cancelled, dealAfter.Status)
 }
 
 // ────────────────────────────────────────────────────────────────
