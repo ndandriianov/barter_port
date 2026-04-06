@@ -513,6 +513,62 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /deals/{dealId}/items:
+    post:
+      tags:
+        - Deals
+      summary: Добавить позицию в сделку
+      description: |
+        Пользователь указывает id одного из своих offers, на основании offer формируется item, item добавляется в сделку
+      operationId: addDealItem
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddDealItemRequest'
+      responses:
+        '200':
+          description: Новая позиция сделки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deal'
+        '400':
+          description: Некорректный запрос (пустое тело)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: |
+            Операция запрещена по бизнес-правилам:
+            сделка не в статусе LookingForParticipants, либо пользователь не является участником сделки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Сделка не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /deals/{dealId}/joins:
     post:
       tags:
@@ -1165,6 +1221,24 @@ components:
         releaseReceiver:
           type: boolean
           description: Освободить слот получателя (только если текущий пользователь является получателем)
+    AddDealItemRequest:
+      type: object
+      required:
+        - offerId
+        - quantity
+      properties:
+        offerId:
+          type: string
+          format: uuid
+          description: |
+            ID предложения, которое пользователь хочет добавить в сделку.
+            Предложение должно принадлежать пользователю и быть в статусе active.
+        quantity:
+          type: integer
+          minimum: 1
+          description: |
+            Количество единиц предложения, которые пользователь хочет добавить в сделку.
+            Должно быть положительным числом.
     GetDealJoinRequestsResponseItem:
       type: object
       required:

@@ -44,3 +44,23 @@ ChangeDealStatusRequest:
   properties:
     expectedStatus:
       $ref: 'schemas.yaml#/DealStatus'
+
+
+AddDealItemRequest:
+  type: object
+  required:
+    - offerId
+    - quantity
+  properties:
+    offerId:
+      type: string
+      format: uuid
+      description: |
+        ID предложения, которое пользователь хочет добавить в сделку.
+        Предложение должно принадлежать пользователю и быть в статусе active.
+    quantity:
+      type: integer
+      minimum: 1
+      description: |
+        Количество единиц предложения, которые пользователь хочет добавить в сделку.
+        Должно быть положительным числом.
