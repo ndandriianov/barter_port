@@ -6,7 +6,9 @@ import (
 	"barter-port/internal/deals/domain/enums"
 	"barter-port/internal/deals/domain/htypes"
 	"fmt"
+	"sort"
 
+	"github.com/google/uuid"
 	openapitypes "github.com/oapi-codegen/runtime/types"
 )
 
@@ -85,4 +87,25 @@ func mapDealToDTO(deal domain.Deal) types.Deal {
 		Items:        itemsDTO,
 		Participants: deal.Participants,
 	}
+}
+
+func mapStatusVotesToDTO(votes map[uuid.UUID]enums.DealStatus) types.GetDealStatusVotesResponse {
+	userIDs := make([]uuid.UUID, 0, len(votes))
+	for userID := range votes {
+		userIDs = append(userIDs, userID)
+	}
+
+	sort.Slice(userIDs, func(i, j int) bool {
+		return userIDs[i].String() < userIDs[j].String()
+	})
+
+	result := make(types.GetDealStatusVotesResponse, 0, len(votes))
+	for _, userID := range userIDs {
+		result = append(result, types.GetDealStatusVotesResponseItem{
+			UserId: userID,
+			Vote:   mapDealStatusToDTO(votes[userID]),
+		})
+	}
+
+	return result
 }

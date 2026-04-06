@@ -9,6 +9,8 @@ import {
   dealJoinRequestSchema,
   draftSchema,
   getDealJoinRequestsResponseSchema,
+  getDealStatusVotesResponseItemSchema,
+  getDealStatusVotesResponseSchema,
   getDealsResponseSchema,
   getMyDraftDealsResponseSchema,
   itemSchema,
@@ -56,6 +58,8 @@ export type DealIdAndParticipants = z.Infer<typeof dealIdAndParticipantsSchema>;
 export type GetDealsResponse = z.Infer<typeof getDealsResponseSchema>;
 export type DealJoinRequest = z.Infer<typeof dealJoinRequestSchema>;
 export type GetDealJoinRequestsResponse = z.Infer<typeof getDealJoinRequestsResponseSchema>;
+export type DealStatusVote = z.Infer<typeof getDealStatusVotesResponseItemSchema>;
+export type GetDealStatusVotesResponse = z.Infer<typeof getDealStatusVotesResponseSchema>;
 export type Item = z.Infer<typeof itemSchema>;
 export type Deal = z.Infer<typeof dealSchema>;
 

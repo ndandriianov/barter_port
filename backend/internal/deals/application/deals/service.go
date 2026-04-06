@@ -209,6 +209,33 @@ func (s *Service) GetDealByID(ctx context.Context, id uuid.UUID) (domain.Deal, e
 }
 
 // ================================================================================
+// GET DEAL STATUS VOTES
+// ================================================================================
+
+// GetDealStatusVotes returns all votes currently recorded for the deal status transition.
+//
+// Domain errors:
+//   - domain.ErrDealNotFound
+func (s *Service) GetDealStatusVotes(ctx context.Context, dealID uuid.UUID) (map[uuid.UUID]enums.DealStatus, error) {
+	var votes map[uuid.UUID]enums.DealStatus
+
+	err := db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
+		if _, err := s.dealsRepository.GetDealByID(ctx, tx, dealID); err != nil {
+			return err
+		}
+
+		var err error
+		votes, err = s.dealsRepository.GetStatusVotes(ctx, tx, dealID)
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	return votes, nil
+}
+
+// ================================================================================
 // UPDATE DEAL ITEM
 // ================================================================================
 

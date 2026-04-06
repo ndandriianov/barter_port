@@ -239,6 +239,14 @@ function DealCard({ deal }: DealCardProps) {
   const [processJoinRequest, { isLoading: isProcessJoinLoading, error: processJoinError }] = dealsApi.useProcessJoinRequestMutation();
 
   const isParticipant = me ? deal.participants.includes(me.id) : false;
+  const canSeeStatusVotes = Boolean(me && isParticipant && !isFinalStatus(deal.status));
+  const {
+    data: statusVotes,
+    isLoading: isStatusVotesLoading,
+    error: statusVotesError,
+  } = dealsApi.useGetDealStatusVotesQuery(deal.id, {
+    skip: !canSeeStatusVotes,
+  });
   const canSeeJoinRequests = Boolean(me && isParticipant && !isFinalStatus(deal.status));
   const {
     data: joinRequests,
@@ -258,11 +266,12 @@ function DealCard({ deal }: DealCardProps) {
             ...(item.providerId ? [item.providerId] : []),
             ...(item.receiverId ? [item.receiverId] : []),
           ]),
+          ...(statusVotes?.map((statusVote) => statusVote.userId) ?? []),
           ...(joinRequests?.flatMap((request) => [request.userId, ...request.voters]) ?? []),
         ],
       ),
     ],
-    [deal.items, joinRequests],
+    [deal.items, joinRequests, statusVotes],
   );
 
   // Prefetch user info for name resolution
@@ -280,6 +289,19 @@ function DealCard({ deal }: DealCardProps) {
   );
 
   const getUserName = (id: string) => usersById[id]?.name?.trim() || "имя не указано";
+
+  const groupedStatusVotes = useMemo(() => {
+    if (!statusVotes || statusVotes.length === 0) return [] as Array<{ status: DealStatus; voters: string[] }>;
+
+    const grouped = new Map<DealStatus, string[]>();
+    statusVotes.forEach(({ vote, userId }) => {
+      const voters = grouped.get(vote) ?? [];
+      voters.push(userId);
+      grouped.set(vote, voters);
+    });
+
+    return [...grouped.entries()].map(([status, voters]) => ({ status, voters }));
+  }, [statusVotes]);
 
   const nextStatus: DealStatus | undefined = nextStatusByCurrent[deal.status as DealStatus];
   const canVoteForNextStatus = isParticipant && nextStatus !== undefined;
@@ -393,6 +415,34 @@ function DealCard({ deal }: DealCardProps) {
             <Alert severity="error" sx={{ mt: 1.5 }}>
               Не удалось обработать заявку на вступление
             </Alert>
+          )}
+
+          {canSeeStatusVotes && (
+            <Box mt={1.5}>
+              <Typography variant="subtitle2" fontWeight={600} mb={0.5}>
+                Голоса за статус
+              </Typography>
+
+              {isStatusVotesLoading ? (
+                <Box display="flex" justifyContent="center" py={1}>
+                  <CircularProgress size={18} />
+                </Box>
+              ) : statusVotesError ? (
+                <Alert severity="error">Не удалось загрузить голоса по статусу</Alert>
+              ) : groupedStatusVotes.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">
+                  Голосов пока нет
+                </Typography>
+              ) : (
+                <Box display="flex" flexDirection="column" gap={0.5}>
+                  {groupedStatusVotes.map(({ status, voters }) => (
+                    <Typography key={status} variant="caption" color="text.secondary">
+                      За "{dealStatusMeta[status].label}": {voters.map(getUserName).join(", ")}
+                    </Typography>
+                  ))}
+                </Box>
+              )}
+            </Box>
           )}
         </Box>
 
