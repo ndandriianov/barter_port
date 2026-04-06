@@ -29,6 +29,18 @@ import usersApi from "@/features/users/api/usersApi.ts";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux.ts";
 import type { User } from "@/features/users/model/types.ts";
 import type { Offer } from "@/features/offers/model/types";
+import { getStatusCode } from "@/shared/utils/getStatusCode";
+import type { FetchBaseQueryError } from "@reduxjs/toolkit/query";
+import type { SerializedError } from "@reduxjs/toolkit";
+
+function dealErrorMessage(
+  error: FetchBaseQueryError | SerializedError | undefined,
+  messages: Partial<Record<number, string>>,
+  fallback: string
+): string {
+  const code = getStatusCode(error);
+  return (code !== undefined && messages[code]) ? messages[code]! : fallback;
+}
 
 const formatDateTime = (value: string) =>
   new Intl.DateTimeFormat("ru-RU", {
@@ -180,7 +192,15 @@ function AddItemDialog({ dealId, onClose }: AddItemDialogProps) {
           helperText={quantityError ? "Минимум 1" : undefined}
         />
 
-        {addError && <Alert severity="error">Не удалось добавить позицию в сделку</Alert>}
+        {addError && (
+          <Alert severity="error">
+            {dealErrorMessage(addError, {
+              400: "Некорректные данные позиции",
+              403: "Добавление позиций недоступно на данном этапе",
+              404: "Сделка не найдена",
+            }, "Не удалось добавить позицию в сделку")}
+          </Alert>
+        )}
       </DialogContent>
       <DialogActions>
         <Button onClick={onClose} disabled={isAdding}>Отмена</Button>
@@ -336,6 +356,7 @@ function DealCard({ deal }: DealCardProps) {
     error: statusVotesError,
   } = dealsApi.useGetDealStatusVotesQuery(deal.id, {
     skip: !canSeeStatusVotes,
+    pollingInterval: 10_000,
   });
   const canSeeJoinRequests = Boolean(me && isParticipant && !isFinalStatus(deal.status));
   const {
@@ -344,6 +365,7 @@ function DealCard({ deal }: DealCardProps) {
     error: joinRequestsError,
   } = dealsApi.useGetDealJoinsQuery(deal.id, {
     skip: !canSeeJoinRequests,
+    pollingInterval: 10_000,
   });
 
   // Collect all unique user IDs referenced in items
@@ -486,25 +508,41 @@ function DealCard({ deal }: DealCardProps) {
 
           {changeStatusError && (
             <Alert severity="error" sx={{ mt: 1.5 }}>
-              Не удалось отправить голос за статус сделки
+              {dealErrorMessage(changeStatusError, {
+                400: "Статус сделки изменился. Обновите страницу",
+                403: "Недостаточно прав для смены статуса",
+                404: "Сделка не найдена",
+              }, "Не удалось отправить голос за статус сделки")}
             </Alert>
           )}
 
           {joinError && (
             <Alert severity="error" sx={{ mt: 1.5 }}>
-              Не удалось откликнуться на сделку
+              {dealErrorMessage(joinError, {
+                400: "Сделка больше не принимает участников",
+                403: "Вы не можете присоединиться к этой сделке",
+                404: "Сделка не найдена",
+              }, "Не удалось откликнуться на сделку")}
             </Alert>
           )}
 
           {leaveError && (
             <Alert severity="error" sx={{ mt: 1.5 }}>
-              Не удалось покинуть сделку
+              {dealErrorMessage(leaveError, {
+                400: "Невозможно покинуть сделку на данном этапе",
+                403: "Вы не можете покинуть эту сделку",
+                404: "Сделка не найдена",
+              }, "Не удалось покинуть сделку")}
             </Alert>
           )}
 
           {processJoinError && (
             <Alert severity="error" sx={{ mt: 1.5 }}>
-              Не удалось обработать заявку на вступление
+              {dealErrorMessage(processJoinError, {
+                400: "Невозможно обработать заявку",
+                403: "Недостаточно прав для обработки заявки",
+                404: "Пользователь или сделка не найдены",
+              }, "Не удалось обработать заявку на вступление")}
             </Alert>
           )}
 
@@ -518,8 +556,12 @@ function DealCard({ deal }: DealCardProps) {
                 <Box display="flex" justifyContent="center" py={1}>
                   <CircularProgress size={18} />
                 </Box>
-              ) : statusVotesError ? (
-                <Alert severity="error">Не удалось загрузить голоса по статусу</Alert>
+              ) : statusVotesError && getStatusCode(statusVotesError) !== 401 ? (
+                <Alert severity="error">
+                  {dealErrorMessage(statusVotesError, {
+                    404: "Данные не найдены",
+                  }, "Не удалось загрузить голоса по статусу")}
+                </Alert>
               ) : groupedStatusVotes.length === 0 ? (
                 <Typography variant="body2" color="text.secondary">
                   Голосов пока нет
@@ -584,9 +626,11 @@ function DealCard({ deal }: DealCardProps) {
               <Box display="flex" justifyContent="center" py={1}>
                 <CircularProgress size={18} />
               </Box>
-            ) : joinRequestsError ? (
+            ) : joinRequestsError && getStatusCode(joinRequestsError) !== 401 ? (
               <Alert severity="error" sx={{ mb: 1.5 }}>
-                Не удалось загрузить заявки на вступление
+                {dealErrorMessage(joinRequestsError, {
+                  404: "Данные не найдены",
+                }, "Не удалось загрузить заявки на вступление")}
               </Alert>
             ) : !joinRequests || joinRequests.length === 0 ? (
               <Typography variant="body2" color="text.secondary">
