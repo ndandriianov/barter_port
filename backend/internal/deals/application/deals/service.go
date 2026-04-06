@@ -30,12 +30,14 @@ func NewService(
 	draftsRepo *drafts.Repository,
 	dealsRepo *deals.Repository,
 	joinsRepo *joins.Repository,
+	offersRepo *offers.Repository,
 ) *Service {
 	return &Service{
 		db:               db,
 		draftsRepository: draftsRepo,
 		dealsRepository:  dealsRepo,
 		joinsRepository:  joinsRepo,
+		offersRepository: offersRepo,
 	}
 }
 
@@ -233,6 +235,82 @@ func (s *Service) GetDealStatusVotes(ctx context.Context, dealID uuid.UUID) (map
 	}
 
 	return votes, nil
+}
+
+// ================================================================================
+// ADD DEAL ITEM
+// ================================================================================
+
+// AddDealItem adds a new item to an existing deal based on the user's offer.
+//
+// Domain errors:
+//   - domain.ErrDealNotFound
+//   - domain.ErrOfferNotFound
+//   - domain.ErrForbidden          - user is not a participant or tries to use another user's offer
+//   - domain.ErrInvalidDealStatus  — deal is not in LookingForParticipants
+//   - domain.ErrInvalidQuantity
+func (s *Service) AddDealItem(
+	ctx context.Context,
+	userID uuid.UUID,
+	dealID uuid.UUID,
+	offerID uuid.UUID,
+	quantity int,
+) (domain.Deal, error) {
+	if quantity < 1 {
+		return domain.Deal{}, domain.ErrInvalidQuantity
+	}
+
+	var updatedDeal domain.Deal
+
+	err := db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
+		deal, err := s.dealsRepository.GetDealByID(ctx, tx, dealID)
+		if err != nil {
+			return err
+		}
+
+		if deal.Status != enums.DealStatusLookingForParticipants {
+			return domain.ErrInvalidDealStatus
+		}
+
+		if !containsUserID(deal.Participants, userID) {
+			return domain.ErrForbidden
+		}
+
+		offer, err := s.offersRepository.GetOffer(ctx, tx, offerID)
+		if err != nil {
+			return err
+		}
+
+		if offer.AuthorId != userID {
+			return domain.ErrForbidden
+		}
+
+		newItem := domain.Item{
+			AuthorID:    offer.AuthorId,
+			Name:        offer.Name,
+			Description: offer.Description,
+			Type:        offer.Type,
+			Quantity:    quantity,
+		}
+
+		if offer.Action == enums.OfferActionGive {
+			newItem.ProviderID = &userID
+		} else {
+			newItem.ReceiverID = &userID
+		}
+
+		if _, err = s.dealsRepository.AddItem(ctx, tx, dealID, newItem); err != nil {
+			return err
+		}
+
+		updatedDeal, err = s.dealsRepository.GetDealByID(ctx, tx, dealID)
+		return err
+	})
+	if err != nil {
+		return domain.Deal{}, err
+	}
+
+	return updatedDeal, nil
 }
 
 // ================================================================================

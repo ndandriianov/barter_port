@@ -1,6 +1,7 @@
 import {createApi} from "@reduxjs/toolkit/query/react";
 import {baseQueryWithReauth} from "@/shared/api/baseApi.ts";
 import {
+  addDealItemRequestSchema,
   changeDealStatusRequestSchema,
   confirmDraftDealResponseSchema,
   createDraftDealResponseSchema,
@@ -13,6 +14,7 @@ import {
   itemSchema,
 } from "@/features/deals/model/schemas.ts";
 import type {
+  AddDealItemRequest,
   ChangeDealStatusRequest,
   ConfirmDraftDealResponse,
   CreateDraftDealRequest,
@@ -162,6 +164,19 @@ const dealsApi = createApi({
       invalidatesTags: (_result, _error, { dealId }) => [
         {type: "Deals", id: dealId},
         {type: "DealStatusVotes", id: dealId},
+        "Deals",
+      ],
+    }),
+
+    addDealItem: builder.mutation<Deal, { dealId: string; body: AddDealItemRequest }>({
+      query: ({ dealId, body }) => ({
+        url: `/deals/${dealId}/items`,
+        method: "POST",
+        body: addDealItemRequestSchema.parse(body),
+      }),
+      transformResponse: (response: unknown) => dealSchema.parse(response),
+      invalidatesTags: (_result, _error, { dealId }) => [
+        {type: "Deals", id: dealId},
         "Deals",
       ],
     }),

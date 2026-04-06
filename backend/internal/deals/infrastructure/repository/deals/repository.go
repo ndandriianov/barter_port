@@ -268,6 +268,44 @@ func (r *Repository) GetDealByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (
 }
 
 // ================================================================================
+// ADD ITEM
+// ================================================================================
+
+// AddItem inserts an item into the deal and returns created row.
+//
+// Domain errors:
+//   - domain.ErrDealNotFound: if no deal with the specified ID exists.
+func (r *Repository) AddItem(ctx context.Context, exec db.DB, dealID uuid.UUID, item domain.Item) (domain.Item, error) {
+	if err := r.ensureDealMutable(ctx, exec, dealID); err != nil {
+		return domain.Item{}, err
+	}
+
+	query := `
+		INSERT INTO items (deal_id, author_id, provider_id, receiver_id, name, description, type, quantity)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING id, author_id, provider_id, receiver_id,
+		          name, description, type, updated_at, quantity`
+
+	itemCreated, err := scanItem(exec.QueryRow(
+		ctx,
+		query,
+		dealID,
+		item.AuthorID,
+		item.ProviderID,
+		item.ReceiverID,
+		item.Name,
+		item.Description,
+		item.Type,
+		item.Quantity,
+	))
+	if err != nil {
+		return domain.Item{}, fmt.Errorf("sql add item: %w", err)
+	}
+
+	return itemCreated, nil
+}
+
+// ================================================================================
 // GET ITEM ROLE IDS
 // ================================================================================
 

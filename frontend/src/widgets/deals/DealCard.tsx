@@ -16,6 +16,7 @@ import {
   List,
   ListItem,
   ListItemText,
+  MenuItem,
   TextField,
   Tooltip,
   Typography,
@@ -23,9 +24,11 @@ import {
 import EditIcon from "@mui/icons-material/Edit";
 import type { Deal, DealStatus, Item, UpdateDealItemRequest } from "@/features/deals/model/types";
 import dealsApi from "@/features/deals/api/dealsApi";
+import offersApi from "@/features/offers/api/offersApi";
 import usersApi from "@/features/users/api/usersApi.ts";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux.ts";
 import type { User } from "@/features/users/model/types.ts";
+import type { Offer } from "@/features/offers/model/types";
 
 const formatDateTime = (value: string) =>
   new Intl.DateTimeFormat("ru-RU", {
@@ -102,6 +105,92 @@ function EditItemDialog({ item, dealId, onClose }: EditItemDialogProps) {
       <DialogActions>
         <Button onClick={onClose} disabled={isLoading}>Отмена</Button>
         <Button onClick={handleSave} variant="contained" disabled={isLoading || quantityError}>Сохранить</Button>
+      </DialogActions>
+    </Dialog>
+  );
+}
+
+interface AddItemDialogProps {
+  dealId: string;
+  onClose: () => void;
+}
+
+function AddItemDialog({ dealId, onClose }: AddItemDialogProps) {
+  const [offerId, setOfferId] = useState("");
+  const [quantity, setQuantity] = useState("1");
+  const { data, isLoading, error } = offersApi.useGetOffersQuery({ sort: "ByTime", my: true, cursor_limit: 100 });
+  const [addDealItem, { isLoading: isAdding, error: addError }] = dealsApi.useAddDealItemMutation();
+
+  const offers: Offer[] = data?.offers ?? [];
+  const quantityError = quantity !== "" && (isNaN(parseInt(quantity, 10)) || parseInt(quantity, 10) < 1);
+
+  const handleSubmit = async () => {
+    const parsedQuantity = parseInt(quantity, 10);
+    if (!offerId || !Number.isInteger(parsedQuantity) || parsedQuantity < 1) return;
+
+    await addDealItem({
+      dealId,
+      body: {
+        offerId,
+        quantity: parsedQuantity,
+      },
+    }).unwrap();
+
+    onClose();
+  };
+
+  return (
+    <Dialog open onClose={onClose} fullWidth maxWidth="sm">
+      <DialogTitle>Добавить позицию в сделку</DialogTitle>
+      <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 2 }}>
+        {isLoading ? (
+          <Box display="flex" justifyContent="center" py={2}>
+            <CircularProgress size={20} />
+          </Box>
+        ) : error ? (
+          <Alert severity="error">Не удалось загрузить ваши объявления</Alert>
+        ) : offers.length === 0 ? (
+          <Alert severity="info">У вас нет доступных объявлений для добавления</Alert>
+        ) : (
+          <TextField
+            select
+            label="Ваше объявление"
+            value={offerId}
+            onChange={(e) => setOfferId(e.target.value)}
+            fullWidth
+            size="small"
+          >
+            {offers.map((offer) => (
+              <MenuItem key={offer.id} value={offer.id}>
+                {offer.name}
+              </MenuItem>
+            ))}
+          </TextField>
+        )}
+
+        <TextField
+          label="Количество"
+          value={quantity}
+          onChange={(e) => setQuantity(e.target.value)}
+          type="number"
+          inputProps={{ min: 1 }}
+          fullWidth
+          size="small"
+          error={quantityError}
+          helperText={quantityError ? "Минимум 1" : undefined}
+        />
+
+        {addError && <Alert severity="error">Не удалось добавить позицию в сделку</Alert>}
+      </DialogContent>
+      <DialogActions>
+        <Button onClick={onClose} disabled={isAdding}>Отмена</Button>
+        <Button
+          onClick={() => void handleSubmit()}
+          variant="contained"
+          disabled={isAdding || !offerId || quantityError || offers.length === 0 || isLoading}
+        >
+          Добавить
+        </Button>
       </DialogActions>
     </Dialog>
   );
@@ -232,6 +321,7 @@ interface DealCardProps {
 function DealCard({ deal }: DealCardProps) {
   const dispatch = useAppDispatch();
   const [editingItem, setEditingItem] = useState<Item | null>(null);
+  const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
   const { data: me } = usersApi.useGetCurrentUserQuery();
   const [changeDealStatus, { isLoading: isStatusLoading, error: changeStatusError }] = dealsApi.useChangeDealStatusMutation();
   const [joinDeal, { isLoading: isJoinLoading, error: joinError }] = dealsApi.useJoinDealMutation();
@@ -309,6 +399,7 @@ function DealCard({ deal }: DealCardProps) {
   const canJoinDeal = Boolean(me && !isParticipant && deal.status === "LookingForParticipants");
   const canLeaveDeal = Boolean(me && isParticipant && !isFinalStatus(deal.status));
   const canVoteJoinRequests = Boolean(me && isParticipant && deal.status === "LookingForParticipants");
+  const canAddItems = Boolean(me && isParticipant && deal.status === "LookingForParticipants");
   const hasActions = canVoteForNextStatus || canCancelDeal || canJoinDeal || canLeaveDeal;
 
   const handleChangeStatus = async (expectedStatus: DealStatus) => {
@@ -551,9 +642,16 @@ function DealCard({ deal }: DealCardProps) {
           </Box>
         )}
 
-        <Typography variant="subtitle2" fontWeight={600} mb={1}>
-          Позиции сделки
-        </Typography>
+        <Box display="flex" alignItems="center" justifyContent="space-between" gap={1} mb={1}>
+          <Typography variant="subtitle2" fontWeight={600}>
+            Позиции сделки
+          </Typography>
+          {canAddItems && (
+            <Button size="small" variant="outlined" onClick={() => setIsAddItemDialogOpen(true)}>
+              Добавить позицию
+            </Button>
+          )}
+        </Box>
 
         {deal.items.length === 0 ? (
           <Typography variant="body2" color="text.secondary">Позиции отсутствуют</Typography>
@@ -576,6 +674,10 @@ function DealCard({ deal }: DealCardProps) {
 
       {editingItem && (
         <EditItemDialog item={editingItem} dealId={deal.id} onClose={() => setEditingItem(null)} />
+      )}
+
+      {isAddItemDialogOpen && (
+        <AddItemDialog dealId={deal.id} onClose={() => setIsAddItemDialogOpen(false)} />
       )}
     </Card>
   );

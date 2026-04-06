@@ -1,5 +1,6 @@
 import {z} from "zod";
 import {
+  addDealItemRequestSchema,
   changeDealStatusRequestSchema,
   confirmDraftDealResponseSchema,
   createDraftDealResponseSchema,
@@ -53,6 +54,7 @@ export interface GetDealsParams {
 
 export type DealStatus = z.Infer<typeof dealStatusSchema>;
 export type ChangeDealStatusRequest = z.Infer<typeof changeDealStatusRequestSchema>;
+export type AddDealItemRequest = z.Infer<typeof addDealItemRequestSchema>;
 export type UpdateDealItemRequest = z.Infer<typeof updateDealItemRequestSchema>;
 export type DealIdAndParticipants = z.Infer<typeof dealIdAndParticipantsSchema>;
 export type GetDealsResponse = z.Infer<typeof getDealsResponseSchema>;

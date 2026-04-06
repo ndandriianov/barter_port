@@ -1047,6 +1047,30 @@ func doGetDealStatusVotes(t *testing.T, dealID string, userID *uuid.UUID) *http.
 	return resp
 }
 
+func doAddDealItem(t *testing.T, dealID string, userID *uuid.UUID, rawBody []byte) *http.Response {
+	t.Helper()
+
+	if rawBody == nil {
+		rawBody = []byte(`{}`)
+	}
+
+	req, err := http.NewRequest(
+		http.MethodPost,
+		dealsURL()+"/deals/"+dealID+"/items",
+		bytes.NewReader(rawBody),
+	)
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+	if userID != nil {
+		req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, *userID))
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+
+	return resp
+}
+
 func mustChangeDealStatus(t *testing.T, dealID uuid.UUID, userID uuid.UUID, status dealstypes.DealStatus) dealstypes.Deal {
 	t.Helper()
 
@@ -1077,6 +1101,138 @@ func mustRequest(t *testing.T, method, url string, body *bytes.Reader) *http.Req
 	require.NoError(t, err)
 
 	return req
+}
+
+// ----------------------------------------------------------------
+// AddDealItem
+// ----------------------------------------------------------------
+
+func TestAddDealItemUnauthorized(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	body := []byte(`{"offerId":"` + uuid.NewString() + `","quantity":1}`)
+	resp := doAddDealItem(t, uuid.NewString(), nil, body)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+}
+
+func TestAddDealItemInvalidDealID(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	body := []byte(`{"offerId":"` + uuid.NewString() + `","quantity":1}`)
+	resp := doAddDealItem(t, "not-a-uuid", &userID, body)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestAddDealItemSuccess(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	dealID := mustCreateDeal(t, userID)
+	offerID := mustCreateOffer(t, userID)
+
+	body := []byte(`{"offerId":"` + offerID.String() + `","quantity":2}`)
+	resp := doAddDealItem(t, dealID.String(), &userID, body)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var deal dealstypes.Deal
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&deal))
+
+	var found bool
+	for _, item := range deal.Items {
+		if item.AuthorId == userID && item.Quantity == 2 {
+			found = true
+			break
+		}
+	}
+	require.True(t, found)
+}
+
+func TestAddDealItemNotParticipantForbidden(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	ownerID := uuid.New()
+	strangerID := uuid.New()
+	dealID := mustCreateDeal(t, ownerID)
+	offerID := mustCreateOffer(t, strangerID)
+
+	body := []byte(`{"offerId":"` + offerID.String() + `","quantity":1}`)
+	resp := doAddDealItem(t, dealID.String(), &strangerID, body)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusForbidden, resp.StatusCode)
+}
+
+func TestAddDealItemOfferNotFound(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	dealID := mustCreateDeal(t, userID)
+
+	body := []byte(`{"offerId":"` + uuid.NewString() + `","quantity":1}`)
+	resp := doAddDealItem(t, dealID.String(), &userID, body)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
+
+func TestAddDealItemForeignOfferForbidden(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userA := uuid.New()
+	userB := uuid.New()
+	dealID, _ := mustCreateTwoPartyDeal(t, userA, userB)
+	offerB := mustCreateOffer(t, userB)
+
+	body := []byte(`{"offerId":"` + offerB.String() + `","quantity":1}`)
+	resp := doAddDealItem(t, dealID.String(), &userA, body)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusForbidden, resp.StatusCode)
+}
+
+func TestAddDealItemInvalidQuantity(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	dealID := mustCreateDeal(t, userID)
+	offerID := mustCreateOffer(t, userID)
+
+	body := []byte(`{"offerId":"` + offerID.String() + `","quantity":0}`)
+	resp := doAddDealItem(t, dealID.String(), &userID, body)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestAddDealItemClosedDealForbidden(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	dealID := mustCreateDeal(t, userID)
+	offerID := mustCreateOffer(t, userID)
+
+	mustChangeDealStatus(t, dealID, userID, dealstypes.Cancelled)
+
+	body := []byte(`{"offerId":"` + offerID.String() + `","quantity":1}`)
+	resp := doAddDealItem(t, dealID.String(), &userID, body)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusForbidden, resp.StatusCode)
 }
 
 // ────────────────────────────────────────────────────────────────
