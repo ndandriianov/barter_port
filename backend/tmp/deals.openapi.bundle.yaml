@@ -1,0 +1,1369 @@
+openapi: 3.0.3
+info:
+  title: Deals API
+  description: Deals API
+  version: 1.0.0
+servers:
+  - url: http://localhost:80
+paths:
+  /deals/drafts:
+    post:
+      tags:
+        - drafts
+      summary: Создать новый черновой договор из объявлений
+      description: |
+        Для каждого объявления, которое должно войти в черновой договор необходимо указать список из:
+
+        - `offerID` id объявления, которое должно войти в черновой договор.
+        - `quantity` количество единиц товара из объявления, которое должно войти в черновой договор.
+
+        В ответе придет созданный черновой договор с его `id`, который можно будет использовать для дальнейших действий
+      operationId: createDraftDeal
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDraftDealRequest'
+      responses:
+        '201':
+          description: Draft deal created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateDraftDealResponse'
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: One or more items not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags:
+        - drafts
+      summary: Получить ID черновых договоров
+      description: |
+        Получить список черновых договоров, отфильтрованных согласно переданным параметрам:
+
+        - `createdByMe` - если true, то возвращать только черновые договоры, автором которых является текущий пользователь. По умолчанию false.
+        - `participating` - если true, то возвращать только черновые договоры, участником которых является текущий пользователь. По умолчанию true.
+      operationId: getMyDraftDeals
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: createdByMe
+          in: query
+          required: false
+          schema:
+            type: boolean
+        - name: participating
+          in: query
+          required: false
+          schema:
+            type: boolean
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetMyDraftDealsResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /deals/drafts/{draftId}:
+    get:
+      tags:
+        - drafts
+      summary: Получить черновой договор по его ID
+      operationId: getDraftDealById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: draftId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Draft'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Draft deal not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    patch:
+      tags:
+        - drafts
+      summary: Подтвердить участие в сделке
+      description: |
+        Подтверждает участие текущего пользователя в сделке.
+        После того, как все участники черновика подтвердят свое участие, создается сделка,
+        используемые в ней items превращаются в сущность item сделки, а не просто объявления.
+
+        Запрос идемпотентный.
+      operationId: confirmDraftDeal
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: draftId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ConfirmDraftDealResponse'
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden. User is not a participant of the draft deal'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Draft deal not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /deals/drafts/{draftId}/cancel:
+    patch:
+      tags:
+        - drafts
+      summary: Отменить участие в сделке
+      description: |
+        Отменяет участие текущего пользователя в сделке.
+        После того, как один из участников черновика отменит свое участие, черновой договор удаляется,
+        а его участники получают нотификацию об отмене сделки.
+
+        Запрос идемпотентный. Возможен только на стадии черновика, после создания сделки отменить участие нельзя.
+      operationId: cancelDraftDeal
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: draftId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden. User is not a participant of the draft deal'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Draft deal not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /deals:
+    get:
+      tags:
+        - Deals
+      summary: Получить все сделки
+      description: |
+        Получить все сделки.
+
+        - Если указать параметр my=true, то будут возвращены только сделки, в которых текущий пользователь является участником.
+        - Если указать параметр open=true, то будут возвращены только открытые сделки
+      operationId: getDeals
+      parameters:
+        - name: my
+          in: query
+          description: False by default. Если true, возвращает только сделки, в которых текущий пользователь является участником
+          required: false
+          schema:
+            type: boolean
+        - name: open
+          in: query
+          description: False by default. Если true, возвращает только открытые сделки
+          required: false
+          schema:
+            type: boolean
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetDealsResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /deals/{dealId}:
+    get:
+      tags:
+        - Deals
+      summary: Получить сделку по ее ID
+      description: Получить сделку по ее ID
+      operationId: getDealById
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deal'
+        '400':
+          description: Invalid deal ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Deal not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /deals/{dealId}/status:
+    patch:
+      tags:
+        - Deals
+      summary: Подтвердить/Отменить сделку
+      description: |
+        Запросить переход к следующему статусу сделки.
+        Когда все пользователи указали один и тот же статус сделки (вперед), то выполняется переход к новому статусу.
+        Сделка должна быть в статусе, предшествующем указанному.
+        Если пользователь выбирает статус отмены, то сделка сразу же переходит в статус отменён.
+      operationId: ChangeDealStatus
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangeDealStatusRequest'
+      responses:
+        '200':
+          description: Запрос обработан, возвращает обновлённую сделку
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deal'
+        '400':
+          description: Некорректный запрос (например, сделка не в том статусе)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Deal not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags:
+        - Deals
+      summary: Получить список голосов за переход к следующему статусу сделки
+      operationId: GetDealStatusVotes
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetDealStatusVotesResponse'
+        '400':
+          description: Invalid deal ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Deal not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /deals/{dealId}/items/{itemId}:
+    patch:
+      tags:
+        - Deals
+      summary: Редактировать позицию сделки
+      description: |
+        Редактировать позицию сделки.
+
+        - Поля `name`, `description`, `quantity` может менять только автор позиции (`author_id`).
+        - Роли `provider`/`receiver` можно claim/release по бизнес-правилам.
+      operationId: updateDealItem
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDealItemRequest'
+      responses:
+        '200':
+          description: Обновлённая позиция сделки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Item'
+        '400':
+          description: Некорректный запрос (пустое тело)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: |
+            Операция запрещена по бизнес-правилам:
+            - пользователь не является автором позиции при изменении контентных полей;
+            - роль уже занята другим пользователем;
+            - пользователь не владеет ролью при release;
+            - пользователь уже занимает другую роль (`provider`/`receiver`) для этой же позиции.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Сделка или позиция не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /deals/{dealId}/items:
+    post:
+      tags:
+        - Deals
+      summary: Добавить позицию в сделку
+      description: |
+        Пользователь указывает id одного из своих offers, на основании offer формируется item, item добавляется в сделку
+      operationId: addDealItem
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddDealItemRequest'
+      responses:
+        '200':
+          description: Новая позиция сделки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deal'
+        '400':
+          description: Некорректный запрос (пустое тело)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: |
+            Операция запрещена по бизнес-правилам:
+            сделка не в статусе LookingForParticipants, либо пользователь не является участником сделки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Сделка не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /deals/{dealId}/joins:
+    post:
+      tags:
+        - Joins
+      summary: Присоединиться к сделке
+      operationId: joinDeal
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Успешное присоединение к сделке
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deal'
+        '400':
+          description: Некорректный запрос (пустое тело)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Операция запрещена по бизнес-правилам
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Сделка не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags:
+        - Joins
+      summary: Получить список пользователей, желающих присоединиться к сделке
+      operationId: getDealJoinRequests
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Список пользователей, желающих присоединиться к сделке
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetDealJoinRequestsResponse'
+        '400':
+          description: Некорректный запрос (пустое тело)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Операция запрещена по бизнес-правилам
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Сделка не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - Joins
+      summary: Покинуть сделку
+      operationId: leaveDeal
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Успешный выход из сделки
+        '400':
+          description: Некорректный запрос (пустое тело)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Операция запрещена по бизнес-правилам
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Сделка не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /deals/{dealId}/joins/{userId}:
+    post:
+      tags:
+        - Joins
+      summary: Обработать заявку на присоединение к сделке
+      operationId: processJoinRequest
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: accept
+          in: query
+          required: true
+          schema:
+            type: boolean
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Заявка успешно обработана
+        '400':
+          description: Некорректный запрос (пустое тело)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Операция запрещена по бизнес-правилам
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Сделка или пользователь не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /offers:
+    get:
+      tags:
+        - offers
+      summary: List offers
+      description: |
+        Returns a paginated list of offers.
+
+        - If `my=true`, only offers created by the current user are returned.
+
+        Supported sorting modes:
+        - `created_at`: newest offers first
+        - `popularity`: most viewed offers first
+
+        Cursor fields depend on the selected sorting mode:
+        - for `created_at`: use `cursor_created_at` + `cursor_id`
+        - for `popularity`: use `cursor_views` + `cursor_id`
+      operationId: listOffers
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: my
+          in: query
+          required: false
+          description: False by default. If true, returns only offers created by the current user.
+          schema:
+            type: boolean
+        - $ref: '#/components/parameters/SortType'
+        - $ref: '#/components/parameters/CursorCreatedAt'
+        - $ref: '#/components/parameters/CursorViews'
+        - $ref: '#/components/parameters/CursorId'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Offers page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListOffersResponse'
+        '400':
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - offers
+      summary: Create offer
+      description: Creates a new barter offer
+      operationId: createOffers
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOfferRequest'
+      responses:
+        '201':
+          description: Offers created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Offer'
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    GetMyDraftDealsResponseItem:
+      type: object
+      required:
+        - id
+        - participants
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор черновой сделки
+        participants:
+          type: array
+          description: Список ID всех пользователей, участвующих в этой сделке
+          items:
+            type: string
+            format: uuid
+            description: Уникальный идентификатор пользователя
+    GetMyDraftDealsResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/GetMyDraftDealsResponseItem'
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Вы отправили некорректный запрос
+    OfferIDAndQuantity:
+      type: object
+      required:
+        - offerID
+        - quantity
+      properties:
+        offerID:
+          type: string
+          format: uuid
+          description: The ID of the offer to include in the draft deal
+        quantity:
+          type: integer
+          description: The quantity of the offer to include in the draft deal
+    CreateDraftDealRequest:
+      type: object
+      properties:
+        name:
+          type: string
+          description: An optional name for the draft deal
+        description:
+          type: string
+          description: An optional description for the draft deal
+        offers:
+          type: array
+          items:
+            $ref: '#/components/schemas/OfferIDAndQuantity'
+      required:
+        - offers
+    CreateDraftDealResponse:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The unique identifier of the created draft deal
+    ItemType:
+      type: string
+      description: Type of barter item
+      enum:
+        - good
+        - service
+    OfferAction:
+      type: string
+      description: Whether the user offers or requests something
+      enum:
+        - give
+        - take
+    Offer:
+      type: object
+      required:
+        - id
+        - authorId
+        - name
+        - type
+        - action
+        - description
+        - createdAt
+        - views
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique item identifier
+        authorId:
+          type: string
+          format: uuid
+          description: Unique identifier of the user who created the item
+        authorName:
+          type: string
+          description: Name of the user who created the item
+        name:
+          type: string
+          description: Short item title
+          example: Bicycle repair
+        description:
+          type: string
+          description: Detailed item description
+          example: I can help fix city bikes and replace brake pads
+        type:
+          $ref: '#/components/schemas/ItemType'
+        action:
+          $ref: '#/components/schemas/OfferAction'
+        views:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Number of item views
+          example: 120
+        createdAt:
+          type: string
+          format: date-time
+          description: Item creation timestamp
+          example: '2026-03-04T12:00:00Z'
+    OfferInfo:
+      type: object
+      required:
+        - quantity
+      properties:
+        quantity:
+          type: integer
+          description: The quantity of the offer to include in the draft deal
+        confirmed:
+          type: boolean
+          description: Whether the offer has been confirmed for the draft deal.
+    OfferWithInfo:
+      allOf:
+        - $ref: '#/components/schemas/Offer'
+        - $ref: '#/components/schemas/OfferInfo'
+    Draft:
+      type: object
+      required:
+        - id
+        - authorId
+        - createdAt
+        - offers
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: The unique identifier of the draft deal
+        authorId:
+          type: string
+          format: uuid
+          description: The unique identifier of the user who created the draft deal
+        name:
+          type: string
+          description: The name of the draft deal
+        description:
+          type: string
+          description: A detailed description of the draft deal
+        createdAt:
+          type: string
+          format: date-time
+          description: The timestamp when the draft deal was created
+        updatedAt:
+          type: string
+          format: date-time
+          description: The timestamp when the draft deal was last updated
+        offers:
+          type: array
+          description: A list of offers included in the draft deal
+          items:
+            $ref: '#/components/schemas/OfferWithInfo'
+    UserConfirm:
+      type: object
+      required:
+        - userId
+        - confirmed
+      properties:
+        userId:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор пользователя
+        confirmed:
+          type: boolean
+          description: Статус подтверждения участия пользователя в сделке
+    ConfirmDraftDealResponse:
+      type: object
+      required:
+        - users
+      properties:
+        users:
+          type: array
+          description: Список пользователей, которые подтвердили/не подтвердили свое участие в сделке
+          items:
+            $ref: '#/components/schemas/UserConfirm'
+    DealStatus:
+      type: string
+      description: Статус сделки
+      enum:
+        - LookingForParticipants
+        - Discussion
+        - Confirmed
+        - Completed
+        - Cancelled
+        - Failed
+    GetDealsResponseItem:
+      type: object
+      required:
+        - id
+        - participants
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор сделки
+        status:
+          $ref: '#/components/schemas/DealStatus'
+        participants:
+          type: array
+          description: Список ID всех пользователей, участвующих в этой сделке
+          items:
+            type: string
+            format: uuid
+            description: Уникальный идентификатор пользователя
+    GetDealsResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/GetDealsResponseItem'
+    Item:
+      type: object
+      required:
+        - id
+        - authorId
+        - name
+        - description
+        - type
+        - quantity
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор позиции сделки
+        authorId:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор пользователя, который предложил эту позицию в сделке
+        providerId:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор пользователя, который отдает эту позицию в сделке
+        receiverId:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор пользователя, который получает эту позицию в сделке
+        name:
+          type: string
+          description: Краткое название позиции сделки
+          example: Ремонт велосипеда
+        description:
+          type: string
+          description: Подробное описание позиции сделки
+          example: Я могу помочь починить городские велосипеды и заменить тормозные колодки
+        type:
+          $ref: '#/components/schemas/ItemType'
+        updatedAt:
+          type: string
+          format: date-time
+          description: Временная метка последнего обновления позиции сделки
+        quantity:
+          type: integer
+          description: Количество позиций этого типа в сделке
+    Deal:
+      type: object
+      required:
+        - id
+        - createdAt
+        - items
+        - status
+        - participants
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор сделки
+        name:
+          type: string
+          description: Название сделки
+        description:
+          type: string
+          description: Описание сделки
+        createdAt:
+          type: string
+          format: date-time
+          description: Временная метка создания сделки
+        updatedAt:
+          type: string
+          format: date-time
+          description: Временная метка последнего обновления сделки
+        status:
+          $ref: '#/components/schemas/DealStatus'
+        items:
+          type: array
+          description: Список позиций сделки
+          items:
+            $ref: '#/components/schemas/Item'
+        participants:
+          type: array
+          description: Список участников сделки
+          items:
+            type: string
+            format: uuid
+            description: Уникальный идентификатор пользователя, участвующего в сделке
+    GetDealStatusVotesResponseItem:
+      type: object
+      required:
+        - userId
+        - vote
+      properties:
+        userId:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор пользователя, который проголосовал за переход сделки в следующий статус
+        vote:
+          $ref: '#/components/schemas/DealStatus'
+    GetDealStatusVotesResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/GetDealStatusVotesResponseItem'
+    ChangeDealStatusRequest:
+      type: object
+      required:
+        - expectedStatus
+      properties:
+        expectedStatus:
+          $ref: '#/components/schemas/DealStatus'
+    UpdateDealItemRequest:
+      type: object
+      minProperties: 1
+      description: |
+        Хотя бы одно поле обязательно.
+        Один и тот же пользователь не может одновременно быть `provider` и `receiver` для одной позиции.
+      properties:
+        name:
+          type: string
+          description: Новое название позиции (только для автора)
+        description:
+          type: string
+          description: Новое описание позиции (только для автора)
+        quantity:
+          type: integer
+          minimum: 1
+          description: Новое количество (только для автора)
+        claimProvider:
+          type: boolean
+          description: Назначить текущего пользователя поставщиком (только если слот свободен и пользователь не является receiver этой же позиции)
+        releaseProvider:
+          type: boolean
+          description: Освободить слот поставщика (только если текущий пользователь является поставщиком)
+        claimReceiver:
+          type: boolean
+          description: Назначить текущего пользователя получателем (только если слот свободен и пользователь не является provider этой же позиции)
+        releaseReceiver:
+          type: boolean
+          description: Освободить слот получателя (только если текущий пользователь является получателем)
+    AddDealItemRequest:
+      type: object
+      required:
+        - offerId
+        - quantity
+      properties:
+        offerId:
+          type: string
+          format: uuid
+          description: |
+            ID предложения, которое пользователь хочет добавить в сделку.
+            Предложение должно принадлежать пользователю и быть в статусе active.
+        quantity:
+          type: integer
+          minimum: 1
+          description: |
+            Количество единиц предложения, которые пользователь хочет добавить в сделку.
+            Должно быть положительным числом.
+    GetDealJoinRequestsResponseItem:
+      type: object
+      required:
+        - userId
+        - dealId
+        - voters
+      properties:
+        userId:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор пользователя, который хочет присоединиться к сделке
+        dealId:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор сделки, к которой пользователь хочет присоединиться
+        voters:
+          type: array
+          description: Список ID пользователей, которые поддерживают заявку на присоединение к сделке
+          items:
+            type: string
+            format: uuid
+            description: Уникальный идентификатор пользователя, который поддерживает заявку на присоединение к сделке
+    GetDealJoinRequestsResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/GetDealJoinRequestsResponseItem'
+    OffersCursor:
+      type: object
+      description: Cursor for stable pagination
+      required:
+        - id
+      properties:
+        createdAt:
+          type: string
+          format: date-time
+          example: '2026-03-04T12:00:00Z'
+        views:
+          type: integer
+          format: int64
+          example: 120
+        id:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+    ListOffersResponse:
+      type: object
+      required:
+        - offers
+      properties:
+        offers:
+          type: array
+          description: List of offers
+          items:
+            $ref: '#/components/schemas/Offer'
+        nextCursor:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/OffersCursor'
+          description: Cursor for fetching the next page; null if there is no next page
+    CreateOfferRequest:
+      type: object
+      required:
+        - name
+        - description
+        - type
+        - action
+      properties:
+        name:
+          type: string
+          example: Bicycle repair
+        description:
+          type: string
+          example: I can help fix city bikes and replace brake pads
+        type:
+          $ref: '#/components/schemas/ItemType'
+        action:
+          $ref: '#/components/schemas/OfferAction'
+  parameters:
+    SortType:
+      name: sort
+      in: query
+      required: true
+      description: Sorting mode for items list
+      schema:
+        type: string
+        enum:
+          - ByTime
+          - ByPopularity
+    CursorCreatedAt:
+      name: cursor_created_at
+      in: query
+      required: false
+      description: |
+        Cursor creation timestamp in RFC3339 format.
+        Used together with `cursor_id` when `sort=created_at`.
+      schema:
+        type: string
+        format: date-time
+    CursorViews:
+      name: cursor_views
+      in: query
+      required: false
+      description: |
+        Cursor views count.
+        Used together with `cursor_id` when `sort=popularity`.
+      schema:
+        type: integer
+        format: int64
+        minimum: 0
+    CursorId:
+      name: cursor_id
+      in: query
+      required: false
+      description: |
+        Cursor item ID used as a tie-breaker for stable pagination.
+      schema:
+        type: string
+        format: uuid
+    Limit:
+      name: cursor_limit
+      in: query
+      required: false
+      description: Maximum number of items to return
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 10

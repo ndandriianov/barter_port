@@ -1,0 +1,151 @@
+ErrorResponse:
+  type: object
+  properties:
+    message:
+      type: string
+      example: Вы отправили некорректный запрос
+
+
+
+CreateDraftDealResponse:
+  type: object
+  required:
+    - id
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: The unique identifier of the created draft deal
+
+
+
+GetMyDraftDealsResponse:
+  type: array
+  items:
+    $ref: '#/GetMyDraftDealsResponseItem'
+
+GetMyDraftDealsResponseItem:
+  type: object
+  required:
+    - id
+    - participants
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор черновой сделки
+    participants:
+      type: array
+      description: Список ID всех пользователей, участвующих в этой сделке
+      items:
+        type: string
+        format: uuid
+        description: Уникальный идентификатор пользователя
+
+
+
+ListOffersResponse:
+  type: object
+  required:
+    - offers
+  properties:
+    offers:
+      type: array
+      description: List of offers
+      items:
+        $ref: 'schemas.yaml#/Offer'
+    nextCursor:
+      nullable: true
+      allOf:
+        - $ref: 'schemas.yaml#/OffersCursor'
+      description: Cursor for fetching the next page; null if there is no next page
+
+
+
+ConfirmDraftDealResponse:
+  type: object
+  required:
+    - users
+  properties:
+    users:
+      type: array
+      description: Список пользователей, которые подтвердили/не подтвердили свое участие в сделке
+      items:
+        $ref: 'schemas.yaml#/UserConfirm'
+
+
+
+GetDealsResponse:
+  type: array
+  items:
+    $ref: '#/GetDealsResponseItem'
+
+GetDealsResponseItem:
+  type: object
+  required:
+    - id
+    - participants
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор сделки
+    status:
+      $ref: 'schemas.yaml#/DealStatus'
+    participants:
+      type: array
+      description: Список ID всех пользователей, участвующих в этой сделке
+      items:
+        type: string
+        format: uuid
+        description: Уникальный идентификатор пользователя
+
+
+
+GetDealJoinRequestsResponse:
+  type: array
+  items:
+    $ref: '#/GetDealJoinRequestsResponseItem'
+
+GetDealJoinRequestsResponseItem:
+  type: object
+  required:
+    - userId
+    - dealId
+    - voters
+  properties:
+    userId:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор пользователя, который хочет присоединиться к сделке
+    dealId:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор сделки, к которой пользователь хочет присоединиться
+    voters:
+      type: array
+      description: Список ID пользователей, которые поддерживают заявку на присоединение к сделке
+      items:
+        type: string
+        format: uuid
+        description: Уникальный идентификатор пользователя, который поддерживает заявку на присоединение к сделке
+
+
+
+GetDealStatusVotesResponse:
+  type: array
+  items:
+    $ref: '#/GetDealStatusVotesResponseItem'
+
+GetDealStatusVotesResponseItem:
+  type: object
+  required:
+    - userId
+    - vote
+  properties:
+    userId:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор пользователя, который проголосовал за переход сделки в следующий статус
+    vote:
+      $ref: 'schemas.yaml#/DealStatus'

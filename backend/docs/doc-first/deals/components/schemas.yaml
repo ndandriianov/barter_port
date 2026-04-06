@@ -1,0 +1,303 @@
+Draft:
+  type: object
+  required:
+    - id
+    - authorId
+    - createdAt
+    - offers
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: The unique identifier of the draft deal
+    authorId:
+      type: string
+      format: uuid
+      description: The unique identifier of the user who created the draft deal
+    name:
+      type: string
+      description: The name of the draft deal
+    description:
+      type: string
+      description: A detailed description of the draft deal
+    createdAt:
+      type: string
+      format: date-time
+      description: The timestamp when the draft deal was created
+    updatedAt:
+      type: string
+      format: date-time
+      description: The timestamp when the draft deal was last updated
+    offers:
+      type: array
+      description: A list of offers included in the draft deal
+      items:
+        $ref: '#/OfferWithInfo'
+
+
+OfferWithInfo:
+  allOf:
+    - $ref: '#/Offer'
+    - $ref: '#/OfferInfo'
+
+OfferIDAndQuantity:
+  type: object
+  required:
+    - offerID
+    - quantity
+  properties:
+    offerID:
+      type: string
+      format: uuid
+      description: The ID of the offer to include in the draft deal
+    quantity:
+      type: integer
+      description: The quantity of the offer to include in the draft deal
+
+
+
+OfferInfo:
+  type: object
+  required:
+    - quantity
+  properties:
+    quantity:
+      type: integer
+      description: The quantity of the offer to include in the draft deal
+    confirmed:
+      type: boolean
+      description: Whether the offer has been confirmed for the draft deal.
+
+
+
+Offer:
+  type: object
+  required:
+    - id
+    - authorId
+    - name
+    - type
+    - action
+    - description
+    - createdAt
+    - views
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: Unique item identifier
+    authorId:
+      type: string
+      format: uuid
+      description: Unique identifier of the user who created the item
+    authorName:
+      type: string
+      description: Name of the user who created the item
+    name:
+      type: string
+      description: Short item title
+      example: Bicycle repair
+    description:
+      type: string
+      description: Detailed item description
+      example: I can help fix city bikes and replace brake pads
+    type:
+      $ref: '#/ItemType'
+    action:
+      $ref: '#/OfferAction'
+    views:
+      type: integer
+      format: int64
+      minimum: 0
+      description: Number of item views
+      example: 120
+    createdAt:
+      type: string
+      format: date-time
+      description: Item creation timestamp
+      example: '2026-03-04T12:00:00Z'
+
+
+ItemType:
+  type: string
+  description: Type of barter item
+  enum:
+    - good
+    - service
+
+
+OfferAction:
+  type: string
+  description: Whether the user offers or requests something
+  enum:
+    - give
+    - take
+
+
+OffersCursor:
+  type: object
+  description: Cursor for stable pagination
+  required:
+    - id
+  properties:
+    createdAt:
+      type: string
+      format: date-time
+      example: '2026-03-04T12:00:00Z'
+    views:
+      type: integer
+      format: int64
+      example: 120
+    id:
+      type: string
+      format: uuid
+      example: '550e8400-e29b-41d4-a716-446655440000'
+
+
+
+UserConfirm:
+  type: object
+  required:
+    - userId
+    - confirmed
+  properties:
+    userId:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор пользователя
+    confirmed:
+      type: boolean
+      description: Статус подтверждения участия пользователя в сделке
+
+
+
+Deal:
+  type: object
+  required:
+    - id
+    - createdAt
+    - items
+    - status
+    - participants
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор сделки
+    name:
+      type: string
+      description: Название сделки
+    description:
+      type: string
+      description: Описание сделки
+    createdAt:
+      type: string
+      format: date-time
+      description: Временная метка создания сделки
+    updatedAt:
+      type: string
+      format: date-time
+      description: Временная метка последнего обновления сделки
+    status:
+      $ref: '#/DealStatus'
+    items:
+      type: array
+      description: Список позиций сделки
+      items:
+        $ref: '#/Item'
+    participants:
+      type: array
+      description: Список участников сделки
+      items:
+        type: string
+        format: uuid
+        description: Уникальный идентификатор пользователя, участвующего в сделке
+
+
+UpdateDealItemRequest:
+  type: object
+  minProperties: 1
+  description: |
+    Хотя бы одно поле обязательно.
+    Один и тот же пользователь не может одновременно быть `provider` и `receiver` для одной позиции.
+  properties:
+    name:
+      type: string
+      description: Новое название позиции (только для автора)
+    description:
+      type: string
+      description: Новое описание позиции (только для автора)
+    quantity:
+      type: integer
+      minimum: 1
+      description: Новое количество (только для автора)
+    claimProvider:
+      type: boolean
+      description: Назначить текущего пользователя поставщиком (только если слот свободен и пользователь не является receiver этой же позиции)
+    releaseProvider:
+      type: boolean
+      description: Освободить слот поставщика (только если текущий пользователь является поставщиком)
+    claimReceiver:
+      type: boolean
+      description: Назначить текущего пользователя получателем (только если слот свободен и пользователь не является provider этой же позиции)
+    releaseReceiver:
+      type: boolean
+      description: Освободить слот получателя (только если текущий пользователь является получателем)
+
+
+Item:
+  type: object
+  required:
+    - id
+    - authorId
+    - name
+    - description
+    - type
+    - quantity
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор позиции сделки
+    authorId:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор пользователя, который предложил эту позицию в сделке
+    providerId:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор пользователя, который отдает эту позицию в сделке
+    receiverId:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор пользователя, который получает эту позицию в сделке
+    name:
+      type: string
+      description: Краткое название позиции сделки
+      example: Ремонт велосипеда
+    description:
+      type: string
+      description: Подробное описание позиции сделки
+      example: Я могу помочь починить городские велосипеды и заменить тормозные колодки
+    type:
+      $ref: '#/ItemType'
+    updatedAt:
+      type: string
+      format: date-time
+      description: Временная метка последнего обновления позиции сделки
+    quantity:
+      type: integer
+      description: Количество позиций этого типа в сделке
+
+
+
+DealStatus:
+  type: string
+  description: Статус сделки
+  enum:
+    - LookingForParticipants
+    - Discussion
+    - Confirmed
+    - Completed
+    - Cancelled
+    - Failed

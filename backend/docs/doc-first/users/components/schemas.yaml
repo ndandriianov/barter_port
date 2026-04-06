@@ -1,0 +1,35 @@
+Me:
+  type: object
+  required:
+    - id
+    - email
+    - createdAt
+  properties:
+    id:
+      $ref: './properties.yaml#/UserId'
+    email:
+      type: string
+#      format: email // TODO: раскомментировать при запуске без bypass
+      description: User email
+      example: 'email@example.com'
+    createdAt:
+      type: string
+      format: date-time
+      description: User registration timestamp
+      example: '2026-03-04T12:00:00Z'
+    name:
+      $ref: './properties.yaml#/Name'
+    bio:
+      $ref: './properties.yaml#/Bio'
+
+User:
+  type: object
+  required:
+    - id
+  properties:
+    id:
+      $ref: './properties.yaml#/UserId'
+    name:
+      $ref: './properties.yaml#/Name'
+    bio:
+      $ref: './properties.yaml#/Bio'

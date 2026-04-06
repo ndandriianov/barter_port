@@ -1,0 +1,330 @@
+deals:
+  get:
+    tags:
+      - Deals
+    summary: Получить все сделки
+    description: |
+      Получить все сделки.
+      
+      - Если указать параметр my=true, то будут возвращены только сделки, в которых текущий пользователь является участником.
+      - Если указать параметр open=true, то будут возвращены только открытые сделки
+    operationId: getDeals
+    parameters:
+      - name: my
+        in: query
+        description: False by default. Если true, возвращает только сделки, в которых текущий пользователь является участником
+        required: false
+        schema:
+          type: boolean
+      - name: open
+        in: query
+        description: False by default. Если true, возвращает только открытые сделки
+        required: false
+        schema:
+          type: boolean
+    security:
+      - bearerAuth: [ ]
+    responses:
+      '200':
+        description: OK
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/GetDealsResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+dealItemById:
+  patch:
+    tags:
+      - Deals
+    summary: Редактировать позицию сделки
+    description: |
+      Редактировать позицию сделки.
+
+      - Поля `name`, `description`, `quantity` может менять только автор позиции (`author_id`).
+      - Роли `provider`/`receiver` можно claim/release по бизнес-правилам.
+    operationId: updateDealItem
+    parameters:
+      - name: dealId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    security:
+      - bearerAuth: [ ]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas.yaml#/UpdateDealItemRequest'
+    responses:
+      '200':
+        description: Обновлённая позиция сделки
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Item'
+      '400':
+        description: Некорректный запрос (пустое тело)
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: |
+          Операция запрещена по бизнес-правилам:
+          - пользователь не является автором позиции при изменении контентных полей;
+          - роль уже занята другим пользователем;
+          - пользователь не владеет ролью при release;
+          - пользователь уже занимает другую роль (`provider`/`receiver`) для этой же позиции.
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Сделка или позиция не найдена
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+dealById:
+  get:
+    tags:
+      - Deals
+    summary: Получить сделку по ее ID
+    description: Получить сделку по ее ID
+    operationId: getDealById
+    parameters:
+      - name: dealId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    security:
+      - bearerAuth: [ ]
+    responses:
+      '200':
+        description: OK
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Deal'
+      '400':
+        description: Invalid deal ID
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Deal not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+
+dealStatus:
+  patch:
+    tags:
+      - Deals
+    summary: Подтвердить/Отменить сделку
+    description: |
+      Запросить переход к следующему статусу сделки.
+      Когда все пользователи указали один и тот же статус сделки (вперед), то выполняется переход к новому статусу.
+      Сделка должна быть в статусе, предшествующем указанному.
+      Если пользователь выбирает статус отмены, то сделка сразу же переходит в статус отменён.
+    operationId: ChangeDealStatus
+    parameters:
+      - name: dealId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    security:
+      - bearerAuth: [ ]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/requests.yaml#/ChangeDealStatusRequest'
+    responses:
+      '200':
+        description: Запрос обработан, возвращает обновлённую сделку
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Deal'
+      '400':
+        description: Некорректный запрос (например, сделка не в том статусе)
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Deal not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+  get:
+    tags:
+      - Deals
+    summary: Получить список голосов за переход к следующему статусу сделки
+    operationId: GetDealStatusVotes
+    parameters:
+      - name: dealId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    security:
+      - bearerAuth: [ ]
+    responses:
+      '200':
+        description: OK
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/GetDealStatusVotesResponse'
+      '400':
+        description: Invalid deal ID
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Deal not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+
+dealItems:
+  post:
+    tags:
+      - Deals
+    summary: Добавить позицию в сделку
+    description: |
+      Пользователь указывает id одного из своих offers, на основании offer формируется item, item добавляется в сделку
+    operationId: addDealItem
+    parameters:
+      - name: dealId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    security:
+      - bearerAuth: [ ]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/requests.yaml#/AddDealItemRequest'
+    responses:
+      '200':
+        description: Новая позиция сделки
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Deal'
+      '400':
+        description: Некорректный запрос (пустое тело)
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: |
+          Операция запрещена по бизнес-правилам:
+          сделка не в статусе LookingForParticipants, либо пользователь не является участником сделки
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Сделка не найдена
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'

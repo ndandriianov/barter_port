@@ -33,9 +33,65 @@ services:
       timeout: 3s
       retries: 30
 
-  caddy:
+  kafka:
+    image: apache/kafka:4.2.0
+    container_name: barter-port-kafka
+    restart: unless-stopped
+    ports:
+      - "9094:9094"
+    environment:
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_NUM_PARTITIONS: 1
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: barter-port-kafka-ui
+    restart: unless-stopped
+    depends_on:
+      - kafka
+    ports:
+      - "8088:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: barter-port
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+
+  caddy-infra:
+    profiles: ["infra"]
     image: caddy:2
-    container_name: barter-port-caddy
+    container_name: barter-port-caddy-infra
+    restart: unless-stopped
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    ports:
+      - "80:80"
+    volumes:
+      - ./Caddyfile.infra:/etc/caddy/Caddyfile:ro
+
+  caddy-app:
+    profiles: ["app"]
+    image: caddy:2
+    container_name: barter-port-caddy-app
     restart: unless-stopped
     extra_hosts:
       - "host.docker.internal:host-gateway"
@@ -45,6 +101,7 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
 
   auth:
+    profiles: ["app"]
     build:
       context: .
       dockerfile: Dockerfile
@@ -53,21 +110,24 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      kafka:
+        condition: service_started
     env_file:
       - ./.env
     environment:
       APP_ENV: docker
       CONFIG_COMMON: /app/config/common.yaml
-      CONFIG_SERVICE: # /app/config/auth.yaml
+      CONFIG_SERVICE: /app/config/auth.yaml
     volumes:
       - ./config:/app/config:ro
 
-  items:
+  deals:
+    profiles: ["app"]
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        SERVICE: items
+        SERVICE: deals
     depends_on:
       db:
         condition: service_healthy
@@ -76,24 +136,47 @@ services:
     environment:
       APP_ENV: docker
       CONFIG_COMMON: /app/config/common.yaml
-      CONFIG_SERVICE: # /app/config/items.yaml
+      CONFIG_SERVICE: /app/config/deals.yaml
+    volumes:
+      - ./config:/app/config:ro
+
+  users:
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: users
+    depends_on:
+      db:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      auth:
+        condition: service_started
+    env_file:
+      - ./.env
+    environment:
+      APP_ENV: docker
+      CONFIG_COMMON: /app/config/common.yaml
+      CONFIG_SERVICE: /app/config/users.yaml
     volumes:
       - ./config:/app/config:ro
 
   swagger-ui:
+    profiles: ["infra", "app"]
     image: swaggerapi/swagger-ui:latest
     container_name: barter-port-swagger-ui
     restart: unless-stopped
     environment:
       URLS: |
         [
-          { "url": "/swagger-specs/auth.json", "name": "Auth API" },
-          { "url": "/swagger-specs/items.json", "name": "Items API" }
+          { "url": "/swagger-specs/auth/swagger.json", "name": "Auth API" },
+          { "url": "/swagger-specs/deals/swagger.yaml", "name": "Deals API" },
+          { "url": "/swagger-specs/users/swagger.yaml", "name": "Users API" }
         ]
       BASE_URL: /docs
-    depends_on:
-      - auth
-      - items
 
 volumes:
   db_data:
+  kafka_data:

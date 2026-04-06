@@ -1,0 +1,170 @@
+package http
+
+import (
+	"barter-port/contracts/openapi/users/types"
+	"barter-port/internal/users/application/user"
+	"barter-port/internal/users/domain"
+	"barter-port/pkg/authkit"
+	"barter-port/pkg/httpx"
+	httplog "barter-port/pkg/logger"
+	"context"
+	"errors"
+	"log/slog"
+	"net/http"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/google/uuid"
+)
+
+type Handlers struct {
+	userService *user.Service
+}
+
+func NewHandlers(userService *user.Service) *Handlers {
+	return &Handlers{userService: userService}
+}
+
+// ================================================================================
+// GetUser
+// ================================================================================
+
+func (h *Handlers) HandleGetUser(w http.ResponseWriter, r *http.Request) {
+	log := httplog.LogFrom(r.Context(), slog.Default())
+
+	userID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		log.Warn("invalid user id", slog.Any("error", err))
+		httpx.WriteErrorStr(w, http.StatusBadRequest, "invalid user id")
+		return
+	}
+
+	u, err := h.userService.GetUser(r.Context(), userID)
+	if err != nil {
+		if errors.Is(err, domain.ErrUserNotFound) {
+			log.Info("user not found", slog.String("user_id", userID.String()))
+			httpx.WriteEmptyError(w, http.StatusNotFound)
+			return
+		}
+
+		log.Error("failed to get user", slog.String("user_id", userID.String()), slog.String("error", err.Error()))
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		return
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, types.User{
+		Id:   u.Id,
+		Name: u.Name,
+		Bio:  u.Bio,
+	})
+}
+
+// ================================================================================
+// GetMe
+// ================================================================================
+
+func (h *Handlers) HandleGetMe(w http.ResponseWriter, r *http.Request) {
+	log := httplog.LogFrom(r.Context(), slog.Default())
+
+	userID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		log.Warn("failed to get user id from context")
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
+	me, err := h.getMe(r.Context(), userID)
+	if err != nil {
+		if errors.Is(err, domain.ErrUserNotFound) {
+			log.Error("current user is absent in users storage", slog.String("user_id", userID.String()))
+			httpx.WriteEmptyError(w, http.StatusNotFound)
+			return
+		}
+
+		log.Error("failed to get current user", slog.String("user_id", userID.String()), slog.String("error", err.Error()))
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		return
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, me)
+}
+
+// ================================================================================
+// UpdateMe
+// ================================================================================
+
+func (h *Handlers) HandleUpdateMe(w http.ResponseWriter, r *http.Request) {
+	log := httplog.LogFrom(r.Context(), slog.Default())
+
+	userID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		log.Warn("failed to get user id from context")
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
+	var req types.UpdateUserRequest
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		log.Warn("failed to decode", slog.Any("error", err))
+		httpx.WriteError(w, http.StatusBadRequest, httpx.ErrCannotDecodeRequestBody)
+		return
+	}
+
+	if req.Name == nil && req.Bio == nil {
+		httpx.WriteErrorStr(w, http.StatusBadRequest, "empty update payload")
+		return
+	}
+
+	if req.Name != nil {
+		if err := h.userService.UpdateName(r.Context(), userID, *req.Name); err != nil {
+			handleUpdateError(w, log, err, userID)
+			return
+		}
+	}
+
+	if req.Bio != nil {
+		if err := h.userService.UpdateBio(r.Context(), userID, req.Bio); err != nil {
+			handleUpdateError(w, log, err, userID)
+			return
+		}
+	}
+
+	me, err := h.getMe(r.Context(), userID)
+	if err != nil {
+		log.Error("failed to load updated user", slog.String("user_id", userID.String()), slog.String("error", err.Error()))
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		return
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, me)
+}
+
+func handleUpdateError(w http.ResponseWriter, log *slog.Logger, err error, userID uuid.UUID) {
+	updateErrLog := log.With(slog.Any("userID", userID), slog.Any("error", err))
+
+	if errors.Is(err, domain.ErrUserNotFound) {
+		updateErrLog.Info("user not found")
+		httpx.WriteEmptyError(w, http.StatusNotFound)
+	} else {
+		updateErrLog.Error("failed to update user")
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
+	}
+}
+
+// ================================================================================
+// helpers
+// ================================================================================
+
+func (h *Handlers) getMe(ctx context.Context, userID uuid.UUID) (types.Me, error) {
+	me, err := h.userService.GetMe(ctx, userID)
+	if err != nil {
+		return types.Me{}, err
+	}
+
+	return types.Me{
+		Id:        me.Id,
+		Name:      me.Name,
+		Bio:       me.Bio,
+		Email:     me.Email, // TODO: конвертировать при отключенном bypass
+		CreatedAt: me.CreatedAt,
+	}, nil
+}

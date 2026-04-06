@@ -1,21 +1,13 @@
 package main
 
 import (
-	"barter-port/internal/auth/repository/email_token"
-	"barter-port/internal/auth/repository/refresh_token"
-	"barter-port/internal/auth/repository/user"
-	"barter-port/internal/auth/service"
-	"barter-port/internal/auth/transport"
-	"barter-port/internal/libs/bootstrap"
-	"barter-port/internal/libs/platform/logger"
-	"log/slog"
+	"barter-port/internal/auth/app"
+	"barter-port/pkg/bootstrap"
+	"errors"
+	"log"
 	"os"
-	"regexp"
 
 	"github.com/joho/godotenv"
-
-	"log"
-	"net/http"
 )
 
 //go:generate bash ../../scripts/generate-swagger-auth.sh
@@ -32,54 +24,52 @@ import (
 func main() {
 	_ = godotenv.Load()
 
-	//serviceName := bootstrap.GetEnv("SERVICE_NAME", "auth")
-	serviceConfigPath := "" //fmt.Sprintf("./config/%s.yaml", serviceName)
+	cfg, err := loadConfig()
+	if err != nil {
+		log.Fatalf("auth - load config: %v", err)
+	}
 
+	err = bootstrap.RunMigrationsFromConfig(cfg)
+	if err != nil {
+		log.Fatalf("auth - run migrations: %v", err)
+	}
+
+	authApp, err := app.NewApp(cfg)
+	if err != nil {
+		log.Fatalf("auth - new app: %v", err)
+	}
+	defer authApp.Close()
+
+	err = authApp.Run()
+	if err != nil {
+		log.Fatalf("auth - run: %v", err)
+	}
+}
+
+func loadConfig() (bootstrap.Config, error) {
 	cfg, err := bootstrap.LoadConfig(bootstrap.ConfigOptions{
 		CommonPath:  os.Getenv("CONFIG_COMMON"),
-		ServicePath: serviceConfigPath,
+		ServicePath: resolveServiceConfigPath(),
 		AppEnv:      os.Getenv("APP_ENV"),
 	})
 	if err != nil {
-		log.Fatal("failed to load config:", err)
+		return bootstrap.Config{}, errors.New("failed to load config: " + err.Error())
 	}
 
-	db, err := bootstrap.InitDatabaseFromConfig(cfg)
-	if err != nil {
-		log.Fatal("failed to initialize database:", err)
-	}
-	defer db.Close()
+	return cfg, nil
+}
 
-	frontendURL := cfg.Frontend.URL
-	re := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
-
-	userRepo := user.NewRepository(db)
-	emailTokenRepo := email_token.NewRepository(db)
-	refreshTokenRepo := refresh_token.NewRepository(db)
-
-	m := bootstrap.InitMailerFromConfig(cfg)
-	if err = bootstrap.ValidateMailConfig(cfg); err != nil {
-		log.Fatal("failed to initialize mailer:", err)
+func resolveServiceConfigPath() string {
+	if path := os.Getenv("CONFIG_SERVICE"); path != "" {
+		if _, err := os.Stat(path); err == nil {
+			return path
+		}
 	}
 
-	logg := logger.NewJSONLogger(slog.LevelDebug, "auth-service", "")
-	infrastructureLogger := logger.NewJSONLogger(slog.LevelDebug, "", "infrastructure")
-
-	jwtManager, err := bootstrap.InitJWTManagerFromConfig(cfg)
-	if err != nil {
-		log.Fatal("failed to initialize JWT manager:", err)
+	const localPath = "./config/auth.yaml"
+	if _, err := os.Stat(localPath); err == nil {
+		return localPath
 	}
 
-	validator, err := bootstrap.InitLocalJWTFromConfig(cfg)
-	if err != nil {
-		log.Fatal("failed to initialize JWT validator:", err)
-	}
-
-	authService := service.NewService(userRepo, emailTokenRepo, m, infrastructureLogger, frontendURL, re)
-	handlers := transport.NewHandlers(logg, authService, jwtManager, refreshTokenRepo)
-	router := transport.NewRouter(logg, validator, handlers)
-
-	port := bootstrap.InitPortStringFromConfig(cfg, 8081)
-	log.Println("backend listening on", port)
-	log.Fatal(http.ListenAndServe(port, router))
+	return os.Getenv("CONFIG_SERVICE")
 }

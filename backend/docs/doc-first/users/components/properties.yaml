@@ -1,0 +1,15 @@
+UserId:
+  type: string
+  format: uuid
+  description: User ID
+  example: '123e4567-e89b-12d3-a456-426614174000'
+
+Name:
+  type: string
+  description: User name
+  example: 'John Doe'
+
+Bio:
+  type: string
+  description: User bio
+  example: 'I am a software developer who loves bartering.'

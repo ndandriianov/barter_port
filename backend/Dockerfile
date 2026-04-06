@@ -16,6 +16,7 @@ FROM alpine:3.20
 WORKDIR /app
 
 COPY --from=builder /out/app /app/app
+COPY --from=builder /src/migrations /app/migrations
 #COPY config /app/config
 
 EXPOSE 8080

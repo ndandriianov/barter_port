@@ -1,9 +1,15 @@
 db:
   host: "db"
 
+kafka:
+  brokers:
+    - "kafka:9092"
+
 mailer:
   host: "smtp4dev"
   port: 25
 
-port:
-  8080
+port: 8080
+auth_grpc_addr: "auth:50051"
+users_grpc_addr: "users:50051"
+users_grpc_listen_addr: ":50051"

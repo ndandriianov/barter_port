@@ -1,0 +1,66 @@
+CreateDraftDealRequest:
+  type: object
+  properties:
+    name:
+      type: string
+      description: An optional name for the draft deal
+    description:
+      type: string
+      description: An optional description for the draft deal
+    offers:
+      type: array
+      items:
+        $ref: 'schemas.yaml#/OfferIDAndQuantity'
+  required:
+    - offers
+
+
+
+CreateOfferRequest:
+  type: object
+  required:
+    - name
+    - description
+    - type
+    - action
+  properties:
+    name:
+      type: string
+      example: Bicycle repair
+    description:
+      type: string
+      example: I can help fix city bikes and replace brake pads
+    type:
+      $ref: 'schemas.yaml#/ItemType'
+    action:
+      $ref: 'schemas.yaml#/OfferAction'
+
+
+
+ChangeDealStatusRequest:
+  type: object
+  required:
+    - expectedStatus
+  properties:
+    expectedStatus:
+      $ref: 'schemas.yaml#/DealStatus'
+
+
+AddDealItemRequest:
+  type: object
+  required:
+    - offerId
+    - quantity
+  properties:
+    offerId:
+      type: string
+      format: uuid
+      description: |
+        ID предложения, которое пользователь хочет добавить в сделку.
+        Предложение должно принадлежать пользователю и быть в статусе active.
+    quantity:
+      type: integer
+      minimum: 1
+      description: |
+        Количество единиц предложения, которые пользователь хочет добавить в сделку.
+        Должно быть положительным числом.

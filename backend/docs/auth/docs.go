@@ -31,11 +31,11 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "description": "Login request",
-                        "name": "loginReq",
+                        "name": "credentialsReq",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/transport.loginReq"
+                            "$ref": "#/definitions/infrastructure_transport_http.credentialsReq"
                         }
                     }
                 ],
@@ -43,32 +43,29 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/transport.loginResp"
+                            "$ref": "#/definitions/infrastructure_transport_http.loginResp"
                         }
                     },
                     "400": {
-                        "description": "Invalid request or credentials",
+                        "description": "Invalid request or credentialsReq",
                         "schema": {
-                            "$ref": "#/definitions/http_api.ErrorResponse"
+                            "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Incorrect password",
                         "schema": {
-                            "$ref": "#/definitions/http_api.ErrorResponse"
+                            "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Email not verified",
                         "schema": {
-                            "$ref": "#/definitions/http_api.ErrorResponse"
+                            "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/http_api.ErrorResponse"
-                        }
+                        "description": "Internal server error"
                     }
                 }
             }
@@ -88,10 +85,7 @@ const docTemplate = `{
                         "description": "Logout successful"
                     },
                     "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/http_api.ErrorResponse"
-                        }
+                        "description": "Internal server error"
                     }
                 }
             }
@@ -115,14 +109,11 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/transport.meResp"
+                            "$ref": "#/definitions/infrastructure_transport_http.meResp"
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/http_api.ErrorResponse"
-                        }
+                        "description": "Internal server error"
                     }
                 }
             }
@@ -153,20 +144,17 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/transport.refreshResponse"
+                            "$ref": "#/definitions/infrastructure_transport_http.refreshResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized or invalid token",
                         "schema": {
-                            "$ref": "#/definitions/http_api.ErrorResponse"
+                            "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/http_api.ErrorResponse"
-                        }
+                        "description": "Internal server error"
                     }
                 }
             }
@@ -187,11 +175,11 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "description": "Register request",
-                        "name": "registerReq",
+                        "name": "credentialsReq",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/transport.registerReq"
+                            "$ref": "#/definitions/infrastructure_transport_http.credentialsReq"
                         }
                     }
                 ],
@@ -199,20 +187,107 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/transport.registerResp"
+                            "$ref": "#/definitions/infrastructure_transport_http.registerResp"
                         }
                     },
                     "400": {
                         "description": "Invalid request",
                         "schema": {
-                            "$ref": "#/definitions/http_api.ErrorResponse"
+                            "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
+        "/auth/retry-send-verification-email": {
+            "post": {
+                "description": "Generates a new email verification token and sends a verification email if the user's email is not verified.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Retry sending verification email",
+                "parameters": [
+                    {
+                        "description": "Retry send verification email request",
+                        "name": "credentialsReq",
+                        "in": "body",
+                        "required": true,
                         "schema": {
-                            "$ref": "#/definitions/http_api.ErrorResponse"
+                            "$ref": "#/definitions/infrastructure_transport_http.credentialsReq"
                         }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Verification email sent successfully"
+                    },
+                    "400": {
+                        "description": "Invalid request",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error"
+                    }
+                }
+            }
+        },
+        "/auth/status/{userId}": {
+            "get": {
+                "description": "Retrieves user creation status by user ID",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Get user creation status",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "User ID",
+                        "name": "userId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/infrastructure_transport_http.userCreationStatusResp"
+                        }
+                    },
+                    "400": {
+                        "description": "Invalid user ID",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "User creation event not found",
+                        "schema": {
+                            "$ref": "#/definitions/httpx.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error"
                     }
                 }
             }
@@ -237,7 +312,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/transport.verifyEmailReq"
+                            "$ref": "#/definitions/infrastructure_transport_http.verifyEmailReq"
                         }
                     }
                 ],
@@ -248,36 +323,32 @@ const docTemplate = `{
                     "400": {
                         "description": "Invalid request or token",
                         "schema": {
-                            "$ref": "#/definitions/http_api.ErrorResponse"
+                            "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "User not found",
                         "schema": {
-                            "$ref": "#/definitions/http_api.ErrorResponse"
+                            "$ref": "#/definitions/httpx.ErrorResponse"
                         }
                     },
                     "500": {
-                        "description": "Internal server error",
-                        "schema": {
-                            "$ref": "#/definitions/http_api.ErrorResponse"
-                        }
+                        "description": "Internal server error"
                     }
                 }
             }
         }
     },
     "definitions": {
-        "http_api.ErrorResponse": {
+        "httpx.ErrorResponse": {
             "type": "object",
             "properties": {
-                "error": {
-                    "description": "The error message",
+                "message": {
                     "type": "string"
                 }
             }
         },
-        "transport.loginReq": {
+        "infrastructure_transport_http.credentialsReq": {
             "type": "object",
             "properties": {
                 "email": {
@@ -290,7 +361,7 @@ const docTemplate = `{
                 }
             }
         },
-        "transport.loginResp": {
+        "infrastructure_transport_http.loginResp": {
             "type": "object",
             "properties": {
                 "accessToken": {
@@ -298,7 +369,7 @@ const docTemplate = `{
                 }
             }
         },
-        "transport.meResp": {
+        "infrastructure_transport_http.meResp": {
             "type": "object",
             "properties": {
                 "userId": {
@@ -306,7 +377,7 @@ const docTemplate = `{
                 }
             }
         },
-        "transport.refreshResponse": {
+        "infrastructure_transport_http.refreshResponse": {
             "type": "object",
             "properties": {
                 "access_token": {
@@ -314,20 +385,7 @@ const docTemplate = `{
                 }
             }
         },
-        "transport.registerReq": {
-            "type": "object",
-            "properties": {
-                "email": {
-                    "type": "string",
-                    "example": "user@email.com"
-                },
-                "password": {
-                    "type": "string",
-                    "example": "password"
-                }
-            }
-        },
-        "transport.registerResp": {
+        "infrastructure_transport_http.registerResp": {
             "type": "object",
             "properties": {
                 "email": {
@@ -338,7 +396,15 @@ const docTemplate = `{
                 }
             }
         },
-        "transport.verifyEmailReq": {
+        "infrastructure_transport_http.userCreationStatusResp": {
+            "type": "object",
+            "properties": {
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "infrastructure_transport_http.verifyEmailReq": {
             "type": "object",
             "properties": {
                 "token": {

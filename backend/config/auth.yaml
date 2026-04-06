@@ -1,1 +1,5 @@
+db:
+  name: "auth_db"
+  migrations_path: "file://migrations/auth"
+
 port: 8081
