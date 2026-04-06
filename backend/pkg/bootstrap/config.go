@@ -57,6 +57,8 @@ type Config struct {
 	AuthGRPCListenAddr  string `mapstructure:"auth_grpc_listen_addr"`
 	UsersGRPCAddr       string `mapstructure:"users_grpc_addr"`
 	UsersGRPCListenAddr string `mapstructure:"users_grpc_listen_addr"`
+	ChatsGRPCAddr       string `mapstructure:"chats_grpc_addr"`
+	ChatsGRPCListenAddr string `mapstructure:"chats_grpc_listen_addr"`
 }
 
 type ConfigOptions struct {

@@ -28,8 +28,9 @@ app-down-v:
 local-up:
 	@trap 'kill 0' INT TERM EXIT; \
 	CONFIG_COMMON=./config/common.yaml APP_ENV=local go run ./cmd/auth & \
-	CONFIG_COMMON=./config/common.yaml APP_ENV=local CONFIG_SERVICE=./config/items.yaml go run ./cmd/items & \
+	CONFIG_COMMON=./config/common.yaml APP_ENV=local CONFIG_SERVICE=./config/deals.yaml go run ./cmd/deals & \
 	CONFIG_COMMON=./config/common.yaml APP_ENV=local CONFIG_SERVICE=./config/users.yaml go run ./cmd/users & \
+	CONFIG_COMMON=./config/common.yaml APP_ENV=local CONFIG_SERVICE=./config/chats.yaml go run ./cmd/chats & \
 	wait
 
 create-migration:
@@ -39,6 +40,7 @@ migrate-up:
 	migrate -path migrations/auth -database "postgres://postgres:$${DB_PASSWORD:-postgres}@localhost:5432/auth_db?sslmode=disable" up
 	migrate -path migrations/users -database "postgres://postgres:$${DB_PASSWORD:-postgres}@localhost:5432/users_db?sslmode=disable" up
 	migrate -path migrations/deals -database "postgres://postgres:$${DB_PASSWORD:-postgres}@localhost:5432/deals_db?sslmode=disable" up
+	migrate -path migrations/chats -database "postgres://postgres:$${DB_PASSWORD:-postgres}@localhost:5432/chats_db?sslmode=disable" up
 
 
 

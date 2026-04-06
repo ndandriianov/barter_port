@@ -54,6 +54,11 @@
 		reverse_proxy users:8080
 	}
 
+	# Chats service по префиксу /chats*
+	handle /chats* {
+		reverse_proxy chats:8083
+	}
+
 	# Всё остальное — основной backend
 	handle {
 		reverse_proxy items:8080 # локально host.docker.internal:8080
