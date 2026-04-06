@@ -1,6 +1,6 @@
 export interface Chat {
   id: string;
-  deal_id?: string;
+  deal_id?: string | null;
   participants: string[];
   created_at: string;
 }
@@ -13,7 +13,7 @@ export interface Message {
   created_at: string;
 }
 
-export interface UserInfo {
+export interface User {
   id: string;
   name: string;
 }
@@ -25,3 +25,9 @@ export interface CreateChatRequest {
 export interface SendMessageRequest {
   content: string;
 }
+
+export type ListChatsResponse = Chat[];
+
+export type GetMessagesResponse = Message[];
+
+export type ListUsersResponse = User[];

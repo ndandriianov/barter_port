@@ -11,7 +11,7 @@ function ChatList({ selectedChatId, onSelect, onNewChat }: Props) {
   const { data: chats = [], isLoading } = chatsApi.useListChatsQuery();
   const { data: users = [], isLoading: isUsersLoading } = chatsApi.useListUsersQuery();
 
-  const userNameById = new Map(users.map((user) => [user.id, user.name || user.id.slice(0, 8)]));
+  const userNameById = new Map(users.map((user) => [user.id, user.name]));
 
   function getParticipantsLabel(chat: Chat): string {
     if (isUsersLoading) return "Участники загружаются...";
@@ -51,7 +51,7 @@ function ChatList({ selectedChatId, onSelect, onNewChat }: Props) {
             }}
           >
             <div style={{ fontSize: 13, fontWeight: 500 }}>
-              {chat.deal_id ? `Сделка` : "Личный чат"}
+              {chat.deal_id != null ? "Сделка" : "Личный чат"}
             </div>
             <div style={{ fontSize: 11, color: "#888", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {getParticipantsLabel(chat)}
