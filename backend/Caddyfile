@@ -23,7 +23,7 @@
 		Vary "Origin"
 	}
 
-    # swagger
+	# swagger
 	handle /docs* {
 		reverse_proxy swagger-ui:8080
 	}
@@ -42,6 +42,11 @@
 	handle /swagger-specs/users/* {
 		uri replace /swagger-specs/users /swagger
 		reverse_proxy users:8080
+	}
+
+	handle /swagger-specs/chats/* {
+		uri replace /swagger-specs/chats /swagger
+		reverse_proxy chats:8080
 	}
 
 	# Auth service по префиксу /auth/*

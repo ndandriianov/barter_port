@@ -43,6 +43,11 @@
 		reverse_proxy host.docker.internal:8082
 	}
 
+	handle /swagger-specs/chats/* {
+	    uri replace /swagger-specs/chats /swagger
+	    reverse_proxy host.docker.internal:8083
+	}
+
 	handle /auth/* {
 		reverse_proxy host.docker.internal:8081
 	}
