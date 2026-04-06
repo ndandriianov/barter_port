@@ -1,0 +1,195 @@
+chats:
+  get:
+    tags:
+      - Chats
+    summary: Получить список чатов текущего пользователя
+    description: Возвращает все чаты, в которых участвует текущий пользователь.
+    operationId: listChats
+    security:
+      - bearerAuth: [ ]
+    responses:
+      '200':
+        description: Список чатов
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ListChatsResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+  post:
+    tags:
+      - Chats
+    summary: Создать direct chat
+    description: Создаёт чат между текущим пользователем и пользователем из `participant_id`.
+    operationId: createChat
+    security:
+      - bearerAuth: [ ]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/requests.yaml#/CreateChatRequest'
+    responses:
+      '201':
+        description: Чат создан
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/CreateChatResponse'
+      '400':
+        description: Некорректный UUID участника или невалидный JSON
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+chatUsers:
+  get:
+    tags:
+      - Chats
+    summary: Получить список пользователей для старта чата
+    description: Возвращает список пользователей из users-сервиса, доступных для создания нового чата.
+    operationId: listChatUsers
+    security:
+      - bearerAuth: [ ]
+    responses:
+      '200':
+        description: Список пользователей
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ListUsersResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+chatMessages:
+  get:
+    tags:
+      - Chats
+    summary: Получить сообщения чата
+    description: |
+      Возвращает сообщения чата в порядке возрастания `created_at`.
+      Если передан `after`, вернутся только сообщения, созданные позже этого момента.
+    operationId: getChatMessages
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - $ref: '../components/parameters.yaml#/ChatId'
+      - $ref: '../components/parameters.yaml#/After'
+    responses:
+      '200':
+        description: Список сообщений
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/GetMessagesResponse'
+      '400':
+        description: Некорректный `chatId` или `after`
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: |
+          Forbidden. Пользователь не является участником чата.
+          В текущей реализации этот статус также возможен для несуществующего `chatId`.
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+  post:
+    tags:
+      - Chats
+    summary: Отправить сообщение в чат
+    description: Отправляет новое сообщение от имени текущего пользователя.
+    operationId: sendChatMessage
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - $ref: '../components/parameters.yaml#/ChatId'
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/requests.yaml#/SendMessageRequest'
+    responses:
+      '201':
+        description: Сообщение создано
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/SendMessageResponse'
+      '400':
+        description: Некорректный `chatId`, пустой `content` или невалидный JSON
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: |
+          Forbidden. Пользователь не является участником чата.
+          В текущей реализации этот статус также возможен для несуществующего `chatId`.
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'

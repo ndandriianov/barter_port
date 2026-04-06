@@ -1,0 +1,73 @@
+Chat:
+  type: object
+  required:
+    - id
+    - participants
+    - created_at
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: Unique chat identifier
+    deal_id:
+      type: string
+      format: uuid
+      nullable: true
+      description: Deal ID if the chat is attached to a deal; null for direct chats
+    participants:
+      type: array
+      description: Chat participant IDs
+      items:
+        type: string
+        format: uuid
+    created_at:
+      type: string
+      format: date-time
+      description: Chat creation timestamp
+      example: '2026-03-04T12:00:00Z'
+
+Message:
+  type: object
+  required:
+    - id
+    - chat_id
+    - sender_id
+    - content
+    - created_at
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: Unique message identifier
+    chat_id:
+      type: string
+      format: uuid
+      description: Chat ID
+    sender_id:
+      type: string
+      format: uuid
+      description: Sender user ID
+    content:
+      type: string
+      description: Message text
+      example: Привет, давай обсудим обмен
+    created_at:
+      type: string
+      format: date-time
+      description: Message creation timestamp
+      example: '2026-03-04T12:01:00Z'
+
+User:
+  type: object
+  required:
+    - id
+    - name
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: User ID
+    name:
+      type: string
+      description: User display name
+      example: Ivan Ivanov

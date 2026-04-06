@@ -1,0 +1,23 @@
+openapi: 3.0.3
+info:
+  title: Chats API
+  description: Chats API
+  version: 1.0.0
+
+servers:
+  - url: 'http://localhost:80'
+
+paths:
+  /chats:
+    $ref: './paths/chats.yaml#/chats'
+  /chats/users:
+    $ref: './paths/chats.yaml#/chatUsers'
+  /chats/{chatId}/messages:
+    $ref: './paths/chats.yaml#/chatMessages'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

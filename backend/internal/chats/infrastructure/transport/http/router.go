@@ -1,6 +1,7 @@
 package http
 
 import (
+	chatsdocfirst "barter-port/docs/doc-first/chats"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/authkit/validators"
 	"barter-port/pkg/logger"
@@ -22,9 +23,19 @@ func NewRouter(logg *slog.Logger, validator *validators.LocalJWT, h *Handlers) h
 
 	r := chi.NewRouter()
 	r.Use(middleware.RequestID)
+	openAPISpecHandler := http.StripPrefix("/swagger/", http.FileServer(http.FS(chatsdocfirst.SpecFS)))
 
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		_, _ = w.Write([]byte("ok"))
+	})
+	r.Get("/swagger", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/swagger/swagger.yaml", http.StatusPermanentRedirect)
+	})
+	r.Get("/swagger/", func(w http.ResponseWriter, r *http.Request) {
+		http.Redirect(w, r, "/swagger/swagger.yaml", http.StatusPermanentRedirect)
+	})
+	r.Get("/swagger/*", func(w http.ResponseWriter, r *http.Request) {
+		openAPISpecHandler.ServeHTTP(w, r)
 	})
 
 	r.Group(func(r chi.Router) {
