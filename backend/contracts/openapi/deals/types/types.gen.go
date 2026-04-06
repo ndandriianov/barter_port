@@ -115,6 +115,17 @@ func (e ListOffersParamsSort) Valid() bool {
 	}
 }
 
+// AddDealItemRequest defines model for AddDealItemRequest.
+type AddDealItemRequest struct {
+	// OfferId ID предложения, которое пользователь хочет добавить в сделку.
+	// Предложение должно принадлежать пользователю и быть в статусе active.
+	OfferId openapi_types.UUID `json:"offerId"`
+
+	// Quantity Количество единиц предложения, которые пользователь хочет добавить в сделку.
+	// Должно быть положительным числом.
+	Quantity int `json:"quantity"`
+}
+
 // ChangeDealStatusRequest defines model for ChangeDealStatusRequest.
 type ChangeDealStatusRequest struct {
 	// ExpectedStatus Статус сделки
@@ -500,6 +511,9 @@ type ListOffersParamsSort string
 
 // CreateDraftDealJSONRequestBody defines body for CreateDraftDeal for application/json ContentType.
 type CreateDraftDealJSONRequestBody = CreateDraftDealRequest
+
+// AddDealItemJSONRequestBody defines body for AddDealItem for application/json ContentType.
+type AddDealItemJSONRequestBody = AddDealItemRequest
 
 // UpdateDealItemJSONRequestBody defines body for UpdateDealItem for application/json ContentType.
 type UpdateDealItemJSONRequestBody = UpdateDealItemRequest

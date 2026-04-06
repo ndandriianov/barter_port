@@ -22,6 +22,8 @@ paths:
     $ref: './paths/deals.yaml#/dealStatus'
   /deals/{dealId}/items/{itemId}:
     $ref: './paths/deals.yaml#/dealItemById'
+  /deals/{dealId}/items:
+    $ref: './paths/deals.yaml#/dealItems'
   /deals/{dealId}/joins:
     $ref: './paths/joins.yaml#/join'
   /deals/{dealId}/joins/{userId}:
