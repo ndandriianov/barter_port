@@ -228,6 +228,18 @@ type GetDealJoinRequestsResponseItem struct {
 	Voters []openapi_types.UUID `json:"voters"`
 }
 
+// GetDealStatusVotesResponse defines model for GetDealStatusVotesResponse.
+type GetDealStatusVotesResponse = []GetDealStatusVotesResponseItem
+
+// GetDealStatusVotesResponseItem defines model for GetDealStatusVotesResponseItem.
+type GetDealStatusVotesResponseItem struct {
+	// UserId Уникальный идентификатор пользователя, который проголосовал за переход сделки в следующий статус
+	UserId openapi_types.UUID `json:"userId"`
+
+	// Vote Статус сделки
+	Vote DealStatus `json:"vote"`
+}
+
 // GetDealsResponse defines model for GetDealsResponse.
 type GetDealsResponse = []GetDealsResponseItem
 
