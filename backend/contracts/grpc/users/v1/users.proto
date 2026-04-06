@@ -6,6 +6,7 @@ option go_package = "barterport/internal/contracts/grpc/users/v1;userspb";
 
 service UsersService {
     rpc GetUsersWithInfo (GetUsersWithInfoRequest) returns (GetUsersWithInfoResponse);
+    rpc ListUsers (ListUsersRequest) returns (ListUsersResponse);
 }
 
 // GetUsersWithInfo
@@ -19,5 +20,12 @@ message UserInfo {
 }
 
 message GetUsersWithInfoResponse {
+    repeated UserInfo users = 1;
+}
+
+// ListUsers
+message ListUsersRequest {}
+
+message ListUsersResponse {
     repeated UserInfo users = 1;
 }

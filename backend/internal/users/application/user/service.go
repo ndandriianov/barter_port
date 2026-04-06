@@ -16,6 +16,7 @@ type UsersRepository interface {
 	UpdateName(ctx context.Context, id uuid.UUID, name string) error
 	UpdateBio(ctx context.Context, id uuid.UUID, bio *string) error
 	GetNamesForUserIDs(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]*string, error)
+	ListUsers(ctx context.Context) ([]domain.User, error)
 }
 
 var ErrAuthClientNotConfigured = errors.New("auth grpc client is not configured")
@@ -95,4 +96,15 @@ func (s *Service) GetNamesForUserIDs(ctx context.Context, ids []uuid.UUID) (map[
 		return nil, fmt.Errorf("repository.GetNamesForUserIDs: %w", err)
 	}
 	return names, nil
+}
+
+// ListUsers returns all users.
+//
+// No domain Errors
+func (s *Service) ListUsers(ctx context.Context) ([]domain.User, error) {
+	users, err := s.repository.ListUsers(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("repository.ListUsers: %w", err)
+	}
+	return users, nil
 }

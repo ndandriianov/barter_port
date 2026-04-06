@@ -3,6 +3,7 @@ import authApi from "@/features/auth/api/authApi";
 import offersApi from "@/features/offers/api/offersApi";
 import dealsApi from "@/features/deals/api/dealsApi.ts";
 import usersApi from "@/features/users/api/usersApi.ts";
+import chatsApi from "@/features/chats/api/chatsApi.ts";
 import {rootReducer} from "@/app/store/rootReducer.ts";
 
 export const store = configureStore({
@@ -13,6 +14,7 @@ export const store = configureStore({
       offersApi.middleware,
       dealsApi.middleware,
       usersApi.middleware,
+      chatsApi.middleware,
     ),
 });
 

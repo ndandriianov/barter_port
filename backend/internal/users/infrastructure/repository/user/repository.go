@@ -117,6 +117,30 @@ func (r *Repository) UpdateBio(ctx context.Context, id uuid.UUID, bio *string) e
 	return nil
 }
 
+// ListUsers returns all users.
+//
+// No domain Errors
+func (r *Repository) ListUsers(ctx context.Context) ([]domain.User, error) {
+	query := `
+		SELECT id, name, bio
+		FROM users
+		ORDER BY id
+	`
+
+	rows, err := r.db.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("sql: %w", err)
+	}
+	defer rows.Close()
+
+	users, err := pgx.CollectRows(rows, pgx.RowToStructByName[domain.User])
+	if err != nil {
+		return nil, fmt.Errorf("collect: %w", err)
+	}
+
+	return users, nil
+}
+
 // GetNamesForUserIDs returns a map of user IDs to their corresponding names.
 //
 // No domain Errors

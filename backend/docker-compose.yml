@@ -163,6 +163,25 @@ services:
     volumes:
       - ./config:/app/config:ro
 
+  chats:
+    profiles: ["app"]
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: chats
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - ./.env
+    environment:
+      APP_ENV: docker
+      CONFIG_COMMON: /app/config/common.yaml
+      CONFIG_SERVICE: /app/config/chats.yaml
+    volumes:
+      - ./config:/app/config:ro
+
   swagger-ui:
     profiles: ["infra", "app"]
     image: swaggerapi/swagger-ui:latest

@@ -20,6 +20,7 @@ const _ = grpc.SupportPackageIsVersion9
 
 const (
 	UsersService_GetUsersWithInfo_FullMethodName = "/barterport.users.v1.UsersService/GetUsersWithInfo"
+	UsersService_ListUsers_FullMethodName        = "/barterport.users.v1.UsersService/ListUsers"
 )
 
 // UsersServiceClient is the client API for UsersService service.
@@ -27,6 +28,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type UsersServiceClient interface {
 	GetUsersWithInfo(ctx context.Context, in *GetUsersWithInfoRequest, opts ...grpc.CallOption) (*GetUsersWithInfoResponse, error)
+	ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error)
 }
 
 type usersServiceClient struct {
@@ -47,11 +49,22 @@ func (c *usersServiceClient) GetUsersWithInfo(ctx context.Context, in *GetUsersW
 	return out, nil
 }
 
+func (c *usersServiceClient) ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListUsersResponse)
+	err := c.cc.Invoke(ctx, UsersService_ListUsers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UsersServiceServer is the server API for UsersService service.
 // All implementations must embed UnimplementedUsersServiceServer
 // for forward compatibility.
 type UsersServiceServer interface {
 	GetUsersWithInfo(context.Context, *GetUsersWithInfoRequest) (*GetUsersWithInfoResponse, error)
+	ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error)
 	mustEmbedUnimplementedUsersServiceServer()
 }
 
@@ -64,6 +77,9 @@ type UnimplementedUsersServiceServer struct{}
 
 func (UnimplementedUsersServiceServer) GetUsersWithInfo(context.Context, *GetUsersWithInfoRequest) (*GetUsersWithInfoResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetUsersWithInfo not implemented")
+}
+func (UnimplementedUsersServiceServer) ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListUsers not implemented")
 }
 func (UnimplementedUsersServiceServer) mustEmbedUnimplementedUsersServiceServer() {}
 func (UnimplementedUsersServiceServer) testEmbeddedByValue()                      {}
@@ -104,6 +120,24 @@ func _UsersService_GetUsersWithInfo_Handler(srv interface{}, ctx context.Context
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UsersService_ListUsers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListUsersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UsersServiceServer).ListUsers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UsersService_ListUsers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UsersServiceServer).ListUsers(ctx, req.(*ListUsersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // UsersService_ServiceDesc is the grpc.ServiceDesc for UsersService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -114,6 +148,10 @@ var UsersService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetUsersWithInfo",
 			Handler:    _UsersService_GetUsersWithInfo_Handler,
+		},
+		{
+			MethodName: "ListUsers",
+			Handler:    _UsersService_ListUsers_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

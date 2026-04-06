@@ -1,6 +1,7 @@
 package deals
 
 import (
+	chatspb "barter-port/contracts/grpc/chats/v1"
 	"barter-port/internal/deals/domain"
 	"barter-port/internal/deals/domain/enums"
 	"barter-port/internal/deals/domain/htypes"
@@ -11,6 +12,7 @@ import (
 	"barter-port/pkg/db"
 	"context"
 	"fmt"
+	"log/slog"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -23,6 +25,8 @@ type Service struct {
 	dealsRepository  *deals.Repository
 	joinsRepository  *joins.Repository
 	offersRepository *offers.Repository
+	chatsClient      chatspb.ChatsServiceClient
+	logger           *slog.Logger
 }
 
 func NewService(
@@ -38,7 +42,18 @@ func NewService(
 		dealsRepository:  dealsRepo,
 		joinsRepository:  joinsRepo,
 		offersRepository: offersRepo,
+		logger:           slog.Default(),
 	}
+}
+
+func (s *Service) WithChatsClient(client chatspb.ChatsServiceClient) *Service {
+	s.chatsClient = client
+	return s
+}
+
+func (s *Service) WithLogger(logger *slog.Logger) *Service {
+	s.logger = logger
+	return s
 }
 
 // ================================================================================
@@ -538,7 +553,28 @@ func (s *Service) confirmDeal(ctx context.Context, id uuid.UUID, userID uuid.UUI
 		return err
 	})
 
-	return deal, txErr
+	if txErr != nil {
+		return deal, txErr
+	}
+
+	if deal.Status == enums.DealStatusDiscussion && s.chatsClient != nil {
+		participantStrs := make([]string, len(deal.Participants))
+		for i, p := range deal.Participants {
+			participantStrs[i] = p.String()
+		}
+		_, err := s.chatsClient.CreateChat(ctx, &chatspb.CreateChatRequest{
+			DealId:         id.String(),
+			ParticipantIds: participantStrs,
+		})
+		if err != nil {
+			s.logger.Error("failed to create chat for deal",
+				slog.String("deal_id", id.String()),
+				slog.Any("error", err),
+			)
+		}
+	}
+
+	return deal, nil
 }
 
 func (s *Service) checkParticipants(ctx context.Context, tx pgx.Tx, dealID uuid.UUID) (bool, error) {

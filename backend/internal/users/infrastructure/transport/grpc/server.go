@@ -18,6 +18,27 @@ func NewServer(usersService *user.Service) *Server {
 	return &Server{usersService: usersService}
 }
 
+func (s Server) ListUsers(ctx context.Context, _ *userspb.ListUsersRequest) (*userspb.ListUsersResponse, error) {
+	users, err := s.usersService.ListUsers(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list users: %w", err)
+	}
+
+	info := make([]*userspb.UserInfo, len(users))
+	for i, u := range users {
+		name := ""
+		if u.Name != nil {
+			name = *u.Name
+		}
+		info[i] = &userspb.UserInfo{
+			Id:   u.Id.String(),
+			Name: name,
+		}
+	}
+
+	return &userspb.ListUsersResponse{Users: info}, nil
+}
+
 func (s Server) GetUsersWithInfo(ctx context.Context, request *userspb.GetUsersWithInfoRequest) (*userspb.GetUsersWithInfoResponse, error) {
 	ids := make([]uuid.UUID, len(request.Ids))
 	for i, id := range request.Ids {
