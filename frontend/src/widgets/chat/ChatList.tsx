@@ -9,6 +9,18 @@ interface Props {
 
 function ChatList({ selectedChatId, onSelect, onNewChat }: Props) {
   const { data: chats = [], isLoading } = chatsApi.useListChatsQuery();
+  const { data: users = [], isLoading: isUsersLoading } = chatsApi.useListUsersQuery();
+
+  const userNameById = new Map(users.map((user) => [user.id, user.name || user.id.slice(0, 8)]));
+
+  function getParticipantsLabel(chat: Chat): string {
+    if (isUsersLoading) return "Участники загружаются...";
+    if (!chat.participants.length) return "Участники не указаны";
+
+    return chat.participants
+      .map((participantId) => userNameById.get(participantId) ?? participantId.slice(0, 8))
+      .join(", ");
+  }
 
   return (
     <div style={{ width: 260, borderRight: "1px solid #e0e0e0", display: "flex", flexDirection: "column", height: "100%" }}>
@@ -42,7 +54,7 @@ function ChatList({ selectedChatId, onSelect, onNewChat }: Props) {
               {chat.deal_id ? `Сделка` : "Личный чат"}
             </div>
             <div style={{ fontSize: 11, color: "#888", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-              {chat.id.slice(0, 8)}...
+              {getParticipantsLabel(chat)}
             </div>
           </div>
         ))}
