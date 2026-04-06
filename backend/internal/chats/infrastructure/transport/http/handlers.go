@@ -2,6 +2,7 @@ package http
 
 import (
 	userspb "barter-port/contracts/grpc/users/v1"
+	"barter-port/contracts/openapi/chats/types"
 	"barter-port/internal/chats/application"
 	"barter-port/internal/chats/domain"
 	"barter-port/pkg/authkit"
@@ -33,17 +34,6 @@ func NewHandlers(log *slog.Logger, chatsService *application.Service, usersClien
 // POST /chats — create direct chat
 // ================================================================================
 
-type createChatReq struct {
-	ParticipantID string `json:"participant_id"`
-}
-
-type chatResp struct {
-	ID           string   `json:"id"`
-	DealID       *string  `json:"deal_id,omitempty"`
-	Participants []string `json:"participants"`
-	CreatedAt    string   `json:"created_at"`
-}
-
 func (h *Handlers) CreateChat(w http.ResponseWriter, r *http.Request) {
 	log := h.log.With(slog.String("handler", "CreateChat"))
 
@@ -53,19 +43,13 @@ func (h *Handlers) CreateChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req createChatReq
+	var req types.CreateChatRequest
 	if err := httpx.DecodeJSON(r, &req); err != nil {
 		httpx.WriteError(w, http.StatusBadRequest, httpx.ErrCannotDecodeRequestBody)
 		return
 	}
 
-	participantID, err := uuid.Parse(req.ParticipantID)
-	if err != nil {
-		httpx.WriteEmptyError(w, http.StatusBadRequest)
-		return
-	}
-
-	chat, err := h.chatsService.CreateChat(r.Context(), nil, []uuid.UUID{userID, participantID})
+	chat, err := h.chatsService.CreateChat(r.Context(), nil, []uuid.UUID{userID, req.ParticipantId})
 	if err != nil {
 		log.Error("error creating chat", slog.Any("error", err))
 		httpx.WriteEmptyError(w, http.StatusInternalServerError)
@@ -95,7 +79,7 @@ func (h *Handlers) ListChats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := make([]chatResp, len(chats))
+	resp := make([]types.Chat, len(chats))
 	for i := range chats {
 		resp[i] = mapChatToResp(&chats[i])
 	}
@@ -105,14 +89,6 @@ func (h *Handlers) ListChats(w http.ResponseWriter, r *http.Request) {
 // ================================================================================
 // GET /chats/{chatId}/messages — get messages (polling)
 // ================================================================================
-
-type messageResp struct {
-	ID        string `json:"id"`
-	ChatID    string `json:"chat_id"`
-	SenderID  string `json:"sender_id"`
-	Content   string `json:"content"`
-	CreatedAt string `json:"created_at"`
-}
 
 func (h *Handlers) GetMessages(w http.ResponseWriter, r *http.Request) {
 	log := h.log.With(slog.String("handler", "GetMessages"))
@@ -150,7 +126,7 @@ func (h *Handlers) GetMessages(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	resp := make([]messageResp, len(msgs))
+	resp := make([]types.Message, len(msgs))
 	for i := range msgs {
 		resp[i] = mapMessageToResp(&msgs[i])
 	}
@@ -234,35 +210,4 @@ func (h *Handlers) ListUsers(w http.ResponseWriter, r *http.Request) {
 		resp[i] = userResp{ID: u.Id, Name: u.Name}
 	}
 	httpx.WriteJSON(w, http.StatusOK, resp)
-}
-
-// ================================================================================
-// helpers
-// ================================================================================
-
-func mapChatToResp(c *domain.Chat) chatResp {
-	participants := make([]string, len(c.Participants))
-	for i, p := range c.Participants {
-		participants[i] = p.String()
-	}
-	resp := chatResp{
-		ID:           c.ID.String(),
-		Participants: participants,
-		CreatedAt:    c.CreatedAt.Format(time.RFC3339Nano),
-	}
-	if c.DealID != nil {
-		s := c.DealID.String()
-		resp.DealID = &s
-	}
-	return resp
-}
-
-func mapMessageToResp(m *domain.Message) messageResp {
-	return messageResp{
-		ID:        m.ID.String(),
-		ChatID:    m.ChatID.String(),
-		SenderID:  m.SenderID.String(),
-		Content:   m.Content,
-		CreatedAt: m.CreatedAt.Format(time.RFC3339Nano),
-	}
 }
