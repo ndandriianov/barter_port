@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package barterport.users.v1;
+
+option go_package = "barterport/internal/contracts/grpc/users/v1;userspb";
+
+service UsersService {
+    rpc GetUsersWithInfo (GetUsersWithInfoRequest) returns (GetUsersWithInfoResponse);
+}
+
+// GetUsersWithInfo
+message GetUsersWithInfoRequest {
+    repeated string ids = 1;
+}
+
+message UserInfo {
+    string id = 1;
+    string name = 2;
+}
+
+message GetUsersWithInfoResponse {
+    repeated UserInfo users = 1;
+}

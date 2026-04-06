@@ -1,0 +1,39 @@
+openapi: 3.0.3
+info:
+  title: Deals API
+  description: Deals API
+  version: 1.0.0
+
+servers:
+  - url: 'http://localhost:80'
+
+paths:
+  /deals/drafts:
+    $ref: './paths/drafts.yaml#/dealsDrafts'
+  /deals/drafts/{draftId}:
+    $ref: './paths/drafts.yaml#/dealsDraftsById'
+  /deals/drafts/{draftId}/cancel:
+    $ref: './paths/drafts.yaml#/dealsDraftsCancel'
+  /deals:
+    $ref: './paths/deals.yaml#/deals'
+  /deals/{dealId}:
+    $ref: './paths/deals.yaml#/dealById'
+  /deals/{dealId}/status:
+    $ref: './paths/deals.yaml#/dealStatus'
+  /deals/{dealId}/items/{itemId}:
+    $ref: './paths/deals.yaml#/dealItemById'
+  /deals/{dealId}/items:
+    $ref: './paths/deals.yaml#/dealItems'
+  /deals/{dealId}/joins:
+    $ref: './paths/joins.yaml#/join'
+  /deals/{dealId}/joins/{userId}:
+    $ref: './paths/joins.yaml#/processJoinRequest'
+  /offers:
+    $ref: './paths/offers.yaml#/offers'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

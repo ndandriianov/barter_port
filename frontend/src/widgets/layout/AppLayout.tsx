@@ -1,0 +1,103 @@
+import { useState } from "react";
+import { Outlet, Link as RouterLink, useNavigate } from "react-router-dom";
+import {
+  AppBar,
+  Box,
+  Button,
+  Container,
+  Drawer,
+  IconButton,
+  List,
+  ListItem,
+  ListItemButton,
+  ListItemText,
+  Toolbar,
+  Typography,
+} from "@mui/material";
+import MenuIcon from "@mui/icons-material/Menu";
+import { useAppDispatch } from "@/hooks/redux";
+import { performLogout } from "@/features/auth/model/logoutThunk";
+
+const navLinks = [
+  { label: "Объявления", to: "/offers" },
+  { label: "Сделки", to: "/deals" },
+  { label: "Черновики", to: "/deals/drafts" },
+  { label: "Профиль", to: "/profile" },
+];
+
+function AppLayout() {
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    await dispatch(performLogout());
+    navigate("/login");
+  };
+
+  const drawer = (
+    <Box sx={{ width: 240 }} role="presentation" onClick={() => setDrawerOpen(false)}>
+      <List>
+        {navLinks.map((link) => (
+          <ListItem key={link.to} disablePadding>
+            <ListItemButton component={RouterLink} to={link.to}>
+              <ListItemText primary={link.label} />
+            </ListItemButton>
+          </ListItem>
+        ))}
+        <ListItem disablePadding>
+          <ListItemButton onClick={handleLogout}>
+            <ListItemText primary="Выйти" />
+          </ListItemButton>
+        </ListItem>
+      </List>
+    </Box>
+  );
+
+  return (
+    <Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+      <AppBar position="sticky">
+        <Toolbar>
+          <IconButton
+            color="inherit"
+            edge="start"
+            sx={{ mr: 1, display: { sm: "none" } }}
+            onClick={() => setDrawerOpen(true)}
+          >
+            <MenuIcon />
+          </IconButton>
+
+          <Typography
+            variant="h6"
+            component={RouterLink}
+            to="/offers"
+            sx={{ flexGrow: 1, textDecoration: "none", color: "inherit", fontWeight: 700 }}
+          >
+            Barter Port
+          </Typography>
+
+          <Box sx={{ display: { xs: "none", sm: "flex" }, gap: 1 }}>
+            {navLinks.map((link) => (
+              <Button key={link.to} color="inherit" component={RouterLink} to={link.to}>
+                {link.label}
+              </Button>
+            ))}
+            <Button color="inherit" variant="outlined" onClick={handleLogout} sx={{ borderColor: "rgba(255,255,255,0.5)" }}>
+              Выйти
+            </Button>
+          </Box>
+        </Toolbar>
+      </AppBar>
+
+      <Drawer open={drawerOpen} onClose={() => setDrawerOpen(false)}>
+        {drawer}
+      </Drawer>
+
+      <Container component="main" maxWidth="lg" sx={{ py: 4, flexGrow: 1 }}>
+        <Outlet />
+      </Container>
+    </Box>
+  );
+}
+
+export default AppLayout;

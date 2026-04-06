@@ -1,12 +1,11 @@
 basePath: /
 definitions:
-  http_api.ErrorResponse:
+  httpx.ErrorResponse:
     properties:
-      error:
-        description: The error message
+      message:
         type: string
     type: object
-  transport.loginReq:
+  infrastructure_transport_http.credentialsReq:
     properties:
       email:
         example: user@email.com
@@ -15,38 +14,34 @@ definitions:
         example: password
         type: string
     type: object
-  transport.loginResp:
+  infrastructure_transport_http.loginResp:
     properties:
       accessToken:
         type: string
     type: object
-  transport.meResp:
+  infrastructure_transport_http.meResp:
     properties:
       userId:
         type: string
     type: object
-  transport.refreshResponse:
+  infrastructure_transport_http.refreshResponse:
     properties:
       access_token:
         type: string
     type: object
-  transport.registerReq:
-    properties:
-      email:
-        example: user@email.com
-        type: string
-      password:
-        example: password
-        type: string
-    type: object
-  transport.registerResp:
+  infrastructure_transport_http.registerResp:
     properties:
       email:
         type: string
       userId:
         type: string
     type: object
-  transport.verifyEmailReq:
+  infrastructure_transport_http.userCreationStatusResp:
+    properties:
+      status:
+        type: string
+    type: object
+  infrastructure_transport_http.verifyEmailReq:
     properties:
       token:
         example: iT1VWZWO1apO2GGoXG1ahOKuHlo8WA6ESwA86WMOTiI
@@ -67,33 +62,31 @@ paths:
       parameters:
       - description: Login request
         in: body
-        name: loginReq
+        name: credentialsReq
         required: true
         schema:
-          $ref: '#/definitions/transport.loginReq'
+          $ref: '#/definitions/infrastructure_transport_http.credentialsReq'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/transport.loginResp'
+            $ref: '#/definitions/infrastructure_transport_http.loginResp'
         "400":
-          description: Invalid request or credentials
+          description: Invalid request or credentialsReq
           schema:
-            $ref: '#/definitions/http_api.ErrorResponse'
+            $ref: '#/definitions/httpx.ErrorResponse'
         "401":
           description: Incorrect password
           schema:
-            $ref: '#/definitions/http_api.ErrorResponse'
+            $ref: '#/definitions/httpx.ErrorResponse'
         "403":
           description: Email not verified
           schema:
-            $ref: '#/definitions/http_api.ErrorResponse'
+            $ref: '#/definitions/httpx.ErrorResponse'
         "500":
           description: Internal server error
-          schema:
-            $ref: '#/definitions/http_api.ErrorResponse'
       summary: Login user
       tags:
       - auth
@@ -107,8 +100,6 @@ paths:
           description: Logout successful
         "500":
           description: Internal server error
-          schema:
-            $ref: '#/definitions/http_api.ErrorResponse'
       summary: Logout user
       tags:
       - auth
@@ -121,11 +112,9 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/transport.meResp'
+            $ref: '#/definitions/infrastructure_transport_http.meResp'
         "500":
           description: Internal server error
-          schema:
-            $ref: '#/definitions/http_api.ErrorResponse'
       security:
       - BearerAuth: []
       summary: Get user info
@@ -148,15 +137,13 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/transport.refreshResponse'
+            $ref: '#/definitions/infrastructure_transport_http.refreshResponse'
         "401":
           description: Unauthorized or invalid token
           schema:
-            $ref: '#/definitions/http_api.ErrorResponse'
+            $ref: '#/definitions/httpx.ErrorResponse'
         "500":
           description: Internal server error
-          schema:
-            $ref: '#/definitions/http_api.ErrorResponse'
       summary: Refresh tokens
       tags:
       - auth
@@ -168,26 +155,84 @@ paths:
       parameters:
       - description: Register request
         in: body
-        name: registerReq
+        name: credentialsReq
         required: true
         schema:
-          $ref: '#/definitions/transport.registerReq'
+          $ref: '#/definitions/infrastructure_transport_http.credentialsReq'
       produces:
       - application/json
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/transport.registerResp'
+            $ref: '#/definitions/infrastructure_transport_http.registerResp'
         "400":
           description: Invalid request
           schema:
-            $ref: '#/definitions/http_api.ErrorResponse'
+            $ref: '#/definitions/httpx.ErrorResponse'
         "500":
           description: Internal server error
-          schema:
-            $ref: '#/definitions/http_api.ErrorResponse'
       summary: Register a new user
+      tags:
+      - auth
+  /auth/retry-send-verification-email:
+    post:
+      consumes:
+      - application/json
+      description: Generates a new email verification token and sends a verification
+        email if the user's email is not verified.
+      parameters:
+      - description: Retry send verification email request
+        in: body
+        name: credentialsReq
+        required: true
+        schema:
+          $ref: '#/definitions/infrastructure_transport_http.credentialsReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Verification email sent successfully
+        "400":
+          description: Invalid request
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: Internal server error
+      summary: Retry sending verification email
+      tags:
+      - auth
+  /auth/status/{userId}:
+    get:
+      description: Retrieves user creation status by user ID
+      parameters:
+      - description: User ID
+        in: path
+        name: userId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/infrastructure_transport_http.userCreationStatusResp'
+        "400":
+          description: Invalid user ID
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: User creation event not found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: Internal server error
+      summary: Get user creation status
       tags:
       - auth
   /auth/verify-email:
@@ -201,7 +246,7 @@ paths:
         name: verifyEmailReq
         required: true
         schema:
-          $ref: '#/definitions/transport.verifyEmailReq'
+          $ref: '#/definitions/infrastructure_transport_http.verifyEmailReq'
       produces:
       - text/plain
       responses:
@@ -210,15 +255,13 @@ paths:
         "400":
           description: Invalid request or token
           schema:
-            $ref: '#/definitions/http_api.ErrorResponse'
+            $ref: '#/definitions/httpx.ErrorResponse'
         "404":
           description: User not found
           schema:
-            $ref: '#/definitions/http_api.ErrorResponse'
+            $ref: '#/definitions/httpx.ErrorResponse'
         "500":
           description: Internal server error
-          schema:
-            $ref: '#/definitions/http_api.ErrorResponse'
       summary: Verify email
       tags:
       - auth

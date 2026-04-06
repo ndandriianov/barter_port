@@ -1,0 +1,6 @@
+ErrorResponse:
+  type: object
+  properties:
+    message:
+      type: string
+      example: Вы отправили некорректный запрос
