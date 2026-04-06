@@ -400,6 +400,51 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags:
+        - Deals
+      summary: Получить список голосов за переход к следующему статусу сделки
+      operationId: GetDealStatusVotes
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetDealStatusVotesResponse'
+        '400':
+          description: Invalid deal ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Deal not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /deals/{dealId}/items/{itemId}:
     patch:
       tags:
@@ -1068,6 +1113,22 @@ components:
             type: string
             format: uuid
             description: Уникальный идентификатор пользователя, участвующего в сделке
+    GetDealStatusVotesResponseItem:
+      type: object
+      required:
+        - userId
+        - vote
+      properties:
+        userId:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор пользователя, который проголосовал за переход сделки в следующий статус
+        vote:
+          $ref: '#/components/schemas/DealStatus'
+    GetDealStatusVotesResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/GetDealStatusVotesResponseItem'
     ChangeDealStatusRequest:
       type: object
       required:

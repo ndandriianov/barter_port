@@ -129,3 +129,23 @@ GetDealJoinRequestsResponseItem:
         type: string
         format: uuid
         description: Уникальный идентификатор пользователя, который поддерживает заявку на присоединение к сделке
+
+
+
+GetDealStatusVotesResponse:
+  type: array
+  items:
+    $ref: '#/GetDealStatusVotesResponseItem'
+
+GetDealStatusVotesResponseItem:
+  type: object
+  required:
+    - userId
+    - vote
+  properties:
+    userId:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор пользователя, который проголосовал за переход сделки в следующий статус
+    vote:
+      $ref: 'schemas.yaml#/DealStatus'
