@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import chatsApi from "@/features/chats/api/chatsApi.ts";
 import usersApi from "@/features/users/api/usersApi.ts";
-import type { Message, UserInfo } from "@/features/chats/model/types.ts";
+import type { Message, User } from "@/features/chats/model/types.ts";
 
 interface Props {
   chatId: string;
@@ -22,8 +22,8 @@ function ChatWindow({ chatId, participants }: Props) {
   // Map userId → name for participants
   const userMap = new Map<string, string>(
     allUsers
-      .filter((u: UserInfo) => participants.includes(u.id))
-      .map((u: UserInfo) => [u.id, u.name || u.id.slice(0, 8)])
+      .filter((u: User) => participants.includes(u.id))
+      .map((u: User) => [u.id, u.name])
   );
 
   // Fallback: if a sender isn't in participants list (e.g. deal chat), still show short id
