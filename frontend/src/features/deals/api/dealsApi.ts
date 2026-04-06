@@ -7,6 +7,7 @@ import {
   dealSchema,
   draftSchema,
   getDealJoinRequestsResponseSchema,
+  getDealStatusVotesResponseSchema,
   getDealsResponseSchema,
   getMyDraftDealsResponseSchema,
   itemSchema,
@@ -18,6 +19,7 @@ import type {
   CreateDraftDealResponse,
   Deal,
   GetDealJoinRequestsResponse,
+  GetDealStatusVotesResponse,
   Draft,
   GetDealsParams,
   GetDealsResponse,
@@ -30,7 +32,7 @@ import type {
 const dealsApi = createApi({
   reducerPath: "dealsApi",
   baseQuery: baseQueryWithReauth,
-  tagTypes: ["Deals", "DraftDeals", "DealJoins"],
+  tagTypes: ["Deals", "DraftDeals", "DealJoins", "DealStatusVotes"],
   endpoints: (builder) => ({
     createDraftDeal: builder.mutation<CreateDraftDealResponse, CreateDraftDealRequest>({
       query: (body) => ({
@@ -119,6 +121,12 @@ const dealsApi = createApi({
       providesTags: (_result, _error, dealId) => [{type: "DealJoins", id: dealId}],
     }),
 
+    getDealStatusVotes: builder.query<GetDealStatusVotesResponse, string>({
+      query: (dealId) => `/deals/${dealId}/status`,
+      transformResponse: (response: unknown) => getDealStatusVotesResponseSchema.parse(response),
+      providesTags: (_result, _error, dealId) => [{type: "DealStatusVotes", id: dealId}],
+    }),
+
     leaveDeal: builder.mutation<void, string>({
       query: (dealId) => ({
         url: `/deals/${dealId}/joins`,
@@ -151,7 +159,11 @@ const dealsApi = createApi({
         body: changeDealStatusRequestSchema.parse(body),
       }),
       transformResponse: (response: unknown) => dealSchema.parse(response),
-      invalidatesTags: (_result, _error, { dealId }) => [{type: "Deals", id: dealId}, "Deals"],
+      invalidatesTags: (_result, _error, { dealId }) => [
+        {type: "Deals", id: dealId},
+        {type: "DealStatusVotes", id: dealId},
+        "Deals",
+      ],
     }),
 
     updateDealItem: builder.mutation<Item, { dealId: string; itemId: string; body: UpdateDealItemRequest }>({

@@ -104,6 +104,13 @@ export const dealJoinRequestSchema = z.object({
 
 export const getDealJoinRequestsResponseSchema = z.array(dealJoinRequestSchema);
 
+export const getDealStatusVotesResponseItemSchema = z.object({
+  userId: z.string(),
+  vote: dealStatusSchema,
+});
+
+export const getDealStatusVotesResponseSchema = z.array(getDealStatusVotesResponseItemSchema);
+
 export const dealIdAndParticipantsSchema = z.object({
   id: z.string(),
   status: dealStatusSchema,

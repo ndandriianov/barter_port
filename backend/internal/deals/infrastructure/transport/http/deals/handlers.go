@@ -231,3 +231,40 @@ func (h *Handlers) ChangeDealStatus(w http.ResponseWriter, r *http.Request) {
 
 	httpx.WriteJSON(w, http.StatusOK, mapDealToDTO(deal))
 }
+
+// ================================================================================
+// GET DEAL STATUS VOTES
+// ================================================================================
+
+func (h *Handlers) GetDealStatusVotes(w http.ResponseWriter, r *http.Request) {
+	log := logger.LogFrom(r.Context(), h.log).With(slog.String("handler", "GetDealStatusVotes"))
+	log.Info("handling get deal status votes request")
+
+	idStr := chi.URLParam(r, "dealId")
+	dealID, err := uuid.Parse(idStr)
+	if err != nil {
+		log.Error("error parsing deal id")
+		httpx.WriteEmptyError(w, http.StatusBadRequest)
+		return
+	}
+
+	if _, ok := authkit.UserIDFromContext(r.Context()); !ok {
+		log.Error("failed to get userID from context")
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
+	votes, err := h.dealsService.GetDealStatusVotes(r.Context(), dealID)
+	if err != nil {
+		if errors.Is(err, domain.ErrDealNotFound) {
+			httpx.WriteEmptyError(w, http.StatusNotFound)
+			return
+		}
+
+		log.Error("error getting deal status votes", slog.Any("error", err))
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		return
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, mapStatusVotesToDTO(votes))
+}

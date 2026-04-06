@@ -1028,6 +1028,25 @@ func doChangeDealStatus(t *testing.T, dealID uuid.UUID, userID *uuid.UUID, rawBo
 	return resp
 }
 
+func doGetDealStatusVotes(t *testing.T, dealID string, userID *uuid.UUID) *http.Response {
+	t.Helper()
+
+	req, err := http.NewRequest(
+		http.MethodGet,
+		dealsURL()+"/deals/"+dealID+"/status",
+		nil,
+	)
+	require.NoError(t, err)
+	if userID != nil {
+		req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, *userID))
+	}
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+
+	return resp
+}
+
 func mustChangeDealStatus(t *testing.T, dealID uuid.UUID, userID uuid.UUID, status dealstypes.DealStatus) dealstypes.Deal {
 	t.Helper()
 
@@ -1330,6 +1349,84 @@ func TestChangeDealStatusCancelledAppliesImmediately(t *testing.T) {
 
 	dealAfter := mustGetDealByID(t, userB, dealID)
 	require.Equal(t, dealstypes.Cancelled, dealAfter.Status)
+}
+
+// ────────────────────────────────────────────────────────────────
+// GetDealStatusVotes
+// ────────────────────────────────────────────────────────────────
+
+func TestGetDealStatusVotesUnauthorized(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	resp := doGetDealStatusVotes(t, uuid.NewString(), nil)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+}
+
+func TestGetDealStatusVotesInvalidUUID(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+
+	resp := doGetDealStatusVotes(t, "not-a-uuid", &userID)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestGetDealStatusVotesNotFound(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+
+	resp := doGetDealStatusVotes(t, uuid.NewString(), &userID)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
+
+func TestGetDealStatusVotesEmptyWhenNoVotes(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userA := uuid.New()
+	userB := uuid.New()
+	dealID, _ := mustCreateTwoPartyDeal(t, userA, userB)
+
+	resp := doGetDealStatusVotes(t, dealID.String(), &userA)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var votes dealstypes.GetDealStatusVotesResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&votes))
+	require.Empty(t, votes)
+}
+
+func TestGetDealStatusVotesReturnsRecordedVotes(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userA := uuid.New()
+	userB := uuid.New()
+	dealID, _ := mustCreateTwoPartyDeal(t, userA, userB)
+
+	_ = mustChangeDealStatus(t, dealID, userA, dealstypes.Discussion)
+
+	resp := doGetDealStatusVotes(t, dealID.String(), &userB)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var votes dealstypes.GetDealStatusVotesResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&votes))
+	require.Len(t, votes, 1)
+	require.Equal(t, userA, votes[0].UserId)
+	require.Equal(t, dealstypes.Discussion, votes[0].Vote)
 }
 
 // ────────────────────────────────────────────────────────────────
