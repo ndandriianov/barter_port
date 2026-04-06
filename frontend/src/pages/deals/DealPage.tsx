@@ -1,7 +1,9 @@
 import { Link, useParams } from "react-router-dom";
 import { Alert, Box, Button, CircularProgress, Typography } from "@mui/material";
 import dealsApi from "@/features/deals/api/dealsApi";
+import chatsApi from "@/features/chats/api/chatsApi";
 import DealCard from "@/widgets/deals/DealCard";
+import ChatWindow from "@/widgets/chat/ChatWindow";
 import { getStatusCode } from "@/shared/utils/getStatusCode";
 
 function DealPage() {
@@ -11,6 +13,12 @@ function DealPage() {
     skip: !dealId,
     pollingInterval: 10_000,
   });
+
+  const canShowDealChat = data?.status === "Discussion" || data?.status === "Confirmed";
+  const { data: chats = [], isLoading: isChatsLoading } = chatsApi.useListChatsQuery(undefined, {
+    skip: !canShowDealChat,
+  });
+  const dealChat = data ? chats.find((chat) => chat.deal_id === data.id) : undefined;
 
   if (!dealId) return <Alert severity="warning">Сделка не найдена</Alert>;
 
@@ -45,6 +53,26 @@ function DealPage() {
         Детали сделки
       </Typography>
       <DealCard deal={data} />
+
+      {canShowDealChat && (
+        <Box mt={3}>
+          <Typography variant="h5" fontWeight={700} mb={2}>
+            Чат сделки
+          </Typography>
+
+          {isChatsLoading ? (
+            <Box display="flex" justifyContent="center" py={4}>
+              <CircularProgress />
+            </Box>
+          ) : !dealChat ? (
+            <Alert severity="info">Чат этой сделки пока недоступен</Alert>
+          ) : (
+            <Box sx={{ border: "1px solid #e0e0e0", borderRadius: 2, height: 520, overflow: "hidden" }}>
+              <ChatWindow chatId={dealChat.id} participants={dealChat.participants} />
+            </Box>
+          )}
+        </Box>
+      )}
     </Box>
   );
 }
