@@ -358,7 +358,7 @@ function DealCard({ deal }: DealCardProps) {
     skip: !canSeeStatusVotes,
     pollingInterval: 10_000,
   });
-  const canSeeJoinRequests = Boolean(me && isParticipant && !isFinalStatus(deal.status));
+  const canSeeJoinRequests = Boolean(me && isParticipant && deal.status === "LookingForParticipants");
   const {
     data: joinRequests,
     isLoading: isJoinRequestsLoading,
