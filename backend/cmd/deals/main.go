@@ -58,7 +58,7 @@ func main() {
 	draftsRepo := drafts.NewRepository()
 	dealsRepo := deals.NewRepository()
 	joinsRepo := joins.NewRepository()
-	dealsService := dealssvc.NewService(db, draftsRepo, dealsRepo, joinsRepo)
+	dealsService := dealssvc.NewService(db, draftsRepo, dealsRepo, joinsRepo, offersRepo)
 
 	validator, err := bootstrap.InitLocalJWTFromConfig(cfg)
 	if err != nil {

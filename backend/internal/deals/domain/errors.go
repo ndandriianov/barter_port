@@ -4,6 +4,7 @@ import "errors"
 
 var (
 	ErrInvalidOfferName        = errors.New("invalid offer name")
+	ErrInvalidQuantity         = errors.New("invalid quantity")
 	ErrDraftNotFound           = errors.New("draft not found")
 	ErrDealNotFound            = errors.New("deal not found")
 	ErrItemNotFound            = errors.New("item not found")

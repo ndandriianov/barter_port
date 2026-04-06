@@ -94,6 +94,55 @@ func (h *Handlers) GetDealByID(w http.ResponseWriter, r *http.Request) {
 }
 
 // ================================================================================
+// ADD DEAL ITEM
+// ================================================================================
+
+func (h *Handlers) AddDealItem(w http.ResponseWriter, r *http.Request) {
+	log := logger.LogFrom(r.Context(), h.log).With(slog.String("handler", "AddDealItem"))
+	log.Info("handling add deal item request")
+
+	dealIDStr := chi.URLParam(r, "dealId")
+	dealID, err := uuid.Parse(dealIDStr)
+	if err != nil {
+		log.Error("error parsing deal id")
+		httpx.WriteEmptyError(w, http.StatusBadRequest)
+		return
+	}
+
+	userID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		log.Error("failed to get userID from context")
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
+	var req types.AddDealItemRequest
+	if err = httpx.DecodeJSON(r, &req); err != nil {
+		log.Error("error decoding request", slog.Any("error", err))
+		httpx.WriteError(w, http.StatusBadRequest, httpx.ErrCannotDecodeRequestBody)
+		return
+	}
+
+	deal, err := h.dealsService.AddDealItem(r.Context(), userID, dealID, req.OfferId, req.Quantity)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrDealNotFound), errors.Is(err, domain.ErrOfferNotFound):
+			httpx.WriteEmptyError(w, http.StatusNotFound)
+		case errors.Is(err, domain.ErrInvalidQuantity):
+			httpx.WriteEmptyError(w, http.StatusBadRequest)
+		case errors.Is(err, domain.ErrForbidden), errors.Is(err, domain.ErrInvalidDealStatus):
+			httpx.WriteEmptyError(w, http.StatusForbidden)
+		default:
+			log.Error("error adding deal item", slog.Any("error", err))
+			httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, mapDealToDTO(deal))
+}
+
+// ================================================================================
 // UPDATE DEAL ITEM
 // ================================================================================
 

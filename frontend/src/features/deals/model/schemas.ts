@@ -86,6 +86,11 @@ export const changeDealStatusRequestSchema = z.object({
   expectedStatus: dealStatusSchema,
 });
 
+export const addDealItemRequestSchema = z.object({
+  offerId: z.string(),
+  quantity: z.number().int().min(1),
+});
+
 export const updateDealItemRequestSchema = z.object({
   name: z.string().optional(),
   description: z.string().optional(),
