@@ -1,6 +1,7 @@
 import {createAsyncThunk} from "@reduxjs/toolkit";
 import {logout} from "@/features/auth/model/authSlice.ts";
 import authApi from "@/features/auth/api/authApi.ts";
+import { resetAllApiCaches } from "@/app/store/resetCaches.ts";
 
 export const performLogout = createAsyncThunk(
   "auth/performLogout",
@@ -12,6 +13,6 @@ export const performLogout = createAsyncThunk(
     }
 
     dispatch(logout());
-    dispatch(authApi.util.resetApiState());
+    dispatch(resetAllApiCaches());
   }
 )
