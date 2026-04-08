@@ -57,25 +57,26 @@ CREATE TABLE deals
 
 CREATE TABLE items
 (
-    id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    deal_id          UUID    NOT NULL,
-    author_id        UUID    NOT NULL,
-    provider_id      UUID,
-    receiver_id      UUID,
-    name             TEXT    NOT NULL,
-    description      TEXT    NOT NULL,
-    type             TEXT    NOT NULL,
-    updated_at       TIMESTAMPTZ,
-    quantity         INTEGER NOT NULL DEFAULT 1,
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    deal_id     UUID    NOT NULL,
+    author_id   UUID    NOT NULL,
+    provider_id UUID,
+    receiver_id UUID,
+    name        TEXT    NOT NULL,
+    description TEXT    NOT NULL,
+    type        TEXT    NOT NULL,
+    updated_at  TIMESTAMPTZ,
+    quantity    INTEGER NOT NULL DEFAULT 1,
     CONSTRAINT offers_type_check CHECK (type IN ('good', 'service')),
     FOREIGN KEY (deal_id) REFERENCES deals (id) ON DELETE CASCADE
 );
 
 CREATE TABLE participants
 (
-    deal_id          UUID        NOT NULL REFERENCES deals (id) ON DELETE CASCADE,
-    user_id          UUID        NOT NULL,
-    requested_status deal_status,
+    deal_id                UUID NOT NULL REFERENCES deals (id) ON DELETE CASCADE,
+    user_id                UUID NOT NULL,
+    requested_status       deal_status,
+    failure_blame_vote_for UUID REFERENCES participants (deal_id, user_id) ON DELETE SET NULL,
     PRIMARY KEY (deal_id, user_id)
 );
 
@@ -88,12 +89,23 @@ CREATE TABLE join_requests
 
 CREATE TABLE join_requests_votes
 (
-    user_id UUID NOT NULL,
-    deal_id UUID NOT NULL REFERENCES deals (id) ON DELETE CASCADE,
+    user_id  UUID NOT NULL,
+    deal_id  UUID NOT NULL REFERENCES deals (id) ON DELETE CASCADE,
     voter_id UUID NOT NULL,
 
     FOREIGN KEY (user_id, deal_id) REFERENCES join_requests (user_id, deal_id) ON DELETE CASCADE,
     FOREIGN KEY (deal_id, voter_id) REFERENCES participants (deal_id, user_id) ON DELETE CASCADE,
 
     PRIMARY KEY (user_id, deal_id, voter_id)
+);
+
+CREATE TABLE deal_failures
+(
+    deal_id            UUID NOT NULL REFERENCES deals (id) ON DELETE CASCADE,
+    user_id            UUID REFERENCES participants (deal_id, user_id) ON DELETE SET NULL, -- если пользователи проголосовали за разных участников, то null
+    confirmed_by_admin BOOLEAN,                                                            -- null - не подтверждено, true - подтверждено, false - отклонено
+    admin_comment      TEXT,
+    punishment_points  INTEGER,
+
+    PRIMARY KEY (deal_id)
 );

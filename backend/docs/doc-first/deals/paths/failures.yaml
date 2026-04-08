@@ -1,0 +1,247 @@
+dealFailuresVotes:
+  post:
+    tags:
+      - Failures
+    summary: Проголосовать за виновника в провале сделки
+    description: |
+      Голос за провал сделки и виновника.
+      Если половина участников с округлением в меньшую сторону проголосует за одного и того же виновника,
+      он будет признан виновным в провале сделки. Голосовать можно только один раз, изменить голос нельзя.
+      
+      Если половина участников проголосовали за провал сделки, но голоса распределились между несколькими кандидатами,
+      то виновника определяет модератор.
+    operationId: voteForFailure
+    parameters:
+      - name: dealId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/requests.yaml#/VoteForFailureRequest'
+    security:
+      - bearerAuth: [ ]
+    responses:
+      '204':
+        description: Голос успешно учтен
+      '400':
+        description: Некорректный запрос (пустое тело)
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: |
+          Операция запрещена по бизнес-правилам:
+          сделка не в статусе Failed, либо пользователь не является участником сделки
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Сделка не найдена
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+  get:
+    tags:
+      - Failures
+    summary: Получить список голосов за виновника в провале сделки
+    operationId: getFailureVotes
+    parameters:
+      - name: dealId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    security:
+      - bearerAuth: [ ]
+    responses:
+      '200':
+        description: Список голосов успешно получен
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/FailureVotesResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: |
+          Операция запрещена по бизнес-правилам: сделка не в статусе Failed
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Сделка не найдена
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+dealMaterials:
+  get:
+    tags:
+      - Failures
+    summary: Получить материалы по провалу сделки
+    operationId: getFailureMaterials
+    parameters:
+      - name: dealId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    security:
+      - bearerAuth: [ ]
+    responses:
+      '200':
+        description: Материалы по провалу сделки успешно получены
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/FailureMaterialResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: |
+          Операция запрещена по бизнес-правилам: сделка не в статусе Failed
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Сделка не найдена
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+
+dealFailureModeratorResolution:
+  post:
+    tags:
+      - Failures
+    summary: Решение модератора по провалу сделки
+    description: |
+      Модератор принимает решение о виновнике провала сделки в случае,
+      если голоса участников распределились между несколькими кандидатами,
+      либо если он не согласен с результатом голосования. Решение модератора является окончательным.
+      
+      Модератор может принять решение что сделка не провалена, тогда она переходит в статус Completed,
+      если была в статусе Confirmed, в ином случае она переходит в Cancelled
+    operationId: moderatorResolutionForFailure
+    parameters:
+      - name: dealId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/requests.yaml#/ModeratorResolutionForFailureRequest'
+    security:
+      - bearerAuth: [ ]
+    responses:
+      '200':
+        description: Решение модератора успешно учтено
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/DealFailureModeratorResolution'
+      '400':
+        description: Некорректный запрос (пустое тело)
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: |
+          Операция запрещена по бизнес-правилам: сделка не в статусе Failed, либо пользователь не является модератором сделки
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Сделка не найдена
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+  get:
+    tags:
+      - Failures
+    summary: Получить решение модератора по провалу сделки
+    operationId: getModeratorResolutionForFailure
+    parameters:
+      - name: dealId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    security:
+      - bearerAuth: [ ]
+    responses:
+      '200':
+        description: Решение модератора успешно получено
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/DealFailureModeratorResolution'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: |
+          Операция запрещена по бизнес-правилам: сделка не в статусе Failed
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Сделка не найдена
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'

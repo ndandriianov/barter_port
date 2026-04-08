@@ -28,6 +28,12 @@ paths:
     $ref: './paths/joins.yaml#/join'
   /deals/{dealId}/joins/{userId}:
     $ref: './paths/joins.yaml#/processJoinRequest'
+  /deals/failures/{dealId}/votes:
+    $ref: './paths/failures.yaml#/dealFailuresVotes'
+  /deals/failures/{dealId}/materials:
+    $ref: './paths/failures.yaml#/dealMaterials'
+  /deals/failures/{dealId}/moderator-resolution:
+    $ref: './paths/failures.yaml#/dealFailureModeratorResolution'
   /offers:
     $ref: './paths/offers.yaml#/offers'
 

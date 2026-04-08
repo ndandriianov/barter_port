@@ -64,3 +64,38 @@ AddDealItemRequest:
       description: |
         Количество единиц предложения, которые пользователь хочет добавить в сделку.
         Должно быть положительным числом.
+
+
+
+VoteForFailureRequest:
+  type: object
+  required:
+    - userId
+  properties:
+    userId:
+      type: string
+      format: uuid
+      description: ID пользователя, за которого голосует участник сделки.
+
+
+
+ModeratorResolutionForFailureRequest:
+  type: object
+  required:
+    - userId
+    - punishmentPoints
+  properties:
+    userId:
+      type: string
+      format: uuid
+      description: |
+        ID пользователя, которого модератор признает виновным в провале сделки. Должен быть участником сделки.
+    punishmentPoints:
+      type: integer
+      minimum: 0
+      description: |
+        Количество штрафных очков, которые модератор назначает виновнику провала сделки. Должно быть неотрицательным числом.
+    comment:
+      type: string
+      description: |
+        Комментарий модератора, объясняющий его решение. Может быть пустым

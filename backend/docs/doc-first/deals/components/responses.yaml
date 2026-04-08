@@ -149,3 +149,39 @@ GetDealStatusVotesResponseItem:
       description: Уникальный идентификатор пользователя, который проголосовал за переход сделки в следующий статус
     vote:
       $ref: 'schemas.yaml#/DealStatus'
+
+
+FailureVotesResponse:
+  type: array
+  items:
+    $ref: '#/FailureVotesResponseItem'
+
+FailureVotesResponseItem:
+  type: object
+  required:
+    - userId
+    - vote
+  properties:
+    userId:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор пользователя, который проголосовал за виновника провала сделки
+    vote:
+      type: string
+      format: uuid
+      description: Идентификатор пользователя, за которого проголосовал пользователь как за виновника
+
+
+
+FailureMaterialResponse:
+  type: object
+  required:
+    - deal
+    - chatId
+  properties:
+    deal:
+      $ref: 'schemas.yaml#/Deal'
+    chatId:
+      type: string
+      format: uuid
+      description: Идентификатор чата, в котором обсуждалась сделка
