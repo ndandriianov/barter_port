@@ -11,8 +11,9 @@ CREATE TABLE offers
     views       INTEGER     NOT NULL DEFAULT 0,
 
     CONSTRAINT offers_type_check CHECK (type IN ('good', 'service')),
-    CONSTRAINT offers_action_check CHECK (action IN ('give', 'take'))
-);
+    CONSTRAINT offers_action_check CHECK (action IN ('give', 'take')
+)
+    );
 
 CREATE TABLE draft_deals
 (
@@ -76,7 +77,12 @@ CREATE TABLE participants
     deal_id                UUID NOT NULL REFERENCES deals (id) ON DELETE CASCADE,
     user_id                UUID NOT NULL,
     requested_status       deal_status,
-    failure_blame_vote_for UUID REFERENCES participants (deal_id, user_id) ON DELETE SET NULL,
+    failure_blame_vote_for UUID,
+
+    FOREIGN KEY (deal_id, failure_blame_vote_for)
+        REFERENCES participants (deal_id, user_id)
+        ON DELETE SET NULL (failure_blame_vote_for),
+
     PRIMARY KEY (deal_id, user_id)
 );
 
@@ -102,10 +108,14 @@ CREATE TABLE join_requests_votes
 CREATE TABLE deal_failures
 (
     deal_id            UUID NOT NULL REFERENCES deals (id) ON DELETE CASCADE,
-    user_id            UUID REFERENCES participants (deal_id, user_id) ON DELETE SET NULL, -- если пользователи проголосовали за разных участников, то null
-    confirmed_by_admin BOOLEAN,                                                            -- null - не подтверждено, true - подтверждено, false - отклонено
+    user_id            UUID,    -- если пользователи проголосовали за разных участников, то null
+    confirmed_by_admin BOOLEAN, -- null - не подтверждено, true - подтверждено, false - отклонено
     admin_comment      TEXT,
     punishment_points  INTEGER,
+
+    FOREIGN KEY (deal_id, user_id)
+        REFERENCES participants (deal_id, user_id)
+        ON DELETE SET NULL (user_id),
 
     PRIMARY KEY (deal_id)
 );
