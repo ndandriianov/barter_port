@@ -4,6 +4,7 @@ Me:
     - id
     - email
     - createdAt
+    - isAdmin
   properties:
     id:
       $ref: './properties.yaml#/UserId'
@@ -17,6 +18,10 @@ Me:
       format: date-time
       description: User registration timestamp
       example: '2026-03-04T12:00:00Z'
+    isAdmin:
+      type: boolean
+      description: Whether the current user has admin access
+      example: false
     name:
       $ref: './properties.yaml#/Name'
     bio:
