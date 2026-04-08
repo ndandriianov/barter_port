@@ -5,8 +5,14 @@ dealFailuresVotes:
     summary: Проголосовать за виновника в провале сделки
     description: |
       Голос за провал сделки и виновника.
+      
       Если половина участников с округлением в меньшую сторону проголосует за одного и того же виновника,
-      он будет признан виновным в провале сделки. Голосовать можно только один раз, изменить голос нельзя.
+      он будет признан виновным в провале сделки.
+      
+      Голосовать можно сколько угодно раз, пока сделка не отменена/завершена
+      или пока нет решения админа о провале.
+      
+      Можно отозвать голос.
       
       Если половина участников проголосовали за провал сделки, но голоса распределились между несколькими кандидатами,
       то виновника определяет админ.
@@ -37,6 +43,52 @@ dealFailuresVotes:
           application/json:
             schema:
               $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: |
+          Операция запрещена по бизнес-правилам: пользователь не является участником сделки,
+          либо сделка уже отменена/завершена
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Сделка не найдена
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+  delete:
+    tags:
+      - Failures
+    summary: Отозвать голос за виновника в провале сделки
+    description: |
+      Участник сделки может отозвать свой голос за провал сделки, если он передумал или проголосовал по ошибке.
+      
+      Голос можно отозвать сколько угодно раз, пока сделка не отменена/завершена
+      или пока нет решения админа о провале.
+      
+      Отозвать голос может только участник сделки
+    operationId: revokeVoteForFailure
+    parameters:
+      - name: dealId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    security:
+      - bearerAuth: [ ]
+    responses:
+      '204':
+        description: Голос успешно отозван
       '401':
         description: Unauthorized
         content:
