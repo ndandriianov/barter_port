@@ -9,7 +9,9 @@ dealFailuresVotes:
       он будет признан виновным в провале сделки. Голосовать можно только один раз, изменить голос нельзя.
       
       Если половина участников проголосовали за провал сделки, но голоса распределились между несколькими кандидатами,
-      то виновника определяет модератор.
+      то виновника определяет админ.
+      
+      Проголосовать за провал может только участник сделки
     operationId: voteForFailure
     parameters:
       - name: dealId
@@ -43,8 +45,8 @@ dealFailuresVotes:
               $ref: '../components/responses.yaml#/ErrorResponse'
       '403':
         description: |
-          Операция запрещена по бизнес-правилам:
-          сделка не в статусе Failed, либо пользователь не является участником сделки
+          Операция запрещена по бизнес-правилам: пользователь не является участником сделки,
+          либо сделка уже отменена/завершена
         content:
           application/json:
             schema:
@@ -61,6 +63,8 @@ dealFailuresVotes:
     tags:
       - Failures
     summary: Получить список голосов за виновника в провале сделки
+    description: |
+      Получить список голосов за виновника в провале сделки могут только участники сделки и админ
     operationId: getFailureVotes
     parameters:
       - name: dealId
@@ -86,7 +90,8 @@ dealFailuresVotes:
               $ref: '../components/responses.yaml#/ErrorResponse'
       '403':
         description: |
-          Операция запрещена по бизнес-правилам: сделка не в статусе Failed
+          Пользователь не является участником сделки и не является админом,
+          Противоречащий бизнес правилам случай сюда не относится, будет просто пустой массив
         content:
           application/json:
             schema:
@@ -104,6 +109,8 @@ dealMaterials:
     tags:
       - Failures
     summary: Получить материалы по провалу сделки
+    description: |
+      Эндпоинт предназначен для использования только админом. Остальным возвращает 403
     operationId: getFailureMaterials
     parameters:
       - name: dealId
@@ -129,7 +136,8 @@ dealMaterials:
               $ref: '../components/responses.yaml#/ErrorResponse'
       '403':
         description: |
-          Операция запрещена по бизнес-правилам: сделка не в статусе Failed
+          Операция запрещена по бизнес-правилам: пользователь не является админом,
+          либо сделка уже отменена/завершена
         content:
           application/json:
             schema:
@@ -147,14 +155,16 @@ dealFailureModeratorResolution:
   post:
     tags:
       - Failures
-    summary: Решение модератора по провалу сделки
+    summary: Решение админа по провалу сделки
     description: |
-      Модератор принимает решение о виновнике провала сделки в случае,
+      Админ принимает решение о виновнике провала сделки в случае,
       если голоса участников распределились между несколькими кандидатами,
-      либо если он не согласен с результатом голосования. Решение модератора является окончательным.
+      либо если он не согласен с результатом голосования. Решение админа является окончательным.
       
-      Модератор может принять решение что сделка не провалена, тогда она переходит в статус Completed,
+      Админ может принять решение что сделка не провалена, тогда она переходит в статус Completed,
       если была в статусе Confirmed, в ином случае она переходит в Cancelled
+      
+      Эндпоинт предназначен для использования только админом. Остальным возвращает 403
     operationId: moderatorResolutionForFailure
     parameters:
       - name: dealId
@@ -173,7 +183,7 @@ dealFailureModeratorResolution:
       - bearerAuth: [ ]
     responses:
       '200':
-        description: Решение модератора успешно учтено
+        description: Решение админа успешно учтено
         content:
           application/json:
             schema:
@@ -192,7 +202,8 @@ dealFailureModeratorResolution:
               $ref: '../components/responses.yaml#/ErrorResponse'
       '403':
         description: |
-          Операция запрещена по бизнес-правилам: сделка не в статусе Failed, либо пользователь не является модератором сделки
+          Операция запрещена по бизнес-правилам: сделка уже отменена/завершена,
+          либо пользователь не является админом
         content:
           application/json:
             schema:
@@ -208,7 +219,9 @@ dealFailureModeratorResolution:
   get:
     tags:
       - Failures
-    summary: Получить решение модератора по провалу сделки
+    summary: Получить решение админа по провалу сделки
+    description: |
+      Получить решение админа по провалу сделки могут только участники сделки и админ
     operationId: getModeratorResolutionForFailure
     parameters:
       - name: dealId
@@ -221,7 +234,7 @@ dealFailureModeratorResolution:
       - bearerAuth: [ ]
     responses:
       '200':
-        description: Решение модератора успешно получено
+        description: Решение админа успешно получено
         content:
           application/json:
             schema:
@@ -234,7 +247,8 @@ dealFailureModeratorResolution:
               $ref: '../components/responses.yaml#/ErrorResponse'
       '403':
         description: |
-          Операция запрещена по бизнес-правилам: сделка не в статусе Failed
+          Операция запрещена по бизнес-правилам: сделка уже отменена/завершена,
+          либо пользователь не является участником сделки и не является админом
         content:
           application/json:
             schema:
