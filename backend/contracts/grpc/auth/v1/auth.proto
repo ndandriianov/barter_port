@@ -18,5 +18,5 @@ message GetMeRequest {
 message GetMeResponse {
     string email = 1;
     google.protobuf.Timestamp created_at = 2;
+    bool is_admin = 3;
 }
-
