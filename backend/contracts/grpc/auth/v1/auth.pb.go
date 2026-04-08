@@ -12,7 +12,6 @@ import (
 	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
-	unsafe "unsafe"
 )
 
 const (
@@ -71,6 +70,7 @@ type GetMeResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Email         string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	IsAdmin       bool                   `protobuf:"varint,3,opt,name=is_admin,json=isAdmin,proto3" json:"is_admin,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -119,19 +119,37 @@ func (x *GetMeResponse) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *GetMeResponse) GetIsAdmin() bool {
+	if x != nil {
+		return x.IsAdmin
+	}
+	return false
+}
+
 var File_contracts_grpc_auth_v1_auth_proto protoreflect.FileDescriptor
 
-const file_contracts_grpc_auth_v1_auth_proto_rawDesc = "" +
-	"\n" +
-	"!contracts/grpc/auth/v1/auth.proto\x12\x13linktracker.auth.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x1e\n" +
-	"\fGetMeRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"`\n" +
-	"\rGetMeResponse\x12\x14\n" +
-	"\x05email\x18\x01 \x01(\tR\x05email\x129\n" +
-	"\n" +
-	"created_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt2]\n" +
-	"\vAuthService\x12N\n" +
-	"\x05GetMe\x12!.linktracker.auth.v1.GetMeRequest\x1a\".linktracker.auth.v1.GetMeResponseB5Z3link-tracker/internal/contracts/grpc/auth/v1;authpbb\x06proto3"
+var file_contracts_grpc_auth_v1_auth_proto_rawDesc = []byte{
+	10, 33, 99, 111, 110, 116, 114, 97, 99, 116, 115, 47, 103, 114, 112, 99, 47, 97, 117, 116, 104,
+	47, 118, 49, 47, 97, 117, 116, 104, 46, 112, 114, 111, 116, 111, 18, 19, 108, 105, 110, 107,
+	116, 114, 97, 99, 107, 101, 114, 46, 97, 117, 116, 104, 46, 118, 49, 26, 31, 103, 111, 111, 103,
+	108, 101, 47, 112, 114, 111, 116, 111, 98, 117, 102, 47, 116, 105, 109, 101, 115, 116, 97, 109,
+	112, 46, 112, 114, 111, 116, 111, 34, 30, 10, 12, 71, 101, 116, 77, 101, 82, 101, 113, 117, 101,
+	115, 116, 18, 14, 10, 2, 105, 100, 24, 1, 32, 1, 40, 9, 82, 2, 105, 100, 34, 123, 10, 13, 71,
+	101, 116, 77, 101, 82, 101, 115, 112, 111, 110, 115, 101, 18, 20, 10, 5, 101, 109, 97, 105, 108,
+	24, 1, 32, 1, 40, 9, 82, 5, 101, 109, 97, 105, 108, 18, 57, 10, 10, 99, 114, 101, 97, 116, 101,
+	100, 95, 97, 116, 24, 2, 32, 1, 40, 11, 50, 26, 46, 103, 111, 111, 103, 108, 101, 46, 112, 114,
+	111, 116, 111, 98, 117, 102, 46, 84, 105, 109, 101, 115, 116, 97, 109, 112, 82, 9, 99, 114, 101,
+	97, 116, 101, 100, 65, 116, 18, 25, 10, 8, 105, 115, 95, 97, 100, 109, 105, 110, 24, 3, 32, 1,
+	40, 8, 82, 7, 105, 115, 65, 100, 109, 105, 110, 50, 93, 10, 11, 65, 117, 116, 104, 83, 101, 114,
+	118, 105, 99, 101, 18, 78, 10, 5, 71, 101, 116, 77, 101, 18, 33, 46, 108, 105, 110, 107, 116,
+	114, 97, 99, 107, 101, 114, 46, 97, 117, 116, 104, 46, 118, 49, 46, 71, 101, 116, 77, 101, 82,
+	101, 113, 117, 101, 115, 116, 26, 34, 46, 108, 105, 110, 107, 116, 114, 97, 99, 107, 101, 114,
+	46, 97, 117, 116, 104, 46, 118, 49, 46, 71, 101, 116, 77, 101, 82, 101, 115, 112, 111, 110, 115,
+	101, 66, 53, 90, 51, 108, 105, 110, 107, 45, 116, 114, 97, 99, 107, 101, 114, 47, 105, 110, 116,
+	101, 114, 110, 97, 108, 47, 99, 111, 110, 116, 114, 97, 99, 116, 115, 47, 103, 114, 112, 99, 47,
+	97, 117, 116, 104, 47, 118, 49, 59, 97, 117, 116, 104, 112, 98, 98, 6, 112, 114, 111, 116, 111,
+	51,
+}
 
 var (
 	file_contracts_grpc_auth_v1_auth_proto_rawDescOnce sync.Once
@@ -140,7 +158,7 @@ var (
 
 func file_contracts_grpc_auth_v1_auth_proto_rawDescGZIP() []byte {
 	file_contracts_grpc_auth_v1_auth_proto_rawDescOnce.Do(func() {
-		file_contracts_grpc_auth_v1_auth_proto_rawDescData = protoimpl.X.CompressGZIP(unsafe.Slice(unsafe.StringData(file_contracts_grpc_auth_v1_auth_proto_rawDesc), len(file_contracts_grpc_auth_v1_auth_proto_rawDesc)))
+		file_contracts_grpc_auth_v1_auth_proto_rawDescData = protoimpl.X.CompressGZIP(file_contracts_grpc_auth_v1_auth_proto_rawDesc)
 	})
 	return file_contracts_grpc_auth_v1_auth_proto_rawDescData
 }
@@ -171,7 +189,7 @@ func file_contracts_grpc_auth_v1_auth_proto_init() {
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
-			RawDescriptor: unsafe.Slice(unsafe.StringData(file_contracts_grpc_auth_v1_auth_proto_rawDesc), len(file_contracts_grpc_auth_v1_auth_proto_rawDesc)),
+			RawDescriptor: file_contracts_grpc_auth_v1_auth_proto_rawDesc,
 			NumEnums:      0,
 			NumMessages:   2,
 			NumExtensions: 0,

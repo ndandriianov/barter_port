@@ -76,6 +76,7 @@ func (a *App) initServices(cfg bootstrap.Config) error {
 		outboxRepo,
 		cfg.Mailer.Bypass,
 		cfg.Frontend.URL,
+		cfg.Admin.Email,
 		regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`),
 	)
 	a.authService = authService
