@@ -204,8 +204,7 @@ func (s *Service) CreateAdmin(ctx context.Context, email, password string) (Regi
 		err = s.users.Create(ctx, tx, u)
 		if err != nil {
 			if !errors.Is(err, domain.ErrEmailAlreadyInUse) {
-				log.Warn("admin already exists", slog.String("email", email))
-				return nil
+				return err
 			}
 
 			return fmt.Errorf("failed to create user: %w", err)
@@ -218,6 +217,11 @@ func (s *Service) CreateAdmin(ctx context.Context, email, password string) (Regi
 		return nil
 	})
 	if err != nil {
+		if errors.Is(err, domain.ErrEmailAlreadyInUse) {
+			log.Warn("admin already exists", slog.String("email", email))
+			return result, nil
+		}
+
 		return RegisterResult{}, err
 	}
 
