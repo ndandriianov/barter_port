@@ -184,6 +184,48 @@ func (s *Service) Register(ctx context.Context, email, password string) (Registe
 	}, nil
 }
 
+func (s *Service) CreateAdmin(ctx context.Context, email, password string) (RegisterResult, error) {
+	const funcName = "CreateAdmin"
+
+	log := s.logger.With(slog.String("func", funcName), slog.String("type", typeName))
+
+	email = strings.TrimSpace(strings.ToLower(email))
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcryptCost)
+	if err != nil {
+		return RegisterResult{}, fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	u := domain.NewUser(uuid.New(), email, string(hash))
+	u.EmailVerified = true
+	result := RegisterResult{UserID: u.ID, Email: u.Email}
+
+	err = db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
+		err = s.users.Create(ctx, tx, u)
+		if err != nil {
+			if !errors.Is(err, domain.ErrEmailAlreadyInUse) {
+				log.Warn("admin already exists", slog.String("email", email))
+				return nil
+			}
+
+			return fmt.Errorf("failed to create user: %w", err)
+		}
+
+		if err = s.createUser(ctx, tx, u.ID); err != nil {
+			return fmt.Errorf("failed to create admin user event: %w", err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return RegisterResult{}, err
+	}
+
+	log.Info("admin ensured", slog.String("email", result.Email), slog.Any("user_id", result.UserID))
+
+	return result, nil
+}
+
 // RetrySendVerificationEmail generates a new email verification token and sends a verification email if the user's email is not verified.
 //
 // It returns the following domain errors:
