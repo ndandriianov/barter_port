@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+package barterport.chats.v1;
+
+option go_package = "barterport/internal/contracts/grpc/chats/v1;chatspb";
+
+service ChatsService {
+    rpc CreateChat (CreateChatRequest) returns (CreateChatResponse);
+}
+
+// CreateChat
+message CreateChatRequest {
+    string deal_id = 1; // пустая строка для прямых чатов
+    repeated string participant_ids = 2;
+}
+
+message CreateChatResponse {
+    string chat_id = 1;
+}

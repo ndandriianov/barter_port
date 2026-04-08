@@ -23,7 +23,7 @@
 		Vary "Origin"
 	}
 
-    # swagger
+	# swagger
 	handle /docs* {
 		reverse_proxy swagger-ui:8080
 	}
@@ -44,6 +44,11 @@
 		reverse_proxy users:8080
 	}
 
+	handle /swagger-specs/chats/* {
+		uri replace /swagger-specs/chats /swagger
+		reverse_proxy chats:8080
+	}
+
 	# Auth service по префиксу /auth/*
 	handle /auth/* {
 		reverse_proxy auth:8080 # локально host.docker.internal:8081
@@ -52,6 +57,11 @@
 	# Users service по префиксу /users/*
 	handle /users/* {
 		reverse_proxy users:8080
+	}
+
+	# Chats service по префиксу /chats*
+	handle /chats* {
+		reverse_proxy chats:8083
 	}
 
 	# Всё остальное — основной backend

@@ -23,6 +23,7 @@ const navLinks = [
   { label: "Сделки", to: "/deals" },
   { label: "Черновики", to: "/deals/drafts" },
   { label: "Профиль", to: "/profile" },
+  { label: "Чаты", to: "/chats" },
 ];
 
 function AppLayout() {

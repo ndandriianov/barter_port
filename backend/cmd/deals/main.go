@@ -47,18 +47,29 @@ func main() {
 
 	offersRepo := offersr.NewRepository(db)
 
-	usersClient, conn, err := app.InitUsersGRPCClient(cfg)
+	usersClient, usersConn, err := app.InitUsersGRPCClient(cfg)
 	if err != nil {
 		log.Fatal("failed to initialize users grpc client:", err)
 	}
-	defer conn.Close()
+	defer usersConn.Close()
+
+	chatsClient, chatsConn, err := app.InitChatsGRPCClient(cfg)
+	if err != nil {
+		logg.Warn("failed to initialize chats grpc client, deal->chat integration disabled", slog.Any("error", err))
+	} else {
+		defer chatsConn.Close()
+	}
 
 	offersService := offers.NewService(offersRepo, usersClient, logg)
 
 	draftsRepo := drafts.NewRepository()
 	dealsRepo := deals.NewRepository()
 	joinsRepo := joins.NewRepository()
-	dealsService := dealssvc.NewService(db, draftsRepo, dealsRepo, joinsRepo, offersRepo)
+	dealsService := dealssvc.NewService(db, draftsRepo, dealsRepo, joinsRepo, offersRepo).
+		WithLogger(logg)
+	if chatsClient != nil {
+		dealsService = dealsService.WithChatsClient(chatsClient)
+	}
 
 	validator, err := bootstrap.InitLocalJWTFromConfig(cfg)
 	if err != nil {

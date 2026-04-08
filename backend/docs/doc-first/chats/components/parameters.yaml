@@ -1,0 +1,19 @@
+ChatId:
+  name: chatId
+  in: path
+  required: true
+  description: Unique chat identifier
+  schema:
+    type: string
+    format: uuid
+
+After:
+  name: after
+  in: query
+  required: false
+  description: |
+    Return only messages created after the specified timestamp.
+    The value must be in RFC3339 / RFC3339Nano format.
+  schema:
+    type: string
+    format: date-time

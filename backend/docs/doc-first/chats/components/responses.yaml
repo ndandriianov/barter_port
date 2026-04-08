@@ -1,0 +1,27 @@
+ErrorResponse:
+  type: object
+  properties:
+    message:
+      type: string
+      example: Вы отправили некорректный запрос
+
+CreateChatResponse:
+  $ref: './schemas.yaml#/Chat'
+
+ListChatsResponse:
+  type: array
+  items:
+    $ref: './schemas.yaml#/Chat'
+
+GetMessagesResponse:
+  type: array
+  items:
+    $ref: './schemas.yaml#/Message'
+
+SendMessageResponse:
+  $ref: './schemas.yaml#/Message'
+
+ListUsersResponse:
+  type: array
+  items:
+    $ref: './schemas.yaml#/User'

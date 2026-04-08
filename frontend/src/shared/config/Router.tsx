@@ -12,6 +12,7 @@ import DealsListPage from "@/pages/deals/DealsListPage";
 import DealPage from "@/pages/deals/DealPage";
 import DraftsListPage from "@/pages/deals/DraftsListPage";
 import DraftPage from "@/pages/deals/DraftPage";
+import ChatsPage from "@/pages/chats/ChatsPage";
 
 function AppRouter() {
   return (
@@ -32,6 +33,7 @@ function AppRouter() {
           <Route path="/deals/:dealId" element={<DealPage />} />
           <Route path="/deals/drafts" element={<DraftsListPage />} />
           <Route path="/deals/drafts/:draftId" element={<DraftPage />} />
+          <Route path="/chats" element={<ChatsPage />} />
           <Route path="*" element={<Navigate to="/profile" replace />} />
         </Route>
       </Routes>

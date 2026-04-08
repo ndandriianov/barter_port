@@ -1,0 +1,333 @@
+openapi: 3.0.3
+info:
+  title: Chats API
+  description: Chats API
+  version: 1.0.0
+servers:
+  - url: http://localhost:80
+paths:
+  /chats:
+    get:
+      tags:
+        - Chats
+      summary: Получить список чатов текущего пользователя
+      description: Возвращает все чаты, в которых участвует текущий пользователь.
+      operationId: listChats
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Список чатов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListChatsResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - Chats
+      summary: Создать direct chat
+      description: Создаёт чат между текущим пользователем и пользователем из `participant_id`.
+      operationId: createChat
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateChatRequest'
+      responses:
+        '201':
+          description: Чат создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chat'
+        '400':
+          description: Некорректный UUID участника или невалидный JSON
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /chats/users:
+    get:
+      tags:
+        - Chats
+      summary: Получить список пользователей для старта чата
+      description: Возвращает список пользователей из users-сервиса, доступных для создания нового чата.
+      operationId: listChatUsers
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Список пользователей
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListUsersResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /chats/{chatId}/messages:
+    get:
+      tags:
+        - Chats
+      summary: Получить сообщения чата
+      description: |
+        Возвращает сообщения чата в порядке возрастания `created_at`.
+        Если передан `after`, вернутся только сообщения, созданные позже этого момента.
+      operationId: getChatMessages
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ChatId'
+        - $ref: '#/components/parameters/After'
+      responses:
+        '200':
+          description: Список сообщений
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetMessagesResponse'
+        '400':
+          description: Некорректный `chatId` или `after`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: |
+            Forbidden. Пользователь не является участником чата.
+            В текущей реализации этот статус также возможен для несуществующего `chatId`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - Chats
+      summary: Отправить сообщение в чат
+      description: Отправляет новое сообщение от имени текущего пользователя.
+      operationId: sendChatMessage
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/ChatId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendMessageRequest'
+      responses:
+        '201':
+          description: Сообщение создано
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Message'
+        '400':
+          description: Некорректный `chatId`, пустой `content` или невалидный JSON
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: |
+            Forbidden. Пользователь не является участником чата.
+            В текущей реализации этот статус также возможен для несуществующего `chatId`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    Chat:
+      type: object
+      required:
+        - id
+        - participants
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique chat identifier
+        deal_id:
+          type: string
+          format: uuid
+          nullable: true
+          description: Deal ID if the chat is attached to a deal; null for direct chats
+        participants:
+          type: array
+          description: Chat participant IDs
+          items:
+            type: string
+            format: uuid
+        created_at:
+          type: string
+          format: date-time
+          description: Chat creation timestamp
+          example: '2026-03-04T12:00:00Z'
+    ListChatsResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/Chat'
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Вы отправили некорректный запрос
+    CreateChatRequest:
+      type: object
+      required:
+        - participant_id
+      properties:
+        participant_id:
+          type: string
+          format: uuid
+          description: User ID of the second participant for a direct chat
+    User:
+      type: object
+      required:
+        - id
+        - name
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: User ID
+        name:
+          type: string
+          description: User display name
+          example: Ivan Ivanov
+    ListUsersResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/User'
+    Message:
+      type: object
+      required:
+        - id
+        - chat_id
+        - sender_id
+        - content
+        - created_at
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Unique message identifier
+        chat_id:
+          type: string
+          format: uuid
+          description: Chat ID
+        sender_id:
+          type: string
+          format: uuid
+          description: Sender user ID
+        content:
+          type: string
+          description: Message text
+          example: Привет, давай обсудим обмен
+        created_at:
+          type: string
+          format: date-time
+          description: Message creation timestamp
+          example: '2026-03-04T12:01:00Z'
+    GetMessagesResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/Message'
+    SendMessageRequest:
+      type: object
+      required:
+        - content
+      properties:
+        content:
+          type: string
+          minLength: 1
+          description: Message text
+          example: Привет, давай обсудим обмен
+  parameters:
+    ChatId:
+      name: chatId
+      in: path
+      required: true
+      description: Unique chat identifier
+      schema:
+        type: string
+        format: uuid
+    After:
+      name: after
+      in: query
+      required: false
+      description: |
+        Return only messages created after the specified timestamp.
+        The value must be in RFC3339 / RFC3339Nano format.
+      schema:
+        type: string
+        format: date-time
