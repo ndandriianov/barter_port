@@ -78,6 +78,7 @@ func (a *App) initServices(cfg bootstrap.Config) error {
 		cfg.Frontend.URL,
 		regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`),
 	)
+	a.authService = authService
 	handlers := httptransport.NewHandlers(a.logger, authService, jwtManager, a.db, refreshTokenRepo)
 	router := httptransport.NewRouter(a.logger, validator, handlers)
 	a.server = &http.Server{

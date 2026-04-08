@@ -14,6 +14,8 @@
 - `JWT_REFRESH_SECRET`
 - `KAFKA_USER_CREATION_TOPIC`
 - `MAILER_BYPASS`
+- `ADMIN_EMAIL`
+- `ADMIN_PASSWORD`
 
 Без явного биндинга эти переменные не будут учтены, даже если они присутствуют в окружении.
 Это особенность библиотеки viper.
@@ -24,3 +26,12 @@
 При запуске приложения создаётся админ с дефолтными данными:
 - Email: `admin@barterport.com`
 - Пароль: `admin`
+
+Значения берутся из `config/common.yaml`:
+```yaml
+admin:
+  email: "admin@barterport.com"
+  password: "admin"
+```
+
+Почта админа сразу помечается подтверждённой в таблице `users`.
