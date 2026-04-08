@@ -4,6 +4,7 @@ import AuthLayout from "@/widgets/layout/AuthLayout";
 import LoginPage from "@/pages/auth/LoginPage";
 import RegisterPage from "@/pages/auth/RegisterPage";
 import VerifyEmailPage from "@/pages/auth/VerifyEmailPage";
+import AdminPage from "@/pages/admin/AdminPage";
 import ProfilePage from "@/pages/profile/ProfilePage";
 import CreateOfferPage from "@/pages/offers/CreateOfferPage";
 import OffersListPage from "@/pages/offers/OffersListPage";
@@ -25,6 +26,7 @@ function AppRouter() {
         </Route>
 
         <Route element={<AppLayout />}>
+          <Route path="/admin" element={<AdminPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/offers" element={<OffersListPage />} />
           <Route path="/offers/create" element={<CreateOfferPage />} />

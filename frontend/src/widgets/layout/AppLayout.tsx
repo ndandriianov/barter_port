@@ -19,6 +19,7 @@ import { useAppDispatch } from "@/hooks/redux";
 import { performLogout } from "@/features/auth/model/logoutThunk";
 
 const navLinks = [
+  { label: "Админка", to: "/admin" },
   { label: "Объявления", to: "/offers" },
   { label: "Сделки", to: "/deals" },
   { label: "Черновики", to: "/deals/drafts" },

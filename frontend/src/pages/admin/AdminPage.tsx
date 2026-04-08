@@ -1,4 +1,5 @@
 import { Link as RouterLink } from "react-router-dom";
+import { skipToken } from "@reduxjs/toolkit/query";
 import {
   Alert,
   Box,
@@ -91,17 +92,64 @@ function MetricCard({ title, value, caption, isLoading = false }: MetricCardProp
 
 function AdminPage() {
   const { data: currentUser, isLoading: isUserLoading } = usersApi.useGetCurrentUserQuery();
-  const { data: visibleUsers, isLoading: isVisibleUsersLoading } = chatsApi.useListUsersQuery();
-  const { data: chats, isLoading: isChatsLoading } = chatsApi.useListChatsQuery();
-  const { data: offers, isLoading: isOffersLoading } = offersApi.useGetOffersQuery({
-    sort: "ByTime",
-    cursor_limit: 20,
-  });
-  const { data: deals, isLoading: isDealsLoading } = dealsApi.useGetDealsQuery();
-  const { data: drafts, isLoading: isDraftsLoading } = dealsApi.useGetMyDraftDealsQuery();
+  const isAdmin = currentUser?.isAdmin === true;
+
+  const { data: visibleUsers, isLoading: isVisibleUsersLoading } = chatsApi.useListUsersQuery(
+    isAdmin ? undefined : skipToken,
+  );
+  const { data: chats, isLoading: isChatsLoading } = chatsApi.useListChatsQuery(isAdmin ? undefined : skipToken);
+  const { data: offers, isLoading: isOffersLoading } = offersApi.useGetOffersQuery(
+    isAdmin
+      ? {
+          sort: "ByTime",
+          cursor_limit: 20,
+        }
+      : skipToken,
+  );
+  const { data: deals, isLoading: isDealsLoading } = dealsApi.useGetDealsQuery(isAdmin ? undefined : skipToken);
+  const { data: drafts, isLoading: isDraftsLoading } = dealsApi.useGetMyDraftDealsQuery(
+    isAdmin ? undefined : skipToken,
+  );
 
   const isOverviewLoading =
     isVisibleUsersLoading || isChatsLoading || isOffersLoading || isDealsLoading || isDraftsLoading;
+
+  if (isUserLoading) {
+    return (
+      <Box display="flex" justifyContent="center" py={8}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (!currentUser) {
+    return <Alert severity="warning">Не удалось получить данные текущего пользователя.</Alert>;
+  }
+
+  if (!currentUser.isAdmin) {
+    return (
+      <Stack spacing={3}>
+        <Alert severity="error">
+          Доступ к панели администратора разрешен только администраторам. Текущий пользователь не
+          имеет права `isAdmin`.
+        </Alert>
+        <Card variant="outlined" sx={{ borderRadius: 3 }}>
+          <CardContent>
+            <Typography variant="h5" fontWeight={700} mb={1}>
+              Доступ запрещен
+            </Typography>
+            <Typography variant="body2" color="text.secondary" mb={3}>
+              Проверка выполнена через `GET /users/me`. Если доступ должен быть, проверь
+              конфигурацию admin пользователя в auth сервисе.
+            </Typography>
+            <Button component={RouterLink} to="/profile" variant="contained">
+              Вернуться в профиль
+            </Button>
+          </CardContent>
+        </Card>
+      </Stack>
+    );
+  }
 
   return (
     <Stack spacing={3}>
@@ -127,13 +175,12 @@ function AdminPage() {
                 Базовая админка
               </Typography>
               <Typography variant="body1" sx={{ maxWidth: 720, opacity: 0.92 }}>
-                Это стартовый frontend-каркас для администрирования. Отдельных backend-функций и
-                проверки админ-ролей пока нет, поэтому экран показывает только доступные сейчас
-                данные и точки расширения.
+                Доступ к этой странице подтвержден через `GET /users/me`. Экран показывает текущие
+                данные системы и остается базой для дальнейшего расширения админских сценариев.
               </Typography>
             </Box>
             <Chip
-              label="Frontend only"
+              label="Admin access enabled"
               sx={{
                 bgcolor: "rgba(255,255,255,0.14)",
                 color: "common.white",
@@ -164,8 +211,8 @@ function AdminPage() {
       </Box>
 
       <Alert severity="info">
-        Страница подготовлена как база для дальнейшего развития: можно без изменения структуры
-        добавить реальные админ-эндпоинты, RBAC и отдельные сценарии модерации.
+        Страница доступна только пользователям с `isAdmin = true`. Новые admin-эндпоинты можно
+        добавлять поверх этой проверки без изменения структуры страницы.
       </Alert>
 
       <Grid container spacing={2}>
@@ -176,32 +223,26 @@ function AdminPage() {
                 Текущий доступ
               </Typography>
 
-              {isUserLoading ? (
-                <CircularProgress size={24} />
-              ) : currentUser ? (
-                <Stack spacing={1.5}>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">
-                      Пользователь
-                    </Typography>
-                    <Typography variant="body1" fontWeight={600}>
-                      {currentUser.name || "Без имени"}
-                    </Typography>
-                  </Box>
-                  <Box>
-                    <Typography variant="caption" color="text.secondary">
-                      Email
-                    </Typography>
-                    <Typography variant="body2">{currentUser.email}</Typography>
-                  </Box>
-                  <Box display="flex" gap={1} flexWrap="wrap">
-                    <Chip label="Текущая сессия" color="primary" variant="outlined" />
-                    <Chip label="Отдельная admin-role не реализована" variant="outlined" />
-                  </Box>
-                </Stack>
-              ) : (
-                <Alert severity="warning">Не удалось получить данные текущего пользователя.</Alert>
-              )}
+              <Stack spacing={1.5}>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">
+                    Пользователь
+                  </Typography>
+                  <Typography variant="body1" fontWeight={600}>
+                    {currentUser.name || "Без имени"}
+                  </Typography>
+                </Box>
+                <Box>
+                  <Typography variant="caption" color="text.secondary">
+                    Email
+                  </Typography>
+                  <Typography variant="body2">{currentUser.email}</Typography>
+                </Box>
+                <Box display="flex" gap={1} flexWrap="wrap">
+                  <Chip label="Текущая сессия" color="primary" variant="outlined" />
+                  <Chip label="isAdmin = true" color="success" variant="outlined" />
+                </Box>
+              </Stack>
             </CardContent>
           </Card>
         </Grid>
@@ -218,11 +259,12 @@ function AdminPage() {
                   для полноценных админ-разделов.
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Карточки ниже используют существующие frontend query-хуки, поэтому сюда можно
-                  постепенно подмешивать реальные системные метрики.
+                  Карточки ниже загружаются только после подтверждения `isAdmin`, поэтому этот
+                  экран можно безопасно расширять системными данными.
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Следующий логичный шаг: вынести отдельный layout, секции и проверку прав доступа.
+                  Следующий логичный шаг: вынести отдельный layout, секции и специализированные
+                  admin-операции.
                 </Typography>
               </Stack>
             </CardContent>
