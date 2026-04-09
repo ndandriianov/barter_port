@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Alert, Box, Button, Divider, Typography } from "@mui/material";
 import { useAppSelector } from "@/hooks/redux";
 import offersApi from "@/features/offers/api/offersApi";
@@ -24,6 +24,7 @@ function isGetOffersResponse(data: unknown): data is GetOffersResponse {
 
 function OfferPage() {
   const { offerId } = useParams<{ offerId: string }>();
+  const navigate = useNavigate();
   const [isRespondModalOpen, setIsRespondModalOpen] = useState(false);
   const { data: meData } = usersApi.useGetCurrentUserQuery();
 
@@ -50,6 +51,15 @@ function OfferPage() {
 
   return (
     <Box maxWidth={700} mx="auto">
+      <Button
+        size="small"
+        variant="text"
+        onClick={() => window.history.length > 1 ? navigate(-1) : navigate("/offers")}
+        sx={{ mb: 2 }}
+      >
+        ← Назад
+      </Button>
+
       <Typography variant="h4" fontWeight={700} mb={3}>
         {offer.name}
       </Typography>
