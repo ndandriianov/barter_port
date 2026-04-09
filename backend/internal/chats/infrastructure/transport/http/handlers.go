@@ -87,6 +87,44 @@ func (h *Handlers) ListChats(w http.ResponseWriter, r *http.Request) {
 }
 
 // ================================================================================
+// GET /chats/deals/{dealId} — get deal chat metadata
+// ================================================================================
+
+func (h *Handlers) GetDealChat(w http.ResponseWriter, r *http.Request) {
+	log := h.log.With(slog.String("handler", "GetDealChat"))
+
+	userID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
+	dealID, err := uuid.Parse(chi.URLParam(r, "dealId"))
+	if err != nil {
+		httpx.WriteEmptyError(w, http.StatusBadRequest)
+		return
+	}
+
+	chat, err := h.chatsService.GetDealChat(r.Context(), userID, dealID)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrForbidden):
+			httpx.WriteEmptyError(w, http.StatusForbidden)
+			return
+		case errors.Is(err, domain.ErrChatNotFound):
+			httpx.WriteEmptyError(w, http.StatusNotFound)
+			return
+		default:
+			log.Error("error getting deal chat", slog.Any("error", err))
+			httpx.WriteEmptyError(w, http.StatusInternalServerError)
+			return
+		}
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, mapChatToResp(chat))
+}
+
+// ================================================================================
 // GET /chats/{chatId}/messages — get messages (polling)
 // ================================================================================
 

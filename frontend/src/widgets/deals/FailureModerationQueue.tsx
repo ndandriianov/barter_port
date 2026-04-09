@@ -26,6 +26,7 @@ import usersApi from "@/features/users/api/usersApi.ts";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux.ts";
 import type { User } from "@/features/users/model/types.ts";
 import { getStatusCode } from "@/shared/utils/getStatusCode";
+import ChatWindow from "@/widgets/chat/ChatWindow.tsx";
 
 function FailureResolutionDialog({
   dealId,
@@ -141,6 +142,34 @@ function FailureResolutionDialog({
                   </Typography>
                 ))}
               </Stack>
+            </Box>
+
+            <Divider />
+
+            <Box>
+              <Typography variant="subtitle1" fontWeight={700} mb={1}>
+                Чат сделки
+              </Typography>
+              {materials.chatId ? (
+                <Box
+                  sx={{
+                    border: "1px solid",
+                    borderColor: "divider",
+                    borderRadius: 3,
+                    overflow: "hidden",
+                    height: 360,
+                    backgroundColor: "background.paper",
+                  }}
+                >
+                  <ChatWindow
+                    chatId={materials.chatId}
+                    participants={materials.deal.participants}
+                    readOnly
+                  />
+                </Box>
+              ) : (
+                <Alert severity="info">У этой сделки нет чата для просмотра.</Alert>
+              )}
             </Box>
 
             <Divider />

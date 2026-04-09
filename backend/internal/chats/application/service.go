@@ -2,6 +2,7 @@ package application
 
 import (
 	"barter-port/internal/chats/domain"
+	"barter-port/pkg/authkit"
 	"fmt"
 	"time"
 
@@ -20,11 +21,17 @@ type ChatsRepository interface {
 }
 
 type Service struct {
-	repo ChatsRepository
+	repo         ChatsRepository
+	adminChecker *authkit.AdminChecker
 }
 
 func NewService(repo ChatsRepository) *Service {
 	return &Service{repo: repo}
+}
+
+func (s *Service) WithAdminChecker(checker *authkit.AdminChecker) *Service {
+	s.adminChecker = checker
+	return s
 }
 
 // CreateChat creates a new chat between participants. For deal chats, dealID is non-nil.
@@ -45,6 +52,39 @@ func (s *Service) GetDealChatID(ctx context.Context, dealID uuid.UUID) (uuid.UUI
 	return chatID, nil
 }
 
+// GetDealChat returns the deal chat if the user is a participant or an admin.
+func (s *Service) GetDealChat(ctx context.Context, userID, dealID uuid.UUID) (*domain.Chat, error) {
+	chatID, err := s.repo.GetDealChatID(ctx, dealID)
+	if err != nil {
+		return nil, fmt.Errorf("repo.GetDealChatID: %w", err)
+	}
+
+	ok, err := s.repo.IsParticipant(ctx, chatID, userID)
+	if err != nil {
+		return nil, fmt.Errorf("repo.IsParticipant: %w", err)
+	}
+	if !ok {
+		if s.adminChecker == nil {
+			return nil, domain.ErrForbidden
+		}
+
+		isAdmin, adminErr := s.adminChecker.IsAdmin(ctx, userID)
+		if adminErr != nil {
+			return nil, fmt.Errorf("adminChecker.IsAdmin: %w", adminErr)
+		}
+		if !isAdmin {
+			return nil, domain.ErrForbidden
+		}
+	}
+
+	chat, err := s.repo.GetChatByID(ctx, chatID)
+	if err != nil {
+		return nil, fmt.Errorf("repo.GetChatByID: %w", err)
+	}
+
+	return chat, nil
+}
+
 // ListChatsForUser returns all chats where the user participates.
 func (s *Service) ListChatsForUser(ctx context.Context, userID uuid.UUID) ([]domain.Chat, error) {
 	chats, err := s.repo.ListChatsForUser(ctx, userID)
@@ -61,7 +101,17 @@ func (s *Service) GetMessages(ctx context.Context, userID, chatID uuid.UUID, aft
 		return nil, fmt.Errorf("repo.IsParticipant: %w", err)
 	}
 	if !ok {
-		return nil, domain.ErrForbidden
+		if s.adminChecker == nil {
+			return nil, domain.ErrForbidden
+		}
+
+		isAdmin, adminErr := s.adminChecker.IsAdmin(ctx, userID)
+		if adminErr != nil {
+			return nil, fmt.Errorf("adminChecker.IsAdmin: %w", adminErr)
+		}
+		if !isAdmin {
+			return nil, domain.ErrForbidden
+		}
 	}
 
 	msgs, err := s.repo.GetMessages(ctx, chatID, after)

@@ -7,6 +7,7 @@ import (
 	"barter-port/internal/chats/infrastructure/repository"
 	transportgrpc "barter-port/internal/chats/infrastructure/transport/grpc"
 	transporthttp "barter-port/internal/chats/infrastructure/transport/http"
+	"barter-port/pkg/authkit"
 	"barter-port/pkg/bootstrap"
 	"barter-port/pkg/logger"
 	"errors"
@@ -40,6 +41,12 @@ func main() {
 
 	logg := logger.NewJSONLogger(slog.LevelDebug, "chats-service", "")
 
+	authClient, authConn, err := app.InitAuthGRPCClient(cfg)
+	if err != nil {
+		log.Fatal("failed to initialize auth grpc client:", err)
+	}
+	defer authConn.Close()
+
 	usersClient, usersConn, err := app.InitUsersGRPCClient(cfg)
 	if err != nil {
 		log.Fatal("failed to initialize users grpc client:", err)
@@ -47,7 +54,8 @@ func main() {
 	defer usersConn.Close()
 
 	repo := repository.NewRepository(db)
-	chatsService := application.NewService(repo)
+	chatsService := application.NewService(repo).
+		WithAdminChecker(authkit.NewAdminChecker(authClient))
 
 	validator, err := bootstrap.InitLocalJWTFromConfig(cfg)
 	if err != nil {
