@@ -24,7 +24,7 @@ interface DealFailureSectionProps {
   getUserName: (id: string) => string;
 }
 
-const votingStatuses = new Set(["LookingForParticipants", "Discussion", "Confirmed"]);
+const votingStatuses = new Set(["Discussion", "Confirmed"]);
 
 function formatResolutionText(resolution: FailureResolution, getUserName: (id: string) => string): {
   severity: "success" | "info" | "warning" | "error";
@@ -137,10 +137,18 @@ function DealFailureSection({ deal, me, isParticipant, getUserName }: DealFailur
             <Chip color="error" label="Провал подтвержден" />
           ) : resolution?.confirmed === false ? (
             <Chip color="success" label="Провал отклонен" />
+          ) : !canVoteForFailure ? (
+            <Chip variant="outlined" label="Голосование недоступно" />
           ) : (
             <Chip variant="outlined" label="Голосование открыто" />
           )}
         </Box>
+
+        {!hasFailureRecord && !canVoteForFailure && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Голосование за провал сделки доступно только на этапах обсуждения и подтверждения.
+          </Alert>
+        )}
 
         {resolutionMeta && (
           <Alert severity={resolutionMeta.severity} sx={{ mb: 2 }}>

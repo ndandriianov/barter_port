@@ -292,8 +292,7 @@ func (s *Service) lockedDealForFailureVote(ctx context.Context, tx pgx.Tx, dealI
 	if err != nil {
 		return domain.Deal{}, err
 	}
-	if status != enums.DealStatusLookingForParticipants &&
-		status != enums.DealStatusDiscussion &&
+	if status != enums.DealStatusDiscussion &&
 		status != enums.DealStatusConfirmed {
 		return domain.Deal{}, domain.ErrInvalidDealStatus
 	}
