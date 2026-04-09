@@ -1,5 +1,7 @@
+import { Link as RouterLink } from "react-router-dom";
 import {
   Box,
+  Button,
   Card,
   CardContent,
   Chip,
@@ -47,9 +49,6 @@ function DraftCard({ draft }: DraftCardProps) {
 
         <Box display="flex" gap={2} mb={2} flexWrap="wrap">
           <Typography variant="caption" color="text.disabled">
-            ID: {draft.id}
-          </Typography>
-          <Typography variant="caption" color="text.disabled">
             Создан: {formatDateTime(draft.createdAt)}
           </Typography>
           {draft.updatedAt && (
@@ -87,12 +86,16 @@ function DraftCard({ draft }: DraftCardProps) {
                         ×{offer.quantity}
                       </Typography>
                       {confirmChip(offer.confirmed)}
+                      <Button
+                        component={RouterLink}
+                        to={`/offers/${offer.id}`}
+                        size="small"
+                        variant="outlined"
+                        sx={{ ml: "auto" }}
+                      >
+                        Открыть
+                      </Button>
                     </Box>
-                  }
-                  secondary={
-                    <Typography variant="caption" color="text.disabled">
-                      ID: {offer.id}
-                    </Typography>
                   }
                 />
               </ListItem>
