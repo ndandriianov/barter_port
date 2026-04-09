@@ -343,7 +343,10 @@ function DealCard({ deal }: DealCardProps) {
   const dispatch = useAppDispatch();
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState(deal.name ?? "");
   const { data: me } = usersApi.useGetCurrentUserQuery();
+  const [updateDeal, { isLoading: isUpdateDealLoading }] = dealsApi.useUpdateDealMutation();
   const [changeDealStatus, { isLoading: isStatusLoading, error: changeStatusError }] = dealsApi.useChangeDealStatusMutation();
   const [joinDeal, { isLoading: isJoinLoading, error: joinError }] = dealsApi.useJoinDealMutation();
   const [leaveDeal, { isLoading: isLeaveLoading, error: leaveError }] = dealsApi.useLeaveDealMutation();
@@ -448,12 +451,56 @@ function DealCard({ deal }: DealCardProps) {
     await processJoinRequest({ dealId: deal.id, userId, accept }).unwrap();
   };
 
+  const handleSaveName = async () => {
+    const trimmed = nameInput.trim();
+    if (trimmed && trimmed !== deal.name) {
+      await updateDeal({ dealId: deal.id, name: trimmed });
+    }
+    setIsEditingName(false);
+  };
+
+  const handleCancelEditName = () => {
+    setNameInput(deal.name ?? "");
+    setIsEditingName(false);
+  };
+
   return (
     <Card variant="outlined">
       <CardContent>
-        <Typography variant="h6" fontWeight={600} gutterBottom>
-          {deal.name ?? "Сделка"}
-        </Typography>
+        {isEditingName ? (
+          <Box display="flex" alignItems="center" gap={1} mb={1}>
+            <TextField
+              value={nameInput}
+              onChange={(e) => setNameInput(e.target.value)}
+              size="small"
+              fullWidth
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void handleSaveName();
+                if (e.key === "Escape") handleCancelEditName();
+              }}
+            />
+            <Button size="small" variant="contained" onClick={() => void handleSaveName()} disabled={isUpdateDealLoading || !nameInput.trim()}>
+              Сохранить
+            </Button>
+            <Button size="small" onClick={handleCancelEditName} disabled={isUpdateDealLoading}>
+              Отмена
+            </Button>
+          </Box>
+        ) : (
+          <Box display="flex" alignItems="center" gap={1} mb={1}>
+            <Typography variant="h6" fontWeight={600}>
+              {deal.name ?? "Сделка"}
+            </Typography>
+            {isParticipant && !isFinalStatus(deal.status) && (
+              <Tooltip title="Переименовать">
+                <IconButton size="small" onClick={() => { setNameInput(deal.name ?? ""); setIsEditingName(true); }}>
+                  <EditIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+          </Box>
+        )}
 
         <Box mb={1.5}>
           <Chip

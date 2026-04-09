@@ -54,6 +54,7 @@ export const createDraftDealResponseSchema = z.object({
 
 export const draftIdAndParticipantsSchema = z.object({
   id: z.string(),
+  name: z.string().optional(),
   participants: z.array(z.string()),
 });
 
@@ -118,6 +119,7 @@ export const getDealStatusVotesResponseSchema = z.array(getDealStatusVotesRespon
 
 export const dealIdAndParticipantsSchema = z.object({
   id: z.string(),
+  name: z.string().optional(),
   status: dealStatusSchema,
   participants: z.array(z.string()),
 });

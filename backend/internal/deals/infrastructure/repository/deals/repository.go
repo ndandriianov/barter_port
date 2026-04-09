@@ -102,6 +102,7 @@ func (r *Repository) GetDealIDs(ctx context.Context, exec db.DB, userID *uuid.UU
 	query := `
 		SELECT d.id,
 		       d.status,
+		       d.name,
 			   COALESCE(array_agg(DISTINCT p) FILTER (WHERE p IS NOT NULL), '{}') AS participant_ids
 		FROM deals d
 				 LEFT JOIN items i ON i.deal_id = d.id
@@ -124,8 +125,9 @@ func (r *Repository) GetDealIDs(ctx context.Context, exec db.DB, userID *uuid.UU
 	for rows.Next() {
 		var id uuid.UUID
 		var statusStr string
+		var name *string
 		var participantIDs []uuid.UUID
-		if err = rows.Scan(&id, &statusStr, &participantIDs); err != nil {
+		if err = rows.Scan(&id, &statusStr, &name, &participantIDs); err != nil {
 			return nil, fmt.Errorf("scan deal id row: %w", err)
 		}
 
@@ -137,6 +139,7 @@ func (r *Repository) GetDealIDs(ctx context.Context, exec db.DB, userID *uuid.UU
 		result = append(result, htypes.DealIDWithParticipantIDs{
 			ID:             id,
 			Status:         status,
+			Name:           name,
 			ParticipantIDs: participantIDs,
 		})
 	}
@@ -146,6 +149,22 @@ func (r *Repository) GetDealIDs(ctx context.Context, exec db.DB, userID *uuid.UU
 	}
 
 	return result, nil
+}
+
+// ================================================================================
+// UPDATE DEAL NAME
+// ================================================================================
+
+// UpdateDealName sets a new name for the deal.
+//
+// No domain errors.
+func (r *Repository) UpdateDealName(ctx context.Context, tx pgx.Tx, dealID uuid.UUID, name string) error {
+	query := `UPDATE deals SET name = $1, updated_at = NOW() WHERE id = $2`
+	_, err := tx.Exec(ctx, query, name, dealID)
+	if err != nil {
+		return fmt.Errorf("sql update deal name: %w", err)
+	}
+	return nil
 }
 
 // ================================================================================

@@ -37,9 +37,11 @@ func mapDealIDWithParticipantIDsToDTO(d htypes.DealIDWithParticipantIDs) types.G
 		participants = append(participants, participantID)
 	}
 
+	s := mapDealStatusToDTO(d.Status)
 	return types.GetDealsResponseItem{
 		Id:           d.ID,
-		Status:       new(mapDealStatusToDTO(d.Status)),
+		Name:         d.Name,
+		Status:       &s,
 		Participants: participants,
 	}
 }

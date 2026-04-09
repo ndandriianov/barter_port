@@ -34,6 +34,9 @@ GetMyDraftDealsResponseItem:
       type: string
       format: uuid
       description: Уникальный идентификатор черновой сделки
+    name:
+      type: string
+      description: Название черновой сделки
     participants:
       type: array
       description: Список ID всех пользователей, участвующих в этой сделке
@@ -90,6 +93,9 @@ GetDealsResponseItem:
       type: string
       format: uuid
       description: Уникальный идентификатор сделки
+    name:
+      type: string
+      description: Название сделки
     status:
       $ref: 'schemas.yaml#/DealStatus'
     participants:

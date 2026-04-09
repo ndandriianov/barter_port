@@ -99,7 +99,8 @@ function DraftsList() {
             <ListItem key={draft.id} disablePadding divider>
               <ListItemButton component={RouterLink} to={`/deals/drafts/${draft.id}`}>
                 <ListItemText
-                  primary={getParticipantNames(draft.participants)}
+                  primary={draft.name ?? "—"}
+                  secondary={getParticipantNames(draft.participants)}
                 />
               </ListItemButton>
             </ListItem>
