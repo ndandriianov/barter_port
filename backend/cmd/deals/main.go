@@ -13,6 +13,7 @@ import (
 	draftsh "barter-port/internal/deals/infrastructure/transport/http/drafts"
 	joinsh "barter-port/internal/deals/infrastructure/transport/http/joins"
 	offersh "barter-port/internal/deals/infrastructure/transport/http/offers"
+	"barter-port/pkg/authkit"
 	"barter-port/pkg/bootstrap"
 	"barter-port/pkg/logger"
 	"errors"
@@ -47,6 +48,12 @@ func main() {
 
 	offersRepo := offersr.NewRepository(db)
 
+	authClient, authConn, err := app.InitAuthGRPCClient(cfg)
+	if err != nil {
+		log.Fatal("failed to initialize auth grpc client:", err)
+	}
+	defer authConn.Close()
+
 	usersClient, usersConn, err := app.InitUsersGRPCClient(cfg)
 	if err != nil {
 		log.Fatal("failed to initialize users grpc client:", err)
@@ -66,6 +73,7 @@ func main() {
 	dealsRepo := deals.NewRepository()
 	joinsRepo := joins.NewRepository()
 	dealsService := dealssvc.NewService(db, draftsRepo, dealsRepo, joinsRepo, offersRepo).
+		WithAdminChecker(authkit.NewAdminChecker(authClient)).
 		WithLogger(logg)
 	if chatsClient != nil {
 		dealsService = dealsService.WithChatsClient(chatsClient)

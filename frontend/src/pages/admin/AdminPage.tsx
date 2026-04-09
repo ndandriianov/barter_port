@@ -22,6 +22,7 @@ import chatsApi from "@/features/chats/api/chatsApi";
 import dealsApi from "@/features/deals/api/dealsApi";
 import offersApi from "@/features/offers/api/offersApi";
 import usersApi from "@/features/users/api/usersApi";
+import FailureModerationQueue from "@/widgets/deals/FailureModerationQueue.tsx";
 
 const quickActions = [
   { label: "Открыть объявления", to: "/offers" },
@@ -214,6 +215,8 @@ function AdminPage() {
         Страница доступна только пользователям с `isAdmin = true`. Новые admin-эндпоинты можно
         добавлять поверх этой проверки без изменения структуры страницы.
       </Alert>
+
+      <FailureModerationQueue />
 
       <Grid container spacing={2}>
         <Grid size={{ xs: 12, md: 6 }}>

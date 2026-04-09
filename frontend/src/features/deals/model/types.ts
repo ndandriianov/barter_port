@@ -9,15 +9,22 @@ import {
   dealIdAndParticipantsSchema,
   dealJoinRequestSchema,
   draftSchema,
+  failureMaterialsSchema,
+  failureModerationDealsResponseSchema,
+  failureResolutionSchema,
+  failureVoteSchema,
   getDealJoinRequestsResponseSchema,
+  getFailureVotesResponseSchema,
   getDealStatusVotesResponseItemSchema,
   getDealStatusVotesResponseSchema,
   getDealsResponseSchema,
   getMyDraftDealsResponseSchema,
   itemSchema,
+  moderatorResolutionForFailureRequestSchema,
   offerWithInfoSchema,
   updateDealItemRequestSchema,
   userConfirmSchema,
+  voteForFailureRequestSchema,
   draftIdAndParticipantsSchema,
 } from "@/features/deals/model/schemas.ts";
 
@@ -64,4 +71,10 @@ export type DealStatusVote = z.Infer<typeof getDealStatusVotesResponseItemSchema
 export type GetDealStatusVotesResponse = z.Infer<typeof getDealStatusVotesResponseSchema>;
 export type Item = z.Infer<typeof itemSchema>;
 export type Deal = z.Infer<typeof dealSchema>;
-
+export type VoteForFailureRequest = z.Infer<typeof voteForFailureRequestSchema>;
+export type FailureVote = z.Infer<typeof failureVoteSchema>;
+export type GetFailureVotesResponse = z.Infer<typeof getFailureVotesResponseSchema>;
+export type ModeratorResolutionForFailureRequest = z.Infer<typeof moderatorResolutionForFailureRequestSchema>;
+export type FailureResolution = z.Infer<typeof failureResolutionSchema>;
+export type FailureMaterials = z.Infer<typeof failureMaterialsSchema>;
+export type FailureModerationDealsResponse = z.Infer<typeof failureModerationDealsResponseSchema>;

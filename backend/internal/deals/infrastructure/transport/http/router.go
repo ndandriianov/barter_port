@@ -72,6 +72,13 @@ func NewRouter(
 		r.Route("/deals", func(r chi.Router) {
 			r.Get("/", dealsHandlers.GetDeals)
 			r.Get("/{dealId}", dealsHandlers.GetDealByID)
+			r.Get("/failures/review", dealsHandlers.GetDealsForFailureReview)
+			r.Post("/failures/{dealId}/votes", dealsHandlers.VoteForFailure)
+			r.Delete("/failures/{dealId}/votes", dealsHandlers.RevokeVoteForFailure)
+			r.Get("/failures/{dealId}/votes", dealsHandlers.GetFailureVotes)
+			r.Get("/failures/{dealId}/materials", dealsHandlers.GetFailureMaterials)
+			r.Post("/failures/{dealId}/moderator-resolution", dealsHandlers.ModeratorResolutionForFailure)
+			r.Get("/failures/{dealId}/moderator-resolution", dealsHandlers.GetModeratorResolutionForFailure)
 			r.Post("/{dealId}/items", dealsHandlers.AddDealItem)
 			r.Get("/{dealId}/status", dealsHandlers.GetDealStatusVotes)
 			r.Patch("/{dealId}/status", dealsHandlers.ChangeDealStatus)
