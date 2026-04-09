@@ -244,15 +244,15 @@ type ErrorResponse struct {
 	Message *string `json:"message,omitempty"`
 }
 
-// FailureModerationDealsResponse defines model for FailureModerationDealsResponse.
-type FailureModerationDealsResponse = []GetDealsResponseItem
-
 // FailureMaterialResponse defines model for FailureMaterialResponse.
 type FailureMaterialResponse struct {
 	// ChatId Идентификатор чата, в котором обсуждалась сделка, если чат был создан
 	ChatId *openapi_types.UUID `json:"chatId,omitempty"`
 	Deal   Deal                `json:"deal"`
 }
+
+// FailureModerationDealsResponse defines model for FailureModerationDealsResponse.
+type FailureModerationDealsResponse = []GetDealsResponseItem
 
 // FailureVotesResponse defines model for FailureVotesResponse.
 type FailureVotesResponse = []FailureVotesResponseItem
