@@ -305,8 +305,6 @@ DealStatus:
 
 DealFailureModeratorResolution:
   type: object
-  required:
-    - confirmed
   properties:
     userId:
       type: string

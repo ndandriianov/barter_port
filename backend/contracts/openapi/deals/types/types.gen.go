@@ -200,7 +200,7 @@ type DealFailureModeratorResolution struct {
 	// Confirmed Поле null если нет решения админа,
 	// true если админ признал сделку проваленной,
 	// false если админ признал сделку не проваленной.
-	Confirmed bool `json:"confirmed"`
+	Confirmed *bool `json:"confirmed,omitempty"`
 
 	// PunishmentPoints Количество штрафных баллов, которые админ назначает пользователю, признанному виновным в провале сделки.
 	// Должны быть положительным числом.

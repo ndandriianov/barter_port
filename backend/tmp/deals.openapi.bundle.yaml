@@ -1616,8 +1616,6 @@ components:
           description: Идентификатор чата, в котором обсуждалась сделка
     DealFailureModeratorResolution:
       type: object
-      required:
-        - confirmed
       properties:
         userId:
           type: string
