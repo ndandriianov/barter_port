@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link as RouterLink } from "react-router-dom";
 import {
   Alert,
   Box,
@@ -297,10 +298,19 @@ function ItemRow({ item, dealId, myId, isParticipant, getUserName, onEditClick }
     >
       <ListItemText
         primary={
-          <Box display="flex" alignItems="center" gap={1}>
+          <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
             <Typography variant="body2" fontWeight={500}>{item.name}</Typography>
             <Typography variant="caption" color="text.secondary">x{item.quantity}</Typography>
             <Chip label={item.type} size="small" variant="outlined" />
+            <Button
+              component={RouterLink}
+              to={`/deals/${dealId}/items/${item.id}`}
+              size="small"
+              variant="outlined"
+              sx={{ ml: "auto" }}
+            >
+              Открыть
+            </Button>
           </Box>
         }
         secondary={item.description}

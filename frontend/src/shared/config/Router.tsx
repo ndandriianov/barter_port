@@ -13,6 +13,7 @@ import DealsListPage from "@/pages/deals/DealsListPage";
 import DealPage from "@/pages/deals/DealPage";
 import DraftsListPage from "@/pages/deals/DraftsListPage";
 import DraftPage from "@/pages/deals/DraftPage";
+import DealItemPage from "@/pages/deals/DealItemPage";
 import ChatsPage from "@/pages/chats/ChatsPage";
 
 function AppRouter() {
@@ -33,6 +34,7 @@ function AppRouter() {
           <Route path="/offers/:offerId" element={<OfferPage />} />
           <Route path="/deals" element={<DealsListPage />} />
           <Route path="/deals/:dealId" element={<DealPage />} />
+          <Route path="/deals/:dealId/items/:itemId" element={<DealItemPage />} />
           <Route path="/deals/drafts" element={<DraftsListPage />} />
           <Route path="/deals/drafts/:draftId" element={<DraftPage />} />
           <Route path="/chats" element={<ChatsPage />} />
