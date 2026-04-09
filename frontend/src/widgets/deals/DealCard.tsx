@@ -264,17 +264,19 @@ function RoleRow({ label, userId, myId, isParticipant, getUserName, onClaim, onR
 interface ItemRowProps {
   item: Item;
   dealId: string;
+  dealStatus: DealStatus;
   myId: string | undefined;
   isParticipant: boolean;
   getUserName: (id: string) => string;
   onEditClick: () => void;
 }
 
-function ItemRow({ item, dealId, myId, isParticipant, getUserName, onEditClick }: ItemRowProps) {
+function ItemRow({ item, dealId, dealStatus, myId, isParticipant, getUserName, onEditClick }: ItemRowProps) {
   const [updateDealItem, { isLoading }] = dealsApi.useUpdateDealItemMutation();
 
-  const canClaimProvider = myId !== undefined && item.receiverId !== myId;
-  const canClaimReceiver = myId !== undefined && item.providerId !== myId;
+  const isEditableStatus = dealStatus === "LookingForParticipants" || dealStatus === "Discussion";
+  const canClaimProvider = myId !== undefined && item.receiverId !== myId && isEditableStatus;
+  const canClaimReceiver = myId !== undefined && item.providerId !== myId && isEditableStatus;
 
   const handleClaim = (field: "claimProvider" | "claimReceiver") => () =>
     updateDealItem({ dealId, itemId: item.id, body: { [field]: true } });
@@ -287,7 +289,7 @@ function ItemRow({ item, dealId, myId, isParticipant, getUserName, onEditClick }
       disableGutters
       sx={{ borderBottom: "1px solid", borderColor: "divider", pb: 1, mb: 1, flexDirection: "column", alignItems: "flex-start" }}
       secondaryAction={
-        myId === item.authorId ? (
+        myId === item.authorId && isEditableStatus ? (
           <Tooltip title="Редактировать">
             <IconButton size="small" onClick={onEditClick}>
               <EditIcon fontSize="small" />
@@ -778,6 +780,7 @@ function DealCard({ deal }: DealCardProps) {
                 key={item.id}
                 item={item}
                 dealId={deal.id}
+                dealStatus={deal.status}
                 myId={me?.id}
                 isParticipant={isParticipant}
                 getUserName={getUserName}
