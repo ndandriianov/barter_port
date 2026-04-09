@@ -138,8 +138,7 @@ join:
               $ref: '../components/responses.yaml#/ErrorResponse'
       '403':
         description: |
-          Операция запрещена по бизнес-правилам:
-          по сделке уже создана запись в `deal_failures`, ожидающая решения админа
+          Операция запрещена по бизнес-правилам: сделка не в статусе LookingForParticipants
         content:
           application/json:
             schema:
