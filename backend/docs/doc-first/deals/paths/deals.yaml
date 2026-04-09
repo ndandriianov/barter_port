@@ -53,6 +53,7 @@ dealItemById:
     description: |
       Редактировать позицию сделки.
 
+      - Редактирование доступно только в статусах `LookingForParticipants` и `Discussion`.
       - Поля `name`, `description`, `quantity` может менять только автор позиции (`author_id`).
       - Роли `provider`/`receiver` можно claim/release по бизнес-правилам.
       - Если по сделке уже создана запись в `deal_failures` и она ожидает решения админа, редактирование позиции запрещено.
@@ -86,7 +87,10 @@ dealItemById:
             schema:
               $ref: '../components/schemas.yaml#/Item'
       '400':
-        description: Некорректный запрос (пустое тело)
+        description: |
+          Некорректный запрос:
+          - пустое тело запроса;
+          - сделка не находится в статусе `LookingForParticipants` или `Discussion`.
         content:
           application/json:
             schema:

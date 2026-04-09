@@ -423,8 +423,13 @@ func (s *Service) UpdateDealItem(
 	var item domain.Item
 
 	err := db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
-		if _, err := s.dealsRepository.GetDealByID(ctx, tx, dealID); err != nil {
+		deal, err := s.dealsRepository.GetDealByID(ctx, tx, dealID)
+		if err != nil {
 			return err
+		}
+
+		if deal.Status != enums.DealStatusLookingForParticipants && deal.Status != enums.DealStatusDiscussion {
+			return domain.ErrInvalidDealStatus
 		}
 
 		if err := s.ensureNoPendingFailureReview(ctx, tx, dealID); err != nil {

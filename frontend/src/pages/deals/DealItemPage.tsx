@@ -30,9 +30,6 @@ const formatDateTime = (value: string) =>
     minute: "2-digit",
   }).format(new Date(value));
 
-const isFinalStatus = (status: DealStatus) =>
-  ["Completed", "Cancelled", "Failed"].includes(status);
-
 // ─── Role row ────────────────────────────────────────────────────────────────
 
 interface RoleRowProps {
@@ -141,9 +138,10 @@ function DealItemPage() {
   if (!item) return <Alert severity="warning">Позиция не найдена</Alert>;
 
   const isParticipant = me ? deal.participants.includes(me.id) : false;
-  const canEdit = !!me && me.id === item.authorId && !isFinalStatus(deal.status);
-  const canClaimProvider = !!me && item.receiverId !== me.id;
-  const canClaimReceiver = !!me && item.providerId !== me.id;
+  const isEditableStatus = deal.status === "LookingForParticipants" || deal.status === "Discussion";
+  const canEdit = !!me && me.id === item.authorId && isEditableStatus;
+  const canClaimProvider = !!me && item.receiverId !== me.id && isEditableStatus;
+  const canClaimReceiver = !!me && item.providerId !== me.id && isEditableStatus;
 
   const quantityError =
     quantityInput !== "" && (isNaN(parseInt(quantityInput, 10)) || parseInt(quantityInput, 10) < 1);
