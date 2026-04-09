@@ -151,6 +151,12 @@ GetDealStatusVotesResponseItem:
       $ref: 'schemas.yaml#/DealStatus'
 
 
+FailureModerationDealsResponse:
+  type: array
+  items:
+    $ref: '#/GetDealsResponseItem'
+
+
 FailureVotesResponse:
   type: array
   items:
@@ -177,11 +183,10 @@ FailureMaterialResponse:
   type: object
   required:
     - deal
-    - chatId
   properties:
     deal:
       $ref: 'schemas.yaml#/Deal'
     chatId:
       type: string
       format: uuid
-      description: Идентификатор чата, в котором обсуждалась сделка
+      description: Идентификатор чата, в котором обсуждалась сделка, если чат был создан
