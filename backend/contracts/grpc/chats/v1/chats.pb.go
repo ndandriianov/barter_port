@@ -118,6 +118,95 @@ func (x *CreateChatResponse) GetChatId() string {
 	return ""
 }
 
+// GetDealChatId
+type GetDealChatIdRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	DealId        string                 `protobuf:"bytes,1,opt,name=deal_id,json=dealId,proto3" json:"deal_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetDealChatIdRequest) Reset() {
+	*x = GetDealChatIdRequest{}
+	mi := &file_contracts_grpc_chats_v1_chats_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetDealChatIdRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetDealChatIdRequest) ProtoMessage() {}
+
+func (x *GetDealChatIdRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_contracts_grpc_chats_v1_chats_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetDealChatIdRequest.ProtoReflect.Descriptor instead.
+func (*GetDealChatIdRequest) Descriptor() ([]byte, []int) {
+	return file_contracts_grpc_chats_v1_chats_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *GetDealChatIdRequest) GetDealId() string {
+	if x != nil {
+		return x.DealId
+	}
+	return ""
+}
+
+type GetDealChatIdResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	ChatId        string                 `protobuf:"bytes,1,opt,name=chat_id,json=chatId,proto3" json:"chat_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetDealChatIdResponse) Reset() {
+	*x = GetDealChatIdResponse{}
+	mi := &file_contracts_grpc_chats_v1_chats_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetDealChatIdResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetDealChatIdResponse) ProtoMessage() {}
+
+func (x *GetDealChatIdResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_contracts_grpc_chats_v1_chats_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetDealChatIdResponse.ProtoReflect.Descriptor instead.
+func (*GetDealChatIdResponse) Descriptor() ([]byte, []int) {
+	return file_contracts_grpc_chats_v1_chats_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *GetDealChatIdResponse) GetChatId() string {
+	if x != nil {
+		return x.ChatId
+	}
+	return ""
+}
+
 var File_contracts_grpc_chats_v1_chats_proto protoreflect.FileDescriptor
 
 const file_contracts_grpc_chats_v1_chats_proto_rawDesc = "" +
@@ -127,10 +216,15 @@ const file_contracts_grpc_chats_v1_chats_proto_rawDesc = "" +
 	"\adeal_id\x18\x01 \x01(\tR\x06dealId\x12'\n" +
 	"\x0fparticipant_ids\x18\x02 \x03(\tR\x0eparticipantIds\"-\n" +
 	"\x12CreateChatResponse\x12\x17\n" +
-	"\achat_id\x18\x01 \x01(\tR\x06chatId2m\n" +
+	"\achat_id\x18\x01 \x01(\tR\x06chatId\"/\n" +
+	"\x14GetDealChatIdRequest\x12\x17\n" +
+	"\adeal_id\x18\x01 \x01(\tR\x06dealId\"0\n" +
+	"\x15GetDealChatIdResponse\x12\x17\n" +
+	"\achat_id\x18\x01 \x01(\tR\x06chatId2\xd5\x01\n" +
 	"\fChatsService\x12]\n" +
 	"\n" +
-	"CreateChat\x12&.barterport.chats.v1.CreateChatRequest\x1a'.barterport.chats.v1.CreateChatResponseB5Z3barterport/internal/contracts/grpc/chats/v1;chatspbb\x06proto3"
+	"CreateChat\x12&.barterport.chats.v1.CreateChatRequest\x1a'.barterport.chats.v1.CreateChatResponse\x12f\n" +
+	"\rGetDealChatId\x12).barterport.chats.v1.GetDealChatIdRequest\x1a*.barterport.chats.v1.GetDealChatIdResponseB5Z3barterport/internal/contracts/grpc/chats/v1;chatspbb\x06proto3"
 
 var (
 	file_contracts_grpc_chats_v1_chats_proto_rawDescOnce sync.Once
@@ -144,16 +238,20 @@ func file_contracts_grpc_chats_v1_chats_proto_rawDescGZIP() []byte {
 	return file_contracts_grpc_chats_v1_chats_proto_rawDescData
 }
 
-var file_contracts_grpc_chats_v1_chats_proto_msgTypes = make([]protoimpl.MessageInfo, 2)
+var file_contracts_grpc_chats_v1_chats_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
 var file_contracts_grpc_chats_v1_chats_proto_goTypes = []any{
-	(*CreateChatRequest)(nil),  // 0: barterport.chats.v1.CreateChatRequest
-	(*CreateChatResponse)(nil), // 1: barterport.chats.v1.CreateChatResponse
+	(*CreateChatRequest)(nil),     // 0: barterport.chats.v1.CreateChatRequest
+	(*CreateChatResponse)(nil),    // 1: barterport.chats.v1.CreateChatResponse
+	(*GetDealChatIdRequest)(nil),  // 2: barterport.chats.v1.GetDealChatIdRequest
+	(*GetDealChatIdResponse)(nil), // 3: barterport.chats.v1.GetDealChatIdResponse
 }
 var file_contracts_grpc_chats_v1_chats_proto_depIdxs = []int32{
 	0, // 0: barterport.chats.v1.ChatsService.CreateChat:input_type -> barterport.chats.v1.CreateChatRequest
-	1, // 1: barterport.chats.v1.ChatsService.CreateChat:output_type -> barterport.chats.v1.CreateChatResponse
-	1, // [1:2] is the sub-list for method output_type
-	0, // [0:1] is the sub-list for method input_type
+	2, // 1: barterport.chats.v1.ChatsService.GetDealChatId:input_type -> barterport.chats.v1.GetDealChatIdRequest
+	1, // 2: barterport.chats.v1.ChatsService.CreateChat:output_type -> barterport.chats.v1.CreateChatResponse
+	3, // 3: barterport.chats.v1.ChatsService.GetDealChatId:output_type -> barterport.chats.v1.GetDealChatIdResponse
+	2, // [2:4] is the sub-list for method output_type
+	0, // [0:2] is the sub-list for method input_type
 	0, // [0:0] is the sub-list for extension type_name
 	0, // [0:0] is the sub-list for extension extendee
 	0, // [0:0] is the sub-list for field type_name
@@ -170,7 +268,7 @@ func file_contracts_grpc_chats_v1_chats_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_contracts_grpc_chats_v1_chats_proto_rawDesc), len(file_contracts_grpc_chats_v1_chats_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   2,
+			NumMessages:   4,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

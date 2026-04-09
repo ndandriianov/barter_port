@@ -11,6 +11,7 @@ import (
 
 type ChatsRepository interface {
 	CreateChat(ctx context.Context, dealID *uuid.UUID, participantIDs []uuid.UUID) (*domain.Chat, error)
+	GetDealChatID(ctx context.Context, dealID uuid.UUID) (uuid.UUID, error)
 	GetChatByID(ctx context.Context, chatID uuid.UUID) (*domain.Chat, error)
 	ListChatsForUser(ctx context.Context, userID uuid.UUID) ([]domain.Chat, error)
 	IsParticipant(ctx context.Context, chatID, userID uuid.UUID) (bool, error)
@@ -33,6 +34,15 @@ func (s *Service) CreateChat(ctx context.Context, dealID *uuid.UUID, participant
 		return nil, fmt.Errorf("repo.CreateChat: %w", err)
 	}
 	return chat, nil
+}
+
+// GetDealChatID returns the chat ID associated with a deal.
+func (s *Service) GetDealChatID(ctx context.Context, dealID uuid.UUID) (uuid.UUID, error) {
+	chatID, err := s.repo.GetDealChatID(ctx, dealID)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("repo.GetDealChatID: %w", err)
+	}
+	return chatID, nil
 }
 
 // ListChatsForUser returns all chats where the user participates.

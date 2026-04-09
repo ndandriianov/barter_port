@@ -19,7 +19,8 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	ChatsService_CreateChat_FullMethodName = "/barterport.chats.v1.ChatsService/CreateChat"
+	ChatsService_CreateChat_FullMethodName    = "/barterport.chats.v1.ChatsService/CreateChat"
+	ChatsService_GetDealChatId_FullMethodName = "/barterport.chats.v1.ChatsService/GetDealChatId"
 )
 
 // ChatsServiceClient is the client API for ChatsService service.
@@ -27,6 +28,7 @@ const (
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ChatsServiceClient interface {
 	CreateChat(ctx context.Context, in *CreateChatRequest, opts ...grpc.CallOption) (*CreateChatResponse, error)
+	GetDealChatId(ctx context.Context, in *GetDealChatIdRequest, opts ...grpc.CallOption) (*GetDealChatIdResponse, error)
 }
 
 type chatsServiceClient struct {
@@ -47,11 +49,22 @@ func (c *chatsServiceClient) CreateChat(ctx context.Context, in *CreateChatReque
 	return out, nil
 }
 
+func (c *chatsServiceClient) GetDealChatId(ctx context.Context, in *GetDealChatIdRequest, opts ...grpc.CallOption) (*GetDealChatIdResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(GetDealChatIdResponse)
+	err := c.cc.Invoke(ctx, ChatsService_GetDealChatId_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // ChatsServiceServer is the server API for ChatsService service.
 // All implementations must embed UnimplementedChatsServiceServer
 // for forward compatibility.
 type ChatsServiceServer interface {
 	CreateChat(context.Context, *CreateChatRequest) (*CreateChatResponse, error)
+	GetDealChatId(context.Context, *GetDealChatIdRequest) (*GetDealChatIdResponse, error)
 	mustEmbedUnimplementedChatsServiceServer()
 }
 
@@ -64,6 +77,9 @@ type UnimplementedChatsServiceServer struct{}
 
 func (UnimplementedChatsServiceServer) CreateChat(context.Context, *CreateChatRequest) (*CreateChatResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method CreateChat not implemented")
+}
+func (UnimplementedChatsServiceServer) GetDealChatId(context.Context, *GetDealChatIdRequest) (*GetDealChatIdResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method GetDealChatId not implemented")
 }
 func (UnimplementedChatsServiceServer) mustEmbedUnimplementedChatsServiceServer() {}
 func (UnimplementedChatsServiceServer) testEmbeddedByValue()                      {}
@@ -104,6 +120,24 @@ func _ChatsService_CreateChat_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _ChatsService_GetDealChatId_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetDealChatIdRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(ChatsServiceServer).GetDealChatId(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: ChatsService_GetDealChatId_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(ChatsServiceServer).GetDealChatId(ctx, req.(*GetDealChatIdRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // ChatsService_ServiceDesc is the grpc.ServiceDesc for ChatsService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -114,6 +148,10 @@ var ChatsService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "CreateChat",
 			Handler:    _ChatsService_CreateChat_Handler,
+		},
+		{
+			MethodName: "GetDealChatId",
+			Handler:    _ChatsService_GetDealChatId_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
