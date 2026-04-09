@@ -96,6 +96,63 @@ chatUsers:
             schema:
               $ref: '../components/responses.yaml#/ErrorResponse'
 
+dealChat:
+  get:
+    tags:
+      - Chats
+    summary: Получить чат сделки
+    description: |
+      Возвращает чат, связанный со сделкой.
+      Доступ разрешен участнику сделки или администратору.
+    operationId: getDealChat
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - name: dealId
+        in: path
+        required: true
+        description: UUID сделки
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: Чат сделки
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/CreateChatResponse'
+      '400':
+        description: Некорректный `dealId`
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: Forbidden. Пользователь не является участником чата сделки и не является администратором.
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Чат сделки не найден
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
 chatMessages:
   get:
     tags:
@@ -131,7 +188,7 @@ chatMessages:
               $ref: '../components/responses.yaml#/ErrorResponse'
       '403':
         description: |
-          Forbidden. Пользователь не является участником чата.
+          Forbidden. Пользователь не является участником чата и не является администратором.
           В текущей реализации этот статус также возможен для несуществующего `chatId`.
         content:
           application/json:

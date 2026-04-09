@@ -12,6 +12,8 @@ paths:
     $ref: './paths/chats.yaml#/chats'
   /chats/users:
     $ref: './paths/chats.yaml#/chatUsers'
+  /chats/deals/{dealId}:
+    $ref: './paths/chats.yaml#/dealChat'
   /chats/{chatId}/messages:
     $ref: './paths/chats.yaml#/chatMessages'
 

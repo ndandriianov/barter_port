@@ -1,7 +1,9 @@
 import { Link, useParams } from "react-router-dom";
 import { Alert, Box, Button, CircularProgress, Typography } from "@mui/material";
+import { skipToken } from "@reduxjs/toolkit/query";
 import dealsApi from "@/features/deals/api/dealsApi";
 import chatsApi from "@/features/chats/api/chatsApi";
+import usersApi from "@/features/users/api/usersApi.ts";
 import DealCard from "@/widgets/deals/DealCard";
 import ChatWindow from "@/widgets/chat/ChatWindow";
 import { getStatusCode } from "@/shared/utils/getStatusCode";
@@ -15,10 +17,12 @@ function DealPage() {
   });
 
   const canShowDealChat = data?.status === "Discussion" || data?.status === "Confirmed";
-  const { data: chats = [], isLoading: isChatsLoading } = chatsApi.useListChatsQuery(undefined, {
-    skip: !canShowDealChat,
-  });
-  const dealChat = data ? chats.find((chat) => chat.deal_id === data.id) : undefined;
+  const {
+    data: dealChat,
+    isLoading: isDealChatLoading,
+    error: dealChatError,
+  } = chatsApi.useGetDealChatQuery(canShowDealChat && data ? data.id : skipToken);
+  const { data: currentUser } = usersApi.useGetCurrentUserQuery();
 
   if (!dealId) return <Alert severity="warning">Сделка не найдена</Alert>;
 
@@ -60,15 +64,27 @@ function DealPage() {
             Чат сделки
           </Typography>
 
-          {isChatsLoading ? (
+          {isDealChatLoading ? (
             <Box display="flex" justifyContent="center" py={4}>
               <CircularProgress />
             </Box>
+          ) : getStatusCode(dealChatError) === 404 ? (
+            <Alert severity="info">Чат этой сделки пока недоступен</Alert>
+          ) : dealChatError ? (
+            getStatusCode(dealChatError) === 403 ? (
+              <Alert severity="warning">У вас нет доступа к чату этой сделки</Alert>
+            ) : (
+              <Alert severity="error">Не удалось загрузить чат сделки</Alert>
+            )
           ) : !dealChat ? (
             <Alert severity="info">Чат этой сделки пока недоступен</Alert>
           ) : (
             <Box sx={{ border: "1px solid #e0e0e0", borderRadius: 2, height: 520, overflow: "hidden" }}>
-              <ChatWindow chatId={dealChat.id} participants={dealChat.participants} />
+              <ChatWindow
+                chatId={dealChat.id}
+                participants={dealChat.participants}
+                readOnly={currentUser?.isAdmin === true}
+              />
             </Box>
           )}
         </Box>
