@@ -203,7 +203,8 @@ type DealFailureModeratorResolution struct {
 	Confirmed *bool `json:"confirmed,omitempty"`
 
 	// PunishmentPoints Количество штрафных баллов, которые админ назначает пользователю, признанному виновным в провале сделки.
-	// Должны быть положительным числом.
+	// Должны быть неотрицательным числом.
+	// Отсутствует, если сделка признана не проваленной.
 	PunishmentPoints *int `json:"punishmentPoints,omitempty"`
 
 	// UserId ID пользователя, которого админ признает виновным в провале сделки.
@@ -243,11 +244,14 @@ type ErrorResponse struct {
 	Message *string `json:"message,omitempty"`
 }
 
+// FailureModerationDealsResponse defines model for FailureModerationDealsResponse.
+type FailureModerationDealsResponse = []GetDealsResponseItem
+
 // FailureMaterialResponse defines model for FailureMaterialResponse.
 type FailureMaterialResponse struct {
-	// ChatId Идентификатор чата, в котором обсуждалась сделка
-	ChatId openapi_types.UUID `json:"chatId"`
-	Deal   Deal               `json:"deal"`
+	// ChatId Идентификатор чата, в котором обсуждалась сделка, если чат был создан
+	ChatId *openapi_types.UUID `json:"chatId,omitempty"`
+	Deal   Deal                `json:"deal"`
 }
 
 // FailureVotesResponse defines model for FailureVotesResponse.
@@ -363,10 +367,19 @@ type ModeratorResolutionForFailureRequest struct {
 	// Comment Комментарий админа, объясняющий его решение. Может быть пустым
 	Comment *string `json:"comment,omitempty"`
 
-	// PunishmentPoints Количество штрафных очков, которые админ назначает виновнику провала сделки. Должно быть неотрицательным числом.
+	// Confirmed Подтверждение админом провала сделки.
+	// Если true, сделка признается проваленной.
+	// Если false, сделка признается не проваленной и переводится в Completed либо Cancelled в зависимости от текущего статуса.
+	Confirmed bool `json:"confirmed"`
+
+	// PunishmentPoints Количество штрафных очков, которые админ назначает виновнику провала сделки.
+	// Должно быть неотрицательным числом.
+	// Разрешено только если confirmed = true.
 	PunishmentPoints *int `json:"punishmentPoints,omitempty"`
 
-	// UserId ID пользователя, которого админ признает виновным в провале сделки. Должен быть участником сделки.
+	// UserId ID пользователя, которого админ признает виновным в провале сделки.
+	// Должен быть участником сделки.
+	// Используется только если confirmed = true.
 	UserId *openapi_types.UUID `json:"userId,omitempty"`
 }
 
