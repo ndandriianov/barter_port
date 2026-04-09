@@ -38,6 +38,8 @@ paths:
     $ref: './paths/failures.yaml#/dealFailureModeratorResolution'
   /offers:
     $ref: './paths/offers.yaml#/offers'
+  /offers/{offerId}:
+    $ref: './paths/offers.yaml#/offerById'
 
 components:
   securitySchemes:

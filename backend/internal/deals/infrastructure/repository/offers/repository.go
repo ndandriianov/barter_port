@@ -230,6 +230,14 @@ func (r *Repository) GetOfferNamesByIDs(ctx context.Context, exec db.DB, ids []u
 // GET OFFER
 // ================================================================================
 
+// GetOfferByID retrieves a single offer by its ID using the repository's own pool.
+//
+// Errors:
+//   - domain.ErrOfferNotFound: if no item with the given ID exists.
+func (r *Repository) GetOfferByID(ctx context.Context, id uuid.UUID) (*domain.Offer, error) {
+	return r.GetOffer(ctx, r.db, id)
+}
+
 // GetOffer retrieves a single item from the database by its ID.
 //
 // Errors:
