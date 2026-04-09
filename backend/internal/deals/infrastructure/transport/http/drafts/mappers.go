@@ -15,6 +15,7 @@ func mapDraftIDWithAuthorIDsToDTO(d htypes.DraftIDWithAuthorIDs) types.GetMyDraf
 
 	return types.GetMyDraftDealsResponseItem{
 		Id:           d.ID,
+		Name:         d.Name,
 		Participants: participants,
 	}
 }

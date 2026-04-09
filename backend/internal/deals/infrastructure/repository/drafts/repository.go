@@ -76,7 +76,7 @@ func (r *Repository) GetDraftsByAuthor(
 	var query string
 	if createdByMe {
 		query = `
-			SELECT dd.id, array_agg(DISTINCT o.author_id) AS participant_ids
+			SELECT dd.id, dd.name, array_agg(DISTINCT o.author_id) AS participant_ids
 			FROM draft_deals dd
 			JOIN draft_deal_offers ddo ON dd.id = ddo.draft_deal_id
 			JOIN offers o ON o.id = ddo.offer_id
@@ -84,13 +84,13 @@ func (r *Repository) GetDraftsByAuthor(
 			GROUP BY dd.id;`
 	} else {
 		query = `
-			SELECT dd.id, array_agg(DISTINCT o.author_id) AS participant_ids
+			SELECT dd.id, dd.name, array_agg(DISTINCT o.author_id) AS participant_ids
 			FROM draft_deals dd
 			JOIN draft_deal_offers ddo ON dd.id = ddo.draft_deal_id
-			JOIN offers o ON o.id = ddo.offer_id 
+			JOIN offers o ON o.id = ddo.offer_id
 			WHERE EXISTS(
 			    SELECT 1
-			    FROM draft_deal_offers ddo2 
+			    FROM draft_deal_offers ddo2
 			    JOIN offers o2 ON o2.id = ddo2.offer_id
 			    WHERE o2.author_id = $1 AND ddo2.draft_deal_id = dd.id
 			)
@@ -106,15 +106,17 @@ func (r *Repository) GetDraftsByAuthor(
 	var drafts []htypes.DraftIDWithAuthorIDs
 	for rows.Next() {
 		var id uuid.UUID
+		var name *string
 		var participantIDs []uuid.UUID
 
-		err = rows.Scan(&id, &participantIDs)
+		err = rows.Scan(&id, &name, &participantIDs)
 		if err != nil {
 			return nil, fmt.Errorf("scan: %w", err)
 		}
 
 		drafts = append(drafts, htypes.DraftIDWithAuthorIDs{
 			ID:             id,
+			Name:           name,
 			ParticipantIDs: participantIDs,
 		})
 	}

@@ -301,6 +301,9 @@ type GetDealsResponseItem struct {
 	// Id Уникальный идентификатор сделки
 	Id openapi_types.UUID `json:"id"`
 
+	// Name Название сделки
+	Name *string `json:"name,omitempty"`
+
 	// Participants Список ID всех пользователей, участвующих в этой сделке
 	Participants []openapi_types.UUID `json:"participants"`
 
@@ -315,6 +318,9 @@ type GetMyDraftDealsResponse = []GetMyDraftDealsResponseItem
 type GetMyDraftDealsResponseItem struct {
 	// Id Уникальный идентификатор черновой сделки
 	Id openapi_types.UUID `json:"id"`
+
+	// Name Название черновой сделки
+	Name *string `json:"name,omitempty"`
 
 	// Participants Список ID всех пользователей, участвующих в этой сделке
 	Participants []openapi_types.UUID `json:"participants"`
@@ -515,6 +521,12 @@ type UserConfirm struct {
 type VoteForFailureRequest struct {
 	// UserId ID пользователя, за которого голосует участник сделки.
 	UserId openapi_types.UUID `json:"userId"`
+}
+
+// UpdateDealRequest defines model for UpdateDealRequest.
+type UpdateDealRequest struct {
+	// Name Новое название сделки
+	Name string `json:"name"`
 }
 
 // CursorCreatedAt defines model for CursorCreatedAt.

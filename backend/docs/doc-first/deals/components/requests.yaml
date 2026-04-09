@@ -16,6 +16,17 @@ CreateDraftDealRequest:
 
 
 
+UpdateDealRequest:
+  type: object
+  required:
+    - name
+  properties:
+    name:
+      type: string
+      description: Новое название сделки
+
+
+
 CreateOfferRequest:
   type: object
   required:

@@ -94,6 +94,63 @@ func (h *Handlers) GetDealByID(w http.ResponseWriter, r *http.Request) {
 }
 
 // ================================================================================
+// UPDATE DEAL
+// ================================================================================
+
+func (h *Handlers) UpdateDeal(w http.ResponseWriter, r *http.Request) {
+	log := logger.LogFrom(r.Context(), h.log).With(slog.String("handler", "UpdateDeal"))
+	log.Info("handling update deal request")
+
+	idStr := chi.URLParam(r, "dealId")
+	if idStr == "" {
+		log.Error("dealId is required")
+		httpx.WriteEmptyError(w, http.StatusBadRequest)
+		return
+	}
+
+	dealID, err := uuid.Parse(idStr)
+	if err != nil {
+		log.Error("error parsing deal id")
+		httpx.WriteEmptyError(w, http.StatusBadRequest)
+		return
+	}
+
+	userID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		log.Error("failed to get userID from context")
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
+	var req types.UpdateDealRequest
+	if err = httpx.DecodeJSON(r, &req); err != nil {
+		log.Error("error decoding request", slog.Any("error", err))
+		httpx.WriteError(w, http.StatusBadRequest, httpx.ErrCannotDecodeRequestBody)
+		return
+	}
+
+	deal, err := h.dealsService.UpdateDealName(r.Context(), dealID, userID, req.Name)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrDealNotFound):
+			log.Info("deal not found", slog.String("dealId", idStr))
+			httpx.WriteEmptyError(w, http.StatusNotFound)
+			return
+		case errors.Is(err, domain.ErrForbidden):
+			log.Info("user not a participant", slog.String("dealId", idStr), slog.String("userID", userID.String()))
+			httpx.WriteEmptyError(w, http.StatusForbidden)
+			return
+		default:
+			log.Error("error updating deal", slog.Any("error", err))
+			httpx.WriteEmptyError(w, http.StatusInternalServerError)
+			return
+		}
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, mapDealToDTO(deal))
+}
+
+// ================================================================================
 // ADD DEAL ITEM
 // ================================================================================
 

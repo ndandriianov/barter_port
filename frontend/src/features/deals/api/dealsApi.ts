@@ -117,6 +117,19 @@ const dealsApi = createApi({
       providesTags: (_result, _error, dealId) => [{type: "Deals", id: dealId}],
     }),
 
+    updateDeal: builder.mutation<Deal, { dealId: string; name: string }>({
+      query: ({ dealId, name }) => ({
+        url: `/deals/${dealId}`,
+        method: "PATCH",
+        body: { name },
+      }),
+      transformResponse: (response: unknown) => dealSchema.parse(response),
+      invalidatesTags: (_result, _error, { dealId }) => [
+        {type: "Deals", id: dealId},
+        "Deals",
+      ],
+    }),
+
     joinDeal: builder.mutation<void, string>({
       query: (dealId) => ({
         url: `/deals/${dealId}/joins`,

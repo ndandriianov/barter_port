@@ -179,7 +179,10 @@ function DealsList() {
                 {deals.map((deal) => (
                   <ListItem key={deal.id} disablePadding divider>
                     <ListItemButton component={RouterLink} to={`/deals/${deal.id}`}>
-                      <ListItemText primary={getParticipantNames(deal.participants)} />
+                      <ListItemText
+                        primary={deal.name ?? "—"}
+                        secondary={getParticipantNames(deal.participants)}
+                      />
                     </ListItemButton>
                   </ListItem>
                 ))}

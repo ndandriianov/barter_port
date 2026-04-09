@@ -72,6 +72,7 @@ func NewRouter(
 		r.Route("/deals", func(r chi.Router) {
 			r.Get("/", dealsHandlers.GetDeals)
 			r.Get("/{dealId}", dealsHandlers.GetDealByID)
+			r.Patch("/{dealId}", dealsHandlers.UpdateDeal)
 			r.Get("/failures/review", dealsHandlers.GetDealsForFailureReview)
 			r.Post("/failures/{dealId}/votes", dealsHandlers.VoteForFailure)
 			r.Delete("/failures/{dealId}/votes", dealsHandlers.RevokeVoteForFailure)

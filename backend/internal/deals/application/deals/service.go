@@ -14,6 +14,7 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -76,18 +77,31 @@ func (s *Service) CreateDraft(
 	authorID uuid.UUID,
 	name *string,
 	description *string,
-	offers []domain.OfferIDAndInfo,
+	offersList []domain.OfferIDAndInfo,
 ) (uuid.UUID, error) {
+	if len(offersList) == 0 {
+		return uuid.Nil, domain.ErrNoOffers
+	}
+
+	if name == nil {
+		offerIDs := make([]uuid.UUID, len(offersList))
+		for i, o := range offersList {
+			offerIDs[i] = o.ID
+		}
+
+		names, err := s.offersRepository.GetOfferNamesByIDs(ctx, s.db, offerIDs)
+		if err != nil {
+			return uuid.Nil, fmt.Errorf("get offer names for draft name: %w", err)
+		}
+
+		name = new(strings.Join(names, ", "))
+	}
+
 	var id uuid.UUID
 	var err error
 
 	txErr := db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
-		if len(offers) == 0 {
-			return domain.ErrNoOffers
-		}
-		// TODO: проверить offers
-
-		id, err = s.draftsRepository.CreateDraft(ctx, tx, authorID, name, description, offers)
+		id, err = s.draftsRepository.CreateDraft(ctx, tx, authorID, name, description, offersList)
 		return err
 	})
 
@@ -227,6 +241,51 @@ func (s *Service) GetDealByID(ctx context.Context, id uuid.UUID) (domain.Deal, e
 	})
 	if err != nil {
 		return domain.Deal{}, err
+	}
+
+	return deal, nil
+}
+
+// ================================================================================
+// UPDATE DEAL NAME
+// ================================================================================
+
+// UpdateDealName changes the name of an existing deal.
+//
+// Domain errors:
+//   - domain.ErrDealNotFound: if no deal with the specified ID exists.
+//   - domain.ErrForbidden: if the user is not a participant of the deal.
+func (s *Service) UpdateDealName(ctx context.Context, dealID uuid.UUID, userID uuid.UUID, name string) (domain.Deal, error) {
+	var deal domain.Deal
+
+	txErr := db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
+		var err error
+		deal, err = s.dealsRepository.GetDealByID(ctx, tx, dealID)
+		if err != nil {
+			return err
+		}
+
+		isParticipant := false
+		for _, p := range deal.Participants {
+			if p == userID {
+				isParticipant = true
+				break
+			}
+		}
+		if !isParticipant {
+			return domain.ErrForbidden
+		}
+
+		if err = s.dealsRepository.UpdateDealName(ctx, tx, dealID, name); err != nil {
+			return err
+		}
+
+		deal, err = s.dealsRepository.GetDealByID(ctx, tx, dealID)
+		return err
+	})
+
+	if txErr != nil {
+		return domain.Deal{}, txErr
 	}
 
 	return deal, nil
