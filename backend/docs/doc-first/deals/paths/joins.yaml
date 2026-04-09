@@ -3,6 +3,11 @@ join:
     tags:
       - Joins
     summary: Присоединиться к сделке
+    description: |
+      Создает заявку на присоединение к сделке.
+
+      Если по сделке уже создана запись в `deal_failures` и она ожидает решения админа,
+      подать заявку на присоединение нельзя.
     operationId: joinDeal
     parameters:
       - name: dealId
@@ -33,7 +38,11 @@ join:
             schema:
               $ref: '../components/responses.yaml#/ErrorResponse'
       '403':
-        description: Операция запрещена по бизнес-правилам
+        description: |
+          Операция запрещена по бизнес-правилам:
+          сделка не допускает присоединение по текущему статусу,
+          либо пользователь уже участвует в сделке,
+          либо по сделке уже создана запись в `deal_failures`, ожидающая решения админа
         content:
           application/json:
             schema:
@@ -97,6 +106,11 @@ join:
     tags:
       - Joins
     summary: Покинуть сделку
+    description: |
+      Удаляет заявку на присоединение к сделке или исключает пользователя из участников по текущим бизнес-правилам.
+
+      Если по сделке уже создана запись в `deal_failures` и она ожидает решения админа,
+      покинуть сделку или отозвать заявку нельзя.
     operationId: leaveDeal
     parameters:
       - name: dealId
@@ -123,7 +137,9 @@ join:
             schema:
               $ref: '../components/responses.yaml#/ErrorResponse'
       '403':
-        description: Операция запрещена по бизнес-правилам
+        description: |
+          Операция запрещена по бизнес-правилам:
+          по сделке уже создана запись в `deal_failures`, ожидающая решения админа
         content:
           application/json:
             schema:
@@ -142,6 +158,11 @@ processJoinRequest:
     tags:
       - Joins
     summary: Обработать заявку на присоединение к сделке
+    description: |
+      Участник сделки голосует за принятие или отклонение заявки на присоединение.
+
+      Если по сделке уже создана запись в `deal_failures` и она ожидает решения админа,
+      обрабатывать заявки на присоединение нельзя.
     operationId: processJoinRequest
     parameters:
       - name: dealId
@@ -179,7 +200,11 @@ processJoinRequest:
             schema:
               $ref: '../components/responses.yaml#/ErrorResponse'
       '403':
-        description: Операция запрещена по бизнес-правилам
+        description: |
+          Операция запрещена по бизнес-правилам:
+          пользователь не вправе обрабатывать заявку,
+          либо текущий статус сделки не допускает обработку заявки,
+          либо по сделке уже создана запись в `deal_failures`, ожидающая решения админа
         content:
           application/json:
             schema:
