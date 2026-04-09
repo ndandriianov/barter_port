@@ -584,33 +584,6 @@ func (r *Repository) GetStatusVotes(ctx context.Context, exec db.DB, dealID uuid
 // PARTICIPANTS
 // ================================================================================
 
-// GetParticipants returns all unique user IDs that hold any role (author/provider/receiver) in the deal's items.
-func (r *Repository) GetParticipants(ctx context.Context, exec db.DB, dealID uuid.UUID) ([]uuid.UUID, error) {
-	query := `
-		SELECT user_id
-		FROM participants
-		WHERE deal_id = $1`
-
-	rows, err := exec.Query(ctx, query, dealID)
-	if err != nil {
-		return nil, fmt.Errorf("sql get participants: %w", err)
-	}
-	defer rows.Close()
-
-	var participants []uuid.UUID
-	for rows.Next() {
-		var id uuid.UUID
-		if err = rows.Scan(&id); err != nil {
-			return nil, fmt.Errorf("scan participant: %w", err)
-		}
-		participants = append(participants, id)
-	}
-	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("rows participants: %w", err)
-	}
-	return participants, nil
-}
-
 func (r *Repository) DeleteParticipant(ctx context.Context, exec db.DB, dealID, userID uuid.UUID) error {
 	query := `
 		DELETE

@@ -430,8 +430,10 @@ func (s *Service) ProcessDealStatusUpdateRequest(
 	switch status {
 	case enums.DealStatusDiscussion, enums.DealStatusConfirmed, enums.DealStatusCompleted:
 		return s.confirmDeal(ctx, dealID, userID, status)
-	case enums.DealStatusCancelled, enums.DealStatusFailed:
+	case enums.DealStatusCancelled:
 		return s.cancelDeal(ctx, dealID, status)
+	case enums.DealStatusFailed:
+		return domain.Deal{}, domain.ErrForbidden
 	default:
 		return domain.Deal{}, fmt.Errorf("invalid status: %s", status)
 	}
@@ -508,17 +510,12 @@ func (s *Service) confirmDeal(ctx context.Context, id uuid.UUID, userID uuid.UUI
 			return err
 		}
 
-		participants, err := s.dealsRepository.GetParticipants(ctx, tx, id)
-		if err != nil {
-			return err
-		}
-
 		votes, err := s.dealsRepository.GetStatusVotes(ctx, tx, id)
 		if err != nil {
 			return err
 		}
 
-		allVoted := len(votes) == len(participants)
+		allVoted := len(votes) == len(deal.Participants)
 		if allVoted {
 			for _, v := range votes {
 				if v != targetStatus {
