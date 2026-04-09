@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { Alert, Box, Button, CircularProgress, Stack, Typography } from "@mui/material";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import CancelOutlinedIcon from "@mui/icons-material/CancelOutlined";
@@ -7,6 +7,7 @@ import DraftCard from "@/widgets/deals/DraftCard";
 
 function DraftPage() {
   const { draftId } = useParams<{ draftId: string }>();
+  const navigate = useNavigate();
 
   const { data, isLoading, error } = dealsApi.useGetDraftDealByIdQuery(draftId ?? "", {
     skip: !draftId,
@@ -37,6 +38,15 @@ function DraftPage() {
 
   return (
     <Box maxWidth={700} mx="auto">
+      <Button
+        size="small"
+        variant="text"
+        onClick={() => window.history.length > 1 ? navigate(-1) : navigate("/deals")}
+        sx={{ mb: 2 }}
+      >
+        ← Назад
+      </Button>
+
       <Typography variant="h4" fontWeight={700} mb={3}>
         Черновой договор
       </Typography>

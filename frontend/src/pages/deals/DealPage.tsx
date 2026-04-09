@@ -1,4 +1,4 @@
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { Alert, Box, Button, CircularProgress, Typography } from "@mui/material";
 import { skipToken } from "@reduxjs/toolkit/query";
 import dealsApi from "@/features/deals/api/dealsApi";
@@ -10,6 +10,7 @@ import { getStatusCode } from "@/shared/utils/getStatusCode";
 
 function DealPage() {
   const { dealId } = useParams<{ dealId: string }>();
+  const navigate = useNavigate();
 
   const { data, isLoading, error } = dealsApi.useGetDealByIdQuery(dealId ?? "", {
     skip: !dealId,
@@ -53,6 +54,15 @@ function DealPage() {
 
   return (
     <Box maxWidth={700} mx="auto">
+      <Button
+        size="small"
+        variant="text"
+        onClick={() => window.history.length > 1 ? navigate(-1) : navigate("/deals")}
+        sx={{ mb: 2 }}
+      >
+        ← Назад
+      </Button>
+
       <Typography variant="h4" fontWeight={700} mb={3}>
         Детали сделки
       </Typography>
