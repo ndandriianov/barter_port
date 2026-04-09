@@ -1,6 +1,7 @@
 package main
 
 import (
+	dealspb "barter-port/contracts/grpc/deals/v1"
 	"barter-port/internal/deals/app"
 	dealssvc "barter-port/internal/deals/application/deals"
 	"barter-port/internal/deals/application/offers"
@@ -8,6 +9,7 @@ import (
 	"barter-port/internal/deals/infrastructure/repository/drafts"
 	"barter-port/internal/deals/infrastructure/repository/joins"
 	offersr "barter-port/internal/deals/infrastructure/repository/offers"
+	transportgrpc "barter-port/internal/deals/infrastructure/transport/grpc"
 	transporthttp "barter-port/internal/deals/infrastructure/transport/http"
 	dealsh "barter-port/internal/deals/infrastructure/transport/http/deals"
 	draftsh "barter-port/internal/deals/infrastructure/transport/http/drafts"
@@ -19,10 +21,12 @@ import (
 	"errors"
 	"log"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 
 	"github.com/joho/godotenv"
+	"google.golang.org/grpc"
 )
 
 func main() {
@@ -83,6 +87,24 @@ func main() {
 	if err != nil {
 		log.Fatal("failed to initialize JWT validator:", err)
 	}
+
+	grpcListenAddr := cfg.DealsGRPCListenAddr
+	if grpcListenAddr == "" {
+		grpcListenAddr = ":50054"
+	}
+	listener, err := net.Listen("tcp", grpcListenAddr)
+	if err != nil {
+		log.Fatal("failed to listen on grpc port:", err)
+	}
+	grpcServer := grpc.NewServer()
+	dealspb.RegisterDealsServiceServer(grpcServer, transportgrpc.NewServer(dealsService))
+
+	go func() {
+		logg.Info("gRPC server listening", slog.String("addr", grpcListenAddr))
+		if err := grpcServer.Serve(listener); err != nil {
+			log.Fatal("gRPC server failed:", err)
+		}
+	}()
 
 	offersHandlers := offersh.NewHandlers(offersService)
 	draftsHandlers := draftsh.NewHandlers(logg, dealsService)

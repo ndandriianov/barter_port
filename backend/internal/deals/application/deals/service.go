@@ -246,6 +246,19 @@ func (s *Service) GetDealByID(ctx context.Context, id uuid.UUID) (domain.Deal, e
 	return deal, nil
 }
 
+// GetDealStatus returns the current status of a deal.
+//
+// Domain errors:
+//   - domain.ErrDealNotFound: if no deal with the specified ID exists.
+func (s *Service) GetDealStatus(ctx context.Context, id uuid.UUID) (enums.DealStatus, error) {
+	deal, err := s.GetDealByID(ctx, id)
+	if err != nil {
+		return 0, err
+	}
+
+	return deal.Status, nil
+}
+
 // ================================================================================
 // UPDATE DEAL NAME
 // ================================================================================

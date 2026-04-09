@@ -1,6 +1,7 @@
 package application
 
 import (
+	dealspb "barter-port/contracts/grpc/deals/v1"
 	"barter-port/internal/chats/domain"
 	"barter-port/pkg/authkit"
 	"fmt"
@@ -22,6 +23,7 @@ type ChatsRepository interface {
 
 type Service struct {
 	repo         ChatsRepository
+	dealsClient  dealspb.DealsServiceClient
 	adminChecker *authkit.AdminChecker
 }
 
@@ -31,6 +33,11 @@ func NewService(repo ChatsRepository) *Service {
 
 func (s *Service) WithAdminChecker(checker *authkit.AdminChecker) *Service {
 	s.adminChecker = checker
+	return s
+}
+
+func (s *Service) WithDealsClient(client dealspb.DealsServiceClient) *Service {
+	s.dealsClient = client
 	return s
 }
 
@@ -121,7 +128,9 @@ func (s *Service) GetMessages(ctx context.Context, userID, chatID uuid.UUID, aft
 	return msgs, nil
 }
 
-// SendMessage sends a message in a chat if the user is a participant.
+// SendMessage sends a message in a chat if the user is a participant and the chat is writable.
+// Personal chats are always writable. Deal chats become read-only when the deal reaches
+// a final status (Completed, Cancelled, Failed).
 func (s *Service) SendMessage(ctx context.Context, userID, chatID uuid.UUID, content string) (*domain.Message, error) {
 	ok, err := s.repo.IsParticipant(ctx, chatID, userID)
 	if err != nil {
@@ -131,9 +140,44 @@ func (s *Service) SendMessage(ctx context.Context, userID, chatID uuid.UUID, con
 		return nil, domain.ErrForbidden
 	}
 
+	chat, err := s.repo.GetChatByID(ctx, chatID)
+	if err != nil {
+		return nil, fmt.Errorf("repo.GetChatByID: %w", err)
+	}
+
+	writable, err := s.isChatWritable(ctx, chat)
+	if err != nil {
+		return nil, fmt.Errorf("isChatWritable: %w", err)
+	}
+	if !writable {
+		return nil, domain.ErrForbidden
+	}
+
 	msg, err := s.repo.SendMessage(ctx, chatID, userID, content)
 	if err != nil {
 		return nil, fmt.Errorf("repo.SendMessage: %w", err)
 	}
 	return msg, nil
+}
+
+func (s *Service) isChatWritable(ctx context.Context, chat *domain.Chat) (bool, error) {
+	if chat.DealID == nil {
+		return true, nil
+	}
+
+	if s.dealsClient == nil {
+		return false, fmt.Errorf("deals grpc client is not configured")
+	}
+
+	resp, err := s.dealsClient.GetDealStatus(ctx, &dealspb.GetDealStatusRequest{DealId: chat.DealID.String()})
+	if err != nil {
+		return false, fmt.Errorf("dealsClient.GetDealStatus: %w", err)
+	}
+
+	switch resp.GetStatus() {
+	case "Completed", "Cancelled", "Failed":
+		return false, nil
+	default:
+		return true, nil
+	}
 }

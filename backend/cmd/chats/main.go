@@ -53,9 +53,16 @@ func main() {
 	}
 	defer usersConn.Close()
 
+	dealsClient, dealsConn, err := app.InitDealsGRPCClient(cfg)
+	if err != nil {
+		log.Fatal("failed to initialize deals grpc client:", err)
+	}
+	defer dealsConn.Close()
+
 	repo := repository.NewRepository(db)
 	chatsService := application.NewService(repo).
-		WithAdminChecker(authkit.NewAdminChecker(authClient))
+		WithAdminChecker(authkit.NewAdminChecker(authClient)).
+		WithDealsClient(dealsClient)
 
 	validator, err := bootstrap.InitLocalJWTFromConfig(cfg)
 	if err != nil {
