@@ -175,6 +175,7 @@ dealStatus:
       Когда все пользователи указали один и тот же статус сделки (вперед), то выполняется переход к новому статусу.
       Сделка должна быть в статусе, предшествующем указанному.
       Если пользователь выбирает статус отмены, то сделка сразу же переходит в статус отменён.
+      Статус Failed не может быть установлен через этот эндпоинт
     operationId: ChangeDealStatus
     parameters:
       - name: dealId
@@ -206,6 +207,13 @@ dealStatus:
               $ref: '../components/responses.yaml#/ErrorResponse'
       '401':
         description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: |
+          Операция запрещена по бизнес-правилам (пользователь не является участником сделки, либо голосовал за Failed)
         content:
           application/json:
             schema:

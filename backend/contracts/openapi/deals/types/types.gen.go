@@ -192,6 +192,25 @@ type Deal struct {
 	UpdatedAt *time.Time `json:"updatedAt,omitempty"`
 }
 
+// DealFailureModeratorResolution defines model for DealFailureModeratorResolution.
+type DealFailureModeratorResolution struct {
+	// Comment Комментарий админа к его решению.
+	Comment *string `json:"comment,omitempty"`
+
+	// Confirmed Поле null если нет решения админа,
+	// true если админ признал сделку проваленной,
+	// false если админ признал сделку не проваленной.
+	Confirmed bool `json:"confirmed"`
+
+	// PunishmentPoints Количество штрафных баллов, которые админ назначает пользователю, признанному виновным в провале сделки.
+	// Должны быть положительным числом.
+	PunishmentPoints *int `json:"punishmentPoints,omitempty"`
+
+	// UserId ID пользователя, которого админ признает виновным в провале сделки.
+	// Должен быть участником сделки.
+	UserId *openapi_types.UUID `json:"userId,omitempty"`
+}
+
 // DealStatus Статус сделки
 type DealStatus string
 
@@ -222,6 +241,25 @@ type Draft struct {
 // ErrorResponse defines model for ErrorResponse.
 type ErrorResponse struct {
 	Message *string `json:"message,omitempty"`
+}
+
+// FailureMaterialResponse defines model for FailureMaterialResponse.
+type FailureMaterialResponse struct {
+	// ChatId Идентификатор чата, в котором обсуждалась сделка
+	ChatId openapi_types.UUID `json:"chatId"`
+	Deal   Deal               `json:"deal"`
+}
+
+// FailureVotesResponse defines model for FailureVotesResponse.
+type FailureVotesResponse = []FailureVotesResponseItem
+
+// FailureVotesResponseItem defines model for FailureVotesResponseItem.
+type FailureVotesResponseItem struct {
+	// UserId Уникальный идентификатор пользователя, который проголосовал за виновника провала сделки
+	UserId openapi_types.UUID `json:"userId"`
+
+	// Vote Идентификатор пользователя, за которого проголосовал пользователь как за виновника
+	Vote openapi_types.UUID `json:"vote"`
 }
 
 // GetDealJoinRequestsResponse defines model for GetDealJoinRequestsResponse.
@@ -318,6 +356,18 @@ type ListOffersResponse struct {
 
 	// Offers List of offers
 	Offers []Offer `json:"offers"`
+}
+
+// ModeratorResolutionForFailureRequest defines model for ModeratorResolutionForFailureRequest.
+type ModeratorResolutionForFailureRequest struct {
+	// Comment Комментарий админа, объясняющий его решение. Может быть пустым
+	Comment *string `json:"comment,omitempty"`
+
+	// PunishmentPoints Количество штрафных очков, которые админ назначает виновнику провала сделки. Должно быть неотрицательным числом.
+	PunishmentPoints *int `json:"punishmentPoints,omitempty"`
+
+	// UserId ID пользователя, которого админ признает виновным в провале сделки. Должен быть участником сделки.
+	UserId *openapi_types.UUID `json:"userId,omitempty"`
 }
 
 // Offer defines model for Offer.
@@ -448,6 +498,12 @@ type UserConfirm struct {
 	UserId openapi_types.UUID `json:"userId"`
 }
 
+// VoteForFailureRequest defines model for VoteForFailureRequest.
+type VoteForFailureRequest struct {
+	// UserId ID пользователя, за которого голосует участник сделки.
+	UserId openapi_types.UUID `json:"userId"`
+}
+
 // CursorCreatedAt defines model for CursorCreatedAt.
 type CursorCreatedAt = time.Time
 
@@ -511,6 +567,12 @@ type ListOffersParamsSort string
 
 // CreateDraftDealJSONRequestBody defines body for CreateDraftDeal for application/json ContentType.
 type CreateDraftDealJSONRequestBody = CreateDraftDealRequest
+
+// ModeratorResolutionForFailureJSONRequestBody defines body for ModeratorResolutionForFailure for application/json ContentType.
+type ModeratorResolutionForFailureJSONRequestBody = ModeratorResolutionForFailureRequest
+
+// VoteForFailureJSONRequestBody defines body for VoteForFailure for application/json ContentType.
+type VoteForFailureJSONRequestBody = VoteForFailureRequest
 
 // AddDealItemJSONRequestBody defines body for AddDealItem for application/json ContentType.
 type AddDealItemJSONRequestBody = AddDealItemRequest

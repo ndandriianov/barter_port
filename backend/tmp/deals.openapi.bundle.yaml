@@ -353,6 +353,7 @@ paths:
         Когда все пользователи указали один и тот же статус сделки (вперед), то выполняется переход к новому статусу.
         Сделка должна быть в статусе, предшествующем указанному.
         Если пользователь выбирает статус отмены, то сделка сразу же переходит в статус отменён.
+        Статус Failed не может быть установлен через этот эндпоинт
       operationId: ChangeDealStatus
       parameters:
         - name: dealId
@@ -384,6 +385,13 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: |
+            Операция запрещена по бизнес-правилам (пользователь не является участником сделки, либо голосовал за Failed)
           content:
             application/json:
               schema:
@@ -750,6 +758,308 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Сделка или пользователь не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /deals/failures/{dealId}/votes:
+    post:
+      tags:
+        - Failures
+      summary: Проголосовать за виновника в провале сделки
+      description: |
+        Голос за провал сделки и виновника.
+
+        Если половина участников с округлением в меньшую сторону проголосует за одного и того же виновника,
+        он будет признан виновным в провале сделки.
+
+        Голосовать можно сколько угодно раз, пока сделка не отменена/завершена
+        или пока нет решения админа о провале.
+
+        Можно отозвать голос.
+
+        Если половина участников проголосовали за провал сделки, но голоса распределились между несколькими кандидатами,
+        то виновника определяет админ.
+
+        Проголосовать за провал может только участник сделки
+      operationId: voteForFailure
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VoteForFailureRequest'
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Голос успешно учтен
+        '400':
+          description: Некорректный запрос (пустое тело)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: |
+            Операция запрещена по бизнес-правилам: пользователь не является участником сделки,
+            либо сделка уже отменена/завершена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Сделка не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - Failures
+      summary: Отозвать голос за виновника в провале сделки
+      description: |
+        Участник сделки может отозвать свой голос за провал сделки, если он передумал или проголосовал по ошибке.
+
+        Голос можно отозвать сколько угодно раз, пока сделка не отменена/завершена
+        или пока нет решения админа о провале.
+
+        Отозвать голос может только участник сделки
+      operationId: revokeVoteForFailure
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Голос успешно отозван
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: |
+            Операция запрещена по бизнес-правилам: пользователь не является участником сделки,
+            либо сделка уже отменена/завершена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Сделка не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags:
+        - Failures
+      summary: Получить список голосов за виновника в провале сделки
+      description: |
+        Получить список голосов за виновника в провале сделки могут только участники сделки и админ
+      operationId: getFailureVotes
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Список голосов успешно получен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailureVotesResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: |
+            Пользователь не является участником сделки и не является админом,
+            Противоречащий бизнес правилам случай сюда не относится, будет просто пустой массив
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Сделка не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /deals/failures/{dealId}/materials:
+    get:
+      tags:
+        - Failures
+      summary: Получить материалы по провалу сделки
+      description: |
+        Эндпоинт предназначен для использования только админом. Остальным возвращает 403
+      operationId: getFailureMaterials
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Материалы по провалу сделки успешно получены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailureMaterialResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: |
+            Операция запрещена по бизнес-правилам: пользователь не является админом,
+            либо сделка уже отменена/завершена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Сделка не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /deals/failures/{dealId}/moderator-resolution:
+    post:
+      tags:
+        - Failures
+      summary: Решение админа по провалу сделки
+      description: |
+        Админ принимает решение о виновнике провала сделки в случае,
+        если голоса участников распределились между несколькими кандидатами,
+        либо если он не согласен с результатом голосования. Решение админа является окончательным.
+
+        Админ может принять решение что сделка не провалена, тогда она переходит в статус Completed,
+        если была в статусе Confirmed, в ином случае она переходит в Cancelled
+
+        Эндпоинт предназначен для использования только админом. Остальным возвращает 403
+      operationId: moderatorResolutionForFailure
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModeratorResolutionForFailureRequest'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Решение админа успешно учтено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DealFailureModeratorResolution'
+        '400':
+          description: Некорректный запрос (пустое тело)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: |
+            Операция запрещена по бизнес-правилам: сделка уже отменена/завершена,
+            либо пользователь не является админом
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Сделка не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags:
+        - Failures
+      summary: Получить решение админа по провалу сделки
+      description: |
+        Получить решение админа по провалу сделки могут только участники сделки и админ
+      operationId: getModeratorResolutionForFailure
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Решение админа успешно получено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DealFailureModeratorResolution'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: |
+            Операция запрещена по бизнес-правилам: сделка уже отменена/завершена,
+            либо пользователь не является участником сделки и не является админом
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Сделка не найдена
           content:
             application/json:
               schema:
@@ -1265,6 +1575,87 @@ components:
       type: array
       items:
         $ref: '#/components/schemas/GetDealJoinRequestsResponseItem'
+    FailureVotesResponseItem:
+      type: object
+      required:
+        - userId
+        - vote
+      properties:
+        userId:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор пользователя, который проголосовал за виновника провала сделки
+        vote:
+          type: string
+          format: uuid
+          description: Идентификатор пользователя, за которого проголосовал пользователь как за виновника
+    FailureVotesResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/FailureVotesResponseItem'
+    VoteForFailureRequest:
+      type: object
+      required:
+        - userId
+      properties:
+        userId:
+          type: string
+          format: uuid
+          description: ID пользователя, за которого голосует участник сделки.
+    FailureMaterialResponse:
+      type: object
+      required:
+        - deal
+        - chatId
+      properties:
+        deal:
+          $ref: '#/components/schemas/Deal'
+        chatId:
+          type: string
+          format: uuid
+          description: Идентификатор чата, в котором обсуждалась сделка
+    DealFailureModeratorResolution:
+      type: object
+      required:
+        - confirmed
+      properties:
+        userId:
+          type: string
+          format: uuid
+          description: |
+            ID пользователя, которого админ признает виновным в провале сделки.
+            Должен быть участником сделки.
+        confirmed:
+          type: boolean
+          description: |
+            Поле null если нет решения админа,
+            true если админ признал сделку проваленной,
+            false если админ признал сделку не проваленной.
+        punishmentPoints:
+          type: integer
+          description: |
+            Количество штрафных баллов, которые админ назначает пользователю, признанному виновным в провале сделки.
+            Должны быть положительным числом.
+        comment:
+          type: string
+          description: Комментарий админа к его решению.
+    ModeratorResolutionForFailureRequest:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+          description: |
+            ID пользователя, которого админ признает виновным в провале сделки. Должен быть участником сделки.
+        punishmentPoints:
+          type: integer
+          minimum: 0
+          description: |
+            Количество штрафных очков, которые админ назначает виновнику провала сделки. Должно быть неотрицательным числом.
+        comment:
+          type: string
+          description: |
+            Комментарий админа, объясняющий его решение. Может быть пустым
     OffersCursor:
       type: object
       description: Cursor for stable pagination
