@@ -1,26 +1,10 @@
 import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { Alert, Box, Button, Divider, Typography } from "@mui/material";
-import { useAppSelector } from "@/hooks/redux";
+import { Alert, Box, Button, CircularProgress, Divider, Typography } from "@mui/material";
 import offersApi from "@/features/offers/api/offersApi";
 import usersApi from "@/features/users/api/usersApi";
-import type { GetOffersResponse, Offer } from "@/features/offers/model/types";
 import OfferCard from "@/widgets/offers/OfferCard";
 import RespondToOfferModal from "@/widgets/offers/RespondToOfferModal";
-
-interface CachedQueryState {
-  endpointName?: string;
-  data?: unknown;
-}
-
-function isGetOffersResponse(data: unknown): data is GetOffersResponse {
-  return (
-    typeof data === "object" &&
-    data !== null &&
-    "offers" in data &&
-    Array.isArray(data.offers)
-  );
-}
 
 function OfferPage() {
   const { offerId } = useParams<{ offerId: string }>();
@@ -28,22 +12,21 @@ function OfferPage() {
   const [isRespondModalOpen, setIsRespondModalOpen] = useState(false);
   const { data: meData } = usersApi.useGetCurrentUserQuery();
 
-  const offer = useAppSelector((state) => {
-    const queries = state[offersApi.reducerPath].queries;
-    const queryStates = Object.values(queries) as CachedQueryState[];
-
-    for (const queryState of queryStates) {
-      if (queryState?.endpointName !== "getOffers" || !isGetOffersResponse(queryState.data)) {
-        continue;
-      }
-      const match = queryState.data.offers.find((entry: Offer) => entry.id === offerId);
-      if (match) return match;
-    }
-
-    return null;
+  const { data: offer, isLoading, error } = offersApi.useGetOfferByIdQuery(offerId ?? "", {
+    skip: !offerId,
   });
 
-  if (!offerId || !offer) {
+  if (!offerId) return <Alert severity="warning">Объявление не найдено</Alert>;
+
+  if (isLoading) {
+    return (
+      <Box display="flex" justifyContent="center" py={6}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error || !offer) {
     return <Alert severity="warning">Объявление не найдено</Alert>;
   }
 

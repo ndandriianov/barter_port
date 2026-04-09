@@ -68,6 +68,7 @@ func NewRouter(
 		r.Route("/offers", func(r chi.Router) {
 			r.Post("/", offersHandlers.HandleCreateOffer)
 			r.Get("/", offersHandlers.HandleGetOffers)
+			r.Get("/{offerId}", offersHandlers.HandleGetOfferByID)
 		})
 		r.Route("/deals", func(r chi.Router) {
 			r.Get("/", dealsHandlers.GetDeals)

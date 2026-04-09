@@ -1,7 +1,7 @@
 import {createApi} from "@reduxjs/toolkit/query/react";
 import {baseQueryWithReauth} from "@/shared/api/baseApi.ts";
-import {getOffersResponseSchema} from "../model/schemas.ts";
-import type {CreateOfferRequest, GetOffersParams, GetOffersResponse} from "../model/types.ts";
+import {getOffersResponseSchema, offerSchema} from "../model/schemas.ts";
+import type {CreateOfferRequest, GetOffersParams, GetOffersResponse, Offer} from "../model/types.ts";
 
 const offersApi = createApi({
   reducerPath: "offersApi",
@@ -20,6 +20,12 @@ const offersApi = createApi({
       },
 
       providesTags: ["Offers"],
+    }),
+
+    getOfferById: builder.query<Offer, string>({
+      query: (offerId) => `/offers/${offerId}`,
+      transformResponse: (response: unknown) => offerSchema.parse(response),
+      providesTags: (_result, _error, offerId) => [{type: "Offers", id: offerId}],
     }),
 
     createOffer: builder.mutation<void, CreateOfferRequest>({
