@@ -1,0 +1,17 @@
+syntax = "proto3";
+
+package barterport.deals.v1;
+
+option go_package = "barterport/internal/contracts/grpc/deals/v1;dealspb";
+
+service DealsService {
+    rpc GetDealStatus (GetDealStatusRequest) returns (GetDealStatusResponse);
+}
+
+message GetDealStatusRequest {
+    string deal_id = 1;
+}
+
+message GetDealStatusResponse {
+    string status = 1;
+}
