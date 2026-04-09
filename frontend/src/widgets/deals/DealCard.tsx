@@ -32,6 +32,7 @@ import type { Offer } from "@/features/offers/model/types";
 import { getStatusCode } from "@/shared/utils/getStatusCode";
 import type { FetchBaseQueryError } from "@reduxjs/toolkit/query";
 import type { SerializedError } from "@reduxjs/toolkit";
+import DealFailureSection from "@/widgets/deals/DealFailureSection.tsx";
 
 function dealErrorMessage(
   error: FetchBaseQueryError | SerializedError | undefined,
@@ -349,6 +350,13 @@ function DealCard({ deal }: DealCardProps) {
   const [processJoinRequest, { isLoading: isProcessJoinLoading, error: processJoinError }] = dealsApi.useProcessJoinRequestMutation();
 
   const isParticipant = me ? deal.participants.includes(me.id) : false;
+  const canAccessFailureResolution = Boolean(me && (isParticipant || me.isAdmin));
+  const { data: failureResolution } = dealsApi.useGetModeratorResolutionForFailureQuery(deal.id, {
+    skip: !canAccessFailureResolution,
+    pollingInterval: 10_000,
+  });
+  const hasFailureResolution = failureResolution !== undefined;
+  const isFailurePending = hasFailureResolution && failureResolution.confirmed === undefined;
   const canSeeStatusVotes = Boolean(me && isParticipant && !isFinalStatus(deal.status));
   const {
     data: statusVotes,
@@ -416,12 +424,12 @@ function DealCard({ deal }: DealCardProps) {
   }, [statusVotes]);
 
   const nextStatus: DealStatus | undefined = nextStatusByCurrent[deal.status as DealStatus];
-  const canVoteForNextStatus = isParticipant && nextStatus !== undefined;
-  const canCancelDeal = isParticipant && !isFinalStatus(deal.status);
+  const canVoteForNextStatus = isParticipant && nextStatus !== undefined && !isFailurePending;
+  const canCancelDeal = isParticipant && !isFinalStatus(deal.status) && !isFailurePending;
   const canJoinDeal = Boolean(me && !isParticipant && deal.status === "LookingForParticipants");
-  const canLeaveDeal = Boolean(me && isParticipant && !isFinalStatus(deal.status));
-  const canVoteJoinRequests = Boolean(me && isParticipant && deal.status === "LookingForParticipants");
-  const canAddItems = Boolean(me && isParticipant && deal.status === "LookingForParticipants");
+  const canLeaveDeal = Boolean(me && isParticipant && !isFinalStatus(deal.status) && !isFailurePending);
+  const canVoteJoinRequests = Boolean(me && isParticipant && deal.status === "LookingForParticipants" && !isFailurePending);
+  const canAddItems = Boolean(me && isParticipant && deal.status === "LookingForParticipants" && !isFailurePending);
   const hasActions = canVoteForNextStatus || canCancelDeal || canJoinDeal || canLeaveDeal;
 
   const handleChangeStatus = async (expectedStatus: DealStatus) => {
@@ -474,7 +482,7 @@ function DealCard({ deal }: DealCardProps) {
                   variant="outlined"
                   color="error"
                   onClick={() => void handleChangeStatus("Cancelled")}
-                  disabled={isStatusLoading || deal.status === "Cancelled"}
+                  disabled={isStatusLoading || deal.status === "Cancelled" || isFailurePending}
                 >
                   Отменить сделку
                 </Button>
@@ -510,7 +518,7 @@ function DealCard({ deal }: DealCardProps) {
             <Alert severity="error" sx={{ mt: 1.5 }}>
               {dealErrorMessage(changeStatusError, {
                 400: "Статус сделки изменился. Обновите страницу",
-                403: "Недостаточно прав для смены статуса",
+                403: isFailurePending ? "Сделка уже передана на разбор по провалу" : "Недостаточно прав для смены статуса",
                 404: "Сделка не найдена",
               }, "Не удалось отправить голос за статус сделки")}
             </Alert>
@@ -530,7 +538,7 @@ function DealCard({ deal }: DealCardProps) {
             <Alert severity="error" sx={{ mt: 1.5 }}>
               {dealErrorMessage(leaveError, {
                 400: "Невозможно покинуть сделку на данном этапе",
-                403: "Вы не можете покинуть эту сделку",
+                403: isFailurePending ? "Сделка уже передана на разбор по провалу" : "Вы не можете покинуть эту сделку",
                 404: "Сделка не найдена",
               }, "Не удалось покинуть сделку")}
             </Alert>
@@ -540,9 +548,16 @@ function DealCard({ deal }: DealCardProps) {
             <Alert severity="error" sx={{ mt: 1.5 }}>
               {dealErrorMessage(processJoinError, {
                 400: "Невозможно обработать заявку",
-                403: "Недостаточно прав для обработки заявки",
+                403: isFailurePending ? "Сделка уже передана на разбор по провалу" : "Недостаточно прав для обработки заявки",
                 404: "Пользователь или сделка не найдены",
               }, "Не удалось обработать заявку на вступление")}
+            </Alert>
+          )}
+
+          {isFailurePending && (
+            <Alert severity="warning" sx={{ mt: 1.5 }}>
+              По сделке достигнут порог голосов о провале. Изменение состава, позиций и статуса
+              заблокировано до решения администратора.
             </Alert>
           )}
 
@@ -714,6 +729,8 @@ function DealCard({ deal }: DealCardProps) {
             ))}
           </List>
         )}
+
+        <DealFailureSection deal={deal} me={me} isParticipant={isParticipant} getUserName={getUserName} />
       </CardContent>
 
       {editingItem && (

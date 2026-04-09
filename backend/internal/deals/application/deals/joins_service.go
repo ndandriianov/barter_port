@@ -25,6 +25,10 @@ func (s *Service) JoinDeal(ctx context.Context, dealID, userID uuid.UUID) error 
 			return domain.ErrInvalidDealStatus
 		}
 
+		if err = s.ensureNoPendingFailureReview(ctx, tx, dealID); err != nil {
+			return err
+		}
+
 		for _, participantID := range deal.Participants {
 			if participantID == userID {
 				return domain.ErrForbidden
@@ -49,6 +53,10 @@ func (s *Service) LeaveDeal(ctx context.Context, dealID, userID uuid.UUID) error
 
 		if deal.Status != enums.DealStatusLookingForParticipants {
 			return domain.ErrInvalidDealStatus
+		}
+
+		if err = s.ensureNoPendingFailureReview(ctx, tx, dealID); err != nil {
+			return err
 		}
 
 		userParticipating := false
@@ -122,6 +130,10 @@ func (s *Service) ProcessJoinRequest(ctx context.Context, dealID, requestedUserI
 		}
 		if deal.Status != enums.DealStatusLookingForParticipants {
 			return domain.ErrInvalidDealStatus
+		}
+
+		if err = s.ensureNoPendingFailureReview(ctx, tx, dealID); err != nil {
+			return err
 		}
 
 		if !containsUserID(deal.Participants, voterID) {

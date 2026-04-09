@@ -123,3 +123,35 @@ export const dealIdAndParticipantsSchema = z.object({
 });
 
 export const getDealsResponseSchema = z.array(dealIdAndParticipantsSchema);
+
+export const voteForFailureRequestSchema = z.object({
+  userId: z.string(),
+});
+
+export const failureVoteSchema = z.object({
+  userId: z.string(),
+  vote: z.string(),
+});
+
+export const getFailureVotesResponseSchema = z.array(failureVoteSchema);
+
+export const moderatorResolutionForFailureRequestSchema = z.object({
+  confirmed: z.boolean(),
+  userId: z.string().optional(),
+  punishmentPoints: z.number().int().min(0).optional(),
+  comment: z.string().optional(),
+});
+
+export const failureResolutionSchema = z.object({
+  userId: z.string().optional(),
+  confirmed: z.boolean().optional(),
+  punishmentPoints: z.number().int().optional(),
+  comment: z.string().optional(),
+});
+
+export const failureMaterialsSchema = z.object({
+  deal: dealSchema,
+  chatId: z.string().optional(),
+});
+
+export const failureModerationDealsResponseSchema = getDealsResponseSchema;

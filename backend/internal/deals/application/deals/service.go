@@ -9,6 +9,7 @@ import (
 	"barter-port/internal/deals/infrastructure/repository/drafts"
 	"barter-port/internal/deals/infrastructure/repository/joins"
 	"barter-port/internal/deals/infrastructure/repository/offers"
+	"barter-port/pkg/authkit"
 	"barter-port/pkg/db"
 	"context"
 	"fmt"
@@ -26,6 +27,7 @@ type Service struct {
 	joinsRepository  *joins.Repository
 	offersRepository *offers.Repository
 	chatsClient      chatspb.ChatsServiceClient
+	adminChecker     *authkit.AdminChecker
 	logger           *slog.Logger
 }
 
@@ -48,6 +50,11 @@ func NewService(
 
 func (s *Service) WithChatsClient(client chatspb.ChatsServiceClient) *Service {
 	s.chatsClient = client
+	return s
+}
+
+func (s *Service) WithAdminChecker(checker *authkit.AdminChecker) *Service {
+	s.adminChecker = checker
 	return s
 }
 
@@ -287,6 +294,10 @@ func (s *Service) AddDealItem(
 			return domain.ErrInvalidDealStatus
 		}
 
+		if err = s.ensureNoPendingFailureReview(ctx, tx, dealID); err != nil {
+			return err
+		}
+
 		if !containsUserID(deal.Participants, userID) {
 			return domain.ErrForbidden
 		}
@@ -354,6 +365,10 @@ func (s *Service) UpdateDealItem(
 
 	err := db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
 		if _, err := s.dealsRepository.GetDealByID(ctx, tx, dealID); err != nil {
+			return err
+		}
+
+		if err := s.ensureNoPendingFailureReview(ctx, tx, dealID); err != nil {
 			return err
 		}
 
@@ -502,6 +517,10 @@ func (s *Service) confirmDeal(ctx context.Context, id uuid.UUID, userID uuid.UUI
 			return err
 		}
 
+		if err = s.ensureNoPendingFailureReview(ctx, tx, id); err != nil {
+			return err
+		}
+
 		if deal.Status+1 != targetStatus {
 			return domain.ErrInvalidDealStatus
 		}
@@ -622,6 +641,10 @@ func (s *Service) cancelDeal(ctx context.Context, id uuid.UUID, targetStatus enu
 		var err error
 		deal, err = s.dealsRepository.GetDealByID(ctx, tx, id)
 		if err != nil {
+			return err
+		}
+
+		if err = s.ensureNoPendingFailureReview(ctx, tx, id); err != nil {
 			return err
 		}
 

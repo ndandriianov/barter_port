@@ -130,7 +130,9 @@ func (h *Handlers) AddDealItem(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteEmptyError(w, http.StatusNotFound)
 		case errors.Is(err, domain.ErrInvalidQuantity):
 			httpx.WriteEmptyError(w, http.StatusBadRequest)
-		case errors.Is(err, domain.ErrForbidden), errors.Is(err, domain.ErrInvalidDealStatus):
+		case errors.Is(err, domain.ErrForbidden),
+			errors.Is(err, domain.ErrInvalidDealStatus),
+			errors.Is(err, domain.ErrFailureReviewRequired):
 			httpx.WriteEmptyError(w, http.StatusForbidden)
 		default:
 			log.Error("error adding deal item", slog.Any("error", err))
@@ -211,6 +213,7 @@ func (h *Handlers) UpdateDealItem(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, domain.ErrInvalidDealStatus):
 			httpx.WriteEmptyError(w, http.StatusBadRequest)
 		case errors.Is(err, domain.ErrForbidden),
+			errors.Is(err, domain.ErrFailureReviewRequired),
 			errors.Is(err, domain.ErrRoleAlreadyTaken),
 			errors.Is(err, domain.ErrNotRoleHolder),
 			errors.Is(err, domain.ErrDuplicateRole):
@@ -269,7 +272,9 @@ func (h *Handlers) ChangeDealStatus(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteEmptyError(w, http.StatusNotFound)
 		case errors.Is(err, domain.ErrInvalidDealStatus):
 			httpx.WriteEmptyError(w, http.StatusBadRequest)
-		case errors.Is(err, domain.ErrDealParticipantsUnready), errors.Is(err, domain.ErrForbidden):
+		case errors.Is(err, domain.ErrDealParticipantsUnready),
+			errors.Is(err, domain.ErrForbidden),
+			errors.Is(err, domain.ErrFailureReviewRequired):
 			httpx.WriteEmptyError(w, http.StatusForbidden)
 		default:
 			log.Error("error changing deal status", slog.Any("error", err))
