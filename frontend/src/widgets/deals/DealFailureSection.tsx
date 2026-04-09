@@ -16,6 +16,7 @@ import dealsApi from "@/features/deals/api/dealsApi";
 import type { Deal, FailureResolution } from "@/features/deals/model/types";
 import type { Me } from "@/features/users/model/types.ts";
 import { getStatusCode } from "@/shared/utils/getStatusCode";
+import FailureResolutionDialog from "@/widgets/deals/FailureResolutionDialog.tsx";
 
 interface DealFailureSectionProps {
   deal: Deal;
@@ -65,6 +66,7 @@ function formatResolutionText(resolution: FailureResolution, getUserName: (id: s
 function DealFailureSection({ deal, me, isParticipant, getUserName }: DealFailureSectionProps) {
   const canAccessFailureData = Boolean(me && (isParticipant || me.isAdmin));
   const canVoteForFailure = Boolean(isParticipant && votingStatuses.has(deal.status));
+  const [isFailureDialogOpen, setIsFailureDialogOpen] = useState(false);
 
   const {
     data: votes = [],
@@ -106,6 +108,7 @@ function DealFailureSection({ deal, me, isParticipant, getUserName }: DealFailur
   const hasResolution = resolution !== undefined;
   const hasFailureRecord = hasResolution && !isResolutionMissing;
   const isFailurePending = hasResolution && resolution.confirmed === undefined;
+  const canAdminResolveFromMaterials = Boolean(me?.isAdmin && isFailurePending);
   const canSubmitVote = canVoteForFailure && !hasFailureRecord && Boolean(selectedUserId);
   const canRevokeVote = canVoteForFailure && !hasFailureRecord && Boolean(ownVote);
 
@@ -157,6 +160,14 @@ function DealFailureSection({ deal, me, isParticipant, getUserName }: DealFailur
             </Typography>
             <Typography variant="body2">{resolutionMeta.description}</Typography>
           </Alert>
+        )}
+
+        {canAdminResolveFromMaterials && (
+          <Box mb={2}>
+            <Button variant="contained" onClick={() => setIsFailureDialogOpen(true)}>
+              Принять решение
+            </Button>
+          </Box>
         )}
 
         {canVoteForFailure && (
@@ -248,6 +259,13 @@ function DealFailureSection({ deal, me, isParticipant, getUserName }: DealFailur
           </Stack>
         )}
       </CardContent>
+
+      {isFailureDialogOpen && (
+        <FailureResolutionDialog
+          dealId={deal.id}
+          onClose={() => setIsFailureDialogOpen(false)}
+        />
+      )}
     </Card>
   );
 }
