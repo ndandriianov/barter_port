@@ -7,6 +7,9 @@ import usersApi from "@/features/users/api/usersApi.ts";
 import DealCard from "@/widgets/deals/DealCard";
 import ChatWindow from "@/widgets/chat/ChatWindow";
 import { getStatusCode } from "@/shared/utils/getStatusCode";
+import type { DealStatus } from "@/features/deals/model/types.ts";
+
+const FINAL_STATUSES: DealStatus[] = ["Completed", "Cancelled", "Failed"];
 
 function DealPage() {
   const { dealId } = useParams<{ dealId: string }>();
@@ -17,13 +20,32 @@ function DealPage() {
     pollingInterval: 10_000,
   });
 
-  const canShowDealChat = data?.status === "Discussion" || data?.status === "Confirmed";
+  const { data: currentUser } = usersApi.useGetCurrentUserQuery();
+
+  const isFinalStatus = data ? FINAL_STATUSES.includes(data.status) : false;
+  const isParticipant = data && currentUser ? data.participants.includes(currentUser.id) : false;
+  const canAccessFailureResolution = Boolean(currentUser && (isParticipant || currentUser.isAdmin));
+
+  const { data: failureResolution } = dealsApi.useGetModeratorResolutionForFailureQuery(
+    canAccessFailureResolution && data ? data.id : skipToken,
+    { pollingInterval: 10_000 },
+  );
+  const isFailurePending = failureResolution !== undefined && failureResolution.confirmed === undefined;
+
+  const canShowDealChat = data
+    ? data.status === "Discussion" ||
+      data.status === "Confirmed" ||
+      FINAL_STATUSES.includes(data.status)
+    : false;
+
   const {
     data: dealChat,
     isLoading: isDealChatLoading,
     error: dealChatError,
   } = chatsApi.useGetDealChatQuery(canShowDealChat && data ? data.id : skipToken);
-  const { data: currentUser } = usersApi.useGetCurrentUserQuery();
+
+  const isChatReadOnly =
+    currentUser?.isAdmin === true || isFinalStatus || isFailurePending;
 
   if (!dealId) return <Alert severity="warning">Сделка не найдена</Alert>;
 
@@ -93,7 +115,7 @@ function DealPage() {
               <ChatWindow
                 chatId={dealChat.id}
                 participants={dealChat.participants}
-                readOnly={currentUser?.isAdmin === true}
+                readOnly={isChatReadOnly}
               />
             </Box>
           )}
