@@ -19,7 +19,7 @@ import dealsApi from "@/features/deals/api/dealsApi";
 import usersApi from "@/features/users/api/usersApi.ts";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux.ts";
 import type { User } from "@/features/users/model/types.ts";
-import type { DealStatus, UpdateDealItemRequest } from "@/features/deals/model/types.ts";
+import type { UpdateDealItemRequest } from "@/features/deals/model/types.ts";
 
 const formatDateTime = (value: string) =>
   new Intl.DateTimeFormat("ru-RU", {
@@ -85,18 +85,11 @@ function DealItemPage() {
 
   const item = deal?.items.find((i) => i.id === itemId);
 
-  const [isEditing, setIsEditing] = useState(false);
-  const [nameInput, setNameInput] = useState("");
-  const [descriptionInput, setDescriptionInput] = useState("");
-  const [quantityInput, setQuantityInput] = useState("");
-
-  useEffect(() => {
-    if (item) {
-      setNameInput(item.name);
-      setDescriptionInput(item.description);
-      setQuantityInput(String(item.quantity));
-    }
-  }, [item]);
+  const [draft, setDraft] = useState<{
+    name: string;
+    description: string;
+    quantity: string;
+  } | null>(null);
 
   const userIds = useMemo(() => {
     if (!item) return [];
@@ -137,6 +130,7 @@ function DealItemPage() {
   if (error || !deal) return <Alert severity="error">Не удалось загрузить сделку</Alert>;
   if (!item) return <Alert severity="warning">Позиция не найдена</Alert>;
 
+  const isEditing = draft !== null;
   const isParticipant = me ? deal.participants.includes(me.id) : false;
   const isEditableStatus = deal.status === "LookingForParticipants" || deal.status === "Discussion";
   const canEdit = !!me && me.id === item.authorId && isEditableStatus;
@@ -144,18 +138,20 @@ function DealItemPage() {
   const canClaimReceiver = !!me && item.providerId !== me.id && isEditableStatus;
 
   const quantityError =
-    quantityInput !== "" && (isNaN(parseInt(quantityInput, 10)) || parseInt(quantityInput, 10) < 1);
+    draft !== null && draft.quantity !== "" && (isNaN(parseInt(draft.quantity, 10)) || parseInt(draft.quantity, 10) < 1);
 
   const handleSave = async () => {
+    if (!draft) return;
+
     const body: UpdateDealItemRequest = {};
-    if (nameInput !== item.name) body.name = nameInput;
-    if (descriptionInput !== item.description) body.description = descriptionInput;
-    const qty = parseInt(quantityInput, 10);
+    if (draft.name !== item.name) body.name = draft.name;
+    if (draft.description !== item.description) body.description = draft.description;
+    const qty = parseInt(draft.quantity, 10);
     if (!isNaN(qty) && qty !== item.quantity) body.quantity = qty;
     if (Object.keys(body).length > 0) {
       await updateDealItem({ dealId, itemId: item.id, body });
     }
-    setIsEditing(false);
+    setDraft(null);
   };
 
   const handleClaim = (field: "claimProvider" | "claimReceiver") => () =>
@@ -181,7 +177,14 @@ function DealItemPage() {
         </Typography>
         {canEdit && !isEditing && (
           <Tooltip title="Редактировать">
-            <IconButton size="small" onClick={() => setIsEditing(true)}>
+            <IconButton
+              size="small"
+              onClick={() => setDraft({
+                name: item.name,
+                description: item.description,
+                quantity: String(item.quantity),
+              })}
+            >
               <EditIcon />
             </IconButton>
           </Tooltip>
@@ -195,8 +198,8 @@ function DealItemPage() {
           {isEditing ? (
             <TextField
               label="Название"
-              value={nameInput}
-              onChange={(e) => setNameInput(e.target.value)}
+              value={draft?.name ?? ""}
+              onChange={(e) => setDraft((current) => current ? { ...current, name: e.target.value } : current)}
               fullWidth
               size="small"
             />
@@ -211,8 +214,8 @@ function DealItemPage() {
           {isEditing ? (
             <TextField
               label="Описание"
-              value={descriptionInput}
-              onChange={(e) => setDescriptionInput(e.target.value)}
+              value={draft?.description ?? ""}
+              onChange={(e) => setDraft((current) => current ? { ...current, description: e.target.value } : current)}
               fullWidth
               size="small"
               multiline
@@ -229,8 +232,8 @@ function DealItemPage() {
           {isEditing ? (
             <TextField
               label="Количество"
-              value={quantityInput}
-              onChange={(e) => setQuantityInput(e.target.value)}
+              value={draft?.quantity ?? ""}
+              onChange={(e) => setDraft((current) => current ? { ...current, quantity: e.target.value } : current)}
               type="number"
               inputProps={{ min: 1 }}
               fullWidth
@@ -263,19 +266,14 @@ function DealItemPage() {
                 variant="contained"
                 size="small"
                 onClick={() => void handleSave()}
-                disabled={isUpdating || quantityError || !nameInput}
+                disabled={isUpdating || quantityError || !(draft?.name ?? "").trim()}
               >
                 Сохранить
               </Button>
               <Button
                 variant="outlined"
                 size="small"
-                onClick={() => {
-                  setIsEditing(false);
-                  setNameInput(item.name);
-                  setDescriptionInput(item.description);
-                  setQuantityInput(String(item.quantity));
-                }}
+                onClick={() => setDraft(null)}
                 disabled={isUpdating}
               >
                 Отмена
