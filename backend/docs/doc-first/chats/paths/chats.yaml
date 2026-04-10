@@ -248,11 +248,25 @@ chatMessages:
           - пользователь не является участником чата;
           - чат привязан к сделке в финальном статусе (`Completed`, `Cancelled`, `Failed`);
           - по сделке есть запись в `deal_failures`, ожидающая решения администратора.
-          В текущей реализации этот статус также возможен для несуществующего `chatId`.
+          В ответе возвращается `message` с конкретной причиной запрета.
         content:
           application/json:
             schema:
               $ref: '../components/responses.yaml#/ErrorResponse'
+            examples:
+              notParticipant:
+                summary: Пользователь не состоит в чате
+                value:
+                  message: Нельзя отправить сообщение в чат, в котором вы не участвуете
+              pendingFailureReview:
+                summary: По сделке ждут решение администратора
+                value:
+                  message: |
+                    Нельзя отправить сообщение: по сделке ожидается решение администратора
+              finalStatus:
+                summary: Сделка уже завершена
+                value:
+                  message: Сделка находится в статусе Completed (завершена)
       '500':
         description: Internal server error
         content:
