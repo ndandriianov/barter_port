@@ -56,6 +56,62 @@ offerReviews:
 
 
 
+offerReviewsSummary:
+  get:
+    tags:
+      - Reviews
+    summary: Получить summary отзывов по offer
+    description: |
+      Возвращает агрегированную статистику отзывов по конкретному `offer`.
+
+      Правила выборки:
+      - в summary включаются только отзывы, у которых заполнен `offerRef`;
+      - учитываются как `offer-only`, так и `offer+item` отзывы;
+      - если отзывов нет, `count = 0`, `avgRating = 0`, а все поля breakdown равны `0`.
+    operationId: getOfferReviewsSummary
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - name: offerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: Summary отзывов по offer
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/OfferReviewsSummaryResponse'
+      '400':
+        description: Invalid offer ID
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Offer not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+
 providerReviews:
   get:
     tags:
@@ -118,7 +174,172 @@ providerReviews:
 
 
 
+providerReviewsSummary:
+  get:
+    tags:
+      - Reviews
+    summary: Получить summary отзывов по provider
+    description: |
+      Возвращает агрегированную статистику отзывов по фактическому поставщику товара или услуги.
+
+      Правила выборки:
+      - фильтрация выполняется строго по `review.providerId`;
+      - учитываются отзывы всех трех типов контекста: `item-only`, `offer-only`, `offer+item`;
+      - если отзывов нет, `count = 0`, `avgRating = 0`, а все поля breakdown равны `0`.
+    operationId: getProviderReviewsSummary
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - name: providerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: Summary отзывов по provider
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ProviderReviewsSummaryResponse'
+      '400':
+        description: Invalid provider ID
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Provider not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+
+authorReviews:
+  get:
+    tags:
+      - Reviews
+    summary: Получить отзывы по автору
+    description: |
+      Возвращает отзывы, оставленные конкретным пользователем как автором отзыва.
+
+      Правила выборки:
+      - фильтрация выполняется строго по `review.authorId`;
+      - `authorId` в каждом объекте ответа всегда совпадает со значением path-параметра `{authorId}`;
+      - в выборку попадают отзывы всех трех типов контекста: `item-only`, `offer-only`, `offer+item`;
+      - отзывы возвращаются в порядке от новых к старым.
+    operationId: getAuthorReviews
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - name: authorId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: Список отзывов, оставленных автором
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/GetAuthorReviewsResponse'
+      '400':
+        description: Invalid author ID
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Author not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+
 reviewById:
+  get:
+    tags:
+      - Reviews
+    summary: Получить отзыв по ID
+    description: |
+      Возвращает один конкретный отзыв по его `reviewId`.
+
+      Особенности:
+      - `providerId` обязателен всегда;
+      - комбинация `offerRef`/`itemRef` в ответе отражает один из трех типов контекста:
+        `item-only`, `offer-only`, `offer+item`.
+    operationId: getReviewById
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - name: reviewId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: Отзыв найден
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Review'
+      '400':
+        description: Invalid review ID
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Отзыв не найден
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
   patch:
     tags:
       - Reviews
@@ -134,6 +355,8 @@ reviewById:
         (`item-only`, `offer-only`, `offer+item`) после создания immutable;
       - после успешного обновления поле `updatedAt` должно быть установлено в текущее время.
     operationId: updateReview
+    security:
+      - bearerAuth: [ ]
     parameters:
       - name: reviewId
         in: path
@@ -141,8 +364,6 @@ reviewById:
         schema:
           type: string
           format: uuid
-    security:
-      - bearerAuth: [ ]
     requestBody:
       required: true
       content:
@@ -180,6 +401,261 @@ reviewById:
               $ref: '../components/responses.yaml#/ErrorResponse'
       '404':
         description: Отзыв не найден
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+  delete:
+    tags:
+      - Reviews
+    summary: Удалить отзыв
+    description: |
+      Удаляет существующий отзыв по его `reviewId`.
+
+      Бизнес-правила:
+      - удалить отзыв может только его автор;
+      - удаление доступно только пока связанная сделка находится в статусе `Completed`;
+      - удаление полностью снимает занятость соответствующего review-контекста, поэтому после этого
+        автор может заново создать отзыв для того же контекста, если остальные бизнес-правила соблюдены.
+    operationId: deleteReview
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - name: reviewId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '204':
+        description: Отзыв удален
+      '400':
+        description: |
+          Некорректный запрос:
+          - invalid review ID;
+          - связанная сделка не находится в статусе `Completed`.
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: Пользователь не является автором отзыва
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Отзыв не найден
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+
+dealReviews:
+  get:
+    tags:
+      - Reviews
+    summary: Получить все отзывы по сделке
+    description: |
+      Возвращает все отзывы, оставленные в рамках конкретной сделки.
+
+      Правила выборки:
+      - в выборку попадают отзывы всех трех типов контекста: `item-only`, `offer-only`, `offer+item`;
+      - отзывы возвращаются в порядке от новых к старым;
+      - endpoint предназначен для целостного просмотра review-активности по завершенной сделке.
+    operationId: getDealReviews
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - name: dealId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: Список отзывов по сделке
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/GetDealReviewsResponse'
+      '400':
+        description: Invalid deal ID
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Deal not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+
+dealPendingReviews:
+  get:
+    tags:
+      - Reviews
+    summary: Получить pending отзывы по сделке
+    description: |
+      Возвращает для текущего пользователя все review-контексты в рамках сделки, по которым отзыв
+      еще потенциально может быть оставлен или уже недоступен.
+
+      Бизнес-правила:
+      - endpoint вычисляется относительно текущего аутентифицированного пользователя;
+      - в выборку попадают только item, где текущий пользователь является `receiver_id`;
+      - для каждого контекста возвращается `canCreate` и, если нужно, `reason`;
+      - если по контексту уже существует отзыв текущего пользователя, возвращается `canCreate = false`
+        и `reason = already_reviewed`;
+      - если сделка не находится в статусе `Completed`, endpoint возвращает `400`.
+    operationId: getDealPendingReviews
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - name: dealId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: Список pending review-контекстов
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/GetPendingDealReviewsResponse'
+      '400':
+        description: |
+          Некорректный запрос:
+          - invalid deal ID;
+          - сделка не находится в статусе `Completed`.
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: Пользователь не является участником сделки
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Deal not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+
+dealItemReviewEligibility:
+  get:
+    tags:
+      - Reviews
+    summary: Проверить возможность оставить отзыв по item
+    description: |
+      Возвращает для текущего пользователя вычисленную eligibility по одному `item`.
+
+      Бизнес-правила:
+      - endpoint вычисляется относительно текущего аутентифицированного пользователя;
+      - если сделка не находится в статусе `Completed`, `canCreate = false` и `reason = deal_not_completed`;
+      - если текущий пользователь не является `receiver_id` этого item, `canCreate = false`
+        и `reason = forbidden_not_receiver`;
+      - если `provider_id` отсутствует, `canCreate = false` и `reason = provider_missing`;
+      - если `receiver_id` отсутствует, `canCreate = false` и `reason = receiver_missing`;
+      - если `provider_id = receiver_id`, `canCreate = false` и `reason = same_provider_and_receiver`;
+      - если по вычисленному контексту отзыв уже существует, `canCreate = false` и `reason = already_reviewed`.
+
+      Вычисление контекста:
+      - `items.offer_id IS NULL` -> `contextType = item-only`;
+      - `items.offer_id IS NOT NULL` и `items.updated_at IS NULL` -> `contextType = offer-only`;
+      - `items.offer_id IS NOT NULL` и `items.updated_at IS NOT NULL` -> `contextType = offer+item`.
+    operationId: getDealItemReviewEligibility
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - name: dealId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+      - name: itemId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: Eligibility по item
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ReviewEligibilityResponse'
+      '400':
+        description: Invalid path parameters
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Сделка или item не найдены
         content:
           application/json:
             schema:
