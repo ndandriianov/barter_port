@@ -330,6 +330,7 @@ Review:
     - id
     - dealId
     - authorId
+    - providerId
     - rating
     - createdAt
   properties:
@@ -348,7 +349,9 @@ Review:
     providerId:
       type: string
       format: uuid
-      description: Идентификатор пользователя, предоставившего товар либо услугу.
+      description: |
+        Идентификатор пользователя, который фактически предоставил товар либо услугу по item.
+        Это значение берется из `items.provider_id` в момент создания отзыва и после этого не меняется.
     rating:
       type: integer
       minimum: 1
@@ -371,18 +374,27 @@ Review:
         - $ref: '#/OfferRef'
       description: |
         Ссылка на исходный `offer`, если отзыв относится к offer.
-        Заполняется в двух случаях:
-        - `items.updated_at IS NULL` и отзыв оставляется только на offer;
-        - `items.updated_at IS NOT NULL` и `items.offer_id IS NOT NULL`, тогда отзыв относится и к offer, и к item.
+
+        Правила заполнения:
+        - `items.offer_id IS NULL` -> `offerRef = null`;
+        - `items.offer_id IS NOT NULL` и `items.updated_at IS NULL` -> отзыв относится только к `offer`,
+          поэтому `offerRef != null`, `itemRef = null`;
+        - `items.offer_id IS NOT NULL` и `items.updated_at IS NOT NULL` -> отзыв относится и к `offer`, и к `item`,
+          поэтому `offerRef != null`, `itemRef != null`.
     itemRef:
       nullable: true
       allOf:
         - $ref: '#/DealItemRef'
       description: |
-        Ссылка на item, если отзыв относится к item.
-        Заполняется в двух случаях:
-        - `items.offer_id IS NULL`, тогда отзыв оставляется только на item;
-        - `items.offer_id IS NOT NULL` и `items.updated_at IS NOT NULL`, тогда отзыв относится и к offer, и к item.
+        Ссылка на `item`, если отзыв относится к item.
+
+        Правила заполнения:
+        - `items.offer_id IS NULL` -> отзыв относится только к `item`,
+          поэтому `offerRef = null`, `itemRef != null`;
+        - `items.offer_id IS NOT NULL` и `items.updated_at IS NULL` -> отзыв относится только к `offer`,
+          поэтому `itemRef = null`;
+        - `items.offer_id IS NOT NULL` и `items.updated_at IS NOT NULL` -> отзыв относится и к `offer`, и к `item`,
+          поэтому `offerRef != null`, `itemRef != null`.
 
 
 
