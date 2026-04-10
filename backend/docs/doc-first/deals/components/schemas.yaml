@@ -334,6 +334,19 @@ ReviewContextType:
 
 
 
+ReviewEligibilityReason:
+  type: string
+  description: Машинно-стабильная причина, по которой отзыв нельзя создать.
+  enum:
+    - deal_not_completed
+    - forbidden_not_receiver
+    - receiver_missing
+    - provider_missing
+    - same_provider_and_receiver
+    - already_reviewed
+
+
+
 Review:
   type: object
   required:
@@ -491,11 +504,12 @@ ReviewEligibility:
         - $ref: '#/DealItemRef'
       description: Ссылка на item, если отзыв затрагивает item.
     reason:
-      type: string
+      nullable: true
+      allOf:
+        - $ref: '#/ReviewEligibilityReason'
       description: |
         Причина, по которой отзыв нельзя создать. Заполняется только если `canCreate = false`.
-        Примеры: `deal_not_completed`, `receiver_missing`, `provider_missing`,
-        `same_provider_and_receiver`, `already_reviewed`, `forbidden_not_receiver`.
+        Если `canCreate = true`, поле равно `null`.
 
 
 
@@ -533,9 +547,12 @@ PendingDealReview:
       type: boolean
       description: Может ли текущий пользователь оставить отзыв по этому контексту.
     reason:
-      type: string
+      nullable: true
+      allOf:
+        - $ref: '#/ReviewEligibilityReason'
       description: |
         Причина, по которой отзыв недоступен для создания. Заполняется только если `canCreate = false`.
+        Если `canCreate = true`, поле равно `null`.
 
 
 
