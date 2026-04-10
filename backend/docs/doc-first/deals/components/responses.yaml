@@ -65,6 +65,20 @@ ListOffersResponse:
 
 
 
+GetOfferReviewsResponse:
+  type: array
+  items:
+    $ref: 'schemas.yaml#/Review'
+
+
+
+GetItemReviewsResponse:
+  type: array
+  items:
+    $ref: 'schemas.yaml#/Review'
+
+
+
 ConfirmDraftDealResponse:
   type: object
   required:

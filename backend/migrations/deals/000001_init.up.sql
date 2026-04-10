@@ -122,3 +122,45 @@ CREATE TABLE deal_failures
 
     PRIMARY KEY (deal_id)
 );
+
+CREATE TABLE deal_reviews
+(
+    id          UUID PRIMARY KEY     DEFAULT gen_random_uuid(),
+    deal_id     UUID        NOT NULL,
+    item_id     UUID,
+    offer_id    UUID,
+    author_id   UUID        NOT NULL,
+    provider_id UUID        NOT NULL,
+    rating      INTEGER     NOT NULL,
+    comment     TEXT,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at  TIMESTAMPTZ,
+
+    CONSTRAINT deal_reviews_rating_check CHECK (rating BETWEEN 1 AND 5),
+    CONSTRAINT deal_reviews_target_check CHECK (offer_id IS NOT NULL OR item_id IS NOT NULL),
+    FOREIGN KEY (deal_id, author_id) REFERENCES participants (deal_id, user_id) ON DELETE CASCADE,
+    FOREIGN KEY (deal_id) REFERENCES deals (id) ON DELETE CASCADE,
+    FOREIGN KEY (item_id) REFERENCES items (id) ON DELETE SET NULL,
+    FOREIGN KEY (offer_id) REFERENCES offers (id) ON DELETE CASCADE,
+    FOREIGN KEY (deal_id, provider_id) REFERENCES participants (deal_id, user_id)
+);
+
+CREATE UNIQUE INDEX deal_reviews_unique_offer_only_context_idx
+    ON deal_reviews (deal_id, offer_id, author_id)
+    WHERE offer_id IS NOT NULL AND item_id IS NULL;
+
+CREATE UNIQUE INDEX deal_reviews_unique_item_only_context_idx
+    ON deal_reviews (deal_id, item_id, author_id)
+    WHERE offer_id IS NULL AND item_id IS NOT NULL;
+
+CREATE UNIQUE INDEX deal_reviews_unique_offer_item_context_idx
+    ON deal_reviews (deal_id, offer_id, item_id, author_id)
+    WHERE offer_id IS NOT NULL AND item_id IS NOT NULL;
+
+CREATE INDEX deal_reviews_offer_created_at_idx
+    ON deal_reviews (offer_id, created_at DESC)
+    WHERE offer_id IS NOT NULL;
+
+CREATE INDEX deal_reviews_item_created_at_idx
+    ON deal_reviews (item_id, created_at DESC)
+    WHERE item_id IS NOT NULL;

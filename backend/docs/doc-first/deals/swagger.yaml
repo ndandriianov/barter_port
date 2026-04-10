@@ -24,6 +24,8 @@ paths:
     $ref: './paths/deals.yaml#/dealItemById'
   /deals/{dealId}/items:
     $ref: './paths/deals.yaml#/dealItems'
+  /deals/{dealId}/items/{itemId}/reviews:
+    $ref: './paths/reviews.yaml#/dealItemReviews'
   /deals/{dealId}/joins:
     $ref: './paths/joins.yaml#/join'
   /deals/{dealId}/joins/{userId}:
@@ -40,6 +42,8 @@ paths:
     $ref: './paths/offers.yaml#/offers'
   /offers/{offerId}:
     $ref: './paths/offers.yaml#/offerById'
+  /offers/{offerId}/reviews:
+    $ref: './paths/reviews.yaml#/offerReviews'
 
 components:
   securitySchemes:

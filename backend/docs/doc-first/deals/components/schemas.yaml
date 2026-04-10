@@ -295,6 +295,97 @@ Item:
 
 
 
+DealItemRef:
+  type: object
+  required:
+    - dealId
+    - itemId
+  properties:
+    dealId:
+      type: string
+      format: uuid
+      description: Идентификатор сделки, в рамках которой был создан item.
+    itemId:
+      type: string
+      format: uuid
+      description: Идентификатор item внутри завершенной сделки.
+
+
+
+OfferRef:
+  type: object
+  required:
+    - offerId
+  properties:
+    offerId:
+      type: string
+      format: uuid
+      description: Идентификатор исходного offer.
+
+
+
+Review:
+  type: object
+  required:
+    - id
+    - dealId
+    - authorId
+    - rating
+    - createdAt
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор отзыва.
+    dealId:
+      type: string
+      format: uuid
+      description: Идентификатор завершенной сделки, по итогам которой оставлен отзыв.
+    authorId:
+      type: string
+      format: uuid
+      description: Идентификатор пользователя, оставившего отзыв.
+    providerId:
+      type: string
+      format: uuid
+      description: Идентификатор пользователя, предоставившего товар либо услугу.
+    rating:
+      type: integer
+      minimum: 1
+      maximum: 5
+      description: Оценка предложения по шкале от 1 до 5.
+    comment:
+      type: string
+      description: Текстовый отзыв.
+    createdAt:
+      type: string
+      format: date-time
+      description: Временная метка создания отзыва.
+    updatedAt:
+      type: string
+      format: date-time
+      description: Временная метка последнего редактирования отзыва.
+    offerRef:
+      nullable: true
+      allOf:
+        - $ref: '#/OfferRef'
+      description: |
+        Ссылка на исходный `offer`, если отзыв относится к offer.
+        Заполняется в двух случаях:
+        - `items.updated_at IS NULL` и отзыв оставляется только на offer;
+        - `items.updated_at IS NOT NULL` и `items.offer_id IS NOT NULL`, тогда отзыв относится и к offer, и к item.
+    itemRef:
+      nullable: true
+      allOf:
+        - $ref: '#/DealItemRef'
+      description: |
+        Ссылка на item, если отзыв относится к item.
+        Заполняется в двух случаях:
+        - `items.offer_id IS NULL`, тогда отзыв оставляется только на item;
+        - `items.offer_id IS NOT NULL` и `items.updated_at IS NOT NULL`, тогда отзыв относится и к offer, и к item.
+
+
+
 DealStatus:
   type: string
   description: Статус сделки

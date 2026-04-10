@@ -78,6 +78,22 @@ AddDealItemRequest:
 
 
 
+CreateReviewRequest:
+  type: object
+  required:
+    - rating
+  properties:
+    rating:
+      type: integer
+      minimum: 1
+      maximum: 5
+      description: Оценка по шкале от 1 до 5.
+    comment:
+      type: string
+      description: Текстовый отзыв после завершения сделки.
+
+
+
 VoteForFailureRequest:
   type: object
   required:
