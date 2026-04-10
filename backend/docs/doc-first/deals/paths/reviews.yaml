@@ -6,6 +6,9 @@ offerReviews:
     description: |
       Возвращает отзывы, оставленные по конкретному `offer` после завершенных сделок.
 
+      Доступ:
+      - endpoint доступен любому авторизованному пользователю.
+
       Особенности:
       - отзывы возвращаются в порядке от новых к старым;
       - сюда попадают только отзывы, у которых заполнен `offerRef`;
@@ -67,6 +70,7 @@ offerReviewsSummary:
       Правила выборки:
       - в summary включаются только отзывы, у которых заполнен `offerRef`;
       - учитываются как `offer-only`, так и `offer+item` отзывы;
+      - endpoint доступен любому авторизованному пользователю;
       - если отзывов нет, `count = 0`, `avgRating = 0`, а все поля breakdown равны `0`.
     operationId: getOfferReviewsSummary
     security:
@@ -120,11 +124,16 @@ providerReviews:
     description: |
       Возвращает отзывы, где указанный пользователь выступает фактическим поставщиком товара или услуги.
 
+      Доступ:
+      - endpoint доступен любому авторизованному пользователю.
+
       Правила выборки:
       - фильтрация выполняется строго по `review.providerId`;
       - `providerId` в каждом объекте ответа всегда совпадает со значением path-параметра `{providerId}`;
       - в выборку попадают отзывы всех трех типов контекста: `item-only`, `offer-only`, `offer+item`;
       - отзывы возвращаются в порядке от новых к старым.
+      - если отзывов по этому `providerId` нет, endpoint возвращает `200` и пустой массив;
+      - существование пользователя с таким `providerId` отдельно не проверяется.
 
       Интерпретация ссылок:
       - если отзыв относится только к `offer`, в ответе будет заполнен только `offerRef`;
@@ -159,12 +168,6 @@ providerReviews:
           application/json:
             schema:
               $ref: '../components/responses.yaml#/ErrorResponse'
-      '404':
-        description: Provider not found
-        content:
-          application/json:
-            schema:
-              $ref: '../components/responses.yaml#/ErrorResponse'
       '500':
         description: Internal server error
         content:
@@ -185,7 +188,9 @@ providerReviewsSummary:
       Правила выборки:
       - фильтрация выполняется строго по `review.providerId`;
       - учитываются отзывы всех трех типов контекста: `item-only`, `offer-only`, `offer+item`;
+      - endpoint доступен любому авторизованному пользователю;
       - если отзывов нет, `count = 0`, `avgRating = 0`, а все поля breakdown равны `0`.
+      - существование пользователя с таким `providerId` отдельно не проверяется.
     operationId: getProviderReviewsSummary
     security:
       - bearerAuth: [ ]
@@ -215,12 +220,6 @@ providerReviewsSummary:
           application/json:
             schema:
               $ref: '../components/responses.yaml#/ErrorResponse'
-      '404':
-        description: Provider not found
-        content:
-          application/json:
-            schema:
-              $ref: '../components/responses.yaml#/ErrorResponse'
       '500':
         description: Internal server error
         content:
@@ -238,11 +237,16 @@ authorReviews:
     description: |
       Возвращает отзывы, оставленные конкретным пользователем как автором отзыва.
 
+      Доступ:
+      - endpoint доступен любому авторизованному пользователю.
+
       Правила выборки:
       - фильтрация выполняется строго по `review.authorId`;
       - `authorId` в каждом объекте ответа всегда совпадает со значением path-параметра `{authorId}`;
       - в выборку попадают отзывы всех трех типов контекста: `item-only`, `offer-only`, `offer+item`;
       - отзывы возвращаются в порядке от новых к старым.
+      - если отзывов по этому `authorId` нет, endpoint возвращает `200` и пустой массив;
+      - существование пользователя с таким `authorId` отдельно не проверяется.
     operationId: getAuthorReviews
     security:
       - bearerAuth: [ ]
@@ -272,12 +276,6 @@ authorReviews:
           application/json:
             schema:
               $ref: '../components/responses.yaml#/ErrorResponse'
-      '404':
-        description: Author not found
-        content:
-          application/json:
-            schema:
-              $ref: '../components/responses.yaml#/ErrorResponse'
       '500':
         description: Internal server error
         content:
@@ -294,6 +292,9 @@ reviewById:
     summary: Получить отзыв по ID
     description: |
       Возвращает один конкретный отзыв по его `reviewId`.
+
+      Доступ:
+      - endpoint доступен любому авторизованному пользователю.
 
       Особенности:
       - `providerId` обязателен всегда;
@@ -480,6 +481,9 @@ dealReviews:
     description: |
       Возвращает все отзывы, оставленные в рамках конкретной сделки.
 
+      Доступ:
+      - endpoint доступен любому авторизованному пользователю.
+
       Правила выборки:
       - в выборку попадают отзывы всех трех типов контекста: `item-only`, `offer-only`, `offer+item`;
       - отзывы возвращаются в порядке от новых к старым;
@@ -539,6 +543,7 @@ dealPendingReviews:
 
       Бизнес-правила:
       - endpoint вычисляется относительно текущего аутентифицированного пользователя;
+      - endpoint доступен любому авторизованному пользователю;
       - в выборку попадают только item, где текущий пользователь является `receiver_id`;
       - для каждого контекста возвращается `canCreate` и, если нужно, `reason`;
       - если по контексту уже существует отзыв текущего пользователя, возвращается `canCreate = false`
@@ -607,6 +612,7 @@ dealItemReviewEligibility:
 
       Бизнес-правила:
       - endpoint вычисляется относительно текущего аутентифицированного пользователя;
+      - endpoint доступен любому авторизованному пользователю;
       - если сделка не находится в статусе `Completed`, `canCreate = false` и `reason = deal_not_completed`;
       - если текущий пользователь не является `receiver_id` этого item, `canCreate = false`
         и `reason = forbidden_not_receiver`;
@@ -676,6 +682,9 @@ dealItemReviews:
     summary: Получить отзывы по item
     description: |
       Возвращает отзывы, относящиеся к конкретному `item` завершенной сделки.
+
+      Доступ:
+      - endpoint доступен любому авторизованному пользователю.
 
       Особенности:
       - отзывы возвращаются в порядке от новых к старым;
