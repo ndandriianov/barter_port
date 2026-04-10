@@ -94,6 +94,25 @@ CreateReviewRequest:
 
 
 
+UpdateReviewRequest:
+  type: object
+  minProperties: 1
+  description: |
+    Хотя бы одно поле обязательно.
+    Изменять можно только содержимое отзыва: `rating` и/или `comment`.
+    Поля контекста (`authorId`, `providerId`, `offerRef`, `itemRef`) не редактируются.
+  properties:
+    rating:
+      type: integer
+      minimum: 1
+      maximum: 5
+      description: Новая оценка по шкале от 1 до 5.
+    comment:
+      type: string
+      description: Новый текст отзыва.
+
+
+
 VoteForFailureRequest:
   type: object
   required:

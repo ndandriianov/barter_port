@@ -56,6 +56,81 @@ offerReviews:
 
 
 
+reviewById:
+  patch:
+    tags:
+      - Reviews
+    summary: Обновить отзыв
+    description: |
+      Обновляет существующий отзыв по его `reviewId`.
+
+      Бизнес-правила:
+      - редактировать отзыв может только его автор;
+      - редактирование доступно только пока связанная сделка находится в статусе `Completed`;
+      - изменять можно только поля `rating` и `comment`;
+      - контекст отзыва не меняется: `authorId`, `providerId`, `offerRef`, `itemRef` и тип контекста
+        (`item-only`, `offer-only`, `offer+item`) после создания immutable;
+      - после успешного обновления поле `updatedAt` должно быть установлено в текущее время.
+    operationId: updateReview
+    parameters:
+      - name: reviewId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    security:
+      - bearerAuth: [ ]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/requests.yaml#/UpdateReviewRequest'
+    responses:
+      '200':
+        description: Отзыв обновлен
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Review'
+      '400':
+        description: |
+          Некорректный запрос:
+          - пустое тело запроса;
+          - рейтинг вне диапазона `1..5`;
+          - связанная сделка не находится в статусе `Completed`.
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: Пользователь не является автором отзыва
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Отзыв не найден
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+
 dealItemReviews:
   get:
     tags:
