@@ -130,7 +130,7 @@ func (s *Service) GetMessages(ctx context.Context, userID, chatID uuid.UUID, aft
 
 // SendMessage sends a message in a chat if the user is a participant and the chat is writable.
 // Personal chats are always writable. Deal chats become read-only when the deal reaches
-// a final status (Completed, Cancelled, Failed).
+// a final status (Completed, Cancelled, Failed) or has a pending admin failure review.
 func (s *Service) SendMessage(ctx context.Context, userID, chatID uuid.UUID, content string) (*domain.Message, error) {
 	ok, err := s.repo.IsParticipant(ctx, chatID, userID)
 	if err != nil {
@@ -172,6 +172,10 @@ func (s *Service) isChatWritable(ctx context.Context, chat *domain.Chat) (bool, 
 	resp, err := s.dealsClient.GetDealStatus(ctx, &dealspb.GetDealStatusRequest{DealId: chat.DealID.String()})
 	if err != nil {
 		return false, fmt.Errorf("dealsClient.GetDealStatus: %w", err)
+	}
+
+	if resp.GetHasPendingFailureReview() {
+		return false, nil
 	}
 
 	switch resp.GetStatus() {

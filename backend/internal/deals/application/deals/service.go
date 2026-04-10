@@ -259,6 +259,14 @@ func (s *Service) GetDealStatus(ctx context.Context, id uuid.UUID) (enums.DealSt
 	return deal.Status, nil
 }
 
+func (s *Service) HasPendingFailureReview(ctx context.Context, id uuid.UUID) (bool, error) {
+	if _, err := s.GetDealByID(ctx, id); err != nil {
+		return false, err
+	}
+
+	return s.dealsRepository.HasPendingFailureReview(ctx, s.db, id)
+}
+
 // ================================================================================
 // UPDATE DEAL NAME
 // ================================================================================

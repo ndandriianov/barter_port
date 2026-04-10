@@ -40,5 +40,17 @@ func (s *Server) GetDealStatus(ctx context.Context, req *dealspb.GetDealStatusRe
 		return nil, status.Errorf(codes.Internal, "failed to get deal status: %v", err)
 	}
 
-	return &dealspb.GetDealStatusResponse{Status: dealStatus.String()}, nil
+	hasPendingFailureReview, err := s.dealsService.HasPendingFailureReview(ctx, dealID)
+	if err != nil {
+		if errors.Is(err, domain.ErrDealNotFound) {
+			return nil, status.Error(codes.NotFound, "deal not found")
+		}
+
+		return nil, status.Errorf(codes.Internal, "failed to get pending failure review state: %v", err)
+	}
+
+	return &dealspb.GetDealStatusResponse{
+		Status:                  dealStatus.String(),
+		HasPendingFailureReview: hasPendingFailureReview,
+	}, nil
 }
