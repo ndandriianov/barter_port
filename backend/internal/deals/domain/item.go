@@ -10,6 +10,7 @@ import (
 
 type Item struct {
 	ID          uuid.UUID
+	OfferID     *uuid.UUID
 	AuthorID    uuid.UUID
 	ProviderID  *uuid.UUID
 	ReceiverID  *uuid.UUID
@@ -23,6 +24,7 @@ type Item struct {
 func (i *Item) ToDTO() types.Item {
 	return types.Item{
 		Id:          i.ID,
+		OfferId:     i.OfferID,
 		AuthorId:    i.AuthorID,
 		ProviderId:  i.ProviderID,
 		ReceiverId:  i.ReceiverID,

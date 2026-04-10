@@ -12,8 +12,8 @@ CREATE TABLE offers
 
     CONSTRAINT offers_type_check CHECK (type IN ('good', 'service')),
     CONSTRAINT offers_action_check CHECK (action IN ('give', 'take')
-)
-    );
+        )
+);
 
 CREATE TABLE draft_deals
 (
@@ -44,7 +44,7 @@ CREATE TYPE deal_status AS ENUM (
     'Completed',
     'Cancelled',
     'Failed'
-);
+    );
 
 CREATE TABLE deals
 (
@@ -60,6 +60,7 @@ CREATE TABLE items
 (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     deal_id     UUID    NOT NULL,
+    offer_id    UUID,
     author_id   UUID    NOT NULL,
     provider_id UUID,
     receiver_id UUID,
@@ -68,8 +69,10 @@ CREATE TABLE items
     type        TEXT    NOT NULL,
     updated_at  TIMESTAMPTZ,
     quantity    INTEGER NOT NULL DEFAULT 1,
+
     CONSTRAINT offers_type_check CHECK (type IN ('good', 'service')),
-    FOREIGN KEY (deal_id) REFERENCES deals (id) ON DELETE CASCADE
+    FOREIGN KEY (deal_id) REFERENCES deals (id) ON DELETE CASCADE,
+    FOREIGN KEY (offer_id) REFERENCES offers (id) ON DELETE SET NULL
 );
 
 CREATE TABLE participants

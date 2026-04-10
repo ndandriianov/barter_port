@@ -392,6 +392,7 @@ func (s *Service) AddDealItem(
 		}
 
 		newItem := domain.Item{
+			OfferID:     &offerID,
 			AuthorID:    offer.AuthorId,
 			Name:        offer.Name,
 			Description: offer.Description,
@@ -564,7 +565,7 @@ func (s *Service) createDeal(ctx context.Context, tx pgx.Tx, draft domain.Draft)
 		}
 
 		items[i] = domain.Item{
-			ID:          o.Offer.ID,
+			OfferID:     new(o.Offer.ID),
 			AuthorID:    o.Offer.AuthorId,
 			ProviderID:  provider,
 			ReceiverID:  receiver,

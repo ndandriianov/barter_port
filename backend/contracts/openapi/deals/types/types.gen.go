@@ -340,6 +340,9 @@ type Item struct {
 	// Name Краткое название позиции сделки
 	Name string `json:"name"`
 
+	// OfferId Идентификатор исходного offer, на базе которого создана позиция сделки
+	OfferId *openapi_types.UUID `json:"offerId,omitempty"`
+
 	// ProviderId Уникальный идентификатор пользователя, который отдает эту позицию в сделке
 	ProviderId *openapi_types.UUID `json:"providerId,omitempty"`
 
@@ -508,6 +511,12 @@ type UpdateDealItemRequest struct {
 	ReleaseReceiver *bool `json:"releaseReceiver,omitempty"`
 }
 
+// UpdateDealRequest defines model for UpdateDealRequest.
+type UpdateDealRequest struct {
+	// Name Новое название сделки
+	Name string `json:"name"`
+}
+
 // UserConfirm defines model for UserConfirm.
 type UserConfirm struct {
 	// Confirmed Статус подтверждения участия пользователя в сделке
@@ -521,12 +530,6 @@ type UserConfirm struct {
 type VoteForFailureRequest struct {
 	// UserId ID пользователя, за которого голосует участник сделки.
 	UserId openapi_types.UUID `json:"userId"`
-}
-
-// UpdateDealRequest defines model for UpdateDealRequest.
-type UpdateDealRequest struct {
-	// Name Новое название сделки
-	Name string `json:"name"`
 }
 
 // CursorCreatedAt defines model for CursorCreatedAt.
@@ -598,6 +601,9 @@ type ModeratorResolutionForFailureJSONRequestBody = ModeratorResolutionForFailur
 
 // VoteForFailureJSONRequestBody defines body for VoteForFailure for application/json ContentType.
 type VoteForFailureJSONRequestBody = VoteForFailureRequest
+
+// UpdateDealJSONRequestBody defines body for UpdateDeal for application/json ContentType.
+type UpdateDealJSONRequestBody = UpdateDealRequest
 
 // AddDealItemJSONRequestBody defines body for AddDealItem for application/json ContentType.
 type AddDealItemJSONRequestBody = AddDealItemRequest
