@@ -86,6 +86,42 @@ GetProviderReviewsResponse:
 
 
 
+GetAuthorReviewsResponse:
+  type: array
+  items:
+    $ref: 'schemas.yaml#/Review'
+
+
+
+GetDealReviewsResponse:
+  type: array
+  items:
+    $ref: 'schemas.yaml#/Review'
+
+
+
+GetPendingDealReviewsResponse:
+  type: array
+  items:
+    $ref: 'schemas.yaml#/PendingDealReview'
+
+
+
+OfferReviewsSummaryResponse:
+  $ref: 'schemas.yaml#/ReviewSummary'
+
+
+
+ProviderReviewsSummaryResponse:
+  $ref: 'schemas.yaml#/ReviewSummary'
+
+
+
+ReviewEligibilityResponse:
+  $ref: 'schemas.yaml#/ReviewEligibility'
+
+
+
 ConfirmDraftDealResponse:
   type: object
   required:

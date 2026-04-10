@@ -324,6 +324,16 @@ OfferRef:
 
 
 
+ReviewContextType:
+  type: string
+  description: Тип контекста, к которому относится отзыв.
+  enum:
+    - item-only
+    - offer-only
+    - offer+item
+
+
+
 Review:
   type: object
   required:
@@ -395,6 +405,137 @@ Review:
           поэтому `itemRef = null`;
         - `items.offer_id IS NOT NULL` и `items.updated_at IS NOT NULL` -> отзыв относится и к `offer`, и к `item`,
           поэтому `offerRef != null`, `itemRef != null`.
+
+
+
+ReviewRatingBreakdown:
+  type: object
+  required:
+    - rating1
+    - rating2
+    - rating3
+    - rating4
+    - rating5
+  properties:
+    rating1:
+      type: integer
+      minimum: 0
+      description: Количество отзывов с оценкой 1.
+    rating2:
+      type: integer
+      minimum: 0
+      description: Количество отзывов с оценкой 2.
+    rating3:
+      type: integer
+      minimum: 0
+      description: Количество отзывов с оценкой 3.
+    rating4:
+      type: integer
+      minimum: 0
+      description: Количество отзывов с оценкой 4.
+    rating5:
+      type: integer
+      minimum: 0
+      description: Количество отзывов с оценкой 5.
+
+
+
+ReviewSummary:
+  type: object
+  required:
+    - count
+    - avgRating
+    - ratingBreakdown
+  properties:
+    count:
+      type: integer
+      minimum: 0
+      description: Общее количество отзывов в выборке.
+    avgRating:
+      type: number
+      format: double
+      minimum: 0
+      maximum: 5
+      description: Средняя оценка по выборке. Для пустой выборки возвращается `0`.
+    ratingBreakdown:
+      $ref: '#/ReviewRatingBreakdown'
+
+
+
+ReviewEligibility:
+  type: object
+  required:
+    - canCreate
+    - contextType
+  properties:
+    canCreate:
+      type: boolean
+      description: Может ли текущий пользователь создать отзыв для этого item.
+    contextType:
+      $ref: '#/ReviewContextType'
+    providerId:
+      nullable: true
+      type: string
+      format: uuid
+      description: |
+        Идентификатор пользователя, который будет сохранен как `review.providerId`.
+        Может быть `null`, если eligibility вычислена в состоянии `provider_missing`.
+    offerRef:
+      nullable: true
+      allOf:
+        - $ref: '#/OfferRef'
+      description: Ссылка на offer, если отзыв затрагивает offer.
+    itemRef:
+      nullable: true
+      allOf:
+        - $ref: '#/DealItemRef'
+      description: Ссылка на item, если отзыв затрагивает item.
+    reason:
+      type: string
+      description: |
+        Причина, по которой отзыв нельзя создать. Заполняется только если `canCreate = false`.
+        Примеры: `deal_not_completed`, `receiver_missing`, `provider_missing`,
+        `same_provider_and_receiver`, `already_reviewed`, `forbidden_not_receiver`.
+
+
+
+PendingDealReview:
+  type: object
+  required:
+    - dealId
+    - contextType
+    - canCreate
+  properties:
+    dealId:
+      type: string
+      format: uuid
+      description: Идентификатор сделки.
+    contextType:
+      $ref: '#/ReviewContextType'
+    providerId:
+      nullable: true
+      type: string
+      format: uuid
+      description: |
+        Идентификатор пользователя, который будет сохранен как `review.providerId`.
+        Может быть `null`, если контекст недоступен из-за `provider_missing`.
+    offerRef:
+      nullable: true
+      allOf:
+        - $ref: '#/OfferRef'
+      description: Ссылка на offer, если отзыв затрагивает offer.
+    itemRef:
+      nullable: true
+      allOf:
+        - $ref: '#/DealItemRef'
+      description: Ссылка на item, если отзыв затрагивает item.
+    canCreate:
+      type: boolean
+      description: Может ли текущий пользователь оставить отзыв по этому контексту.
+    reason:
+      type: string
+      description: |
+        Причина, по которой отзыв недоступен для создания. Заполняется только если `canCreate = false`.
 
 
 

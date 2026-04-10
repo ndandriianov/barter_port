@@ -26,10 +26,20 @@ paths:
     $ref: './paths/deals.yaml#/dealItems'
   /deals/{dealId}/items/{itemId}/reviews:
     $ref: './paths/reviews.yaml#/dealItemReviews'
+  /deals/{dealId}/items/{itemId}/review-eligibility:
+    $ref: './paths/reviews.yaml#/dealItemReviewEligibility'
+  /deals/{dealId}/reviews:
+    $ref: './paths/reviews.yaml#/dealReviews'
+  /deals/{dealId}/reviews/pending:
+    $ref: './paths/reviews.yaml#/dealPendingReviews'
   /reviews/{reviewId}:
     $ref: './paths/reviews.yaml#/reviewById'
+  /reviews/authors/{authorId}:
+    $ref: './paths/reviews.yaml#/authorReviews'
   /reviews/providers/{providerId}:
     $ref: './paths/reviews.yaml#/providerReviews'
+  /reviews/providers/{providerId}/summary:
+    $ref: './paths/reviews.yaml#/providerReviewsSummary'
   /deals/{dealId}/joins:
     $ref: './paths/joins.yaml#/join'
   /deals/{dealId}/joins/{userId}:
@@ -48,6 +58,8 @@ paths:
     $ref: './paths/offers.yaml#/offerById'
   /offers/{offerId}/reviews:
     $ref: './paths/reviews.yaml#/offerReviews'
+  /offers/{offerId}/reviews/summary:
+    $ref: './paths/reviews.yaml#/offerReviewsSummary'
 
 components:
   securitySchemes:
