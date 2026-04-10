@@ -79,6 +79,13 @@ GetItemReviewsResponse:
 
 
 
+GetProviderReviewsResponse:
+  type: array
+  items:
+    $ref: 'schemas.yaml#/Review'
+
+
+
 ConfirmDraftDealResponse:
   type: object
   required:
