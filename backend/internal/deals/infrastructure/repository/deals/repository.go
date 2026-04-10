@@ -45,14 +45,15 @@ func (r *Repository) CreateDeal(ctx context.Context, tx pgx.Tx, deal domain.Deal
 	}
 
 	offersQuery := `
-		INSERT INTO items (deal_id, author_id, receiver_id, provider_id, name, description, type, quantity) 
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8);`
+		INSERT INTO items (deal_id, offer_id, author_id, receiver_id, provider_id, name, description, type, quantity) 
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);`
 
 	for _, item := range deal.Items {
 		_, err = tx.Exec(
 			ctx,
 			offersQuery,
 			id,
+			item.OfferID,
 			item.AuthorID,
 			item.ReceiverID,
 			item.ProviderID,
@@ -178,7 +179,7 @@ func (r *Repository) UpdateDealName(ctx context.Context, tx pgx.Tx, dealID uuid.
 func (r *Repository) GetDealByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (domain.Deal, error) {
 	query := `
 		SELECT d.id, d.name, d.description, d.created_at, d.updated_at, d.status,
-		       i.id, i.author_id, i.provider_id, i.receiver_id,
+		       i.id, i.offer_id, i.author_id, i.provider_id, i.receiver_id,
 		       i.name, i.description, i.type, i.updated_at, i.quantity
 		FROM deals d
 		LEFT JOIN items i ON i.deal_id = d.id
@@ -195,6 +196,7 @@ func (r *Repository) GetDealByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (
 
 	for rows.Next() {
 		var itemID *uuid.UUID
+		var itemOfferID *uuid.UUID
 		var itemAuthorID *uuid.UUID
 		var itemProviderID *uuid.UUID
 		var itemReceiverID *uuid.UUID
@@ -212,6 +214,7 @@ func (r *Repository) GetDealByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (
 			&deal.UpdatedAt,
 			&deal.Status,
 			&itemID,
+			&itemOfferID,
 			&itemAuthorID,
 			&itemProviderID,
 			&itemReceiverID,
@@ -241,6 +244,7 @@ func (r *Repository) GetDealByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (
 
 		deal.Items = append(deal.Items, domain.Item{
 			ID:          *itemID,
+			OfferID:     itemOfferID,
 			AuthorID:    *itemAuthorID,
 			ProviderID:  itemProviderID,
 			ReceiverID:  itemReceiverID,
@@ -300,15 +304,16 @@ func (r *Repository) AddItem(ctx context.Context, exec db.DB, dealID uuid.UUID, 
 	}
 
 	query := `
-		INSERT INTO items (deal_id, author_id, provider_id, receiver_id, name, description, type, quantity)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-		RETURNING id, author_id, provider_id, receiver_id,
+		INSERT INTO items (deal_id, offer_id, author_id, provider_id, receiver_id, name, description, type, quantity)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		RETURNING id, offer_id, author_id, provider_id, receiver_id,
 		          name, description, type, updated_at, quantity`
 
 	itemCreated, err := scanItem(exec.QueryRow(
 		ctx,
 		query,
 		dealID,
+		item.OfferID,
 		item.AuthorID,
 		item.ProviderID,
 		item.ReceiverID,
@@ -402,7 +407,7 @@ func (r *Repository) UpdateItem(
 		WHERE id = $1
 		  AND deal_id   = $2
 		  AND author_id = $3
-		RETURNING id, author_id, provider_id, receiver_id,
+		RETURNING id, offer_id, author_id, provider_id, receiver_id,
 		          name, description, type, updated_at, quantity`
 
 	row := exec.QueryRow(ctx, updateQuery, itemID, dealID, userID, patch.Name, patch.Description, patch.Quantity)
@@ -446,7 +451,7 @@ func (r *Repository) ClaimItemProvider(ctx context.Context, exec db.DB, dealID, 
 		UPDATE items
 		SET provider_id = $3, updated_at = NOW()
 		WHERE id = $1 AND deal_id = $2 AND provider_id IS NULL
-		RETURNING id, author_id, provider_id, receiver_id,
+		RETURNING id, offer_id, author_id, provider_id, receiver_id,
 				  name, description, type, updated_at, quantity`
 
 	const check = `SELECT provider_id FROM items WHERE id = $1 AND deal_id = $2`
@@ -464,7 +469,7 @@ func (r *Repository) ReleaseItemProvider(ctx context.Context, exec db.DB, dealID
 		UPDATE items
 		SET provider_id = NULL, updated_at = NOW()
 		WHERE id = $1 AND deal_id = $2 AND provider_id = $3
-		RETURNING id, author_id, provider_id, receiver_id,
+		RETURNING id, offer_id, author_id, provider_id, receiver_id,
 				  name, description, type, updated_at, quantity`
 
 	const check = `SELECT provider_id FROM items WHERE id = $1 AND deal_id = $2`
@@ -482,7 +487,7 @@ func (r *Repository) ClaimItemReceiver(ctx context.Context, exec db.DB, dealID, 
 		UPDATE items
 		SET receiver_id = $3, updated_at = NOW()
 		WHERE id = $1 AND deal_id = $2 AND receiver_id IS NULL
-		RETURNING id, author_id, provider_id, receiver_id,
+		RETURNING id, offer_id, author_id, provider_id, receiver_id,
 				  name, description, type, updated_at, quantity`
 
 	const check = `SELECT receiver_id FROM items WHERE id = $1 AND deal_id = $2`
@@ -500,7 +505,7 @@ func (r *Repository) ReleaseItemReceiver(ctx context.Context, exec db.DB, dealID
 		UPDATE items
 		SET receiver_id = NULL, updated_at = NOW()
 		WHERE id = $1 AND deal_id = $2 AND receiver_id = $3
-		RETURNING id, author_id, provider_id, receiver_id,
+		RETURNING id, offer_id, author_id, provider_id, receiver_id,
 				  name, description, type, updated_at, quantity`
 
 	const check = `SELECT receiver_id FROM items WHERE id = $1 AND deal_id = $2`
@@ -675,6 +680,7 @@ func scanItem(row interface{ Scan(...any) error }) (domain.Item, error) {
 	var itemType string
 	err := row.Scan(
 		&item.ID,
+		&item.OfferID,
 		&item.AuthorID,
 		&item.ProviderID,
 		&item.ReceiverID,

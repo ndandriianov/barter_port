@@ -263,6 +263,10 @@ Item:
       type: string
       format: uuid
       description: Уникальный идентификатор пользователя, который предложил эту позицию в сделке
+    offerId:
+      type: string
+      format: uuid
+      description: Идентификатор исходного offer, на базе которого создана позиция сделки
     providerId:
       type: string
       format: uuid

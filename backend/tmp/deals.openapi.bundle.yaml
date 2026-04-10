@@ -297,6 +297,64 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
   /deals/{dealId}:
+    patch:
+      tags:
+        - Deals
+      summary: Обновить название сделки
+      description: Обновить название сделки. Только участники сделки могут изменять её название.
+      operationId: updateDeal
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDealRequest'
+      responses:
+        '200':
+          description: Обновлённая сделка
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deal'
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Пользователь не является участником сделки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Сделка не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     get:
       tags:
         - Deals
@@ -466,6 +524,7 @@ paths:
       description: |
         Редактировать позицию сделки.
 
+        - Редактирование доступно только в статусах `LookingForParticipants` и `Discussion`.
         - Поля `name`, `description`, `quantity` может менять только автор позиции (`author_id`).
         - Роли `provider`/`receiver` можно claim/release по бизнес-правилам.
         - Если по сделке уже создана запись в `deal_failures` и она ожидает решения админа, редактирование позиции запрещено.
@@ -499,7 +558,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/Item'
         '400':
-          description: Некорректный запрос (пустое тело)
+          description: |
+            Некорректный запрос:
+            - пустое тело запроса;
+            - сделка не находится в статусе `LookingForParticipants` или `Discussion`.
           content:
             application/json:
               schema:
@@ -724,8 +786,7 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '403':
           description: |
-            Операция запрещена по бизнес-правилам:
-            по сделке уже создана запись в `deal_failures`, ожидающая решения админа
+            Операция запрещена по бизнес-правилам: сделка не в статусе LookingForParticipants
           content:
             application/json:
               schema:
@@ -851,7 +912,7 @@ paths:
         до итогового решения админа.
 
         Голосовать можно сколько угодно раз, пока сделка находится в одном из статусов:
-        LookingForParticipants, Discussion, Confirmed,
+        Discussion, Confirmed,
         и пока по сделке нет записи в `deal_failures`, а также окончательного решения админа.
 
         До достижения порога голос можно изменить или отозвать.
@@ -895,7 +956,7 @@ paths:
         '403':
           description: |
             Операция запрещена по бизнес-правилам: пользователь не является участником сделки,
-            либо статус сделки не входит в LookingForParticipants / Discussion / Confirmed,
+            либо статус сделки не входит в Discussion / Confirmed,
             либо по сделке уже создана запись в deal_failures,
             либо решение админа уже принято
           content:
@@ -916,7 +977,7 @@ paths:
         Участник сделки может отозвать свой голос за провал сделки, если он передумал или проголосовал по ошибке.
 
         Голос можно отозвать сколько угодно раз, пока сделка находится в одном из статусов:
-        LookingForParticipants, Discussion, Confirmed,
+        Discussion, Confirmed,
         и пока по сделке нет записи в `deal_failures`, а также окончательного решения админа.
 
         После достижения порога и создания записи в `deal_failures` голос отзывать нельзя.
@@ -944,7 +1005,7 @@ paths:
         '403':
           description: |
             Операция запрещена по бизнес-правилам: пользователь не является участником сделки,
-            либо статус сделки не входит в LookingForParticipants / Discussion / Confirmed,
+            либо статус сделки не входит в Discussion / Confirmed,
             либо по сделке уже создана запись в deal_failures,
             либо решение админа уже принято
           content:
@@ -1010,6 +1071,7 @@ paths:
       description: |
         Эндпоинт предназначен для использования только админом. Остальным возвращает 403.
 
+        Если по сделке еще не создана запись в `deal_failures`, эндпоинт также возвращает 403.
         Если чат для сделки не был создан, поле chatId отсутствует в ответе.
       operationId: getFailureMaterials
       parameters:
@@ -1037,6 +1099,7 @@ paths:
         '403':
           description: |
             Операция запрещена по бизнес-правилам: пользователь не является админом,
+            либо по сделке еще не создана запись в `deal_failures`,
             либо сделка уже отменена/завершена
           content:
             application/json:
@@ -1057,6 +1120,9 @@ paths:
         Админ принимает решение о виновнике провала сделки в случае,
         если голоса участников распределились между несколькими кандидатами,
         либо если он не согласен с результатом голосования. Решение админа является окончательным.
+
+        Если `confirmed = true`, сделка переходит в статус `Failed`.
+        Если при этом `userId` не передан, в `deal_failures.user_id` сохраняется `null`.
 
         Админ может принять решение что сделка не провалена, тогда она переходит в статус Completed,
         если была в статусе Confirmed, в ином случае она переходит в Cancelled.
@@ -1128,7 +1194,10 @@ paths:
         - Failures
       summary: Получить решение админа по провалу сделки
       description: |
-        Получить решение админа по провалу сделки могут только участники сделки и админ
+        Получить решение админа по провалу сделки могут только участники сделки и админ.
+
+        Если сделка существует, но по ней еще не создана запись в `deal_failures`,
+        эндпоинт возвращает 403.
       operationId: getModeratorResolutionForFailure
       parameters:
         - name: dealId
@@ -1155,7 +1224,8 @@ paths:
         '403':
           description: |
             Операция запрещена по бизнес-правилам:
-            пользователь не является участником сделки и не является админом
+            пользователь не является участником сделки и не является админом,
+            либо по сделке еще не создана запись в `deal_failures`
           content:
             application/json:
               schema:
@@ -1262,6 +1332,53 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /offers/{offerId}:
+    get:
+      tags:
+        - offers
+      summary: Get offer by ID
+      description: Returns a single offer by its ID.
+      operationId: getOfferById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: offerId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Offer'
+        '400':
+          description: Invalid offer ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Offer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
   securitySchemes:
     bearerAuth:
@@ -1279,6 +1396,9 @@ components:
           type: string
           format: uuid
           description: Уникальный идентификатор черновой сделки
+        name:
+          type: string
+          description: Название черновой сделки
         participants:
           type: array
           description: Список ID всех пользователей, участвующих в этой сделке
@@ -1484,6 +1604,9 @@ components:
           type: string
           format: uuid
           description: Уникальный идентификатор сделки
+        name:
+          type: string
+          description: Название сделки
         status:
           $ref: '#/components/schemas/DealStatus'
         participants:
@@ -1515,6 +1638,10 @@ components:
           type: string
           format: uuid
           description: Уникальный идентификатор пользователя, который предложил эту позицию в сделке
+        offerId:
+          type: string
+          format: uuid
+          description: Идентификатор исходного offer, на базе которого создана позиция сделки
         providerId:
           type: string
           format: uuid
@@ -1581,6 +1708,14 @@ components:
             type: string
             format: uuid
             description: Уникальный идентификатор пользователя, участвующего в сделке
+    UpdateDealRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: Новое название сделки
     GetDealStatusVotesResponseItem:
       type: object
       required:
