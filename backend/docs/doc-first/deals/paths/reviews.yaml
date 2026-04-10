@@ -9,6 +9,7 @@ offerReviews:
       Особенности:
       - отзывы возвращаются в порядке от новых к старым;
       - сюда попадают только отзывы, у которых заполнен `offerRef`;
+      - `providerId` обязателен в каждом отзыве и указывает, кто именно фактически предоставил товар/услугу;
       - если отзыв одновременно относится и к `item`, в ответе будет заполнен `itemRef`,
         чтобы было понятно, о какой модифицированной позиции шла речь.
     operationId: getOfferReviews
@@ -65,6 +66,7 @@ dealItemReviews:
 
       Особенности:
       - отзывы возвращаются в порядке от новых к старым;
+      - `providerId` обязателен в каждом отзыве и указывает, кто именно фактически предоставил товар/услугу;
       - если отзыв относится только к `item`, будет заполнен только `itemRef`;
       - если отзыв относится и к `offer`, и к `item`, в ответе будут заполнены обе ссылки.
     operationId: getDealItemReviews
@@ -124,14 +126,22 @@ dealItemReviews:
 
       Бизнес-правила:
       - отзыв можно оставить только если сделка находится в статусе `Completed`;
-      - отзыв может оставить только участник этой сделки, являющийся получателем item;
-      - в отзыве сохраняется информация об отправителе товара/услуги
-      - один пользователь может оставить не более одного отзыва на один и тот же набор целей в рамках сделки.
+      - отзыв может оставить только пользователь, который является `items.receiver_id` для этого item;
+      - `items.provider_id` должен быть заполнен; именно это значение сохраняется в `review.providerId`;
+      - если `items.provider_id = items.receiver_id`, отзыв создать нельзя;
+      - `authorId` в созданном отзыве всегда равен `items.receiver_id`;
+      - `providerId` в созданном отзыве всегда равен `items.provider_id`;
+      - один пользователь может оставить не более одного отзыва на один и тот же контекст в рамках сделки.
 
       При создании отзыва:
       - если `items.offer_id IS NULL`, отзыв создается только на `item`;
-      - если `items.updated_at IS NULL`, отзыв создается только на `offer`;
+      - если `items.offer_id IS NOT NULL` и `items.updated_at IS NULL`, отзыв создается только на `offer`;
       - если `items.offer_id IS NOT NULL` и `items.updated_at IS NOT NULL`, отзыв создается одновременно на `offer` и `item`.
+
+      Контекст уникальности определяется так:
+      - `item-only`: `(deal_id, item_id, author_id)`;
+      - `offer-only`: `(deal_id, offer_id, author_id, provider_id)`;
+      - `offer+item`: `(deal_id, offer_id, item_id, author_id, provider_id)`.
     operationId: createDealItemReview
     parameters:
       - name: dealId
@@ -165,6 +175,9 @@ dealItemReviews:
         description: |
           Некорректный запрос:
           - сделка не находится в статусе `Completed`;
+          - у item не заполнен `provider_id`;
+          - у item не заполнен `receiver_id`;
+          - `provider_id = receiver_id`;
           - рейтинг вне диапазона `1..5`.
         content:
           application/json:
@@ -179,7 +192,7 @@ dealItemReviews:
       '403':
         description: |
           Операция запрещена:
-          - пользователь не является участником сделки;
+          - пользователь не является `receiver_id` этого item;
           - пользователь пытается оставить отзыв на собственный offer в кейсах, где отзыв относится к offer.
         content:
           application/json:
@@ -192,7 +205,11 @@ dealItemReviews:
             schema:
               $ref: '../components/responses.yaml#/ErrorResponse'
       '409':
-        description: Пользователь уже оставил отзыв для этого набора целей в рамках данной сделки
+        description: |
+          Пользователь уже оставил отзыв для этого контекста в рамках данной сделки:
+          - `item-only`: `(deal_id, item_id, author_id)`;
+          - `offer-only`: `(deal_id, offer_id, author_id, provider_id)`;
+          - `offer+item`: `(deal_id, offer_id, item_id, author_id, provider_id)`.
         content:
           application/json:
             schema:

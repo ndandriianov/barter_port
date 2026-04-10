@@ -146,7 +146,7 @@ CREATE TABLE deal_reviews
 );
 
 CREATE UNIQUE INDEX deal_reviews_unique_offer_only_context_idx
-    ON deal_reviews (deal_id, offer_id, author_id)
+    ON deal_reviews (deal_id, offer_id, author_id, provider_id)
     WHERE offer_id IS NOT NULL AND item_id IS NULL;
 
 CREATE UNIQUE INDEX deal_reviews_unique_item_only_context_idx
@@ -154,7 +154,7 @@ CREATE UNIQUE INDEX deal_reviews_unique_item_only_context_idx
     WHERE offer_id IS NULL AND item_id IS NOT NULL;
 
 CREATE UNIQUE INDEX deal_reviews_unique_offer_item_context_idx
-    ON deal_reviews (deal_id, offer_id, item_id, author_id)
+    ON deal_reviews (deal_id, offer_id, item_id, author_id, provider_id)
     WHERE offer_id IS NOT NULL AND item_id IS NOT NULL;
 
 CREATE INDEX deal_reviews_offer_created_at_idx
