@@ -4,6 +4,7 @@ import (
 	dealspb "barter-port/contracts/grpc/deals/v1"
 	"barter-port/internal/chats/domain"
 	"barter-port/pkg/authkit"
+	"errors"
 	"fmt"
 	"time"
 
@@ -137,7 +138,7 @@ func (s *Service) SendMessage(ctx context.Context, userID, chatID uuid.UUID, con
 		return nil, fmt.Errorf("repo.IsParticipant: %w", err)
 	}
 	if !ok {
-		return nil, domain.ErrForbidden
+		return nil, domain.NewUserMessageError(domain.ErrForbidden, "Нельзя отправить сообщение в чат, в котором вы не участвуете")
 	}
 
 	chat, err := s.repo.GetChatByID(ctx, chatID)
@@ -145,12 +146,11 @@ func (s *Service) SendMessage(ctx context.Context, userID, chatID uuid.UUID, con
 		return nil, fmt.Errorf("repo.GetChatByID: %w", err)
 	}
 
-	writable, err := s.isChatWritable(ctx, chat)
-	if err != nil {
-		return nil, fmt.Errorf("isChatWritable: %w", err)
-	}
-	if !writable {
-		return nil, domain.ErrForbidden
+	if err := s.ensureChatWritable(ctx, chat); err != nil {
+		if errors.Is(err, domain.ErrChatPendingFailureReview) || errors.Is(err, domain.ErrChatWriteForbidden) {
+			return nil, err
+		}
+		return nil, fmt.Errorf("ensureChatWritable: %w", err)
 	}
 
 	msg, err := s.repo.SendMessage(ctx, chatID, userID, content)
@@ -160,28 +160,44 @@ func (s *Service) SendMessage(ctx context.Context, userID, chatID uuid.UUID, con
 	return msg, nil
 }
 
-func (s *Service) isChatWritable(ctx context.Context, chat *domain.Chat) (bool, error) {
+func (s *Service) ensureChatWritable(ctx context.Context, chat *domain.Chat) error {
 	if chat.DealID == nil {
-		return true, nil
+		return nil
 	}
 
 	if s.dealsClient == nil {
-		return false, fmt.Errorf("deals grpc client is not configured")
+		return fmt.Errorf("deals grpc client is not configured")
 	}
 
 	resp, err := s.dealsClient.GetDealStatus(ctx, &dealspb.GetDealStatusRequest{DealId: chat.DealID.String()})
 	if err != nil {
-		return false, fmt.Errorf("dealsClient.GetDealStatus: %w", err)
+		return fmt.Errorf("dealsClient.GetDealStatus: %w", err)
 	}
 
 	if resp.GetHasPendingFailureReview() {
-		return false, nil
+		return domain.ErrChatPendingFailureReview
 	}
 
 	switch resp.GetStatus() {
 	case "Completed", "Cancelled", "Failed":
-		return false, nil
+		return domain.NewUserMessageError(
+			domain.ErrChatWriteForbidden,
+			fmt.Sprintf("Сделка находится в статусе %s", localizeDealStatus(resp.GetStatus())),
+		)
 	default:
-		return true, nil
+		return nil
+	}
+}
+
+func localizeDealStatus(status string) string {
+	switch status {
+	case "Completed":
+		return "Completed (завершена)"
+	case "Cancelled":
+		return "Cancelled (отменена)"
+	case "Failed":
+		return "Failed (провалена)"
+	default:
+		return status
 	}
 }

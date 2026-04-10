@@ -207,8 +207,9 @@ func (h *Handlers) SendMessage(w http.ResponseWriter, r *http.Request) {
 
 	msg, err := h.chatsService.SendMessage(r.Context(), userID, chatID, req.Content)
 	if err != nil {
-		if errors.Is(err, domain.ErrForbidden) {
-			httpx.WriteEmptyError(w, http.StatusForbidden)
+		switch {
+		case errors.Is(err, domain.ErrChatPendingFailureReview), errors.Is(err, domain.ErrChatWriteForbidden), errors.Is(err, domain.ErrForbidden):
+			httpx.WriteError(w, http.StatusForbidden, err)
 			return
 		}
 		log.Error("error sending message", slog.Any("error", err))

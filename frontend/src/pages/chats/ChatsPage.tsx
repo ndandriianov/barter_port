@@ -27,7 +27,7 @@ function ChatsPage() {
 
       <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
         {selectedChat ? (
-          <ChatWindow chatId={selectedChat.id} participants={selectedChat.participants} />
+          <ChatWindow key={selectedChat.id} chatId={selectedChat.id} participants={selectedChat.participants} />
         ) : (
           <div style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", color: "#888" }}>
             Выберите чат или начните новый
