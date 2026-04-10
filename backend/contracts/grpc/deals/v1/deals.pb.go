@@ -66,10 +66,11 @@ func (x *GetDealStatusRequest) GetDealId() string {
 }
 
 type GetDealStatusResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Status        string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	state                   protoimpl.MessageState `protogen:"open.v1"`
+	Status                  string                 `protobuf:"bytes,1,opt,name=status,proto3" json:"status,omitempty"`
+	HasPendingFailureReview bool                   `protobuf:"varint,2,opt,name=has_pending_failure_review,json=hasPendingFailureReview,proto3" json:"has_pending_failure_review,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *GetDealStatusResponse) Reset() {
@@ -109,15 +110,23 @@ func (x *GetDealStatusResponse) GetStatus() string {
 	return ""
 }
 
+func (x *GetDealStatusResponse) GetHasPendingFailureReview() bool {
+	if x != nil {
+		return x.HasPendingFailureReview
+	}
+	return false
+}
+
 var File_contracts_grpc_deals_v1_deals_proto protoreflect.FileDescriptor
 
 const file_contracts_grpc_deals_v1_deals_proto_rawDesc = "" +
 	"\n" +
 	"#contracts/grpc/deals/v1/deals.proto\x12\x13barterport.deals.v1\"/\n" +
 	"\x14GetDealStatusRequest\x12\x17\n" +
-	"\adeal_id\x18\x01 \x01(\tR\x06dealId\"/\n" +
+	"\adeal_id\x18\x01 \x01(\tR\x06dealId\"l\n" +
 	"\x15GetDealStatusResponse\x12\x16\n" +
-	"\x06status\x18\x01 \x01(\tR\x06status2v\n" +
+	"\x06status\x18\x01 \x01(\tR\x06status\x12;\n" +
+	"\x1ahas_pending_failure_review\x18\x02 \x01(\bR\x17hasPendingFailureReview2v\n" +
 	"\fDealsService\x12f\n" +
 	"\rGetDealStatus\x12).barterport.deals.v1.GetDealStatusRequest\x1a*.barterport.deals.v1.GetDealStatusResponseB5Z3barterport/internal/contracts/grpc/deals/v1;dealspbb\x06proto3"
 
