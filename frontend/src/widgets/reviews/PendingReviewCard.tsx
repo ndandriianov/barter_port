@@ -13,10 +13,12 @@ import {
 import type { FetchBaseQueryError } from "@reduxjs/toolkit/query";
 import type { SerializedError } from "@reduxjs/toolkit";
 import dealsApi from "@/features/deals/api/dealsApi.ts";
+import offersApi from "@/features/offers/api/offersApi.ts";
 import reviewsApi from "@/features/reviews/api/reviewsApi.ts";
 import { reviewContextLabels } from "@/features/reviews/model/meta.ts";
 import type { PendingDealReview } from "@/features/reviews/model/types.ts";
 import usersApi from "@/features/users/api/usersApi.ts";
+import type { OfferType } from "@/features/offers/model/types.ts";
 import { getStatusCode } from "@/shared/utils/getStatusCode.ts";
 import ReviewEditorDialog from "@/widgets/reviews/ReviewEditorDialog.tsx";
 
@@ -24,6 +26,11 @@ interface PendingReviewCardProps {
   review: PendingDealReview;
   dealName?: string;
 }
+
+const subjectTypeLabel: Record<OfferType, string> = {
+  good: "Товар",
+  service: "Услуга",
+};
 
 function getCreateErrorMessage(error: FetchBaseQueryError | SerializedError | undefined): string | null {
   if (!error) {
@@ -53,7 +60,10 @@ function PendingReviewCard({ review, dealName }: PendingReviewCardProps) {
     skip: !review.providerId,
   });
   const { data: deal } = dealsApi.useGetDealByIdQuery(review.dealId, {
-    skip: Boolean(review.itemRef) || !review.offerRef,
+    skip: !review.itemRef && !review.offerRef,
+  });
+  const { data: offer } = offersApi.useGetOfferByIdQuery(review.offerRef?.offerId ?? "", {
+    skip: !review.offerRef,
   });
 
   const itemRef = useMemo(() => {
@@ -79,6 +89,26 @@ function PendingReviewCard({ review, dealName }: PendingReviewCardProps) {
       : null;
   }, [currentUser?.id, deal, review.dealId, review.itemRef, review.offerRef, review.providerId]);
   const contextLabel = useMemo(() => reviewContextLabels[review.contextType], [review.contextType]);
+  const subject = useMemo(() => {
+    if (itemRef && deal) {
+      const item = deal.items.find((dealItem) => dealItem.id === itemRef.itemId);
+      if (item?.name?.trim()) {
+        return {
+          label: subjectTypeLabel[item.type],
+          name: item.name.trim(),
+        };
+      }
+    }
+
+    if (offer?.name?.trim()) {
+      return {
+        label: subjectTypeLabel[offer.type],
+        name: offer.name.trim(),
+      };
+    }
+
+    return null;
+  }, [deal, itemRef, offer]);
 
   const handleCreate = async ({ rating, comment }: { rating: number; comment: string }) => {
     if (!itemRef) {
@@ -110,6 +140,11 @@ function PendingReviewCard({ review, dealName }: PendingReviewCardProps) {
                 <Typography variant="body2" color="text.secondary">
                   Поставщик: {provider?.name?.trim() || "Имя не указано"}
                 </Typography>
+                {subject && (
+                  <Typography variant="body2" fontWeight={600} mt={0.5}>
+                    {subject.label}: {subject.name}
+                  </Typography>
+                )}
               </div>
               <Chip label={contextLabel} size="small" color="success" variant="outlined" />
             </Box>
