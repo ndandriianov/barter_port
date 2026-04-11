@@ -16,6 +16,7 @@ import (
 	failuresh "barter-port/internal/deals/infrastructure/transport/http/failures"
 	joinsh "barter-port/internal/deals/infrastructure/transport/http/joins"
 	offersh "barter-port/internal/deals/infrastructure/transport/http/offers"
+	reviewsh "barter-port/internal/deals/infrastructure/transport/http/reviews"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/bootstrap"
 	"barter-port/pkg/logger"
@@ -112,7 +113,8 @@ func main() {
 	dealsHandlers := dealsh.NewHandlers(logg, dealsService)
 	failuresHandlers := failuresh.NewHandlers(logg, dealsService)
 	joinsHandlers := joinsh.NewHandlers(logg, dealsService)
-	router := transporthttp.NewRouter(logg, validator, offersHandlers, draftsHandlers, dealsHandlers, failuresHandlers, joinsHandlers)
+	reviewsHandlers := reviewsh.NewHandlers(logg, dealsService)
+	router := transporthttp.NewRouter(logg, validator, offersHandlers, draftsHandlers, dealsHandlers, failuresHandlers, joinsHandlers, reviewsHandlers)
 
 	port := bootstrap.InitPortStringFromConfig(cfg, 8080)
 	log.Println("backend listening on", port)
