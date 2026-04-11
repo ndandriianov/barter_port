@@ -149,13 +149,13 @@ function ProfilePage() {
           <Divider sx={{ my: 3 }} />
 
           <Box display="flex" gap={2} flexWrap="wrap">
-            <Button component={RouterLink} to="/reviews/pending" variant="outlined">
+            <Button component={RouterLink} to="/reviews?tab=available" variant="outlined">
               Оставить отзыв
             </Button>
-            <Button component={RouterLink} to="/reviews/mine" variant="outlined">
+            <Button component={RouterLink} to="/reviews?tab=mine" variant="outlined">
               Мои отзывы
             </Button>
-            <Button component={RouterLink} to={`/users/${data.id}/reviews`} variant="outlined">
+            <Button component={RouterLink} to="/reviews?tab=about-me" variant="outlined">
               Отзывы обо мне
             </Button>
           </Box>
