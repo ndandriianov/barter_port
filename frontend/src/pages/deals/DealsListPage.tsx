@@ -1,9 +1,20 @@
+import { useEffect, useState } from "react";
 import { Link as RouterLink, useSearchParams } from "react-router-dom";
 import { Box, Button, ButtonGroup, Paper, Typography } from "@mui/material";
 import type { DealStatus } from "@/features/deals/model/types.ts";
 import DealsList from "@/widgets/deals/DealsList";
 
 type DealsStatusTab = "all" | DealStatus;
+type DealsStatusCounts = Partial<Record<DealsStatusTab, number>>;
+const orderedStatusTabs: DealsStatusTab[] = [
+  "all",
+  "LookingForParticipants",
+  "Discussion",
+  "Confirmed",
+  "Completed",
+  "Cancelled",
+  "Failed",
+];
 
 const statusTabMeta: Record<DealsStatusTab, { title: string; description: string }> = {
   all: {
@@ -48,14 +59,34 @@ function isDealsStatusTab(value: string | null): value is DealsStatusTab {
 
 function DealsListPage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const [availableTabs, setAvailableTabs] = useState<DealsStatusTab[] | null>(null);
+  const [statusCounts, setStatusCounts] = useState<DealsStatusCounts>({});
   const rawStatus = searchParams.get("status");
   const statusTab: DealsStatusTab = isDealsStatusTab(rawStatus) ? rawStatus : "all";
+  const visibleTabs = availableTabs ?? orderedStatusTabs;
 
   const handleStatusTabChange = (nextStatus: DealsStatusTab) => {
     const nextParams = new URLSearchParams(searchParams);
     nextParams.set("status", nextStatus);
     setSearchParams(nextParams);
   };
+
+  useEffect(() => {
+    if (!availableTabs || availableTabs.includes(statusTab)) {
+      return;
+    }
+
+    const nextStatus = availableTabs[0];
+    const nextParams = new URLSearchParams(searchParams);
+
+    if (nextStatus) {
+      nextParams.set("status", nextStatus);
+    } else {
+      nextParams.delete("status");
+    }
+
+    setSearchParams(nextParams);
+  }, [availableTabs, searchParams, setSearchParams, statusTab]);
 
   return (
     <Box maxWidth={1200} mx="auto">
@@ -75,59 +106,35 @@ function DealsListPage() {
         </Box>
       </Box>
 
-      <Paper variant="outlined" sx={{ p: 1, mb: 3 }}>
-        <ButtonGroup
-          fullWidth
-          variant="text"
-          sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)", xl: "repeat(4, 1fr)" } }}
-        >
-          <Button variant={statusTab === "all" ? "contained" : "text"} onClick={() => handleStatusTabChange("all")}>
-            Все
-          </Button>
-          <Button
-            variant={statusTab === "LookingForParticipants" ? "contained" : "text"}
-            onClick={() => handleStatusTabChange("LookingForParticipants")}
+      {visibleTabs.length > 0 && (
+        <Paper variant="outlined" sx={{ p: 1, mb: 3 }}>
+          <ButtonGroup
+            fullWidth
+            variant="text"
+            sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)", xl: "repeat(4, 1fr)" } }}
           >
-            В поиске участников
-          </Button>
-          <Button
-            variant={statusTab === "Discussion" ? "contained" : "text"}
-            onClick={() => handleStatusTabChange("Discussion")}
-          >
-            Обсуждение
-          </Button>
-          <Button
-            variant={statusTab === "Confirmed" ? "contained" : "text"}
-            onClick={() => handleStatusTabChange("Confirmed")}
-          >
-            Подтверждены
-          </Button>
-          <Button
-            variant={statusTab === "Completed" ? "contained" : "text"}
-            onClick={() => handleStatusTabChange("Completed")}
-          >
-            Завершены
-          </Button>
-          <Button
-            variant={statusTab === "Cancelled" ? "contained" : "text"}
-            onClick={() => handleStatusTabChange("Cancelled")}
-          >
-            Отменены
-          </Button>
-          <Button
-            variant={statusTab === "Failed" ? "contained" : "text"}
-            onClick={() => handleStatusTabChange("Failed")}
-          >
-            Не состоялись
-          </Button>
-        </ButtonGroup>
-      </Paper>
+            {visibleTabs.map((tab) => (
+              <Button
+                key={tab}
+                variant={statusTab === tab ? "contained" : "text"}
+                onClick={() => handleStatusTabChange(tab)}
+              >
+                {statusTabMeta[tab].title} {statusCounts[tab] ?? 0}
+              </Button>
+            ))}
+          </ButtonGroup>
+        </Paper>
+      )}
 
       <Typography variant="h5" fontWeight={700} mb={2}>
         {statusTabMeta[statusTab].title}
       </Typography>
 
-      <DealsList statusFilter={statusTab} />
+      <DealsList
+        statusFilter={statusTab}
+        onAvailableStatusTabsChange={setAvailableTabs}
+        onStatusCountsChange={setStatusCounts}
+      />
     </Box>
   );
 }
