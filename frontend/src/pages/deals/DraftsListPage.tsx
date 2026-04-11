@@ -2,9 +2,13 @@ import { useSearchParams } from "react-router-dom";
 import { Box, Button, ButtonGroup, Paper, Typography } from "@mui/material";
 import DraftsList from "@/widgets/deals/DraftsList";
 
-type DraftsTab = "others" | "mine";
+type DraftsTab = "all" | "others" | "mine";
 
 const tabMeta: Record<DraftsTab, { title: string; description: string }> = {
+  all: {
+    title: "Все",
+    description: "Все ваши черновики договоров: и входящие предложения, и ваши собственные исходящие приложения.",
+  },
   others: {
     title: "Входящие предложения",
     description: "Черновики других пользователей, в которых участвуют ваши объявления.",
@@ -16,13 +20,13 @@ const tabMeta: Record<DraftsTab, { title: string; description: string }> = {
 };
 
 function isDraftsTab(value: string | null): value is DraftsTab {
-  return value === "others" || value === "mine";
+  return value === "all" || value === "others" || value === "mine";
 }
 
 function DraftsListPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const rawTab = searchParams.get("tab");
-  const tab: DraftsTab = isDraftsTab(rawTab) ? rawTab : "others";
+  const tab: DraftsTab = isDraftsTab(rawTab) ? rawTab : "all";
 
   const handleTabChange = (nextTab: DraftsTab) => {
     const nextParams = new URLSearchParams(searchParams);
@@ -45,8 +49,14 @@ function DraftsListPage() {
         <ButtonGroup
           fullWidth
           variant="text"
-          sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(2, 1fr)" } }}
+          sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" } }}
         >
+          <Button
+            variant={tab === "all" ? "contained" : "text"}
+            onClick={() => handleTabChange("all")}
+          >
+            Все
+          </Button>
           <Button
             variant={tab === "others" ? "contained" : "text"}
             onClick={() => handleTabChange("others")}
@@ -62,9 +72,11 @@ function DraftsListPage() {
         </ButtonGroup>
       </Paper>
 
-      <Typography variant="h5" fontWeight={700} mb={2}>
-        {tabMeta[tab].title}
-      </Typography>
+      <Box mb={2}>
+        <Typography variant="h5" fontWeight={700}>
+          {tabMeta[tab].title}
+        </Typography>
+      </Box>
 
       <DraftsList
         mode={tab}

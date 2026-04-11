@@ -3,6 +3,7 @@ import { Link as RouterLink } from "react-router-dom";
 import {
   Alert,
   Box,
+  Chip,
   CircularProgress,
   FormControl,
   IconButton,
@@ -25,7 +26,7 @@ import type {Draft} from "@/features/deals/model/types.ts";
 import type {User} from "@/features/users/model/types.ts";
 
 interface DraftsListProps {
-  mode: "mine" | "others";
+  mode: "all" | "mine" | "others";
   selectedOfferId: string;
   onSelectedOfferIdChange: (offerId: string) => void;
 }
@@ -33,8 +34,24 @@ interface DraftsListProps {
 function DraftsList({ mode, selectedOfferId, onSelectedOfferIdChange }: DraftsListProps) {
   const dispatch = useAppDispatch();
   const { data: currentUser } = usersApi.useGetCurrentUserQuery();
-  const { data, isLoading, error, refetch, isFetching } = dealsApi.useGetMyDraftDealsQuery({
-    createdByMe: mode === "mine",
+  const {
+    data: mineData,
+    isLoading: isMineLoading,
+    error: mineError,
+    refetch: refetchMine,
+    isFetching: isMineFetching,
+  } = dealsApi.useGetMyDraftDealsQuery({
+    createdByMe: true,
+    participating: true,
+  });
+  const {
+    data: othersData,
+    isLoading: isOthersLoading,
+    error: othersError,
+    refetch: refetchOthers,
+    isFetching: isOthersFetching,
+  } = dealsApi.useGetMyDraftDealsQuery({
+    createdByMe: false,
     participating: true,
   });
   const {
@@ -47,14 +64,45 @@ function DraftsList({ mode, selectedOfferId, onSelectedOfferIdChange }: DraftsLi
     cursor_limit: 100,
   });
 
+  const mineDrafts = mineData ?? [];
+  const incomingRawDrafts = othersData ?? [];
+
+  const draftIdsFromMine = useMemo(
+    () => new Set(mineDrafts.map((draft) => draft.id)),
+    [mineDrafts],
+  );
+
+  const baseDrafts = useMemo(() => {
+    if (mode === "mine") {
+      return mineDrafts;
+    }
+
+    if (mode === "others") {
+      return incomingRawDrafts.filter((draft) => !draftIdsFromMine.has(draft.id));
+    }
+
+    const merged = new Map<string, typeof mineDrafts[number]>();
+
+    mineDrafts.forEach((draft) => {
+      merged.set(draft.id, draft);
+    });
+    incomingRawDrafts.forEach((draft) => {
+      if (!merged.has(draft.id)) {
+        merged.set(draft.id, draft);
+      }
+    });
+
+    return Array.from(merged.values());
+  }, [draftIdsFromMine, incomingRawDrafts, mineDrafts, mode]);
+
   const draftIds = useMemo(
-    () => (data ?? []).map((draft) => draft.id),
-    [data],
+    () => baseDrafts.map((draft) => draft.id),
+    [baseDrafts],
   );
 
   const participantIds = useMemo(
-    () => [...new Set((data ?? []).flatMap((draft) => draft.participants))],
-    [data],
+    () => [...new Set(baseDrafts.flatMap((draft) => draft.participants))],
+    [baseDrafts],
   );
 
   useEffect(() => {
@@ -119,40 +167,72 @@ function DraftsList({ mode, selectedOfferId, onSelectedOfferIdChange }: DraftsLi
           })
           .join(", ");
 
+  const getDraftDirection = (draftId: string): "incoming" | "outgoing" => {
+    const details = draftDetailsById[draftId];
+    if (details && currentUser) {
+      return details.authorId === currentUser.id ? "outgoing" : "incoming";
+    }
+
+    if (draftIdsFromMine.has(draftId)) {
+      return "outgoing";
+    }
+
+    return "incoming";
+  };
+
   const filteredDrafts = useMemo(() => {
-    if (!data) {
+    if (baseDrafts.length === 0) {
       return [];
     }
 
-    const draftsByMode = mode === "mine"
-      ? data
-      : data.filter((draft) => {
-          if (!currentUser) {
-            return true;
-          }
-
-          const details = draftDetailsById[draft.id];
-          if (!details) {
-            return true;
-          }
-
-          return details.authorId !== currentUser.id;
-        });
-
     if (!selectedOfferId) {
-      return draftsByMode;
+      return baseDrafts;
     }
 
-    return draftsByMode.filter((draft) =>
+    return baseDrafts.filter((draft) =>
       draftDetailsById[draft.id]?.offers.some((offer) => offer.id === selectedOfferId),
     );
-  }, [currentUser, data, draftDetailsById, mode, selectedOfferId]);
+  }, [baseDrafts, draftDetailsById, selectedOfferId]);
 
   const isDraftDetailsLoading = selectedOfferId !== "" &&
     draftIds.some((draftId) => {
       const query = draftQueryStatesById[draftId];
       return !draftDetailsById[draftId] || query?.isLoading || query?.isUninitialized;
     });
+
+  const isLoading = mode === "all"
+    ? isMineLoading || isOthersLoading
+    : mode === "mine"
+      ? isMineLoading
+      : isOthersLoading;
+
+  const isFetching = mode === "all"
+    ? isMineFetching || isOthersFetching
+    : mode === "mine"
+      ? isMineFetching
+      : isOthersFetching;
+
+  const error = mode === "all"
+    ? mineError ?? othersError
+    : mode === "mine"
+      ? mineError
+      : othersError;
+
+  const handleRefetch = () => {
+    if (mode !== "others") {
+      void refetchMine();
+    }
+
+    if (mode !== "mine") {
+      void refetchOthers();
+    }
+  };
+
+  const emptyMessage = mode === "all"
+    ? "У вас пока нет черновиков"
+    : mode === "mine"
+      ? "У вас пока нет своих черновиков"
+      : "Пока нет чужих черновиков с вашим участием";
 
   if (isLoading) {
     return (
@@ -166,7 +246,15 @@ function DraftsList({ mode, selectedOfferId, onSelectedOfferIdChange }: DraftsLi
     return <Alert severity="error">Не удалось загрузить черновики</Alert>;
   }
 
-  if (!data) {
+  if (mode === "all" && !mineData && !othersData) {
+    return <Alert severity="info">Черновики недоступны</Alert>;
+  }
+
+  if (mode === "mine" && !mineData) {
+    return <Alert severity="info">Черновики недоступны</Alert>;
+  }
+
+  if (mode === "others" && !othersData) {
     return <Alert severity="info">Черновики недоступны</Alert>;
   }
 
@@ -192,7 +280,7 @@ function DraftsList({ mode, selectedOfferId, onSelectedOfferIdChange }: DraftsLi
 
         <Tooltip title="Обновить">
           <span>
-            <IconButton onClick={() => refetch()} disabled={isFetching} size="small">
+            <IconButton onClick={handleRefetch} disabled={isFetching} size="small">
               <RefreshIcon />
             </IconButton>
           </span>
@@ -209,17 +297,15 @@ function DraftsList({ mode, selectedOfferId, onSelectedOfferIdChange }: DraftsLi
         <Box display="flex" justifyContent="center" py={6}>
           <CircularProgress />
         </Box>
-      ) : data.length === 0 ? (
+      ) : baseDrafts.length === 0 ? (
         <Typography color="text.secondary" textAlign="center" py={4}>
-          {mode === "mine" ? "У вас пока нет своих черновиков" : "Пока нет чужих черновиков с вашим участием"}
+          {emptyMessage}
         </Typography>
       ) : filteredDrafts.length === 0 ? (
         <Typography color="text.secondary" textAlign="center" py={4}>
           {selectedOfferId
             ? "Черновики с выбранным объявлением не найдены"
-            : mode === "mine"
-              ? "У вас пока нет своих черновиков"
-              : "Пока нет чужих черновиков с вашим участием"}
+            : emptyMessage}
         </Typography>
       ) : (
         <List disablePadding>
@@ -228,7 +314,21 @@ function DraftsList({ mode, selectedOfferId, onSelectedOfferIdChange }: DraftsLi
               <ListItemButton component={RouterLink} to={`/deals/drafts/${draft.id}`}>
                 <ListItemText
                   primary={draft.name ?? "—"}
-                  secondary={getParticipantNames(draft.participants)}
+                  secondary={(
+                    <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
+                      <Typography variant="body2" color="text.secondary">
+                        {getParticipantNames(draft.participants)}
+                      </Typography>
+                      {mode === "all" && (
+                        <Chip
+                          label={getDraftDirection(draft.id) === "incoming" ? "Входящий" : "Исходящий"}
+                          size="small"
+                          color={getDraftDirection(draft.id) === "incoming" ? "warning" : "success"}
+                          variant="outlined"
+                        />
+                      )}
+                    </Box>
+                  )}
                 />
               </ListItemButton>
             </ListItem>
