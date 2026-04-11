@@ -18,9 +18,6 @@ import (
 	"github.com/testcontainers/testcontainers-go/network"
 )
 
-// globalFixture — единый стек контейнеров, разделяемый всеми тестами пакета.
-var globalFixture *Fixture
-
 func TestMain(m *testing.M) {
 	os.Exit(runTests(m))
 }

@@ -71,6 +71,9 @@ type Fixture struct {
 	UsersURL string
 }
 
+// globalFixture — единый стек контейнеров, разделяемый всеми тестами пакета.
+var globalFixture *Fixture
+
 // TerminateAll останавливает все контейнеры и удаляет сеть.
 // Используется в TestMain, где нет *testing.T.
 func (f *Fixture) TerminateAll(ctx context.Context) error {
@@ -132,7 +135,7 @@ func NewFixture(t *testing.T, opts FixtureOptions) *Fixture {
 		req.Env = serviceEnv()
 		req.Env["CONFIG_SERVICE"] = "/app/config/auth.yaml"
 		req.Env["JWT_REFRESH_SECRET"] = testJWTRefreshSecret
-		req.Env["MAILER_BYPASS"] = "true"
+		req.Env["MAILER_BYPASS"] = "true" // TODO: в проде надо false
 		f.Auth = startContainer(ctx, t, req)
 		f.AuthURL = containerBaseURL(ctx, t, f.Auth, authHTTPPort)
 	}
