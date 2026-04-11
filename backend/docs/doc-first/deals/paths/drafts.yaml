@@ -198,6 +198,56 @@ dealsDraftsById:
             schema:
               $ref: '../components/responses.yaml#/ErrorResponse'
 
+  delete:
+    tags:
+      - drafts
+    summary: Удалить черновой договор
+    description: |
+      Удаляет черновой договор. Доступно любому участнику чернового договора.
+    operationId: deleteDraftDeal
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - name: draftId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: OK
+      '400':
+        description: Invalid request
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: Forbidden. User is not a participant of the draft deal'
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Draft deal not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
 
 dealsDraftsCancel:
   patch:
