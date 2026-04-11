@@ -3,6 +3,7 @@ import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import { Alert, Box, Button, CircularProgress, Divider, Typography } from "@mui/material";
 import offersApi from "@/features/offers/api/offersApi";
 import usersApi from "@/features/users/api/usersApi";
+import useDraftOfferCounts from "@/features/deals/model/useDraftOfferCounts.ts";
 import reviewsApi from "@/features/reviews/api/reviewsApi.ts";
 import OfferCard from "@/widgets/offers/OfferCard";
 import RespondToOfferModal from "@/widgets/offers/RespondToOfferModal";
@@ -20,6 +21,8 @@ function OfferPage() {
   const { data: reviewsSummary } = reviewsApi.useGetOfferReviewsSummaryQuery(offerId ?? "", {
     skip: !offerId,
   });
+  const isOwnOffer = !!meData && !!offer && offer.authorId === meData.id;
+  const { countsByOfferId } = useDraftOfferCounts({ enabled: isOwnOffer });
 
   if (!offerId) return <Alert severity="warning">Объявление не найдено</Alert>;
 
@@ -52,7 +55,7 @@ function OfferPage() {
         {offer.name}
       </Typography>
 
-      <OfferCard offer={offer} />
+      <OfferCard offer={offer} draftCount={isOwnOffer ? (countsByOfferId[offer.id] ?? 0) : 0} />
 
       <Divider sx={{ my: 3 }} />
 
