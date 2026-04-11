@@ -24,6 +24,7 @@ import type { DealStatus, GetDealsResponse } from "@/features/deals/model/types.
 
 type DealListItem = GetDealsResponse[number];
 type DealsStatusFilter = "all" | DealStatus;
+type DealsStatusCounts = Partial<Record<DealsStatusFilter, number>>;
 
 const dealStatusOrder: DealStatus[] = [
   "LookingForParticipants",
@@ -45,9 +46,11 @@ const dealStatusLabels: Record<DealStatus, string> = {
 
 interface DealsListProps {
   statusFilter: DealsStatusFilter;
+  onAvailableStatusTabsChange?: (tabs: DealsStatusFilter[]) => void;
+  onStatusCountsChange?: (counts: DealsStatusCounts) => void;
 }
 
-function DealsList({ statusFilter }: DealsListProps) {
+function DealsList({ statusFilter, onAvailableStatusTabsChange, onStatusCountsChange }: DealsListProps) {
   const dispatch = useAppDispatch();
   const [myOnly, setMyOnly] = useState(false);
 
@@ -115,6 +118,38 @@ function DealsList({ statusFilter }: DealsListProps) {
     [groupedDeals],
   );
 
+  const availableStatusTabs = useMemo<DealsStatusFilter[]>(() => {
+    if (!data || data.length === 0) {
+      return [];
+    }
+
+    const tabs: DealsStatusFilter[] = ["all"];
+
+    dealStatusOrder.forEach((status) => {
+      if (data.some((deal) => deal.status === status)) {
+        tabs.push(status);
+      }
+    });
+
+    return tabs;
+  }, [data]);
+
+  const statusCounts = useMemo<DealsStatusCounts>(() => {
+    if (!data || data.length === 0) {
+      return {};
+    }
+
+    return {
+      all: data.length,
+      LookingForParticipants: data.filter((deal) => deal.status === "LookingForParticipants").length,
+      Discussion: data.filter((deal) => deal.status === "Discussion").length,
+      Confirmed: data.filter((deal) => deal.status === "Confirmed").length,
+      Completed: data.filter((deal) => deal.status === "Completed").length,
+      Cancelled: data.filter((deal) => deal.status === "Cancelled").length,
+      Failed: data.filter((deal) => deal.status === "Failed").length,
+    };
+  }, [data]);
+
   const getParticipantNames = (ids: string[]) =>
     ids.length === 0
       ? "имя не указано"
@@ -124,6 +159,14 @@ function DealsList({ statusFilter }: DealsListProps) {
             return name ? name : "имя не указано";
           })
           .join(", ");
+
+  useEffect(() => {
+    onAvailableStatusTabsChange?.(availableStatusTabs);
+  }, [availableStatusTabs, onAvailableStatusTabsChange]);
+
+  useEffect(() => {
+    onStatusCountsChange?.(statusCounts);
+  }, [onStatusCountsChange, statusCounts]);
 
   if (isLoading) {
     return (
