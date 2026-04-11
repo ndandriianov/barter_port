@@ -99,6 +99,17 @@ const dealsApi = createApi({
       ],
     }),
 
+    deleteDraftDeal: builder.mutation<void, string>({
+      query: (draftId) => ({
+        url: `/deals/drafts/${draftId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (_result, _error, draftId) => [
+        {type: "DraftDeals", id: draftId},
+        "DraftDeals",
+      ],
+    }),
+
     getDeals: builder.query<GetDealsResponse, GetDealsParams | void>({
       query: (params) =>
         params
