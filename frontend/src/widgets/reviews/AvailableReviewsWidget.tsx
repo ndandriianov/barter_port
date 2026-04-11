@@ -1,4 +1,3 @@
-import { useEffect, useMemo } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import {
   Alert,
@@ -7,69 +6,24 @@ import {
   CircularProgress,
   Stack,
 } from "@mui/material";
-import dealsApi from "@/features/deals/api/dealsApi.ts";
-import reviewsApi from "@/features/reviews/api/reviewsApi.ts";
 import PendingReviewCard from "@/widgets/reviews/PendingReviewCard.tsx";
-import { useAppDispatch, useAppSelector } from "@/hooks/redux.ts";
+import usePendingReviews from "@/features/reviews/model/usePendingReviews.ts";
 
 interface AvailableReviewsWidgetProps {
   selectedDealId?: string | null;
 }
 
 function AvailableReviewsWidget({ selectedDealId }: AvailableReviewsWidgetProps) {
-  const dispatch = useAppDispatch();
-  const { data: deals, isLoading, error } = dealsApi.useGetDealsQuery({ my: true });
+  const {
+    completedDeals,
+    filteredReviews,
+    isDealsLoading,
+    dealsError,
+    isPendingLoading,
+    hasPendingErrors,
+  } = usePendingReviews({ selectedDealId });
 
-  const completedDeals = useMemo(
-    () => (deals ?? []).filter((deal) => deal.status === "Completed"),
-    [deals],
-  );
-
-  useEffect(() => {
-    if (completedDeals.length === 0) {
-      return;
-    }
-
-    const subscriptions = completedDeals.map((deal) =>
-      dispatch(reviewsApi.endpoints.getDealPendingReviews.initiate(deal.id)),
-    );
-
-    return () => {
-      subscriptions.forEach((subscription) => subscription.unsubscribe());
-    };
-  }, [completedDeals, dispatch]);
-
-  const pendingByDeal = useAppSelector((state) =>
-    completedDeals.map((deal) => ({
-      deal,
-      query: reviewsApi.endpoints.getDealPendingReviews.select(deal.id)(state),
-    })),
-  );
-
-  const pendingReviews = useMemo(
-    () =>
-      pendingByDeal.flatMap(({ deal, query }) =>
-        (query.data ?? [])
-          .filter((review) => review.canCreate)
-          .map((review) => ({ deal, review })),
-      ),
-    [pendingByDeal],
-  );
-
-  const filteredReviews = useMemo(
-    () =>
-      selectedDealId
-        ? pendingReviews.filter(({ deal }) => deal.id === selectedDealId)
-        : pendingReviews,
-    [pendingReviews, selectedDealId],
-  );
-
-  const isPendingLoading =
-    completedDeals.length > 0 &&
-    pendingByDeal.some(({ query }) => query.isLoading || query.isUninitialized);
-  const hasPendingErrors = pendingByDeal.some(({ query }) => query.isError);
-
-  if (isLoading) {
+  if (isDealsLoading) {
     return (
       <Box display="flex" justifyContent="center" py={6}>
         <CircularProgress />
@@ -77,7 +31,7 @@ function AvailableReviewsWidget({ selectedDealId }: AvailableReviewsWidgetProps)
     );
   }
 
-  if (error) {
+  if (dealsError) {
     return <Alert severity="error">Не удалось загрузить завершенные сделки</Alert>;
   }
 
