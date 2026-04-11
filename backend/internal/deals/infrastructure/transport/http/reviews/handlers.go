@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 
 	"barter-port/contracts/openapi/deals/types"
-	dealssvc "barter-port/internal/deals/application/deals"
+	reviewssvc "barter-port/internal/deals/application/reviews"
 	"barter-port/internal/deals/domain"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/httpx"
@@ -18,10 +18,10 @@ import (
 
 type Handlers struct {
 	log          *slog.Logger
-	dealsService *dealssvc.Service
+	dealsService *reviewssvc.Service
 }
 
-func NewHandlers(log *slog.Logger, dealsService *dealssvc.Service) *Handlers {
+func NewHandlers(log *slog.Logger, dealsService *reviewssvc.Service) *Handlers {
 	return &Handlers{
 		log:          log,
 		dealsService: dealsService,

@@ -1,6 +1,7 @@
-package deals
+package joins
 
 import (
+	appdeals "barter-port/internal/deals/application/deals"
 	"barter-port/internal/deals/domain"
 	"barter-port/internal/deals/domain/enums"
 	"barter-port/internal/deals/domain/htypes"
@@ -13,10 +14,18 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
+type Service struct {
+	*appdeals.Service
+}
+
+func NewService(base *appdeals.Service) *Service {
+	return &Service{Service: base}
+}
+
 // JoinDeal creates a join request for the specified user and deal.
 func (s *Service) JoinDeal(ctx context.Context, dealID, userID uuid.UUID) error {
-	return db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
-		deal, err := s.dealsRepository.GetDealByID(ctx, tx, dealID)
+	return db.RunInTx(ctx, s.DB(), func(ctx context.Context, tx pgx.Tx) error {
+		deal, err := s.DealsRepository().GetDealByID(ctx, tx, dealID)
 		if err != nil {
 			return err
 		}
@@ -25,7 +34,7 @@ func (s *Service) JoinDeal(ctx context.Context, dealID, userID uuid.UUID) error 
 			return domain.ErrInvalidDealStatus
 		}
 
-		if err = s.ensureNoPendingFailureReview(ctx, tx, dealID); err != nil {
+		if err = s.EnsureNoPendingFailureReview(ctx, tx, dealID); err != nil {
 			return err
 		}
 
@@ -35,7 +44,7 @@ func (s *Service) JoinDeal(ctx context.Context, dealID, userID uuid.UUID) error 
 			}
 		}
 
-		err = s.joinsRepository.CreateJoinRequest(ctx, tx, userID, dealID)
+		err = s.JoinsRepository().CreateJoinRequest(ctx, tx, userID, dealID)
 		if repox.IsUniqueViolation(err) {
 			return nil
 		}
@@ -45,8 +54,8 @@ func (s *Service) JoinDeal(ctx context.Context, dealID, userID uuid.UUID) error 
 
 // LeaveDeal removes user's join request from the deal.
 func (s *Service) LeaveDeal(ctx context.Context, dealID, userID uuid.UUID) error {
-	return db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
-		deal, err := s.dealsRepository.GetDealByID(ctx, tx, dealID)
+	return db.RunInTx(ctx, s.DB(), func(ctx context.Context, tx pgx.Tx) error {
+		deal, err := s.DealsRepository().GetDealByID(ctx, tx, dealID)
 		if err != nil {
 			return err
 		}
@@ -55,7 +64,7 @@ func (s *Service) LeaveDeal(ctx context.Context, dealID, userID uuid.UUID) error
 			return domain.ErrInvalidDealStatus
 		}
 
-		if err = s.ensureNoPendingFailureReview(ctx, tx, dealID); err != nil {
+		if err = s.EnsureNoPendingFailureReview(ctx, tx, dealID); err != nil {
 			return err
 		}
 
@@ -67,10 +76,10 @@ func (s *Service) LeaveDeal(ctx context.Context, dealID, userID uuid.UUID) error
 		}
 
 		if userParticipating {
-			return s.dealsRepository.DeleteParticipant(ctx, tx, dealID, userID)
+			return s.DealsRepository().DeleteParticipant(ctx, tx, dealID, userID)
 		}
 
-		return s.joinsRepository.DeleteJoinRequest(ctx, tx, userID, dealID)
+		return s.JoinsRepository().DeleteJoinRequest(ctx, tx, userID, dealID)
 	})
 }
 
@@ -78,21 +87,21 @@ func (s *Service) LeaveDeal(ctx context.Context, dealID, userID uuid.UUID) error
 func (s *Service) GetDealJoinRequests(ctx context.Context, dealID, userID uuid.UUID) ([]htypes.JoinRequestWithVoters, error) {
 	var result []htypes.JoinRequestWithVoters
 
-	txErr := db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
-		deal, err := s.dealsRepository.GetDealByID(ctx, tx, dealID)
+	txErr := db.RunInTx(ctx, s.DB(), func(ctx context.Context, tx pgx.Tx) error {
+		deal, err := s.DealsRepository().GetDealByID(ctx, tx, dealID)
 		if err != nil {
 			return err
 		}
 
-		if !containsUserID(deal.Participants, userID) {
+		if !appdeals.ContainsUserID(deal.Participants, userID) {
 			return domain.ErrForbidden
 		}
 
-		requests, err := s.joinsRepository.GetJoinRequestsByDealID(ctx, tx, dealID)
+		requests, err := s.JoinsRepository().GetJoinRequestsByDealID(ctx, tx, dealID)
 		if err != nil {
 			return err
 		}
-		votes, err := s.joinsRepository.GetJoinRequestVotesByDealID(ctx, tx, dealID)
+		votes, err := s.JoinsRepository().GetJoinRequestVotesByDealID(ctx, tx, dealID)
 		if err != nil {
 			return err
 		}
@@ -123,8 +132,8 @@ func (s *Service) GetDealJoinRequests(ctx context.Context, dealID, userID uuid.U
 
 // ProcessJoinRequest saves participant's vote and applies the final decision when all participants voted.
 func (s *Service) ProcessJoinRequest(ctx context.Context, dealID, requestedUserID, voterID uuid.UUID, accept bool) error {
-	return db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
-		deal, err := s.dealsRepository.GetDealByID(ctx, tx, dealID)
+	return db.RunInTx(ctx, s.DB(), func(ctx context.Context, tx pgx.Tx) error {
+		deal, err := s.DealsRepository().GetDealByID(ctx, tx, dealID)
 		if err != nil {
 			return err
 		}
@@ -132,15 +141,15 @@ func (s *Service) ProcessJoinRequest(ctx context.Context, dealID, requestedUserI
 			return domain.ErrInvalidDealStatus
 		}
 
-		if err = s.ensureNoPendingFailureReview(ctx, tx, dealID); err != nil {
+		if err = s.EnsureNoPendingFailureReview(ctx, tx, dealID); err != nil {
 			return err
 		}
 
-		if !containsUserID(deal.Participants, voterID) {
+		if !appdeals.ContainsUserID(deal.Participants, voterID) {
 			return domain.ErrForbidden
 		}
 
-		requests, err := s.joinsRepository.GetJoinRequestsByDealID(ctx, tx, dealID)
+		requests, err := s.JoinsRepository().GetJoinRequestsByDealID(ctx, tx, dealID)
 		if err != nil {
 			return err
 		}
@@ -149,18 +158,18 @@ func (s *Service) ProcessJoinRequest(ctx context.Context, dealID, requestedUserI
 		}
 
 		if !accept {
-			err = s.joinsRepository.DeleteJoinRequest(ctx, tx, requestedUserID, dealID)
+			err = s.JoinsRepository().DeleteJoinRequest(ctx, tx, requestedUserID, dealID)
 			if err != nil {
 				return fmt.Errorf("delete join request: %w", err)
 			}
 			return nil
 		}
 
-		if err = s.joinsRepository.UpsertJoinRequestVote(ctx, tx, requestedUserID, dealID, voterID); err != nil {
+		if err = s.JoinsRepository().UpsertJoinRequestVote(ctx, tx, requestedUserID, dealID, voterID); err != nil {
 			return fmt.Errorf("upsert join request vote: %w", err)
 		}
 
-		votes, err := s.joinsRepository.GetJoinRequestVotesByDealID(ctx, tx, dealID)
+		votes, err := s.JoinsRepository().GetJoinRequestVotesByDealID(ctx, tx, dealID)
 		if err != nil {
 			return err
 		}
@@ -173,23 +182,14 @@ func (s *Service) ProcessJoinRequest(ctx context.Context, dealID, requestedUserI
 		}
 
 		if votesForRequestedUser == len(deal.Participants) {
-			if err = s.joinsRepository.AddParticipant(ctx, tx, dealID, requestedUserID); err != nil {
+			if err = s.JoinsRepository().AddParticipant(ctx, tx, dealID, requestedUserID); err != nil {
 				return fmt.Errorf("add participant from join request: %w", err)
 			}
-			return s.joinsRepository.DeleteJoinRequest(ctx, tx, requestedUserID, dealID)
+			return s.JoinsRepository().DeleteJoinRequest(ctx, tx, requestedUserID, dealID)
 		}
 
 		return nil
 	})
-}
-
-func containsUserID(items []uuid.UUID, userID uuid.UUID) bool {
-	for _, item := range items {
-		if item == userID {
-			return true
-		}
-	}
-	return false
 }
 
 func containsJoinRequest(items []htypes.JoinRequest, userID uuid.UUID) bool {

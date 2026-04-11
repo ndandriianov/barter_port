@@ -4,7 +4,10 @@ import (
 	dealspb "barter-port/contracts/grpc/deals/v1"
 	"barter-port/internal/deals/app"
 	dealssvc "barter-port/internal/deals/application/deals"
+	failuressvc "barter-port/internal/deals/application/failures"
+	joinssvc "barter-port/internal/deals/application/joins"
 	"barter-port/internal/deals/application/offers"
+	reviewssvc "barter-port/internal/deals/application/reviews"
 	"barter-port/internal/deals/infrastructure/repository/deals"
 	"barter-port/internal/deals/infrastructure/repository/drafts"
 	"barter-port/internal/deals/infrastructure/repository/joins"
@@ -84,6 +87,9 @@ func main() {
 	if chatsClient != nil {
 		dealsService = dealsService.WithChatsClient(chatsClient)
 	}
+	failuresService := failuressvc.NewService(dealsService)
+	joinsService := joinssvc.NewService(dealsService)
+	reviewsService := reviewssvc.NewService(dealsService)
 
 	validator, err := bootstrap.InitLocalJWTFromConfig(cfg)
 	if err != nil {
@@ -111,9 +117,9 @@ func main() {
 	offersHandlers := offersh.NewHandlers(offersService)
 	draftsHandlers := draftsh.NewHandlers(logg, dealsService)
 	dealsHandlers := dealsh.NewHandlers(logg, dealsService)
-	failuresHandlers := failuresh.NewHandlers(logg, dealsService)
-	joinsHandlers := joinsh.NewHandlers(logg, dealsService)
-	reviewsHandlers := reviewsh.NewHandlers(logg, dealsService)
+	failuresHandlers := failuresh.NewHandlers(logg, failuresService)
+	joinsHandlers := joinsh.NewHandlers(logg, joinsService)
+	reviewsHandlers := reviewsh.NewHandlers(logg, reviewsService)
 	router := transporthttp.NewRouter(logg, validator, offersHandlers, draftsHandlers, dealsHandlers, failuresHandlers, joinsHandlers, reviewsHandlers)
 
 	port := bootstrap.InitPortStringFromConfig(cfg, 8080)

@@ -64,6 +64,38 @@ func (s *Service) WithLogger(logger *slog.Logger) *Service {
 	return s
 }
 
+func (s *Service) DB() *pgxpool.Pool {
+	return s.db
+}
+
+func (s *Service) DraftsRepository() *drafts.Repository {
+	return s.draftsRepository
+}
+
+func (s *Service) DealsRepository() *deals.Repository {
+	return s.dealsRepository
+}
+
+func (s *Service) JoinsRepository() *joins.Repository {
+	return s.joinsRepository
+}
+
+func (s *Service) OffersRepository() *offers.Repository {
+	return s.offersRepository
+}
+
+func (s *Service) ChatsClient() chatspb.ChatsServiceClient {
+	return s.chatsClient
+}
+
+func (s *Service) AdminChecker() *authkit.AdminChecker {
+	return s.adminChecker
+}
+
+func (s *Service) Logger() *slog.Logger {
+	return s.logger
+}
+
 // ================================================================================
 // CREATE DRAFT
 // ================================================================================
@@ -374,11 +406,11 @@ func (s *Service) AddDealItem(
 			return domain.ErrInvalidDealStatus
 		}
 
-		if err = s.ensureNoPendingFailureReview(ctx, tx, dealID); err != nil {
+		if err = s.EnsureNoPendingFailureReview(ctx, tx, dealID); err != nil {
 			return err
 		}
 
-		if !containsUserID(deal.Participants, userID) {
+		if !ContainsUserID(deal.Participants, userID) {
 			return domain.ErrForbidden
 		}
 
@@ -454,7 +486,7 @@ func (s *Service) UpdateDealItem(
 			return domain.ErrInvalidDealStatus
 		}
 
-		if err := s.ensureNoPendingFailureReview(ctx, tx, dealID); err != nil {
+		if err := s.EnsureNoPendingFailureReview(ctx, tx, dealID); err != nil {
 			return err
 		}
 
@@ -603,7 +635,7 @@ func (s *Service) confirmDeal(ctx context.Context, id uuid.UUID, userID uuid.UUI
 			return err
 		}
 
-		if err = s.ensureNoPendingFailureReview(ctx, tx, id); err != nil {
+		if err = s.EnsureNoPendingFailureReview(ctx, tx, id); err != nil {
 			return err
 		}
 
@@ -730,7 +762,7 @@ func (s *Service) cancelDeal(ctx context.Context, id uuid.UUID, targetStatus enu
 			return err
 		}
 
-		if err = s.ensureNoPendingFailureReview(ctx, tx, id); err != nil {
+		if err = s.EnsureNoPendingFailureReview(ctx, tx, id); err != nil {
 			return err
 		}
 
@@ -757,4 +789,25 @@ func (s *Service) cancelDeal(ctx context.Context, id uuid.UUID, targetStatus enu
 	})
 
 	return deal, err
+}
+
+func (s *Service) EnsureNoPendingFailureReview(ctx context.Context, tx pgx.Tx, dealID uuid.UUID) error {
+	hasPending, err := s.dealsRepository.HasPendingFailureReview(ctx, tx, dealID)
+	if err != nil {
+		return err
+	}
+	if hasPending {
+		return domain.ErrFailureReviewRequired
+	}
+
+	return nil
+}
+
+func ContainsUserID(items []uuid.UUID, userID uuid.UUID) bool {
+	for _, item := range items {
+		if item == userID {
+			return true
+		}
+	}
+	return false
 }

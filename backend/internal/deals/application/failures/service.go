@@ -1,7 +1,8 @@
-package deals
+package failures
 
 import (
 	chatspb "barter-port/contracts/grpc/chats/v1"
+	appdeals "barter-port/internal/deals/application/deals"
 	"barter-port/internal/deals/domain"
 	"barter-port/internal/deals/domain/enums"
 	"barter-port/internal/deals/domain/htypes"
@@ -16,6 +17,14 @@ import (
 	grpcstatus "google.golang.org/grpc/status"
 )
 
+type Service struct {
+	*appdeals.Service
+}
+
+func NewService(base *appdeals.Service) *Service {
+	return &Service{Service: base}
+}
+
 func (s *Service) GetDealsForFailureReview(
 	ctx context.Context,
 	userID uuid.UUID,
@@ -28,19 +37,19 @@ func (s *Service) GetDealsForFailureReview(
 		return nil, domain.ErrAdminOnly
 	}
 
-	return s.dealsRepository.GetFailureReviewDeals(ctx, s.db)
+	return s.DealsRepository().GetFailureReviewDeals(ctx, s.DB())
 }
 
 func (s *Service) VoteForFailure(
 	ctx context.Context,
 	dealID, voterID, votedForID uuid.UUID,
 ) error {
-	return db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
+	return db.RunInTx(ctx, s.DB(), func(ctx context.Context, tx pgx.Tx) error {
 		deal, err := s.lockedDealForFailureVote(ctx, tx, dealID)
 		if err != nil {
 			return err
 		}
-		if !containsUserID(deal.Participants, voterID) || !containsUserID(deal.Participants, votedForID) {
+		if !appdeals.ContainsUserID(deal.Participants, voterID) || !appdeals.ContainsUserID(deal.Participants, votedForID) {
 			return domain.ErrForbidden
 		}
 
@@ -48,11 +57,11 @@ func (s *Service) VoteForFailure(
 			return err
 		}
 
-		if err = s.dealsRepository.SetFailureVote(ctx, tx, dealID, voterID, votedForID); err != nil {
+		if err = s.DealsRepository().SetFailureVote(ctx, tx, dealID, voterID, votedForID); err != nil {
 			return err
 		}
 
-		votes, err := s.dealsRepository.GetFailureVotes(ctx, tx, dealID)
+		votes, err := s.DealsRepository().GetFailureVotes(ctx, tx, dealID)
 		if err != nil {
 			return err
 		}
@@ -63,17 +72,17 @@ func (s *Service) VoteForFailure(
 		}
 
 		blamedUserID := failureVoteWinner(votes, threshold)
-		return s.dealsRepository.CreateFailureRecord(ctx, tx, dealID, blamedUserID)
+		return s.DealsRepository().CreateFailureRecord(ctx, tx, dealID, blamedUserID)
 	})
 }
 
 func (s *Service) RevokeVoteForFailure(ctx context.Context, dealID, userID uuid.UUID) error {
-	return db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
+	return db.RunInTx(ctx, s.DB(), func(ctx context.Context, tx pgx.Tx) error {
 		deal, err := s.lockedDealForFailureVote(ctx, tx, dealID)
 		if err != nil {
 			return err
 		}
-		if !containsUserID(deal.Participants, userID) {
+		if !appdeals.ContainsUserID(deal.Participants, userID) {
 			return domain.ErrForbidden
 		}
 
@@ -81,7 +90,7 @@ func (s *Service) RevokeVoteForFailure(ctx context.Context, dealID, userID uuid.
 			return err
 		}
 
-		return s.dealsRepository.ClearFailureVote(ctx, tx, dealID, userID)
+		return s.DealsRepository().ClearFailureVote(ctx, tx, dealID, userID)
 	})
 }
 
@@ -94,7 +103,7 @@ func (s *Service) GetFailureVotes(
 		return nil, err
 	}
 
-	if !containsUserID(deal.Participants, userID) {
+	if !appdeals.ContainsUserID(deal.Participants, userID) {
 		isAdmin, adminErr := s.isAdmin(ctx, userID)
 		if adminErr != nil {
 			return nil, adminErr
@@ -104,7 +113,7 @@ func (s *Service) GetFailureVotes(
 		}
 	}
 
-	return s.dealsRepository.GetFailureVotes(ctx, s.db, dealID)
+	return s.DealsRepository().GetFailureVotes(ctx, s.DB(), dealID)
 }
 
 func (s *Service) GetFailureMaterials(
@@ -124,7 +133,7 @@ func (s *Service) GetFailureMaterials(
 		return htypes.FailureMaterials{}, err
 	}
 
-	hasFailure, err := s.dealsRepository.HasFailureRecord(ctx, s.db, dealID)
+	hasFailure, err := s.DealsRepository().HasFailureRecord(ctx, s.DB(), dealID)
 	if err != nil {
 		return htypes.FailureMaterials{}, err
 	}
@@ -137,11 +146,11 @@ func (s *Service) GetFailureMaterials(
 	}
 
 	result := htypes.FailureMaterials{Deal: deal}
-	if s.chatsClient == nil {
+	if s.ChatsClient() == nil {
 		return result, nil
 	}
 
-	resp, err := s.chatsClient.GetDealChatId(ctx, &chatspb.GetDealChatIdRequest{DealId: dealID.String()})
+	resp, err := s.ChatsClient().GetDealChatId(ctx, &chatspb.GetDealChatIdRequest{DealId: dealID.String()})
 	if err != nil {
 		switch grpcstatus.Code(err) {
 		case codes.NotFound, codes.Unavailable:
@@ -185,21 +194,21 @@ func (s *Service) ModeratorResolutionForFailure(
 	}
 
 	var record htypes.FailureRecord
-	err = db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
-		if _, err = s.dealsRepository.LockDeal(ctx, tx, dealID); err != nil {
+	err = db.RunInTx(ctx, s.DB(), func(ctx context.Context, tx pgx.Tx) error {
+		if _, err = s.DealsRepository().LockDeal(ctx, tx, dealID); err != nil {
 			return err
 		}
 
-		deal, err := s.dealsRepository.GetDealByID(ctx, tx, dealID)
+		deal, err := s.DealsRepository().GetDealByID(ctx, tx, dealID)
 		if err != nil {
 			return err
 		}
 
-		if failureUserID != nil && !containsUserID(deal.Participants, *failureUserID) {
+		if failureUserID != nil && !appdeals.ContainsUserID(deal.Participants, *failureUserID) {
 			return domain.ErrForbidden
 		}
 
-		record, err = s.dealsRepository.ResolveFailureRecord(
+		record, err = s.DealsRepository().ResolveFailureRecord(
 			ctx,
 			tx,
 			dealID,
@@ -221,10 +230,10 @@ func (s *Service) ModeratorResolutionForFailure(
 			}
 		}
 
-		if err = s.dealsRepository.UpdateDealStatus(ctx, tx, dealID, targetStatus); err != nil {
+		if err = s.DealsRepository().UpdateDealStatus(ctx, tx, dealID, targetStatus); err != nil {
 			return err
 		}
-		return s.dealsRepository.DeleteStatusVotes(ctx, tx, dealID)
+		return s.DealsRepository().DeleteStatusVotes(ctx, tx, dealID)
 	})
 	if err != nil {
 		return htypes.FailureRecord{}, err
@@ -242,7 +251,7 @@ func (s *Service) GetModeratorResolutionForFailure(
 		return htypes.FailureRecord{}, err
 	}
 
-	if !containsUserID(deal.Participants, userID) {
+	if !appdeals.ContainsUserID(deal.Participants, userID) {
 		isAdmin, adminErr := s.isAdmin(ctx, userID)
 		if adminErr != nil {
 			return htypes.FailureRecord{}, adminErr
@@ -252,7 +261,7 @@ func (s *Service) GetModeratorResolutionForFailure(
 		}
 	}
 
-	record, err := s.dealsRepository.GetFailureRecord(ctx, s.db, dealID)
+	record, err := s.DealsRepository().GetFailureRecord(ctx, s.DB(), dealID)
 	if errors.Is(err, domain.ErrFailureNotFound) {
 		return htypes.FailureRecord{}, domain.ErrForbidden
 	}
@@ -263,20 +272,8 @@ func (s *Service) GetModeratorResolutionForFailure(
 	return record, nil
 }
 
-func (s *Service) ensureNoPendingFailureReview(ctx context.Context, exec pgx.Tx, dealID uuid.UUID) error {
-	hasPending, err := s.dealsRepository.HasPendingFailureReview(ctx, exec, dealID)
-	if err != nil {
-		return err
-	}
-	if hasPending {
-		return domain.ErrFailureReviewRequired
-	}
-
-	return nil
-}
-
 func (s *Service) ensureFailureVotingOpen(ctx context.Context, tx pgx.Tx, dealID uuid.UUID) error {
-	record, err := s.dealsRepository.GetFailureRecord(ctx, tx, dealID)
+	record, err := s.DealsRepository().GetFailureRecord(ctx, tx, dealID)
 	if err == nil {
 		if record.ConfirmedByAdmin != nil {
 			return domain.ErrFailureAlreadyResolved
@@ -290,7 +287,7 @@ func (s *Service) ensureFailureVotingOpen(ctx context.Context, tx pgx.Tx, dealID
 }
 
 func (s *Service) lockedDealForFailureVote(ctx context.Context, tx pgx.Tx, dealID uuid.UUID) (domain.Deal, error) {
-	status, err := s.dealsRepository.LockDeal(ctx, tx, dealID)
+	status, err := s.DealsRepository().LockDeal(ctx, tx, dealID)
 	if err != nil {
 		return domain.Deal{}, err
 	}
@@ -299,15 +296,15 @@ func (s *Service) lockedDealForFailureVote(ctx context.Context, tx pgx.Tx, dealI
 		return domain.Deal{}, domain.ErrInvalidDealStatus
 	}
 
-	return s.dealsRepository.GetDealByID(ctx, tx, dealID)
+	return s.DealsRepository().GetDealByID(ctx, tx, dealID)
 }
 
 func (s *Service) isAdmin(ctx context.Context, userID uuid.UUID) (bool, error) {
-	if s.adminChecker == nil {
+	if s.AdminChecker() == nil {
 		return false, fmt.Errorf("admin checker is not configured")
 	}
 
-	return s.adminChecker.IsAdmin(ctx, userID)
+	return s.AdminChecker().IsAdmin(ctx, userID)
 }
 
 func failureVoteThreshold(participantsCount int) int {
