@@ -1,9 +1,10 @@
-package deals
+package reviews
 
 import (
 	"barter-port/contracts/openapi/deals/types"
 	"barter-port/internal/deals/domain"
 	"barter-port/internal/deals/domain/htypes"
+	dealsrepo "barter-port/internal/deals/infrastructure/repository/deals"
 	"barter-port/pkg/db"
 	"barter-port/pkg/repox"
 	"context"
@@ -13,6 +14,14 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
+
+type Repository struct {
+	*dealsrepo.Repository
+}
+
+func NewRepository(base *dealsrepo.Repository) *Repository {
+	return &Repository{Repository: base}
+}
 
 const reviewSelectCols = `id, deal_id, item_id, offer_id, author_id, provider_id, rating, comment, created_at, updated_at`
 
@@ -57,10 +66,6 @@ func scanReviews(rows pgx.Rows) ([]domain.Review, error) {
 	return result, nil
 }
 
-// ================================================================================
-// CREATE REVIEW
-// ================================================================================
-
 func (r *Repository) CreateReview(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -79,16 +84,10 @@ func (r *Repository) CreateReview(
 		if repox.IsUniqueViolation(err) {
 			return domain.Review{}, domain.ErrReviewAlreadyExists
 		}
-		// scanReview wraps ErrNoRows as ErrReviewNotFound, but INSERT won't return no-rows on success
-		// Re-check: if we got ErrReviewNotFound here it means an INSERT returned no rows (shouldn't happen)
 		return domain.Review{}, fmt.Errorf("sql create review: %w", err)
 	}
 	return review, nil
 }
-
-// ================================================================================
-// GET REVIEW BY ID
-// ================================================================================
 
 func (r *Repository) GetReviewByID(
 	ctx context.Context,
@@ -102,10 +101,6 @@ func (r *Repository) GetReviewByID(
 	}
 	return review, nil
 }
-
-// ================================================================================
-// UPDATE REVIEW
-// ================================================================================
 
 func (r *Repository) UpdateReview(
 	ctx context.Context,
@@ -129,10 +124,6 @@ func (r *Repository) UpdateReview(
 	return review, nil
 }
 
-// ================================================================================
-// DELETE REVIEW
-// ================================================================================
-
 func (r *Repository) DeleteReview(
 	ctx context.Context,
 	tx pgx.Tx,
@@ -147,10 +138,6 @@ func (r *Repository) DeleteReview(
 	}
 	return nil
 }
-
-// ================================================================================
-// GET REVIEWS BY OFFER ID
-// ================================================================================
 
 func (r *Repository) GetReviewsByOfferID(
 	ctx context.Context,
@@ -170,10 +157,6 @@ func (r *Repository) GetReviewsByOfferID(
 	return scanReviews(rows)
 }
 
-// ================================================================================
-// GET REVIEWS SUMMARY BY OFFER ID
-// ================================================================================
-
 func (r *Repository) GetReviewsSummaryByOfferID(
 	ctx context.Context,
 	exec db.DB,
@@ -181,10 +164,6 @@ func (r *Repository) GetReviewsSummaryByOfferID(
 ) (htypes.ReviewSummary, error) {
 	return r.getReviewsSummary(ctx, exec, "offer_id", offerID)
 }
-
-// ================================================================================
-// GET REVIEWS BY PROVIDER ID
-// ================================================================================
 
 func (r *Repository) GetReviewsByProviderID(
 	ctx context.Context,
@@ -204,10 +183,6 @@ func (r *Repository) GetReviewsByProviderID(
 	return scanReviews(rows)
 }
 
-// ================================================================================
-// GET REVIEWS SUMMARY BY PROVIDER ID
-// ================================================================================
-
 func (r *Repository) GetReviewsSummaryByProviderID(
 	ctx context.Context,
 	exec db.DB,
@@ -216,7 +191,6 @@ func (r *Repository) GetReviewsSummaryByProviderID(
 	return r.getReviewsSummary(ctx, exec, "provider_id", providerID)
 }
 
-// getReviewsSummary is a shared helper for offer and provider summary queries.
 func (r *Repository) getReviewsSummary(
 	ctx context.Context,
 	exec db.DB,
@@ -246,10 +220,6 @@ func (r *Repository) getReviewsSummary(
 	return s, nil
 }
 
-// ================================================================================
-// GET REVIEWS BY AUTHOR ID
-// ================================================================================
-
 func (r *Repository) GetReviewsByAuthorID(
 	ctx context.Context,
 	exec db.DB,
@@ -267,10 +237,6 @@ func (r *Repository) GetReviewsByAuthorID(
 	defer rows.Close()
 	return scanReviews(rows)
 }
-
-// ================================================================================
-// GET REVIEWS BY DEAL ID
-// ================================================================================
 
 func (r *Repository) GetReviewsByDealID(
 	ctx context.Context,
@@ -290,10 +256,6 @@ func (r *Repository) GetReviewsByDealID(
 	return scanReviews(rows)
 }
 
-// ================================================================================
-// GET REVIEWS BY DEAL ITEM ID
-// ================================================================================
-
 func (r *Repository) GetReviewsByDealItemID(
 	ctx context.Context,
 	exec db.DB,
@@ -312,12 +274,6 @@ func (r *Repository) GetReviewsByDealItemID(
 	return scanReviews(rows)
 }
 
-// ================================================================================
-// GET ITEM FOR REVIEW
-// ================================================================================
-
-// GetItemForReview returns an item by deal and item ID, used for review business logic.
-// Returns ErrItemNotFound if the item does not exist in the deal.
 func (r *Repository) GetItemForReview(
 	ctx context.Context,
 	exec db.DB,
@@ -329,7 +285,7 @@ func (r *Repository) GetItemForReview(
 		FROM items
 		WHERE deal_id = $1 AND id = $2`
 
-	item, err := scanItem(exec.QueryRow(ctx, query, dealID, itemID))
+	item, err := dealsrepo.ScanItem(exec.QueryRow(ctx, query, dealID, itemID))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return domain.Item{}, domain.ErrItemNotFound
 	}
@@ -339,12 +295,6 @@ func (r *Repository) GetItemForReview(
 	return item, nil
 }
 
-// ================================================================================
-// REVIEW EXISTS FOR USER
-// ================================================================================
-
-// ReviewExistsForUser checks whether a review already exists for a specific context and user.
-// Uses IS NOT DISTINCT FROM to correctly handle NULL comparisons for itemID and offerID.
 func (r *Repository) ReviewExistsForUser(
 	ctx context.Context,
 	exec db.DB,
@@ -370,12 +320,6 @@ func (r *Repository) ReviewExistsForUser(
 	return exists, nil
 }
 
-// ================================================================================
-// GET PENDING REVIEWS FOR PARTICIPANT
-// ================================================================================
-
-// GetPendingReviewsForParticipant returns all review eligibility entries for items
-// where the given user is the receiver in a deal. Uses a single query to avoid N+1.
 func (r *Repository) GetPendingReviewsForParticipant(
 	ctx context.Context,
 	exec db.DB,
@@ -437,7 +381,6 @@ func (r *Repository) GetPendingReviewsForParticipant(
 			DealID:      dealID,
 		}
 
-		// itemRef is set for item-only and offer+item contexts
 		if contextType == string(types.ItemOnly) || contextType == string(types.OfferItem) {
 			e.ItemID = &itemID
 		}
