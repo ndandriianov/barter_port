@@ -23,4 +23,10 @@ var (
 	ErrInvalidFailureDecision  = errors.New("invalid failure decision")
 	ErrJoinRequestNotFound     = errors.New("join request not found")
 	ErrDealParticipantsUnready = errors.New("deal participants unready")
+
+	ErrReviewNotFound          = errors.New("review not found")
+	ErrReviewAlreadyExists     = errors.New("review already exists")
+	ErrReceiverMissing         = errors.New("item has no receiver")
+	ErrProviderMissing         = errors.New("item has no provider")
+	ErrSameProviderAndReceiver = errors.New("provider and receiver are the same user")
 )
