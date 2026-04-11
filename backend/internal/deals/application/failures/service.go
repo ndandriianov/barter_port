@@ -6,6 +6,7 @@ import (
 	"barter-port/internal/deals/domain"
 	"barter-port/internal/deals/domain/enums"
 	"barter-port/internal/deals/domain/htypes"
+	failuresrepo "barter-port/internal/deals/infrastructure/repository/failures"
 	"barter-port/pkg/db"
 	"context"
 	"errors"
@@ -19,10 +20,11 @@ import (
 
 type Service struct {
 	*appdeals.Service
+	repository *failuresrepo.Repository
 }
 
-func NewService(base *appdeals.Service) *Service {
-	return &Service{Service: base}
+func NewService(base *appdeals.Service, repository *failuresrepo.Repository) *Service {
+	return &Service{Service: base, repository: repository}
 }
 
 func (s *Service) GetDealsForFailureReview(
@@ -37,7 +39,7 @@ func (s *Service) GetDealsForFailureReview(
 		return nil, domain.ErrAdminOnly
 	}
 
-	return s.DealsRepository().GetFailureReviewDeals(ctx, s.DB())
+	return s.repository.GetFailureReviewDeals(ctx, s.DB())
 }
 
 func (s *Service) VoteForFailure(
@@ -57,11 +59,11 @@ func (s *Service) VoteForFailure(
 			return err
 		}
 
-		if err = s.DealsRepository().SetFailureVote(ctx, tx, dealID, voterID, votedForID); err != nil {
+		if err = s.repository.SetFailureVote(ctx, tx, dealID, voterID, votedForID); err != nil {
 			return err
 		}
 
-		votes, err := s.DealsRepository().GetFailureVotes(ctx, tx, dealID)
+		votes, err := s.repository.GetFailureVotes(ctx, tx, dealID)
 		if err != nil {
 			return err
 		}
@@ -72,7 +74,7 @@ func (s *Service) VoteForFailure(
 		}
 
 		blamedUserID := failureVoteWinner(votes, threshold)
-		return s.DealsRepository().CreateFailureRecord(ctx, tx, dealID, blamedUserID)
+		return s.repository.CreateFailureRecord(ctx, tx, dealID, blamedUserID)
 	})
 }
 
@@ -90,7 +92,7 @@ func (s *Service) RevokeVoteForFailure(ctx context.Context, dealID, userID uuid.
 			return err
 		}
 
-		return s.DealsRepository().ClearFailureVote(ctx, tx, dealID, userID)
+		return s.repository.ClearFailureVote(ctx, tx, dealID, userID)
 	})
 }
 
@@ -113,7 +115,7 @@ func (s *Service) GetFailureVotes(
 		}
 	}
 
-	return s.DealsRepository().GetFailureVotes(ctx, s.DB(), dealID)
+	return s.repository.GetFailureVotes(ctx, s.DB(), dealID)
 }
 
 func (s *Service) GetFailureMaterials(
@@ -133,7 +135,7 @@ func (s *Service) GetFailureMaterials(
 		return htypes.FailureMaterials{}, err
 	}
 
-	hasFailure, err := s.DealsRepository().HasFailureRecord(ctx, s.DB(), dealID)
+	hasFailure, err := s.repository.HasFailureRecord(ctx, s.DB(), dealID)
 	if err != nil {
 		return htypes.FailureMaterials{}, err
 	}
@@ -195,7 +197,7 @@ func (s *Service) ModeratorResolutionForFailure(
 
 	var record htypes.FailureRecord
 	err = db.RunInTx(ctx, s.DB(), func(ctx context.Context, tx pgx.Tx) error {
-		if _, err = s.DealsRepository().LockDeal(ctx, tx, dealID); err != nil {
+		if _, err = s.repository.LockDeal(ctx, tx, dealID); err != nil {
 			return err
 		}
 
@@ -208,7 +210,7 @@ func (s *Service) ModeratorResolutionForFailure(
 			return domain.ErrForbidden
 		}
 
-		record, err = s.DealsRepository().ResolveFailureRecord(
+		record, err = s.repository.ResolveFailureRecord(
 			ctx,
 			tx,
 			dealID,
@@ -261,7 +263,7 @@ func (s *Service) GetModeratorResolutionForFailure(
 		}
 	}
 
-	record, err := s.DealsRepository().GetFailureRecord(ctx, s.DB(), dealID)
+	record, err := s.repository.GetFailureRecord(ctx, s.DB(), dealID)
 	if errors.Is(err, domain.ErrFailureNotFound) {
 		return htypes.FailureRecord{}, domain.ErrForbidden
 	}
@@ -273,7 +275,7 @@ func (s *Service) GetModeratorResolutionForFailure(
 }
 
 func (s *Service) ensureFailureVotingOpen(ctx context.Context, tx pgx.Tx, dealID uuid.UUID) error {
-	record, err := s.DealsRepository().GetFailureRecord(ctx, tx, dealID)
+	record, err := s.repository.GetFailureRecord(ctx, tx, dealID)
 	if err == nil {
 		if record.ConfirmedByAdmin != nil {
 			return domain.ErrFailureAlreadyResolved
@@ -287,7 +289,7 @@ func (s *Service) ensureFailureVotingOpen(ctx context.Context, tx pgx.Tx, dealID
 }
 
 func (s *Service) lockedDealForFailureVote(ctx context.Context, tx pgx.Tx, dealID uuid.UUID) (domain.Deal, error) {
-	status, err := s.DealsRepository().LockDeal(ctx, tx, dealID)
+	status, err := s.repository.LockDeal(ctx, tx, dealID)
 	if err != nil {
 		return domain.Deal{}, err
 	}
@@ -320,8 +322,7 @@ func failureVoteWinner(votes []htypes.FailureVote, threshold int) *uuid.UUID {
 	for _, vote := range votes {
 		counts[vote.Vote]++
 		if counts[vote.Vote] >= threshold {
-			votedFor := vote.Vote
-			return &votedFor
+			return new(vote.Vote)
 		}
 	}
 

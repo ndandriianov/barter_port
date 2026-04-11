@@ -6,6 +6,7 @@ import (
 	"barter-port/internal/deals/domain"
 	"barter-port/internal/deals/domain/enums"
 	"barter-port/internal/deals/domain/htypes"
+	reviewsrepo "barter-port/internal/deals/infrastructure/repository/reviews"
 	"barter-port/pkg/db"
 	"context"
 	"fmt"
@@ -16,10 +17,11 @@ import (
 
 type Service struct {
 	*appdeals.Service
+	repository *reviewsrepo.Repository
 }
 
-func NewService(base *appdeals.Service) *Service {
-	return &Service{Service: base}
+func NewService(base *appdeals.Service, repository *reviewsrepo.Repository) *Service {
+	return &Service{Service: base, repository: repository}
 }
 
 // CreateDealItemReview creates a review for a deal item. The review target (offer, item, or both)
@@ -51,7 +53,7 @@ func (s *Service) CreateDealItemReview(
 			return domain.ErrInvalidDealStatus
 		}
 
-		item, err := s.DealsRepository().GetItemForReview(ctx, tx, dealID, itemID)
+		item, err := s.repository.GetItemForReview(ctx, tx, dealID, itemID)
 		if err != nil {
 			return err
 		}
@@ -71,7 +73,7 @@ func (s *Service) CreateDealItemReview(
 
 		offerID, storedItemID := determineReviewContext(item)
 
-		review, err = s.DealsRepository().CreateReview(
+		review, err = s.repository.CreateReview(
 			ctx, tx,
 			dealID, userID, *item.ProviderID,
 			storedItemID, offerID,
@@ -90,7 +92,7 @@ func (s *Service) CreateDealItemReview(
 // Domain errors:
 //   - domain.ErrReviewNotFound
 func (s *Service) GetReviewByID(ctx context.Context, reviewID uuid.UUID) (domain.Review, error) {
-	return s.DealsRepository().GetReviewByID(ctx, s.DB(), reviewID)
+	return s.repository.GetReviewByID(ctx, s.DB(), reviewID)
 }
 
 // UpdateReview updates the rating and/or comment of a review.
@@ -110,7 +112,7 @@ func (s *Service) UpdateReview(
 	var review domain.Review
 
 	err := db.RunInTx(ctx, s.DB(), func(ctx context.Context, tx pgx.Tx) error {
-		existing, err := s.DealsRepository().GetReviewByID(ctx, tx, reviewID)
+		existing, err := s.repository.GetReviewByID(ctx, tx, reviewID)
 		if err != nil {
 			return err
 		}
@@ -126,7 +128,7 @@ func (s *Service) UpdateReview(
 			return domain.ErrInvalidDealStatus
 		}
 
-		review, err = s.DealsRepository().UpdateReview(ctx, tx, reviewID, rating, comment)
+		review, err = s.repository.UpdateReview(ctx, tx, reviewID, rating, comment)
 		return err
 	})
 	if err != nil {
@@ -145,7 +147,7 @@ func (s *Service) UpdateReview(
 //   - domain.ErrInvalidDealStatus - deal is not Completed
 func (s *Service) DeleteReview(ctx context.Context, userID, reviewID uuid.UUID) error {
 	return db.RunInTx(ctx, s.DB(), func(ctx context.Context, tx pgx.Tx) error {
-		existing, err := s.DealsRepository().GetReviewByID(ctx, tx, reviewID)
+		existing, err := s.repository.GetReviewByID(ctx, tx, reviewID)
 		if err != nil {
 			return err
 		}
@@ -161,7 +163,7 @@ func (s *Service) DeleteReview(ctx context.Context, userID, reviewID uuid.UUID) 
 			return domain.ErrInvalidDealStatus
 		}
 
-		return s.DealsRepository().DeleteReview(ctx, tx, reviewID)
+		return s.repository.DeleteReview(ctx, tx, reviewID)
 	})
 }
 
@@ -180,7 +182,7 @@ func (s *Service) GetDealReviews(ctx context.Context, dealID uuid.UUID) ([]domai
 		return nil, err
 	}
 	_ = deal
-	return s.DealsRepository().GetReviewsByDealID(ctx, s.DB(), dealID)
+	return s.repository.GetReviewsByDealID(ctx, s.DB(), dealID)
 }
 
 // GetDealPendingReviews returns all pending review contexts for the current user in a deal.
@@ -211,7 +213,7 @@ func (s *Service) GetDealPendingReviews(
 		return nil, domain.ErrInvalidDealStatus
 	}
 
-	return s.DealsRepository().GetPendingReviewsForParticipant(ctx, s.DB(), dealID, userID)
+	return s.repository.GetPendingReviewsForParticipant(ctx, s.DB(), dealID, userID)
 }
 
 // GetDealItemReviewEligibility returns the review eligibility for a specific item in a deal
@@ -235,7 +237,7 @@ func (s *Service) GetDealItemReviewEligibility(
 		return htypes.ReviewEligibility{}, err
 	}
 
-	item, err := s.DealsRepository().GetItemForReview(ctx, s.DB(), dealID, itemID)
+	item, err := s.repository.GetItemForReview(ctx, s.DB(), dealID, itemID)
 	if err != nil {
 		return htypes.ReviewEligibility{}, err
 	}
@@ -276,7 +278,7 @@ func (s *Service) GetDealItemReviewEligibility(
 		return e, nil
 	}
 
-	exists, err := s.DealsRepository().ReviewExistsForUser(
+	exists, err := s.repository.ReviewExistsForUser(
 		ctx, s.DB(), dealID, userID, storedItemID, offerID, *item.ProviderID,
 	)
 	if err != nil {
@@ -312,11 +314,11 @@ func (s *Service) GetDealItemReviews(
 	}
 	_ = deal
 
-	if _, err = s.DealsRepository().GetItemForReview(ctx, s.DB(), dealID, itemID); err != nil {
+	if _, err = s.repository.GetItemForReview(ctx, s.DB(), dealID, itemID); err != nil {
 		return nil, err
 	}
 
-	return s.DealsRepository().GetReviewsByDealItemID(ctx, s.DB(), dealID, itemID)
+	return s.repository.GetReviewsByDealItemID(ctx, s.DB(), dealID, itemID)
 }
 
 // GetOfferReviews returns all reviews for a specific offer, ordered newest first.
@@ -328,7 +330,7 @@ func (s *Service) GetOfferReviews(ctx context.Context, offerID uuid.UUID) ([]dom
 	if _, err := s.OffersRepository().GetOffer(ctx, s.DB(), offerID); err != nil {
 		return nil, err
 	}
-	return s.DealsRepository().GetReviewsByOfferID(ctx, s.DB(), offerID)
+	return s.repository.GetReviewsByOfferID(ctx, s.DB(), offerID)
 }
 
 // GetOfferReviewsSummary returns aggregated review statistics for a specific offer.
@@ -343,13 +345,13 @@ func (s *Service) GetOfferReviewsSummary(
 	if _, err := s.OffersRepository().GetOffer(ctx, s.DB(), offerID); err != nil {
 		return htypes.ReviewSummary{}, err
 	}
-	return s.DealsRepository().GetReviewsSummaryByOfferID(ctx, s.DB(), offerID)
+	return s.repository.GetReviewsSummaryByOfferID(ctx, s.DB(), offerID)
 }
 
 // GetProviderReviews returns all reviews for a specific provider, ordered newest first.
 // No existence check is performed on the provider.
 func (s *Service) GetProviderReviews(ctx context.Context, providerID uuid.UUID) ([]domain.Review, error) {
-	return s.DealsRepository().GetReviewsByProviderID(ctx, s.DB(), providerID)
+	return s.repository.GetReviewsByProviderID(ctx, s.DB(), providerID)
 }
 
 // GetProviderReviewsSummary returns aggregated review statistics for a specific provider.
@@ -358,13 +360,13 @@ func (s *Service) GetProviderReviewsSummary(
 	ctx context.Context,
 	providerID uuid.UUID,
 ) (htypes.ReviewSummary, error) {
-	return s.DealsRepository().GetReviewsSummaryByProviderID(ctx, s.DB(), providerID)
+	return s.repository.GetReviewsSummaryByProviderID(ctx, s.DB(), providerID)
 }
 
 // GetAuthorReviews returns all reviews written by a specific author, ordered newest first.
 // No existence check is performed on the author.
 func (s *Service) GetAuthorReviews(ctx context.Context, authorID uuid.UUID) ([]domain.Review, error) {
-	return s.DealsRepository().GetReviewsByAuthorID(ctx, s.DB(), authorID)
+	return s.repository.GetReviewsByAuthorID(ctx, s.DB(), authorID)
 }
 
 // determineReviewContext derives which IDs to store based on item fields:

@@ -1,9 +1,10 @@
-package deals
+package failures
 
 import (
 	"barter-port/internal/deals/domain"
 	"barter-port/internal/deals/domain/enums"
 	"barter-port/internal/deals/domain/htypes"
+	dealsrepo "barter-port/internal/deals/infrastructure/repository/deals"
 	"barter-port/pkg/db"
 	"context"
 	"errors"
@@ -12,6 +13,14 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
+
+type Repository struct {
+	*dealsrepo.Repository
+}
+
+func NewRepository(base *dealsrepo.Repository) *Repository {
+	return &Repository{Repository: base}
+}
 
 func (r *Repository) LockDeal(ctx context.Context, tx pgx.Tx, dealID uuid.UUID) (enums.DealStatus, error) {
 	var status enums.DealStatus

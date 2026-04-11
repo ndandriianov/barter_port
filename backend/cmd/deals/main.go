@@ -10,8 +10,10 @@ import (
 	reviewssvc "barter-port/internal/deals/application/reviews"
 	"barter-port/internal/deals/infrastructure/repository/deals"
 	"barter-port/internal/deals/infrastructure/repository/drafts"
+	failuresrepo "barter-port/internal/deals/infrastructure/repository/failures"
 	"barter-port/internal/deals/infrastructure/repository/joins"
 	offersr "barter-port/internal/deals/infrastructure/repository/offers"
+	reviewsrepo "barter-port/internal/deals/infrastructure/repository/reviews"
 	transportgrpc "barter-port/internal/deals/infrastructure/transport/grpc"
 	transporthttp "barter-port/internal/deals/infrastructure/transport/http"
 	dealsh "barter-port/internal/deals/infrastructure/transport/http/deals"
@@ -80,16 +82,18 @@ func main() {
 
 	draftsRepo := drafts.NewRepository()
 	dealsRepo := deals.NewRepository()
+	failuresRepo := failuresrepo.NewRepository(dealsRepo)
 	joinsRepo := joins.NewRepository()
-	dealsService := dealssvc.NewService(db, draftsRepo, dealsRepo, joinsRepo, offersRepo).
+	reviewsRepo := reviewsrepo.NewRepository(dealsRepo)
+	dealsService := dealssvc.NewService(db, draftsRepo, dealsRepo, failuresRepo, joinsRepo, offersRepo).
 		WithAdminChecker(authkit.NewAdminChecker(authClient)).
 		WithLogger(logg)
 	if chatsClient != nil {
 		dealsService = dealsService.WithChatsClient(chatsClient)
 	}
-	failuresService := failuressvc.NewService(dealsService)
+	failuresService := failuressvc.NewService(dealsService, failuresRepo)
 	joinsService := joinssvc.NewService(dealsService)
-	reviewsService := reviewssvc.NewService(dealsService)
+	reviewsService := reviewssvc.NewService(dealsService, reviewsRepo)
 
 	validator, err := bootstrap.InitLocalJWTFromConfig(cfg)
 	if err != nil {

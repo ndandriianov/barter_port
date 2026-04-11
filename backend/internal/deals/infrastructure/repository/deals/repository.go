@@ -673,8 +673,8 @@ func (r *Repository) DeleteStatusVotes(ctx context.Context, tx pgx.Tx, dealID uu
 	return nil
 }
 
-// scanItem scans an item row returned from an UPDATE … RETURNING or SELECT query.
-func scanItem(row interface{ Scan(...any) error }) (domain.Item, error) {
+// ScanItem scans an item row returned from an UPDATE RETURNING or SELECT query.
+func ScanItem(row interface{ Scan(...any) error }) (domain.Item, error) {
 	var item domain.Item
 	var itemType string
 	err := row.Scan(
@@ -697,4 +697,8 @@ func scanItem(row interface{ Scan(...any) error }) (domain.Item, error) {
 		return domain.Item{}, fmt.Errorf("item type: %w", err)
 	}
 	return item, nil
+}
+
+func scanItem(row interface{ Scan(...any) error }) (domain.Item, error) {
+	return ScanItem(row)
 }

@@ -7,6 +7,7 @@ import (
 	"barter-port/internal/deals/domain/htypes"
 	"barter-port/internal/deals/infrastructure/repository/deals"
 	"barter-port/internal/deals/infrastructure/repository/drafts"
+	failuresrepo "barter-port/internal/deals/infrastructure/repository/failures"
 	"barter-port/internal/deals/infrastructure/repository/joins"
 	"barter-port/internal/deals/infrastructure/repository/offers"
 	"barter-port/pkg/authkit"
@@ -25,6 +26,7 @@ type Service struct {
 	db               *pgxpool.Pool
 	draftsRepository *drafts.Repository
 	dealsRepository  *deals.Repository
+	failuresRepo     *failuresrepo.Repository
 	joinsRepository  *joins.Repository
 	offersRepository *offers.Repository
 	chatsClient      chatspb.ChatsServiceClient
@@ -36,6 +38,7 @@ func NewService(
 	db *pgxpool.Pool,
 	draftsRepo *drafts.Repository,
 	dealsRepo *deals.Repository,
+	failuresRepo *failuresrepo.Repository,
 	joinsRepo *joins.Repository,
 	offersRepo *offers.Repository,
 ) *Service {
@@ -43,6 +46,7 @@ func NewService(
 		db:               db,
 		draftsRepository: draftsRepo,
 		dealsRepository:  dealsRepo,
+		failuresRepo:     failuresRepo,
 		joinsRepository:  joinsRepo,
 		offersRepository: offersRepo,
 		logger:           slog.Default(),
@@ -74,6 +78,10 @@ func (s *Service) DraftsRepository() *drafts.Repository {
 
 func (s *Service) DealsRepository() *deals.Repository {
 	return s.dealsRepository
+}
+
+func (s *Service) FailuresRepository() *failuresrepo.Repository {
+	return s.failuresRepo
 }
 
 func (s *Service) JoinsRepository() *joins.Repository {
@@ -296,7 +304,7 @@ func (s *Service) HasPendingFailureReview(ctx context.Context, id uuid.UUID) (bo
 		return false, err
 	}
 
-	return s.dealsRepository.HasPendingFailureReview(ctx, s.db, id)
+	return s.failuresRepo.HasPendingFailureReview(ctx, s.db, id)
 }
 
 // ================================================================================
@@ -792,7 +800,7 @@ func (s *Service) cancelDeal(ctx context.Context, id uuid.UUID, targetStatus enu
 }
 
 func (s *Service) EnsureNoPendingFailureReview(ctx context.Context, tx pgx.Tx, dealID uuid.UUID) error {
-	hasPending, err := s.dealsRepository.HasPendingFailureReview(ctx, tx, dealID)
+	hasPending, err := s.failuresRepo.HasPendingFailureReview(ctx, tx, dealID)
 	if err != nil {
 		return err
 	}
