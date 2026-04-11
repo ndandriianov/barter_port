@@ -55,7 +55,15 @@ function OfferPage() {
         {offer.name}
       </Typography>
 
-      <OfferCard offer={offer} draftCount={isOwnOffer ? (countsByOfferId[offer.id] ?? 0) : 0} />
+      <OfferCard
+        offer={offer}
+        draftCount={isOwnOffer ? (countsByOfferId[offer.id] ?? 0) : 0}
+        draftsHref={
+          isOwnOffer && (countsByOfferId[offer.id] ?? 0) > 0
+            ? `/deals/drafts?offerId=${offer.id}`
+            : undefined
+        }
+      />
 
       <Divider sx={{ my: 3 }} />
 
