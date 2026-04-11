@@ -25,14 +25,16 @@ import type {Draft} from "@/features/deals/model/types.ts";
 import type {User} from "@/features/users/model/types.ts";
 
 interface DraftsListProps {
+  mode: "mine" | "others";
   selectedOfferId: string;
   onSelectedOfferIdChange: (offerId: string) => void;
 }
 
-function DraftsList({ selectedOfferId, onSelectedOfferIdChange }: DraftsListProps) {
+function DraftsList({ mode, selectedOfferId, onSelectedOfferIdChange }: DraftsListProps) {
   const dispatch = useAppDispatch();
+  const { data: currentUser } = usersApi.useGetCurrentUserQuery();
   const { data, isLoading, error, refetch, isFetching } = dealsApi.useGetMyDraftDealsQuery({
-    createdByMe: false,
+    createdByMe: mode === "mine",
     participating: true,
   });
   const {
@@ -122,14 +124,29 @@ function DraftsList({ selectedOfferId, onSelectedOfferIdChange }: DraftsListProp
       return [];
     }
 
+    const draftsByMode = mode === "mine"
+      ? data
+      : data.filter((draft) => {
+          if (!currentUser) {
+            return true;
+          }
+
+          const details = draftDetailsById[draft.id];
+          if (!details) {
+            return true;
+          }
+
+          return details.authorId !== currentUser.id;
+        });
+
     if (!selectedOfferId) {
-      return data;
+      return draftsByMode;
     }
 
-    return data.filter((draft) =>
+    return draftsByMode.filter((draft) =>
       draftDetailsById[draft.id]?.offers.some((offer) => offer.id === selectedOfferId),
     );
-  }, [data, draftDetailsById, selectedOfferId]);
+  }, [currentUser, data, draftDetailsById, mode, selectedOfferId]);
 
   const isDraftDetailsLoading = selectedOfferId !== "" &&
     draftIds.some((draftId) => {
@@ -194,11 +211,15 @@ function DraftsList({ selectedOfferId, onSelectedOfferIdChange }: DraftsListProp
         </Box>
       ) : data.length === 0 ? (
         <Typography color="text.secondary" textAlign="center" py={4}>
-          У вас пока нет черновых договоров
+          {mode === "mine" ? "У вас пока нет своих черновиков" : "Пока нет чужих черновиков с вашим участием"}
         </Typography>
       ) : filteredDrafts.length === 0 ? (
         <Typography color="text.secondary" textAlign="center" py={4}>
-          Черновики с выбранным объявлением не найдены
+          {selectedOfferId
+            ? "Черновики с выбранным объявлением не найдены"
+            : mode === "mine"
+              ? "У вас пока нет своих черновиков"
+              : "Пока нет чужих черновиков с вашим участием"}
         </Typography>
       ) : (
         <List disablePadding>
