@@ -110,6 +110,7 @@ func NewRouter(
 			r.Post("/drafts", draftsHandlers.CreateDraft)
 			r.Get("/drafts", draftsHandlers.GetDrafts)
 			r.Get("/drafts/{draftId}", draftsHandlers.GetDraftByID)
+			r.Delete("/drafts/{draftId}", draftsHandlers.DeleteDraft)
 			r.Patch("/drafts/{draftId}", draftsHandlers.ConfirmDraft)
 			r.Patch("/drafts/{draftId}/cancel", draftsHandlers.CancelDraft)
 			r.Get("/{dealId}/reviews", reviewsHandlers.GetDealReviews)

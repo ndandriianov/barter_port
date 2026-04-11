@@ -197,6 +197,55 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - drafts
+      summary: Удалить черновой договор
+      description: |
+        Удаляет черновой договор. Доступно любому участнику чернового договора.
+      operationId: deleteDraftDeal
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: draftId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden. User is not a participant of the draft deal'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Draft deal not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /deals/drafts/{draftId}/cancel:
     patch:
       tags:
@@ -811,7 +860,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /deals/{dealId}/items/{itemId}/review-eligibility:
+  /deals/{dealId}/items/{itemId}/reviews/eligibility:
     get:
       tags:
         - Reviews
@@ -937,7 +986,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /deals/{dealId}/reviews/pending:
+  /deals/{dealId}/reviews-pending:
     get:
       tags:
         - Reviews
@@ -1189,7 +1238,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /reviews/authors/{authorId}:
+  /authors/{authorId}/reviews:
     get:
       tags:
         - Reviews
@@ -1242,7 +1291,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /reviews/providers/{providerId}:
+  /providers/{providerId}/reviews:
     get:
       tags:
         - Reviews
@@ -1300,7 +1349,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /reviews/providers/{providerId}/summary:
+  /providers/{providerId}/reviews-summary:
     get:
       tags:
         - Reviews
@@ -2136,7 +2185,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-  /offers/{offerId}/reviews/summary:
+  /offers/{offerId}/reviews-summary:
     get:
       tags:
         - Reviews

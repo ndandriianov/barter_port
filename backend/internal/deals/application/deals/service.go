@@ -175,6 +175,43 @@ func (s *Service) GetDraftByID(ctx context.Context, id uuid.UUID) (domain.Draft,
 	return s.draftsRepository.GetDraftByID(ctx, s.db, id)
 }
 
+// DeleteDraftByID deletes a draft deal by its ID.
+//
+// Domain errors:
+// - domain.ErrDraftNotFound: if no draft deal with the specified ID exists.
+// - domain.ErrForbidden: if the user is not a participant of the draft.
+func (s *Service) DeleteDraftByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
+	return db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
+		_, err := s.draftsRepository.GetDraftByID(ctx, tx, id)
+		if err != nil {
+			return fmt.Errorf("get draft: %w", err)
+		}
+
+		isParticipant := false
+		participants, err := s.draftsRepository.GetParticipants(ctx, tx, id)
+		if err != nil {
+			return fmt.Errorf("get draft participants: %w", err)
+		}
+
+		for _, p := range participants {
+			if p == userID {
+				isParticipant = true
+				break
+			}
+		}
+		if !isParticipant {
+			return domain.ErrForbidden
+		}
+
+		err = s.draftsRepository.DeleteDraft(ctx, tx, id)
+		if err != nil {
+			return fmt.Errorf("delete draft: %w", err)
+		}
+
+		return nil
+	})
+}
+
 // ================================================================================
 // CONFIRM DRAFT
 // ================================================================================

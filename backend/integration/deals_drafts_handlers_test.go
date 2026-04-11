@@ -417,7 +417,7 @@ func TestCancelDraftNotFound(t *testing.T) {
 	require.Equal(t, http.StatusNotFound, resp.StatusCode)
 }
 
-func TestCancelDraftForbiddenAfterAllConfirmed(t *testing.T) {
+func TestCancelDraftNotFoundAfterAllConfirmed(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)
 
@@ -436,5 +436,51 @@ func TestCancelDraftForbiddenAfterAllConfirmed(t *testing.T) {
 	cancelReq := mustUserRequest(t, http.MethodPatch, dealsURL()+"/deals/drafts/"+draftID.String()+"/cancel", userA, nil)
 	cancelResp := mustDo(t, cancelReq)
 	defer func() { _ = cancelResp.Body.Close() }()
-	require.Equal(t, http.StatusForbidden, cancelResp.StatusCode)
+	require.Equal(t, http.StatusNotFound, cancelResp.StatusCode)
+}
+
+func TestDeleteDraftSuccess(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	offerID := mustCreateOffer(t, userID)
+	draftID := mustCreateDraft(t, userID, nil, nil, []types.OfferIDAndQuantity{{OfferID: offerID, Quantity: 1}})
+
+	deleteReq := mustUserRequest(t, http.MethodDelete, dealsURL()+"/deals/drafts/"+draftID.String(), userID, nil)
+	deleteResp := mustDo(t, deleteReq)
+	defer func() { _ = deleteResp.Body.Close() }()
+	require.Equal(t, http.StatusOK, deleteResp.StatusCode)
+
+	getReq := mustUserRequest(t, http.MethodGet, dealsURL()+"/deals/drafts/"+draftID.String(), userID, nil)
+	getResp := mustDo(t, getReq)
+	defer func() { _ = getResp.Body.Close() }()
+	require.Equal(t, http.StatusNotFound, getResp.StatusCode)
+}
+
+func TestDeleteDraftForbiddenForNonParticipant(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	ownerID := uuid.New()
+	nonParticipantID := uuid.New()
+	offerID := mustCreateOffer(t, ownerID)
+	draftID := mustCreateDraft(t, ownerID, nil, nil, []types.OfferIDAndQuantity{{OfferID: offerID, Quantity: 1}})
+
+	req := mustUserRequest(t, http.MethodDelete, dealsURL()+"/deals/drafts/"+draftID.String(), nonParticipantID, nil)
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusForbidden, resp.StatusCode)
+}
+
+func TestDeleteDraftNotFound(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	req := mustUserRequest(t, http.MethodDelete, dealsURL()+"/deals/drafts/"+uuid.NewString(), userID, nil)
+
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusNotFound, resp.StatusCode)
 }
