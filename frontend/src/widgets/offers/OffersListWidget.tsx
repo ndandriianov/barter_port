@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { Link as RouterLink } from "react-router-dom";
 import {
   Alert,
   Box,
@@ -104,13 +103,17 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
         <Grid container spacing={2}>
           {offers.map((offer) => (
             <Grid key={offer.id} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
-              <RouterLink to={`/offers/${offer.id}`} style={{ textDecoration: "none" }}>
-                <OfferCard
-                  offer={offer}
-                  showRating
-                  draftCount={mode === "mine" ? (countsByOfferId[offer.id] ?? 0) : 0}
-                />
-              </RouterLink>
+              <OfferCard
+                offer={offer}
+                showRating
+                draftCount={mode === "mine" ? (countsByOfferId[offer.id] ?? 0) : 0}
+                offerHref={`/offers/${offer.id}`}
+                draftsHref={
+                  mode === "mine" && (countsByOfferId[offer.id] ?? 0) > 0
+                    ? `/deals/drafts?offerId=${offer.id}`
+                    : undefined
+                }
+              />
             </Grid>
           ))}
         </Grid>

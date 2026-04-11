@@ -1,7 +1,8 @@
-import { Box, Card, CardContent, Chip, Typography } from "@mui/material";
+import { Box, Button, Card, CardContent, Chip, Typography } from "@mui/material";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
 import StarRoundedIcon from "@mui/icons-material/StarRounded";
+import { Link as RouterLink } from "react-router-dom";
 import type { Offer, OfferAction, OfferType } from "@/features/offers/model/types";
 import reviewsApi from "@/features/reviews/api/reviewsApi.ts";
 
@@ -31,9 +32,17 @@ interface OfferCardProps {
   offer: Offer;
   showRating?: boolean;
   draftCount?: number;
+  offerHref?: string;
+  draftsHref?: string;
 }
 
-function OfferCard({ offer, showRating = false, draftCount = 0 }: OfferCardProps) {
+function OfferCard({
+  offer,
+  showRating = false,
+  draftCount = 0,
+  offerHref,
+  draftsHref,
+}: OfferCardProps) {
   const authorName = offer.authorName?.trim() || "Имя не указано";
   const { data: summary } = reviewsApi.useGetOfferReviewsSummaryQuery(offer.id, {
     skip: !showRating,
@@ -84,6 +93,21 @@ function OfferCard({ offer, showRating = false, draftCount = 0 }: OfferCardProps
             <Typography variant="caption">{formatCreatedAt(offer.createdAt)}</Typography>
           </Box>
         </Box>
+
+        {(offerHref || (draftsHref && draftCount > 0)) && (
+          <Box display="flex" gap={1} flexWrap="wrap" mt={2}>
+            {offerHref && (
+              <Button component={RouterLink} to={offerHref} size="small" variant="outlined">
+                Открыть
+              </Button>
+            )}
+            {draftsHref && draftCount > 0 && (
+              <Button component={RouterLink} to={draftsHref} size="small" variant="outlined" color="warning">
+                Черновики: {draftCount}
+              </Button>
+            )}
+          </Box>
+        )}
       </CardContent>
     </Card>
   );

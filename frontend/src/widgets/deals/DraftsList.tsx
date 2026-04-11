@@ -1,4 +1,4 @@
-import {useEffect, useMemo, useState} from "react";
+import {useEffect, useMemo} from "react";
 import { Link as RouterLink } from "react-router-dom";
 import {
   Alert,
@@ -24,9 +24,13 @@ import {useAppDispatch, useAppSelector} from "@/hooks/redux.ts";
 import type {Draft} from "@/features/deals/model/types.ts";
 import type {User} from "@/features/users/model/types.ts";
 
-function DraftsList() {
+interface DraftsListProps {
+  selectedOfferId: string;
+  onSelectedOfferIdChange: (offerId: string) => void;
+}
+
+function DraftsList({ selectedOfferId, onSelectedOfferIdChange }: DraftsListProps) {
   const dispatch = useAppDispatch();
-  const [selectedOfferId, setSelectedOfferId] = useState("");
   const { data, isLoading, error, refetch, isFetching } = dealsApi.useGetMyDraftDealsQuery({
     createdByMe: false,
     participating: true,
@@ -157,7 +161,7 @@ function DraftsList() {
           <Select
             value={selectedOfferId}
             label="Фильтр по моему объявлению"
-            onChange={(event) => setSelectedOfferId(event.target.value)}
+            onChange={(event) => onSelectedOfferIdChange(event.target.value)}
             disabled={isOffersLoading || Boolean(offersError)}
           >
             <MenuItem value="">Все черновики</MenuItem>
