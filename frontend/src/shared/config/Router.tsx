@@ -15,8 +15,7 @@ import DraftsListPage from "@/pages/deals/DraftsListPage";
 import DraftPage from "@/pages/deals/DraftPage";
 import DealItemPage from "@/pages/deals/DealItemPage";
 import ChatsPage from "@/pages/chats/ChatsPage";
-import PendingReviewsPage from "@/pages/reviews/PendingReviewsPage";
-import MyReviewsPage from "@/pages/reviews/MyReviewsPage";
+import ReviewsPage from "@/pages/reviews/ReviewsPage";
 import UserReviewsPage from "@/pages/reviews/UserReviewsPage";
 import OfferReviewsPage from "@/pages/reviews/OfferReviewsPage";
 
@@ -43,8 +42,9 @@ function AppRouter() {
           <Route path="/deals/drafts" element={<DraftsListPage />} />
           <Route path="/deals/drafts/:draftId" element={<DraftPage />} />
           <Route path="/chats" element={<ChatsPage />} />
-          <Route path="/reviews/pending" element={<PendingReviewsPage />} />
-          <Route path="/reviews/mine" element={<MyReviewsPage />} />
+          <Route path="/reviews" element={<ReviewsPage />} />
+          <Route path="/reviews/pending" element={<Navigate to="/reviews?tab=available" replace />} />
+          <Route path="/reviews/mine" element={<Navigate to="/reviews?tab=mine" replace />} />
           <Route path="/users/:userId/reviews" element={<UserReviewsPage />} />
           <Route path="*" element={<Navigate to="/profile" replace />} />
         </Route>

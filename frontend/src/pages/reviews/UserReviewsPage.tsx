@@ -1,21 +1,14 @@
-import { Link as RouterLink, useParams } from "react-router-dom";
-import {
-  Alert,
-  Box,
-  Button,
-  CircularProgress,
-  Stack,
-  Typography,
-} from "@mui/material";
+import {Link as RouterLink, useParams} from "react-router-dom";
+import {Alert, Box, Button, CircularProgress, Stack, Typography,} from "@mui/material";
 import reviewsApi from "@/features/reviews/api/reviewsApi.ts";
 import usersApi from "@/features/users/api/usersApi.ts";
 import ReviewCard from "@/widgets/reviews/ReviewCard.tsx";
 import ReviewSummaryCard from "@/widgets/reviews/ReviewSummaryCard.tsx";
 
 function UserReviewsPage() {
-  const { userId } = useParams<{ userId: string }>();
-  const { data: currentUser } = usersApi.useGetCurrentUserQuery();
-  const { data: user } = usersApi.useGetUserByIdQuery(userId ?? "", {
+  const {userId} = useParams<{ userId: string }>();
+  const {data: currentUser} = usersApi.useGetCurrentUserQuery();
+  const {data: user} = usersApi.useGetUserByIdQuery(userId ?? "", {
     skip: !userId,
   });
   const {
@@ -25,7 +18,7 @@ function UserReviewsPage() {
   } = reviewsApi.useGetProviderReviewsQuery(userId ?? "", {
     skip: !userId,
   });
-  const { data: summary, isLoading: isSummaryLoading } = reviewsApi.useGetProviderReviewsSummaryQuery(userId ?? "", {
+  const {data: summary, isLoading: isSummaryLoading} = reviewsApi.useGetProviderReviewsSummaryQuery(userId ?? "", {
     skip: !userId,
   });
 
@@ -36,7 +29,7 @@ function UserReviewsPage() {
   if (isLoading) {
     return (
       <Box display="flex" justifyContent="center" py={6}>
-        <CircularProgress />
+        <CircularProgress/>
       </Box>
     );
   }
@@ -64,11 +57,11 @@ function UserReviewsPage() {
 
         <Box display="flex" gap={1} flexWrap="wrap">
           {isCurrentUser && (
-            <Button component={RouterLink} to="/reviews/mine" variant="outlined">
+            <Button component={RouterLink} to="/reviews?tab=mine" variant="outlined">
               Мои отзывы
             </Button>
           )}
-          <Button component={RouterLink} to="/reviews/pending" variant="text">
+          <Button component={RouterLink} to="/reviews?tab=available" variant="text">
             Доступные отзывы
           </Button>
         </Box>
@@ -76,7 +69,7 @@ function UserReviewsPage() {
 
       {summary && !isSummaryLoading && (
         <Box mb={3}>
-          <ReviewSummaryCard title="Сводка по оценкам" summary={summary} />
+          <ReviewSummaryCard title="Сводка по оценкам" summary={summary}/>
         </Box>
       )}
 
@@ -85,7 +78,7 @@ function UserReviewsPage() {
       ) : (
         <Stack spacing={2}>
           {reviews.map((review) => (
-            <ReviewCard key={review.id} review={review} />
+            <ReviewCard key={review.id} review={review}/>
           ))}
         </Stack>
       )}

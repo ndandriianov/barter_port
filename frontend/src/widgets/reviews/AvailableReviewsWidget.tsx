@@ -1,23 +1,23 @@
 import { useEffect, useMemo } from "react";
-import { Link as RouterLink, useSearchParams } from "react-router-dom";
+import { Link as RouterLink } from "react-router-dom";
 import {
   Alert,
   Box,
   Button,
   CircularProgress,
   Stack,
-  Typography,
 } from "@mui/material";
 import dealsApi from "@/features/deals/api/dealsApi.ts";
 import reviewsApi from "@/features/reviews/api/reviewsApi.ts";
 import PendingReviewCard from "@/widgets/reviews/PendingReviewCard.tsx";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux.ts";
 
-function PendingReviewsPage() {
-  const dispatch = useAppDispatch();
-  const [searchParams] = useSearchParams();
-  const selectedDealId = searchParams.get("dealId");
+interface AvailableReviewsWidgetProps {
+  selectedDealId?: string | null;
+}
 
+function AvailableReviewsWidget({ selectedDealId }: AvailableReviewsWidgetProps) {
+  const dispatch = useAppDispatch();
   const { data: deals, isLoading, error } = dealsApi.useGetDealsQuery({ my: true });
 
   const completedDeals = useMemo(
@@ -82,32 +82,12 @@ function PendingReviewsPage() {
   }
 
   return (
-    <Box maxWidth={900} mx="auto">
-      <Box display="flex" justifyContent="space-between" alignItems="flex-start" gap={2} flexWrap="wrap" mb={3}>
-        <div>
-          <Typography variant="h4" fontWeight={700}>
-            Отзывы после сделки
-          </Typography>
-          <Typography variant="body1" color="text.secondary" mt={1}>
-            Здесь собраны все позиции, по которым вы можете оставить отзыв как получатель.
-          </Typography>
-        </div>
-
-        <Box display="flex" gap={1} flexWrap="wrap">
-          <Button component={RouterLink} to="/reviews/mine" variant="outlined">
-            Мои отзывы
-          </Button>
-          <Button component={RouterLink} to="/profile" variant="text">
-            Профиль
-          </Button>
-        </Box>
-      </Box>
-
+    <Box>
       {selectedDealId && (
         <Alert
           severity="info"
           action={
-            <Button component={RouterLink} to="/reviews/pending" color="inherit" size="small">
+            <Button component={RouterLink} to="/reviews?tab=available" color="inherit" size="small">
               Все сделки
             </Button>
           }
@@ -148,4 +128,4 @@ function PendingReviewsPage() {
   );
 }
 
-export default PendingReviewsPage;
+export default AvailableReviewsWidget;

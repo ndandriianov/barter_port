@@ -105,7 +105,7 @@ function DealPage() {
           action={
             <Button
               component={Link}
-              to={`/reviews/pending?dealId=${data.id}`}
+              to={`/reviews?tab=available&dealId=${data.id}`}
               color="inherit"
               size="small"
             >
