@@ -4,6 +4,7 @@ import { skipToken } from "@reduxjs/toolkit/query";
 import dealsApi from "@/features/deals/api/dealsApi";
 import chatsApi from "@/features/chats/api/chatsApi";
 import usersApi from "@/features/users/api/usersApi.ts";
+import reviewsApi from "@/features/reviews/api/reviewsApi.ts";
 import DealCard from "@/widgets/deals/DealCard";
 import ChatWindow from "@/widgets/chat/ChatWindow";
 import { getStatusCode } from "@/shared/utils/getStatusCode";
@@ -25,6 +26,12 @@ function DealPage() {
   const isFinalStatus = data ? FINAL_STATUSES.includes(data.status) : false;
   const isParticipant = data && currentUser ? data.participants.includes(currentUser.id) : false;
   const canAccessFailureResolution = Boolean(currentUser && (isParticipant || currentUser.isAdmin));
+  const {
+    data: pendingReviews,
+    isLoading: isPendingReviewsLoading,
+  } = reviewsApi.useGetDealPendingReviewsQuery(data?.id ?? "", {
+    skip: !data || data.status !== "Completed" || !isParticipant,
+  });
 
   const { data: failureResolution } = dealsApi.useGetModeratorResolutionForFailureQuery(
     canAccessFailureResolution && data ? data.id : skipToken,
@@ -74,6 +81,8 @@ function DealPage() {
   }
   if (!data) return <Alert severity="warning">Сделка не найдена</Alert>;
 
+  const availableReviewCount = pendingReviews?.filter((review) => review.canCreate).length ?? 0;
+
   return (
     <Box maxWidth={700} mx="auto">
       <Button
@@ -88,6 +97,32 @@ function DealPage() {
       <Typography variant="h4" fontWeight={700} mb={3}>
         Детали сделки
       </Typography>
+
+      {data.status === "Completed" && isParticipant && (
+        <Alert
+          severity={availableReviewCount > 0 ? "success" : "info"}
+          sx={{ mb: 3 }}
+          action={
+            <Button
+              component={Link}
+              to={`/reviews/pending?dealId=${data.id}`}
+              color="inherit"
+              size="small"
+            >
+              {availableReviewCount > 0 ? "Оставить отзыв" : "Открыть отзывы"}
+            </Button>
+          }
+        >
+          {isPendingReviewsLoading
+            ? "Сделка завершена. Проверяем доступные отзывы..."
+            : availableReviewCount > 0
+              ? `Сделка успешно завершена. Можно оставить ${availableReviewCount} ${
+                  availableReviewCount === 1 ? "отзыв" : availableReviewCount < 5 ? "отзыва" : "отзывов"
+                } о полученных товарах или услугах.`
+              : "Сделка успешно завершена. По этой сделке больше нет доступных отзывов."}
+        </Alert>
+      )}
+
       <DealCard deal={data} />
 
       {canShowDealChat && (
