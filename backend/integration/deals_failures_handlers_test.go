@@ -14,8 +14,8 @@ func TestGetDealsForFailureReviewNonAdminForbidden(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)
 
-	userID := uuid.New()
-	req := mustUserRequest(t, http.MethodGet, dealsURL()+"/deals/failures/review", userID, nil)
+	registered := registerAuthUser(t, globalFixture)
+	req := mustUserRequest(t, http.MethodGet, dealsURL()+"/deals/failures/review", registered.UserID, nil)
 	resp := mustDo(t, req)
 	defer func() { _ = resp.Body.Close() }()
 	require.Equal(t, http.StatusForbidden, resp.StatusCode)
