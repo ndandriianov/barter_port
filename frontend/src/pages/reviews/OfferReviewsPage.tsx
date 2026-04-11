@@ -1,4 +1,4 @@
-import { Link as RouterLink, useParams } from "react-router-dom";
+import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import {
   Alert,
   Box,
@@ -14,6 +14,7 @@ import ReviewSummaryCard from "@/widgets/reviews/ReviewSummaryCard.tsx";
 
 function OfferReviewsPage() {
   const { offerId } = useParams<{ offerId: string }>();
+  const navigate = useNavigate();
   const { data: offer, isLoading: isOfferLoading, error: offerError } = offersApi.useGetOfferByIdQuery(offerId ?? "", {
     skip: !offerId,
   });
@@ -50,6 +51,15 @@ function OfferReviewsPage() {
 
   return (
     <Box maxWidth={900} mx="auto">
+      <Button
+        size="small"
+        variant="text"
+        onClick={() => window.history.length > 1 ? navigate(-1) : navigate(`/offers/${offer.id}`)}
+        sx={{ mb: 2 }}
+      >
+        ← Назад
+      </Button>
+
       <Box display="flex" justifyContent="space-between" alignItems="flex-start" gap={2} flexWrap="wrap" mb={3}>
         <div>
           <Typography variant="h4" fontWeight={700}>
