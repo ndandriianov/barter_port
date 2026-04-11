@@ -1,7 +1,7 @@
 package joins
 
 import (
-	dealssvc "barter-port/internal/deals/application/deals"
+	joinssvc "barter-port/internal/deals/application/joins"
 	"barter-port/internal/deals/domain"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/httpx"
@@ -17,10 +17,10 @@ import (
 
 type Handlers struct {
 	log          *slog.Logger
-	dealsService *dealssvc.Service
+	dealsService *joinssvc.Service
 }
 
-func NewHandlers(log *slog.Logger, dealsService *dealssvc.Service) *Handlers {
+func NewHandlers(log *slog.Logger, dealsService *joinssvc.Service) *Handlers {
 	return &Handlers{log: log, dealsService: dealsService}
 }
 

@@ -2,7 +2,7 @@ package failures
 
 import (
 	"barter-port/contracts/openapi/deals/types"
-	dealssvc "barter-port/internal/deals/application/deals"
+	failuressvc "barter-port/internal/deals/application/failures"
 	"barter-port/internal/deals/domain"
 	"barter-port/internal/deals/infrastructure/transport/http/common"
 	"barter-port/pkg/authkit"
@@ -18,10 +18,10 @@ import (
 
 type Handlers struct {
 	log          *slog.Logger
-	dealsService *dealssvc.Service
+	dealsService *failuressvc.Service
 }
 
-func NewHandlers(log *slog.Logger, dealsService *dealssvc.Service) *Handlers {
+func NewHandlers(log *slog.Logger, dealsService *failuressvc.Service) *Handlers {
 	return &Handlers{
 		log:          log,
 		dealsService: dealsService,
