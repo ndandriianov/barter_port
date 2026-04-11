@@ -1,7 +1,8 @@
-package deals
+package failures
 
 import (
 	"barter-port/contracts/openapi/deals/types"
+	dealssvc "barter-port/internal/deals/application/deals"
 	"barter-port/internal/deals/domain"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/httpx"
@@ -13,6 +14,18 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
+
+type Handlers struct {
+	log          *slog.Logger
+	dealsService *dealssvc.Service
+}
+
+func NewHandlers(log *slog.Logger, dealsService *dealssvc.Service) *Handlers {
+	return &Handlers{
+		log:          log,
+		dealsService: dealsService,
+	}
+}
 
 func (h *Handlers) GetDealsForFailureReview(w http.ResponseWriter, r *http.Request) {
 	log := logger.LogFrom(r.Context(), h.log).With(slog.String("handler", "GetDealsForFailureReview"))

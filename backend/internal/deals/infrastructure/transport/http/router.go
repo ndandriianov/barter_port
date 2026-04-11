@@ -4,6 +4,7 @@ import (
 	dealsdocfirst "barter-port/docs/doc-first/deals"
 	"barter-port/internal/deals/infrastructure/transport/http/deals"
 	draftsh "barter-port/internal/deals/infrastructure/transport/http/drafts"
+	failuresh "barter-port/internal/deals/infrastructure/transport/http/failures"
 	joinsh "barter-port/internal/deals/infrastructure/transport/http/joins"
 	"barter-port/internal/deals/infrastructure/transport/http/offers"
 	"barter-port/pkg/authkit"
@@ -23,6 +24,7 @@ func NewRouter(
 	offersHandlers *offers.Handlers,
 	draftsHandlers *draftsh.Handlers,
 	dealsHandlers *deals.Handlers,
+	failuresHandlers *failuresh.Handlers,
 	joinsHandlers *joinsh.Handlers,
 ) http.Handler {
 	if logg == nil {
@@ -36,6 +38,9 @@ func NewRouter(
 	}
 	if dealsHandlers == nil {
 		log.Fatal("deals handlers are required")
+	}
+	if failuresHandlers == nil {
+		log.Fatal("failures handlers are required")
 	}
 	if joinsHandlers == nil {
 		log.Fatal("joins handlers are required")
@@ -74,13 +79,13 @@ func NewRouter(
 			r.Get("/", dealsHandlers.GetDeals)
 			r.Get("/{dealId}", dealsHandlers.GetDealByID)
 			r.Patch("/{dealId}", dealsHandlers.UpdateDeal)
-			r.Get("/failures/review", dealsHandlers.GetDealsForFailureReview)
-			r.Post("/failures/{dealId}/votes", dealsHandlers.VoteForFailure)
-			r.Delete("/failures/{dealId}/votes", dealsHandlers.RevokeVoteForFailure)
-			r.Get("/failures/{dealId}/votes", dealsHandlers.GetFailureVotes)
-			r.Get("/failures/{dealId}/materials", dealsHandlers.GetFailureMaterials)
-			r.Post("/failures/{dealId}/moderator-resolution", dealsHandlers.ModeratorResolutionForFailure)
-			r.Get("/failures/{dealId}/moderator-resolution", dealsHandlers.GetModeratorResolutionForFailure)
+			r.Get("/failures/review", failuresHandlers.GetDealsForFailureReview)
+			r.Post("/failures/{dealId}/votes", failuresHandlers.VoteForFailure)
+			r.Delete("/failures/{dealId}/votes", failuresHandlers.RevokeVoteForFailure)
+			r.Get("/failures/{dealId}/votes", failuresHandlers.GetFailureVotes)
+			r.Get("/failures/{dealId}/materials", failuresHandlers.GetFailureMaterials)
+			r.Post("/failures/{dealId}/moderator-resolution", failuresHandlers.ModeratorResolutionForFailure)
+			r.Get("/failures/{dealId}/moderator-resolution", failuresHandlers.GetModeratorResolutionForFailure)
 			r.Post("/{dealId}/items", dealsHandlers.AddDealItem)
 			r.Get("/{dealId}/status", dealsHandlers.GetDealStatusVotes)
 			r.Patch("/{dealId}/status", dealsHandlers.ChangeDealStatus)
