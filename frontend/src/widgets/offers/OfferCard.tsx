@@ -1,7 +1,9 @@
 import { Box, Card, CardContent, Chip, Typography } from "@mui/material";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
+import StarRoundedIcon from "@mui/icons-material/StarRounded";
 import type { Offer, OfferAction, OfferType } from "@/features/offers/model/types";
+import reviewsApi from "@/features/reviews/api/reviewsApi.ts";
 
 const actionLabels: Record<OfferAction, string> = {
   give: "Отдаю",
@@ -27,10 +29,14 @@ const formatCreatedAt = (value: string) =>
 
 interface OfferCardProps {
   offer: Offer;
+  showRating?: boolean;
 }
 
-function OfferCard({ offer }: OfferCardProps) {
+function OfferCard({ offer, showRating = false }: OfferCardProps) {
   const authorName = offer.authorName?.trim() || "Имя не указано";
+  const { data: summary } = reviewsApi.useGetOfferReviewsSummaryQuery(offer.id, {
+    skip: !showRating,
+  });
 
   return (
     <Card variant="outlined" sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
@@ -51,6 +57,18 @@ function OfferCard({ offer }: OfferCardProps) {
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
           {offer.description}
         </Typography>
+
+        {showRating && (
+          <Box display="flex" alignItems="center" gap={0.75} mb={2} color={summary && summary.count > 0 ? "warning.main" : "text.disabled"}>
+            <StarRoundedIcon fontSize="small" />
+            <Typography variant="body2" fontWeight={600} color="text.primary">
+              {summary && summary.count > 0 ? summary.avgRating.toFixed(1) : "0.0"}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              {summary && summary.count > 0 ? `(${summary.count})` : "(нет отзывов)"}
+            </Typography>
+          </Box>
+        )}
 
         <Box display="flex" justifyContent="space-between" alignItems="center" mt="auto">
           <Box display="flex" alignItems="center" gap={0.5} color="text.disabled">
