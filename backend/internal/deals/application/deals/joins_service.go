@@ -165,7 +165,14 @@ func (s *Service) ProcessJoinRequest(ctx context.Context, dealID, requestedUserI
 			return err
 		}
 
-		if len(votes) == len(deal.Participants) {
+		votesForRequestedUser := 0
+		for _, vote := range votes {
+			if vote.UserID == requestedUserID {
+				votesForRequestedUser++
+			}
+		}
+
+		if votesForRequestedUser == len(deal.Participants) {
 			if err = s.joinsRepository.AddParticipant(ctx, tx, dealID, requestedUserID); err != nil {
 				return fmt.Errorf("add participant from join request: %w", err)
 			}

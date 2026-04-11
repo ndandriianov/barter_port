@@ -143,10 +143,12 @@ func (s *Service) GetFailureMaterials(
 
 	resp, err := s.chatsClient.GetDealChatId(ctx, &chatspb.GetDealChatIdRequest{DealId: dealID.String()})
 	if err != nil {
-		if grpcstatus.Code(err) == codes.NotFound {
+		switch grpcstatus.Code(err) {
+		case codes.NotFound, codes.Unavailable:
 			return result, nil
+		default:
+			return htypes.FailureMaterials{}, fmt.Errorf("get deal chat id: %w", err)
 		}
-		return htypes.FailureMaterials{}, fmt.Errorf("get deal chat id: %w", err)
 	}
 	if chatID := resp.GetChatId(); chatID != "" {
 		parsedID, parseErr := uuid.Parse(chatID)

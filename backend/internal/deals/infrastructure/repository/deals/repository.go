@@ -102,17 +102,16 @@ func (r *Repository) CreateDeal(ctx context.Context, tx pgx.Tx, deal domain.Deal
 func (r *Repository) GetDealIDs(ctx context.Context, exec db.DB, userID *uuid.UUID, open bool) ([]htypes.DealIDWithParticipantIDs, error) {
 	query := `
 		SELECT d.id,
-		       d.status,
-		       d.name,
-			   COALESCE(array_agg(DISTINCT p) FILTER (WHERE p IS NOT NULL), '{}') AS participant_ids
+			   d.status,
+			   d.name,
+			   COALESCE(array_agg(DISTINCT p.user_id) FILTER ( WHERE p.user_id IS NOT NULL), '{}'::uuid[]) AS participant_ids
 		FROM deals d
-				 LEFT JOIN items i ON i.deal_id = d.id
-				 LEFT JOIN LATERAL (VALUES (i.author_id), (i.provider_id), (i.receiver_id)) AS t(p) ON true
+				 LEFT JOIN participants p ON p.deal_id = d.id
 		WHERE ($1::uuid IS NULL
 			OR EXISTS(SELECT 1
-					  FROM items i2
-					  WHERE i2.deal_id = d.id
-						AND (i2.author_id = $1 OR i2.provider_id = $1 OR i2.receiver_id = $1)))
+					  FROM participants p2
+					  WHERE p2.deal_id = d.id
+						AND (p2.user_id = $1)))
 		  AND (NOT $2::boolean OR d.status::text NOT IN ('Completed', 'Cancelled', 'Failed'))
 		GROUP BY d.id`
 
