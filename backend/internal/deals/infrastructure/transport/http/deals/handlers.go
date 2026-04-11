@@ -5,6 +5,7 @@ import (
 	dealssvc "barter-port/internal/deals/application/deals"
 	"barter-port/internal/deals/domain"
 	"barter-port/internal/deals/domain/htypes"
+	"barter-port/internal/deals/infrastructure/transport/http/common"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/httpx"
 	"barter-port/pkg/logger"
@@ -53,7 +54,7 @@ func (h *Handlers) GetDeals(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.WriteJSON(w, http.StatusOK, mapDealIDsWithParticipantIDsToDTO(deals))
+	httpx.WriteJSON(w, http.StatusOK, common.MapDealIDsWithParticipantIDsToDTO(deals))
 }
 
 // ================================================================================
@@ -90,7 +91,7 @@ func (h *Handlers) GetDealByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.WriteJSON(w, http.StatusOK, mapDealToDTO(deal))
+	httpx.WriteJSON(w, http.StatusOK, common.MapDealToDTO(deal))
 }
 
 // ================================================================================
@@ -147,7 +148,7 @@ func (h *Handlers) UpdateDeal(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	httpx.WriteJSON(w, http.StatusOK, mapDealToDTO(deal))
+	httpx.WriteJSON(w, http.StatusOK, common.MapDealToDTO(deal))
 }
 
 // ================================================================================
@@ -198,7 +199,7 @@ func (h *Handlers) AddDealItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.WriteJSON(w, http.StatusOK, mapDealToDTO(deal))
+	httpx.WriteJSON(w, http.StatusOK, common.MapDealToDTO(deal))
 }
 
 // ================================================================================
@@ -340,7 +341,7 @@ func (h *Handlers) ChangeDealStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.WriteJSON(w, http.StatusOK, mapDealToDTO(deal))
+	httpx.WriteJSON(w, http.StatusOK, common.MapDealToDTO(deal))
 }
 
 // ================================================================================

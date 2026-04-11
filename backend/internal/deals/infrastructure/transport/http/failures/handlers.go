@@ -4,6 +4,7 @@ import (
 	"barter-port/contracts/openapi/deals/types"
 	dealssvc "barter-port/internal/deals/application/deals"
 	"barter-port/internal/deals/domain"
+	"barter-port/internal/deals/infrastructure/transport/http/common"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/httpx"
 	"barter-port/pkg/logger"
@@ -49,7 +50,7 @@ func (h *Handlers) GetDealsForFailureReview(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	httpx.WriteJSON(w, http.StatusOK, mapDealIDsWithParticipantIDsToDTO(deals))
+	httpx.WriteJSON(w, http.StatusOK, common.MapDealIDsWithParticipantIDsToDTO(deals))
 }
 
 func (h *Handlers) VoteForFailure(w http.ResponseWriter, r *http.Request) {
