@@ -18,6 +18,7 @@ import {
 import MenuIcon from "@mui/icons-material/Menu";
 import { useAppDispatch } from "@/hooks/redux";
 import { performLogout } from "@/features/auth/model/logoutThunk";
+import dealsApi from "@/features/deals/api/dealsApi.ts";
 import usePendingReviews from "@/features/reviews/model/usePendingReviews.ts";
 
 const navLinks = [
@@ -35,6 +36,11 @@ function AppLayout() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { pendingCount } = usePendingReviews();
+  const { data: drafts } = dealsApi.useGetMyDraftDealsQuery({
+    createdByMe: false,
+    participating: true,
+  });
+  const draftCount = drafts?.length ?? 0;
 
   const handleLogout = async () => {
     await dispatch(performLogout());
@@ -42,17 +48,27 @@ function AppLayout() {
   };
 
   const renderNavLabel = (label: string, to: string) => {
-    if (to !== "/reviews") {
-      return label;
+    if (to === "/reviews") {
+      return (
+        <Badge badgeContent={pendingCount} color="error" max={99}>
+          <Box component="span" sx={{ pr: pendingCount > 0 ? 1 : 0 }}>
+            {label}
+          </Box>
+        </Badge>
+      );
     }
 
-    return (
-      <Badge badgeContent={pendingCount} color="error" max={99}>
-        <Box component="span" sx={{ pr: pendingCount > 0 ? 1 : 0 }}>
-          {label}
-        </Box>
-      </Badge>
-    );
+    if (to === "/deals/drafts") {
+      return (
+        <Badge badgeContent={draftCount} color="warning" max={99}>
+          <Box component="span" sx={{ pr: draftCount > 0 ? 1 : 0 }}>
+            {label}
+          </Box>
+        </Badge>
+      );
+    }
+
+    return label;
   };
 
   const drawer = (
