@@ -2,8 +2,11 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Alert, Box, Button, CircularProgress, Stack, Typography } from "@mui/material";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import CancelOutlinedIcon from "@mui/icons-material/CancelOutlined";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import dealsApi from "@/features/deals/api/dealsApi";
+import usersApi from "@/features/users/api/usersApi.ts";
 import DraftCard from "@/widgets/deals/DraftCard";
+import { getErrorMessage } from "@/shared/utils/getErrorMessage.ts";
 
 function DraftPage() {
   const { draftId } = useParams<{ draftId: string }>();
@@ -12,8 +15,10 @@ function DraftPage() {
   const { data, isLoading, error } = dealsApi.useGetDraftDealByIdQuery(draftId ?? "", {
     skip: !draftId,
   });
-  const [confirmDraftDeal, { isLoading: isConfirming }] = dealsApi.useConfirmDraftDealMutation();
-  const [cancelDraftDeal, { isLoading: isCancelling }] = dealsApi.useCancelDraftDealMutation();
+  const { data: me } = usersApi.useGetCurrentUserQuery();
+  const [confirmDraftDeal, { isLoading: isConfirming, error: confirmError }] = dealsApi.useConfirmDraftDealMutation();
+  const [cancelDraftDeal, { isLoading: isCancelling, error: cancelError }] = dealsApi.useCancelDraftDealMutation();
+  const [deleteDraftDeal, { isLoading: isDeleting, error: deleteError }] = dealsApi.useDeleteDraftDealMutation();
 
   if (!draftId) return <Alert severity="warning">Черновик не найден</Alert>;
 
@@ -29,12 +34,33 @@ function DraftPage() {
   if (!data) return <Alert severity="warning">Черновик не найден</Alert>;
 
   const onConfirm = async () => {
-    await confirmDraftDeal(draftId);
+    try {
+      await confirmDraftDeal(draftId).unwrap();
+    } catch {
+      return;
+    }
   };
 
   const onCancel = async () => {
-    await cancelDraftDeal(draftId);
+    try {
+      await cancelDraftDeal(draftId).unwrap();
+    } catch {
+      return;
+    }
   };
+
+  const onDelete = async () => {
+    try {
+      await deleteDraftDeal(draftId).unwrap();
+      navigate("/deals/drafts");
+    } catch {
+      return;
+    }
+  };
+
+  const actionError = confirmError ?? cancelError ?? deleteError;
+  const actionErrorMessage = getErrorMessage(actionError) ?? "Не удалось выполнить действие с черновиком";
+  const deleteDraftLabel = me?.id === data.authorId ? "Отменить черновик" : "Отклонить черновик";
 
   return (
     <Box maxWidth={700} mx="auto">
@@ -59,7 +85,7 @@ function DraftPage() {
           color="success"
           startIcon={isConfirming ? <CircularProgress size={18} color="inherit" /> : <CheckCircleOutlineIcon />}
           onClick={onConfirm}
-          disabled={isConfirming || isCancelling}
+          disabled={isConfirming || isCancelling || isDeleting}
         >
           Подтвердить участие
         </Button>
@@ -68,11 +94,26 @@ function DraftPage() {
           color="error"
           startIcon={isCancelling ? <CircularProgress size={18} color="inherit" /> : <CancelOutlinedIcon />}
           onClick={onCancel}
-          disabled={isConfirming || isCancelling}
+          disabled={isConfirming || isCancelling || isDeleting}
         >
           Отменить участие
         </Button>
+        <Button
+          variant="outlined"
+          color="warning"
+          startIcon={isDeleting ? <CircularProgress size={18} color="inherit" /> : <DeleteOutlineIcon />}
+          onClick={onDelete}
+          disabled={isConfirming || isCancelling || isDeleting}
+        >
+          {deleteDraftLabel}
+        </Button>
       </Stack>
+
+      {actionError && (
+        <Alert severity="error" sx={{ mt: 2 }}>
+          {actionErrorMessage}
+        </Alert>
+      )}
     </Box>
   );
 }
