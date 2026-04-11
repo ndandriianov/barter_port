@@ -30,9 +30,10 @@ const formatCreatedAt = (value: string) =>
 interface OfferCardProps {
   offer: Offer;
   showRating?: boolean;
+  draftCount?: number;
 }
 
-function OfferCard({ offer, showRating = false }: OfferCardProps) {
+function OfferCard({ offer, showRating = false, draftCount = 0 }: OfferCardProps) {
   const authorName = offer.authorName?.trim() || "Имя не указано";
   const { data: summary } = reviewsApi.useGetOfferReviewsSummaryQuery(offer.id, {
     skip: !showRating,
@@ -44,6 +45,9 @@ function OfferCard({ offer, showRating = false }: OfferCardProps) {
         <Box display="flex" gap={1} mb={1} flexWrap="wrap">
           <Chip label={typeLabels[offer.type]} size="small" variant="outlined" />
           <Chip label={actionLabels[offer.action]} size="small" color={actionColors[offer.action]} />
+          {draftCount > 0 && (
+            <Chip label={`Черновики: ${draftCount}`} size="small" color="warning" variant="outlined" />
+          )}
         </Box>
 
         <Typography variant="h6" fontWeight={600} gutterBottom noWrap>

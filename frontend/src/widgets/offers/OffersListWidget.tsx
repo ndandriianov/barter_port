@@ -17,6 +17,7 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import offersApi from "@/features/offers/api/offersApi";
 import usersApi from "@/features/users/api/usersApi.ts";
 import type { Offer, SortType } from "@/features/offers/model/types";
+import useDraftOfferCounts from "@/features/deals/model/useDraftOfferCounts.ts";
 import OfferCard from "@/widgets/offers/OfferCard";
 
 interface OffersListWidgetProps {
@@ -26,6 +27,7 @@ interface OffersListWidgetProps {
 function OffersListWidget({ mode }: OffersListWidgetProps) {
   const [sortType, setSortType] = useState<SortType>("ByTime");
   const { data: currentUser } = usersApi.useGetCurrentUserQuery();
+  const { countsByOfferId } = useDraftOfferCounts({ enabled: mode === "mine" });
   const {
     data,
     isLoading,
@@ -103,7 +105,11 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
           {offers.map((offer) => (
             <Grid key={offer.id} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
               <RouterLink to={`/offers/${offer.id}`} style={{ textDecoration: "none" }}>
-                <OfferCard offer={offer} showRating />
+                <OfferCard
+                  offer={offer}
+                  showRating
+                  draftCount={mode === "mine" ? (countsByOfferId[offer.id] ?? 0) : 0}
+                />
               </RouterLink>
             </Grid>
           ))}
