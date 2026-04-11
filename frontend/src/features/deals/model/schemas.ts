@@ -63,6 +63,7 @@ export const getMyDraftDealsResponseSchema = z.array(draftIdAndParticipantsSchem
 export const itemSchema = z.object({
   id: z.string(),
   authorId: z.string(),
+  offerId: z.string().optional(),
   providerId: z.string().optional(),
   receiverId: z.string().optional(),
   name: z.string(),

@@ -15,6 +15,10 @@ import DraftsListPage from "@/pages/deals/DraftsListPage";
 import DraftPage from "@/pages/deals/DraftPage";
 import DealItemPage from "@/pages/deals/DealItemPage";
 import ChatsPage from "@/pages/chats/ChatsPage";
+import PendingReviewsPage from "@/pages/reviews/PendingReviewsPage";
+import MyReviewsPage from "@/pages/reviews/MyReviewsPage";
+import UserReviewsPage from "@/pages/reviews/UserReviewsPage";
+import OfferReviewsPage from "@/pages/reviews/OfferReviewsPage";
 
 function AppRouter() {
   return (
@@ -32,12 +36,16 @@ function AppRouter() {
           <Route path="/offers" element={<OffersListPage />} />
           <Route path="/offers/create" element={<CreateOfferPage />} />
           <Route path="/offers/:offerId" element={<OfferPage />} />
+          <Route path="/offers/:offerId/reviews" element={<OfferReviewsPage />} />
           <Route path="/deals" element={<DealsListPage />} />
           <Route path="/deals/:dealId" element={<DealPage />} />
           <Route path="/deals/:dealId/items/:itemId" element={<DealItemPage />} />
           <Route path="/deals/drafts" element={<DraftsListPage />} />
           <Route path="/deals/drafts/:draftId" element={<DraftPage />} />
           <Route path="/chats" element={<ChatsPage />} />
+          <Route path="/reviews/pending" element={<PendingReviewsPage />} />
+          <Route path="/reviews/mine" element={<MyReviewsPage />} />
+          <Route path="/users/:userId/reviews" element={<UserReviewsPage />} />
           <Route path="*" element={<Navigate to="/profile" replace />} />
         </Route>
       </Routes>

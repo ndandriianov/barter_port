@@ -22,6 +22,7 @@ const navLinks = [
   { label: "Админка", to: "/admin" },
   { label: "Объявления", to: "/offers" },
   { label: "Сделки", to: "/deals" },
+  { label: "Отзывы", to: "/reviews/pending" },
   { label: "Черновики", to: "/deals/drafts" },
   { label: "Профиль", to: "/profile" },
   { label: "Чаты", to: "/chats" },

@@ -1,10 +1,12 @@
 import { useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import { Alert, Box, Button, CircularProgress, Divider, Typography } from "@mui/material";
 import offersApi from "@/features/offers/api/offersApi";
 import usersApi from "@/features/users/api/usersApi";
+import reviewsApi from "@/features/reviews/api/reviewsApi.ts";
 import OfferCard from "@/widgets/offers/OfferCard";
 import RespondToOfferModal from "@/widgets/offers/RespondToOfferModal";
+import ReviewSummaryCard from "@/widgets/reviews/ReviewSummaryCard.tsx";
 
 function OfferPage() {
   const { offerId } = useParams<{ offerId: string }>();
@@ -13,6 +15,9 @@ function OfferPage() {
   const { data: meData } = usersApi.useGetCurrentUserQuery();
 
   const { data: offer, isLoading, error } = offersApi.useGetOfferByIdQuery(offerId ?? "", {
+    skip: !offerId,
+  });
+  const { data: reviewsSummary } = reviewsApi.useGetOfferReviewsSummaryQuery(offerId ?? "", {
     skip: !offerId,
   });
 
@@ -51,12 +56,24 @@ function OfferPage() {
 
       <Divider sx={{ my: 3 }} />
 
-      <Box display="flex" gap={2}>
+      {reviewsSummary && (
+        <Box mb={3}>
+          <ReviewSummaryCard title="Отзывы по этому offer" summary={reviewsSummary} />
+        </Box>
+      )}
+
+      <Box display="flex" gap={2} flexWrap="wrap">
         {canRespond && (
           <Button variant="contained" onClick={() => setIsRespondModalOpen(true)}>
             Откликнуться
           </Button>
         )}
+        <Button component={RouterLink} to={`/offers/${offer.id}/reviews`} variant="outlined">
+          Смотреть отзывы
+        </Button>
+        <Button component={RouterLink} to={`/users/${offer.authorId}/reviews`} variant="outlined">
+          Отзывы о поставщике
+        </Button>
         <Button variant="outlined" color="error">
           Пожаловаться
         </Button>

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link as RouterLink, useNavigate } from "react-router-dom";
 import {Alert, Box, Button, Card, CardContent, CircularProgress, Divider, Stack, TextField, Typography,} from "@mui/material";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import usersApi from "@/features/users/api/usersApi";
@@ -143,6 +143,20 @@ function ProfilePage() {
             </Button>
             <Button variant="outlined" onClick={() => refetch()} disabled={isSaving}>
               Обновить
+            </Button>
+          </Box>
+
+          <Divider sx={{ my: 3 }} />
+
+          <Box display="flex" gap={2} flexWrap="wrap">
+            <Button component={RouterLink} to="/reviews/pending" variant="outlined">
+              Оставить отзыв
+            </Button>
+            <Button component={RouterLink} to="/reviews/mine" variant="outlined">
+              Мои отзывы
+            </Button>
+            <Button component={RouterLink} to={`/users/${data.id}/reviews`} variant="outlined">
+              Отзывы обо мне
             </Button>
           </Box>
         </CardContent>
