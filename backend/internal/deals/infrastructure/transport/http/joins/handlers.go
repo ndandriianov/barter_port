@@ -1,7 +1,7 @@
 package joins
 
 import (
-	dealssvc "barter-port/internal/deals/application/deals"
+	joinssvc "barter-port/internal/deals/application/joins"
 	"barter-port/internal/deals/domain"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/httpx"
@@ -17,10 +17,10 @@ import (
 
 type Handlers struct {
 	log          *slog.Logger
-	dealsService *dealssvc.Service
+	dealsService *joinssvc.Service
 }
 
-func NewHandlers(log *slog.Logger, dealsService *dealssvc.Service) *Handlers {
+func NewHandlers(log *slog.Logger, dealsService *joinssvc.Service) *Handlers {
 	return &Handlers{log: log, dealsService: dealsService}
 }
 
@@ -44,7 +44,9 @@ func (h *Handlers) JoinDeal(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case errors.Is(err, domain.ErrDealNotFound):
 			httpx.WriteEmptyError(w, http.StatusNotFound)
-		case errors.Is(err, domain.ErrForbidden), errors.Is(err, domain.ErrInvalidDealStatus):
+		case errors.Is(err, domain.ErrForbidden),
+			errors.Is(err, domain.ErrInvalidDealStatus),
+			errors.Is(err, domain.ErrFailureReviewRequired):
 			httpx.WriteEmptyError(w, http.StatusForbidden)
 		default:
 			log.Error("error joining deal", slog.Any("error", err))
@@ -76,6 +78,10 @@ func (h *Handlers) LeaveDeal(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case errors.Is(err, domain.ErrDealNotFound):
 			httpx.WriteEmptyError(w, http.StatusNotFound)
+		case errors.Is(err, domain.ErrForbidden),
+			errors.Is(err, domain.ErrInvalidDealStatus),
+			errors.Is(err, domain.ErrFailureReviewRequired):
+			httpx.WriteEmptyError(w, http.StatusForbidden)
 		default:
 			log.Error("error leaving deal", slog.Any("error", err))
 			httpx.WriteEmptyError(w, http.StatusInternalServerError)
@@ -156,7 +162,9 @@ func (h *Handlers) ProcessJoinRequest(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case errors.Is(err, domain.ErrDealNotFound), errors.Is(err, domain.ErrJoinRequestNotFound):
 			httpx.WriteEmptyError(w, http.StatusNotFound)
-		case errors.Is(err, domain.ErrForbidden), errors.Is(err, domain.ErrInvalidDealStatus):
+		case errors.Is(err, domain.ErrForbidden),
+			errors.Is(err, domain.ErrInvalidDealStatus),
+			errors.Is(err, domain.ErrFailureReviewRequired):
 			httpx.WriteEmptyError(w, http.StatusForbidden)
 		default:
 			log.Error("error processing join request", slog.Any("error", err))

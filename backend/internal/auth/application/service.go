@@ -65,6 +65,7 @@ type Service struct {
 	emailBypassMode bool
 
 	frontendBaseURL string
+	adminEmail      string
 	re              *regexp.Regexp
 }
 
@@ -79,6 +80,7 @@ func NewService(
 	emailBypassMode bool,
 
 	frontendBaseURL string,
+	adminEmail string,
 	re *regexp.Regexp,
 ) *Service {
 	if logger == nil {
@@ -96,6 +98,7 @@ func NewService(
 		emailBypassMode: emailBypassMode,
 
 		frontendBaseURL: strings.TrimRight(frontendBaseURL, "/"),
+		adminEmail:      strings.TrimSpace(strings.ToLower(adminEmail)),
 		re:              re,
 	}
 }
@@ -182,6 +185,52 @@ func (s *Service) Register(ctx context.Context, email, password string) (Registe
 		UserID: u.ID,
 		Email:  u.Email,
 	}, nil
+}
+
+func (s *Service) CreateAdmin(ctx context.Context, email, password string) (RegisterResult, error) {
+	const funcName = "CreateAdmin"
+
+	log := s.logger.With(slog.String("func", funcName), slog.String("type", typeName))
+
+	email = strings.TrimSpace(strings.ToLower(email))
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcryptCost)
+	if err != nil {
+		return RegisterResult{}, fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	u := domain.NewUser(uuid.New(), email, string(hash))
+	u.EmailVerified = true
+	result := RegisterResult{UserID: u.ID, Email: u.Email}
+
+	err = db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
+		err = s.users.Create(ctx, tx, u)
+		if err != nil {
+			if !errors.Is(err, domain.ErrEmailAlreadyInUse) {
+				return err
+			}
+
+			return fmt.Errorf("failed to create user: %w", err)
+		}
+
+		if err = s.createUser(ctx, tx, u.ID); err != nil {
+			return fmt.Errorf("failed to create admin user event: %w", err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		if errors.Is(err, domain.ErrEmailAlreadyInUse) {
+			log.Warn("admin already exists", slog.String("email", email))
+			return result, nil
+		}
+
+		return RegisterResult{}, err
+	}
+
+	log.Info("admin ensured", slog.String("email", result.Email), slog.Any("user_id", result.UserID))
+
+	return result, nil
 }
 
 // RetrySendVerificationEmail generates a new email verification token and sends a verification email if the user's email is not verified.
@@ -291,6 +340,31 @@ func (s *Service) VerifyEmail(ctx context.Context, rawToken string) error {
 //   - domain.ErrUserNotFound
 func (s *Service) GetMe(ctx context.Context, userID uuid.UUID) (domain.User, error) {
 	return s.users.GetByID(ctx, s.db, userID)
+}
+
+// IsAdmin reports whether the user matches the configured admin account.
+//
+// Errors:
+//   - domain.ErrUserNotFound
+func (s *Service) IsAdmin(ctx context.Context, userID uuid.UUID) (bool, error) {
+	user, err := s.GetMe(ctx, userID)
+	if err != nil {
+		return false, err
+	}
+
+	return s.isAdminEmail(user.Email), nil
+}
+
+func (s *Service) IsAdminEmail(email string) bool {
+	return s.isAdminEmail(email)
+}
+
+func (s *Service) isAdminEmail(email string) bool {
+	if s.adminEmail == "" {
+		return false
+	}
+
+	return strings.TrimSpace(strings.ToLower(email)) == s.adminEmail
 }
 
 func (s *Service) createUser(ctx context.Context, tx pgx.Tx, userID uuid.UUID) error {

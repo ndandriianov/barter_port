@@ -23,6 +23,8 @@ import type { User } from "@/features/users/model/types.ts";
 import type { DealStatus, GetDealsResponse } from "@/features/deals/model/types.ts";
 
 type DealListItem = GetDealsResponse[number];
+type DealsStatusFilter = "all" | DealStatus;
+type DealsStatusCounts = Partial<Record<DealsStatusFilter, number>>;
 
 const dealStatusOrder: DealStatus[] = [
   "LookingForParticipants",
@@ -42,14 +44,18 @@ const dealStatusLabels: Record<DealStatus, string> = {
   Failed: "Не состоялись",
 };
 
-function DealsList() {
+interface DealsListProps {
+  statusFilter: DealsStatusFilter;
+  onAvailableStatusTabsChange?: (tabs: DealsStatusFilter[]) => void;
+  onStatusCountsChange?: (counts: DealsStatusCounts) => void;
+}
+
+function DealsList({ statusFilter, onAvailableStatusTabsChange, onStatusCountsChange }: DealsListProps) {
   const dispatch = useAppDispatch();
   const [myOnly, setMyOnly] = useState(false);
-  const [openOnly, setOpenOnly] = useState(false);
 
   const { data, isLoading, isFetching, error, refetch } = dealsApi.useGetDealsQuery({
     my: myOnly || undefined,
-    open: openOnly || undefined,
   });
 
   const participantIds = useMemo(
@@ -94,13 +100,54 @@ function DealsList() {
       },
     );
 
-    (data ?? []).forEach((deal) => {
+    const filteredDeals = statusFilter === "all"
+      ? (data ?? [])
+      : (data ?? []).filter((deal) => deal.status === statusFilter);
+
+    filteredDeals.forEach((deal) => {
       groups[deal.status].push(deal);
     });
 
     return dealStatusOrder
       .map((status) => ({ status, deals: groups[status] }))
       .filter((group) => group.deals.length > 0);
+  }, [data, statusFilter]);
+
+  const filteredDealsCount = useMemo(
+    () => groupedDeals.reduce((sum, group) => sum + group.deals.length, 0),
+    [groupedDeals],
+  );
+
+  const availableStatusTabs = useMemo<DealsStatusFilter[]>(() => {
+    if (!data || data.length === 0) {
+      return [];
+    }
+
+    const tabs: DealsStatusFilter[] = ["all"];
+
+    dealStatusOrder.forEach((status) => {
+      if (data.some((deal) => deal.status === status)) {
+        tabs.push(status);
+      }
+    });
+
+    return tabs;
+  }, [data]);
+
+  const statusCounts = useMemo<DealsStatusCounts>(() => {
+    if (!data || data.length === 0) {
+      return {};
+    }
+
+    return {
+      all: data.length,
+      LookingForParticipants: data.filter((deal) => deal.status === "LookingForParticipants").length,
+      Discussion: data.filter((deal) => deal.status === "Discussion").length,
+      Confirmed: data.filter((deal) => deal.status === "Confirmed").length,
+      Completed: data.filter((deal) => deal.status === "Completed").length,
+      Cancelled: data.filter((deal) => deal.status === "Cancelled").length,
+      Failed: data.filter((deal) => deal.status === "Failed").length,
+    };
   }, [data]);
 
   const getParticipantNames = (ids: string[]) =>
@@ -112,6 +159,14 @@ function DealsList() {
             return name ? name : "имя не указано";
           })
           .join(", ");
+
+  useEffect(() => {
+    onAvailableStatusTabsChange?.(availableStatusTabs);
+  }, [availableStatusTabs, onAvailableStatusTabsChange]);
+
+  useEffect(() => {
+    onStatusCountsChange?.(statusCounts);
+  }, [onStatusCountsChange, statusCounts]);
 
   if (isLoading) {
     return (
@@ -143,16 +198,6 @@ function DealsList() {
             }
             label="Только мои"
           />
-          <FormControlLabel
-            control={
-              <Checkbox
-                checked={openOnly}
-                onChange={(e) => setOpenOnly(e.target.checked)}
-                size="small"
-              />
-            }
-            label="Только открытые"
-          />
         </FormGroup>
 
         <Tooltip title="Обновить">
@@ -164,9 +209,9 @@ function DealsList() {
         </Tooltip>
       </Box>
 
-      {data.length === 0 ? (
+      {filteredDealsCount === 0 ? (
         <Typography color="text.secondary" textAlign="center" py={4}>
-          Сделок пока нет
+          {statusFilter === "all" ? "Сделок пока нет" : "Сделок с выбранным статусом пока нет"}
         </Typography>
       ) : (
         <Box display="flex" flexDirection="column" gap={3}>
@@ -179,7 +224,10 @@ function DealsList() {
                 {deals.map((deal) => (
                   <ListItem key={deal.id} disablePadding divider>
                     <ListItemButton component={RouterLink} to={`/deals/${deal.id}`}>
-                      <ListItemText primary={getParticipantNames(deal.participants)} />
+                      <ListItemText
+                        primary={deal.name ?? "—"}
+                        secondary={getParticipantNames(deal.participants)}
+                      />
                     </ListItemButton>
                   </ListItem>
                 ))}

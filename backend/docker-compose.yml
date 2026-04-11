@@ -173,6 +173,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      deals:
+        condition: service_started
     env_file:
       - ./.env
     environment:

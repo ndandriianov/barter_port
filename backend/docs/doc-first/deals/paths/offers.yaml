@@ -95,3 +95,53 @@ offers:
           application/json:
             schema:
               $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+
+offerById:
+  get:
+    tags:
+      - offers
+    summary: Get offer by ID
+    description: Returns a single offer by its ID.
+    operationId: getOfferById
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - name: offerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: OK
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Offer'
+      '400':
+        description: Invalid offer ID
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Offer not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'

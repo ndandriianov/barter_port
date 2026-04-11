@@ -3,6 +3,7 @@ package main
 import (
 	"barter-port/internal/auth/app"
 	"barter-port/pkg/bootstrap"
+	"context"
 	"errors"
 	"log"
 	"os"
@@ -39,6 +40,10 @@ func main() {
 		log.Fatalf("auth - new app: %v", err)
 	}
 	defer authApp.Close()
+
+	if _, err = authApp.EnsureAdmin(context.Background(), cfg.Admin.Email, cfg.Admin.Password); err != nil {
+		log.Fatalf("auth - ensure admin: %v", err)
+	}
 
 	err = authApp.Run()
 	if err != nil {

@@ -24,12 +24,42 @@ paths:
     $ref: './paths/deals.yaml#/dealItemById'
   /deals/{dealId}/items:
     $ref: './paths/deals.yaml#/dealItems'
+  /deals/{dealId}/items/{itemId}/reviews:
+    $ref: './paths/reviews.yaml#/dealItemReviews'
+  /deals/{dealId}/items/{itemId}/reviews/eligibility:
+    $ref: './paths/reviews.yaml#/dealItemReviewEligibility'
+  /deals/{dealId}/reviews:
+    $ref: './paths/reviews.yaml#/dealReviews'
+  /deals/{dealId}/reviews-pending:
+    $ref: './paths/reviews.yaml#/dealPendingReviews'
+  /reviews/{reviewId}:
+    $ref: './paths/reviews.yaml#/reviewById'
+  /authors/{authorId}/reviews:
+    $ref: './paths/reviews.yaml#/authorReviews'
+  /providers/{providerId}/reviews:
+    $ref: './paths/reviews.yaml#/providerReviews'
+  /providers/{providerId}/reviews-summary:
+    $ref: './paths/reviews.yaml#/providerReviewsSummary'
   /deals/{dealId}/joins:
     $ref: './paths/joins.yaml#/join'
   /deals/{dealId}/joins/{userId}:
     $ref: './paths/joins.yaml#/processJoinRequest'
+  /deals/failures/review:
+    $ref: './paths/failures.yaml#/dealFailuresReview'
+  /deals/failures/{dealId}/votes:
+    $ref: './paths/failures.yaml#/dealFailuresVotes'
+  /deals/failures/{dealId}/materials:
+    $ref: './paths/failures.yaml#/dealMaterials'
+  /deals/failures/{dealId}/moderator-resolution:
+    $ref: './paths/failures.yaml#/dealFailureModeratorResolution'
   /offers:
     $ref: './paths/offers.yaml#/offers'
+  /offers/{offerId}:
+    $ref: './paths/offers.yaml#/offerById'
+  /offers/{offerId}/reviews:
+    $ref: './paths/reviews.yaml#/offerReviews'
+  /offers/{offerId}/reviews-summary:
+    $ref: './paths/reviews.yaml#/offerReviewsSummary'
 
 components:
   securitySchemes:

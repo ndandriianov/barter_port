@@ -46,6 +46,7 @@ func NewRouter(logg *slog.Logger, validator *validators.LocalJWT, h *Handlers) h
 			r.Get("/users", h.ListUsers)
 			r.Post("/", h.CreateChat)
 			r.Get("/", h.ListChats)
+			r.Get("/deals/{dealId}", h.GetDealChat)
 			r.Get("/{chatId}/messages", h.GetMessages)
 			r.Post("/{chatId}/messages", h.SendMessage)
 		})

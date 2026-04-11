@@ -53,8 +53,10 @@ dealItemById:
     description: |
       Редактировать позицию сделки.
 
+      - Редактирование доступно только в статусах `LookingForParticipants` и `Discussion`.
       - Поля `name`, `description`, `quantity` может менять только автор позиции (`author_id`).
       - Роли `provider`/`receiver` можно claim/release по бизнес-правилам.
+      - Если по сделке уже создана запись в `deal_failures` и она ожидает решения админа, редактирование позиции запрещено.
     operationId: updateDealItem
     parameters:
       - name: dealId
@@ -85,7 +87,10 @@ dealItemById:
             schema:
               $ref: '../components/schemas.yaml#/Item'
       '400':
-        description: Некорректный запрос (пустое тело)
+        description: |
+          Некорректный запрос:
+          - пустое тело запроса;
+          - сделка не находится в статусе `LookingForParticipants` или `Discussion`.
         content:
           application/json:
             schema:
@@ -102,7 +107,8 @@ dealItemById:
           - пользователь не является автором позиции при изменении контентных полей;
           - роль уже занята другим пользователем;
           - пользователь не владеет ролью при release;
-          - пользователь уже занимает другую роль (`provider`/`receiver`) для этой же позиции.
+          - пользователь уже занимает другую роль (`provider`/`receiver`) для этой же позиции;
+          - по сделке уже создана запись в `deal_failures`, ожидающая решения админа.
         content:
           application/json:
             schema:
@@ -116,6 +122,64 @@ dealItemById:
 
 
 dealById:
+  patch:
+    tags:
+      - Deals
+    summary: Обновить название сделки
+    description: Обновить название сделки. Только участники сделки могут изменять её название.
+    operationId: updateDeal
+    parameters:
+      - name: dealId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    security:
+      - bearerAuth: [ ]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/requests.yaml#/UpdateDealRequest'
+    responses:
+      '200':
+        description: Обновлённая сделка
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Deal'
+      '400':
+        description: Некорректный запрос
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: Пользователь не является участником сделки
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Сделка не найдена
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
   get:
     tags:
       - Deals
@@ -175,6 +239,10 @@ dealStatus:
       Когда все пользователи указали один и тот же статус сделки (вперед), то выполняется переход к новому статусу.
       Сделка должна быть в статусе, предшествующем указанному.
       Если пользователь выбирает статус отмены, то сделка сразу же переходит в статус отменён.
+      Статус Failed не может быть установлен через этот эндпоинт.
+      
+      Если по сделке уже создана запись в `deal_failures` и она ожидает решения админа,
+      менять статус сделки через этот эндпоинт нельзя.
     operationId: ChangeDealStatus
     parameters:
       - name: dealId
@@ -206,6 +274,15 @@ dealStatus:
               $ref: '../components/responses.yaml#/ErrorResponse'
       '401':
         description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: |
+          Операция запрещена по бизнес-правилам
+          (пользователь не является участником сделки, либо голосовал за Failed,
+          либо по сделке уже создана запись в `deal_failures`, ожидающая решения админа)
         content:
           application/json:
             schema:
@@ -278,7 +355,10 @@ dealItems:
       - Deals
     summary: Добавить позицию в сделку
     description: |
-      Пользователь указывает id одного из своих offers, на основании offer формируется item, item добавляется в сделку
+      Пользователь указывает id одного из своих offers, на основании offer формируется item, item добавляется в сделку.
+
+      Если по сделке уже создана запись в `deal_failures` и она ожидает решения админа,
+      добавление новой позиции запрещено.
     operationId: addDealItem
     parameters:
       - name: dealId
@@ -317,7 +397,8 @@ dealItems:
       '403':
         description: |
           Операция запрещена по бизнес-правилам:
-          сделка не в статусе LookingForParticipants, либо пользователь не является участником сделки
+          сделка не в статусе LookingForParticipants, либо пользователь не является участником сделки,
+          либо по сделке уже создана запись в `deal_failures`, ожидающая решения админа
         content:
           application/json:
             schema:

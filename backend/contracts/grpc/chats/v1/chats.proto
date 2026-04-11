@@ -6,6 +6,7 @@ option go_package = "barterport/internal/contracts/grpc/chats/v1;chatspb";
 
 service ChatsService {
     rpc CreateChat (CreateChatRequest) returns (CreateChatResponse);
+    rpc GetDealChatId (GetDealChatIdRequest) returns (GetDealChatIdResponse);
 }
 
 // CreateChat
@@ -15,5 +16,14 @@ message CreateChatRequest {
 }
 
 message CreateChatResponse {
+    string chat_id = 1;
+}
+
+// GetDealChatId
+message GetDealChatIdRequest {
+    string deal_id = 1;
+}
+
+message GetDealChatIdResponse {
     string chat_id = 1;
 }

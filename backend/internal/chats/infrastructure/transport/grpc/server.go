@@ -3,7 +3,9 @@ package grpc
 import (
 	chatspb "barter-port/contracts/grpc/chats/v1"
 	"barter-port/internal/chats/application"
+	"barter-port/internal/chats/domain"
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -49,4 +51,25 @@ func (s *Server) CreateChat(ctx context.Context, req *chatspb.CreateChatRequest)
 	}
 
 	return &chatspb.CreateChatResponse{ChatId: chat.ID.String()}, nil
+}
+
+func (s *Server) GetDealChatId(ctx context.Context, req *chatspb.GetDealChatIdRequest) (*chatspb.GetDealChatIdResponse, error) {
+	if req.DealId == "" {
+		return nil, status.Error(codes.InvalidArgument, "deal_id is required")
+	}
+
+	dealID, err := uuid.Parse(req.DealId)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid deal_id: %v", err)
+	}
+
+	chatID, err := s.chatsService.GetDealChatID(ctx, dealID)
+	if err != nil {
+		if errors.Is(err, domain.ErrChatNotFound) {
+			return nil, status.Error(codes.NotFound, "chat for deal not found")
+		}
+		return nil, status.Errorf(codes.Internal, "failed to get chat id for deal: %v", err)
+	}
+
+	return &chatspb.GetDealChatIdResponse{ChatId: chatID.String()}, nil
 }

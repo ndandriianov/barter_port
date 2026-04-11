@@ -9,5 +9,5 @@ export const userSchema = z.object({
 export const meSchema = userSchema.extend({
   email: z.string(),
   createdAt: z.string(),
+  isAdmin: z.boolean(),
 });
-

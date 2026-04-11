@@ -27,6 +27,7 @@ type Me struct {
 	Bio       *string
 	Email     string
 	CreatedAt time.Time
+	IsAdmin   bool
 }
 
 type Service struct {
@@ -68,6 +69,7 @@ func (s *Service) GetMe(ctx context.Context, id uuid.UUID) (Me, error) {
 		Bio:       u.Bio,
 		Email:     authMe.GetEmail(),
 		CreatedAt: createdAt,
+		IsAdmin:   authMe.GetIsAdmin(),
 	}, nil
 }
 

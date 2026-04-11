@@ -263,6 +263,10 @@ Item:
       type: string
       format: uuid
       description: Уникальный идентификатор пользователя, который предложил эту позицию в сделке
+    offerId:
+      type: string
+      format: uuid
+      description: Идентификатор исходного offer, на базе которого создана позиция сделки
     providerId:
       type: string
       format: uuid
@@ -291,6 +295,267 @@ Item:
 
 
 
+DealItemRef:
+  type: object
+  required:
+    - dealId
+    - itemId
+  properties:
+    dealId:
+      type: string
+      format: uuid
+      description: Идентификатор сделки, в рамках которой был создан item.
+    itemId:
+      type: string
+      format: uuid
+      description: Идентификатор item внутри завершенной сделки.
+
+
+
+OfferRef:
+  type: object
+  required:
+    - offerId
+  properties:
+    offerId:
+      type: string
+      format: uuid
+      description: Идентификатор исходного offer.
+
+
+
+ReviewContextType:
+  type: string
+  description: Тип контекста, к которому относится отзыв.
+  enum:
+    - item-only
+    - offer-only
+    - offer+item
+
+
+
+ReviewEligibilityReason:
+  type: string
+  description: Машинно-стабильная причина, по которой отзыв нельзя создать.
+  enum:
+    - deal_not_completed
+    - forbidden_not_receiver
+    - receiver_missing
+    - provider_missing
+    - same_provider_and_receiver
+    - already_reviewed
+
+
+
+Review:
+  type: object
+  required:
+    - id
+    - dealId
+    - authorId
+    - providerId
+    - rating
+    - createdAt
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор отзыва.
+    dealId:
+      type: string
+      format: uuid
+      description: Идентификатор завершенной сделки, по итогам которой оставлен отзыв.
+    authorId:
+      type: string
+      format: uuid
+      description: Идентификатор пользователя, оставившего отзыв.
+    providerId:
+      type: string
+      format: uuid
+      description: |
+        Идентификатор пользователя, который фактически предоставил товар либо услугу по item.
+        Это значение берется из `items.provider_id` в момент создания отзыва и после этого не меняется.
+    rating:
+      type: integer
+      minimum: 1
+      maximum: 5
+      description: Оценка предложения по шкале от 1 до 5.
+    comment:
+      type: string
+      description: Текстовый отзыв.
+    createdAt:
+      type: string
+      format: date-time
+      description: Временная метка создания отзыва.
+    updatedAt:
+      type: string
+      format: date-time
+      description: Временная метка последнего редактирования отзыва.
+    offerRef:
+      nullable: true
+      allOf:
+        - $ref: '#/OfferRef'
+      description: |
+        Ссылка на исходный `offer`, если отзыв относится к offer.
+
+        Правила заполнения:
+        - `items.offer_id IS NULL` -> `offerRef = null`;
+        - `items.offer_id IS NOT NULL` и `items.updated_at IS NULL` -> отзыв относится только к `offer`,
+          поэтому `offerRef != null`, `itemRef = null`;
+        - `items.offer_id IS NOT NULL` и `items.updated_at IS NOT NULL` -> отзыв относится и к `offer`, и к `item`,
+          поэтому `offerRef != null`, `itemRef != null`.
+    itemRef:
+      nullable: true
+      allOf:
+        - $ref: '#/DealItemRef'
+      description: |
+        Ссылка на `item`, если отзыв относится к item.
+
+        Правила заполнения:
+        - `items.offer_id IS NULL` -> отзыв относится только к `item`,
+          поэтому `offerRef = null`, `itemRef != null`;
+        - `items.offer_id IS NOT NULL` и `items.updated_at IS NULL` -> отзыв относится только к `offer`,
+          поэтому `itemRef = null`;
+        - `items.offer_id IS NOT NULL` и `items.updated_at IS NOT NULL` -> отзыв относится и к `offer`, и к `item`,
+          поэтому `offerRef != null`, `itemRef != null`.
+
+
+
+ReviewRatingBreakdown:
+  type: object
+  required:
+    - rating1
+    - rating2
+    - rating3
+    - rating4
+    - rating5
+  properties:
+    rating1:
+      type: integer
+      minimum: 0
+      description: Количество отзывов с оценкой 1.
+    rating2:
+      type: integer
+      minimum: 0
+      description: Количество отзывов с оценкой 2.
+    rating3:
+      type: integer
+      minimum: 0
+      description: Количество отзывов с оценкой 3.
+    rating4:
+      type: integer
+      minimum: 0
+      description: Количество отзывов с оценкой 4.
+    rating5:
+      type: integer
+      minimum: 0
+      description: Количество отзывов с оценкой 5.
+
+
+
+ReviewSummary:
+  type: object
+  required:
+    - count
+    - avgRating
+    - ratingBreakdown
+  properties:
+    count:
+      type: integer
+      minimum: 0
+      description: Общее количество отзывов в выборке.
+    avgRating:
+      type: number
+      format: double
+      minimum: 0
+      maximum: 5
+      description: Средняя оценка по выборке. Для пустой выборки возвращается `0`.
+    ratingBreakdown:
+      $ref: '#/ReviewRatingBreakdown'
+
+
+
+ReviewEligibility:
+  type: object
+  required:
+    - canCreate
+    - contextType
+  properties:
+    canCreate:
+      type: boolean
+      description: Может ли текущий пользователь создать отзыв для этого item.
+    contextType:
+      $ref: '#/ReviewContextType'
+    providerId:
+      nullable: true
+      type: string
+      format: uuid
+      description: |
+        Идентификатор пользователя, который будет сохранен как `review.providerId`.
+        Может быть `null`, если eligibility вычислена в состоянии `provider_missing`.
+    offerRef:
+      nullable: true
+      allOf:
+        - $ref: '#/OfferRef'
+      description: Ссылка на offer, если отзыв затрагивает offer.
+    itemRef:
+      nullable: true
+      allOf:
+        - $ref: '#/DealItemRef'
+      description: Ссылка на item, если отзыв затрагивает item.
+    reason:
+      nullable: true
+      allOf:
+        - $ref: '#/ReviewEligibilityReason'
+      description: |
+        Причина, по которой отзыв нельзя создать. Заполняется только если `canCreate = false`.
+        Если `canCreate = true`, поле равно `null`.
+
+
+
+PendingDealReview:
+  type: object
+  required:
+    - dealId
+    - contextType
+    - canCreate
+  properties:
+    dealId:
+      type: string
+      format: uuid
+      description: Идентификатор сделки.
+    contextType:
+      $ref: '#/ReviewContextType'
+    providerId:
+      nullable: true
+      type: string
+      format: uuid
+      description: |
+        Идентификатор пользователя, который будет сохранен как `review.providerId`.
+        Может быть `null`, если контекст недоступен из-за `provider_missing`.
+    offerRef:
+      nullable: true
+      allOf:
+        - $ref: '#/OfferRef'
+      description: Ссылка на offer, если отзыв затрагивает offer.
+    itemRef:
+      nullable: true
+      allOf:
+        - $ref: '#/DealItemRef'
+      description: Ссылка на item, если отзыв затрагивает item.
+    canCreate:
+      type: boolean
+      description: Может ли текущий пользователь оставить отзыв по этому контексту.
+    reason:
+      nullable: true
+      allOf:
+        - $ref: '#/ReviewEligibilityReason'
+      description: |
+        Причина, по которой отзыв недоступен для создания. Заполняется только если `canCreate = false`.
+        Если `canCreate = true`, поле равно `null`.
+
+
+
 DealStatus:
   type: string
   description: Статус сделки
@@ -301,3 +566,29 @@ DealStatus:
     - Completed
     - Cancelled
     - Failed
+
+
+DealFailureModeratorResolution:
+  type: object
+  properties:
+    userId:
+      type: string
+      format: uuid
+      description: |
+        ID пользователя, которого админ признает виновным в провале сделки.
+        Должен быть участником сделки.
+    confirmed:
+      type: boolean
+      description: |
+        Поле null если нет решения админа,
+        true если админ признал сделку проваленной,
+        false если админ признал сделку не проваленной.
+    punishmentPoints:
+      type: integer
+      description: |
+        Количество штрафных баллов, которые админ назначает пользователю, признанному виновным в провале сделки.
+        Должны быть неотрицательным числом.
+        Отсутствует, если сделка признана не проваленной.
+    comment:
+      type: string
+      description: Комментарий админа к его решению.

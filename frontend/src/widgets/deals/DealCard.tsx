@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Link as RouterLink } from "react-router-dom";
 import {
   Alert,
   Box,
@@ -32,6 +33,7 @@ import type { Offer } from "@/features/offers/model/types";
 import { getStatusCode } from "@/shared/utils/getStatusCode";
 import type { FetchBaseQueryError } from "@reduxjs/toolkit/query";
 import type { SerializedError } from "@reduxjs/toolkit";
+import DealFailureSection from "@/widgets/deals/DealFailureSection.tsx";
 
 function dealErrorMessage(
   error: FetchBaseQueryError | SerializedError | undefined,
@@ -262,17 +264,19 @@ function RoleRow({ label, userId, myId, isParticipant, getUserName, onClaim, onR
 interface ItemRowProps {
   item: Item;
   dealId: string;
+  dealStatus: DealStatus;
   myId: string | undefined;
   isParticipant: boolean;
   getUserName: (id: string) => string;
   onEditClick: () => void;
 }
 
-function ItemRow({ item, dealId, myId, isParticipant, getUserName, onEditClick }: ItemRowProps) {
+function ItemRow({ item, dealId, dealStatus, myId, isParticipant, getUserName, onEditClick }: ItemRowProps) {
   const [updateDealItem, { isLoading }] = dealsApi.useUpdateDealItemMutation();
 
-  const canClaimProvider = myId !== undefined && item.receiverId !== myId;
-  const canClaimReceiver = myId !== undefined && item.providerId !== myId;
+  const isEditableStatus = dealStatus === "LookingForParticipants" || dealStatus === "Discussion";
+  const canClaimProvider = myId !== undefined && item.receiverId !== myId && isEditableStatus;
+  const canClaimReceiver = myId !== undefined && item.providerId !== myId && isEditableStatus;
 
   const handleClaim = (field: "claimProvider" | "claimReceiver") => () =>
     updateDealItem({ dealId, itemId: item.id, body: { [field]: true } });
@@ -285,7 +289,7 @@ function ItemRow({ item, dealId, myId, isParticipant, getUserName, onEditClick }
       disableGutters
       sx={{ borderBottom: "1px solid", borderColor: "divider", pb: 1, mb: 1, flexDirection: "column", alignItems: "flex-start" }}
       secondaryAction={
-        myId === item.authorId ? (
+        myId === item.authorId && isEditableStatus ? (
           <Tooltip title="Редактировать">
             <IconButton size="small" onClick={onEditClick}>
               <EditIcon fontSize="small" />
@@ -296,10 +300,19 @@ function ItemRow({ item, dealId, myId, isParticipant, getUserName, onEditClick }
     >
       <ListItemText
         primary={
-          <Box display="flex" alignItems="center" gap={1}>
+          <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
             <Typography variant="body2" fontWeight={500}>{item.name}</Typography>
             <Typography variant="caption" color="text.secondary">x{item.quantity}</Typography>
             <Chip label={item.type} size="small" variant="outlined" />
+            <Button
+              component={RouterLink}
+              to={`/deals/${dealId}/items/${item.id}`}
+              size="small"
+              variant="outlined"
+              sx={{ ml: "auto" }}
+            >
+              Открыть
+            </Button>
           </Box>
         }
         secondary={item.description}
@@ -342,13 +355,23 @@ function DealCard({ deal }: DealCardProps) {
   const dispatch = useAppDispatch();
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [nameInput, setNameInput] = useState(deal.name ?? "");
   const { data: me } = usersApi.useGetCurrentUserQuery();
+  const [updateDeal, { isLoading: isUpdateDealLoading }] = dealsApi.useUpdateDealMutation();
   const [changeDealStatus, { isLoading: isStatusLoading, error: changeStatusError }] = dealsApi.useChangeDealStatusMutation();
   const [joinDeal, { isLoading: isJoinLoading, error: joinError }] = dealsApi.useJoinDealMutation();
   const [leaveDeal, { isLoading: isLeaveLoading, error: leaveError }] = dealsApi.useLeaveDealMutation();
   const [processJoinRequest, { isLoading: isProcessJoinLoading, error: processJoinError }] = dealsApi.useProcessJoinRequestMutation();
 
   const isParticipant = me ? deal.participants.includes(me.id) : false;
+  const canAccessFailureResolution = Boolean(me && (isParticipant || me.isAdmin));
+  const { data: failureResolution } = dealsApi.useGetModeratorResolutionForFailureQuery(deal.id, {
+    skip: !canAccessFailureResolution,
+    pollingInterval: 10_000,
+  });
+  const hasFailureResolution = failureResolution !== undefined;
+  const isFailurePending = hasFailureResolution && failureResolution.confirmed === undefined;
   const canSeeStatusVotes = Boolean(me && isParticipant && !isFinalStatus(deal.status));
   const {
     data: statusVotes,
@@ -416,12 +439,12 @@ function DealCard({ deal }: DealCardProps) {
   }, [statusVotes]);
 
   const nextStatus: DealStatus | undefined = nextStatusByCurrent[deal.status as DealStatus];
-  const canVoteForNextStatus = isParticipant && nextStatus !== undefined;
-  const canCancelDeal = isParticipant && !isFinalStatus(deal.status);
+  const canVoteForNextStatus = isParticipant && nextStatus !== undefined && !isFailurePending;
+  const canCancelDeal = isParticipant && !isFinalStatus(deal.status) && !isFailurePending;
   const canJoinDeal = Boolean(me && !isParticipant && deal.status === "LookingForParticipants");
-  const canLeaveDeal = Boolean(me && isParticipant && !isFinalStatus(deal.status));
-  const canVoteJoinRequests = Boolean(me && isParticipant && deal.status === "LookingForParticipants");
-  const canAddItems = Boolean(me && isParticipant && deal.status === "LookingForParticipants");
+  const canLeaveDeal = Boolean(me && isParticipant && !isFinalStatus(deal.status) && !isFailurePending);
+  const canVoteJoinRequests = Boolean(me && isParticipant && deal.status === "LookingForParticipants" && !isFailurePending);
+  const canAddItems = Boolean(me && isParticipant && deal.status === "LookingForParticipants" && !isFailurePending);
   const hasActions = canVoteForNextStatus || canCancelDeal || canJoinDeal || canLeaveDeal;
 
   const handleChangeStatus = async (expectedStatus: DealStatus) => {
@@ -440,12 +463,56 @@ function DealCard({ deal }: DealCardProps) {
     await processJoinRequest({ dealId: deal.id, userId, accept }).unwrap();
   };
 
+  const handleSaveName = async () => {
+    const trimmed = nameInput.trim();
+    if (trimmed && trimmed !== deal.name) {
+      await updateDeal({ dealId: deal.id, name: trimmed });
+    }
+    setIsEditingName(false);
+  };
+
+  const handleCancelEditName = () => {
+    setNameInput(deal.name ?? "");
+    setIsEditingName(false);
+  };
+
   return (
     <Card variant="outlined">
       <CardContent>
-        <Typography variant="h6" fontWeight={600} gutterBottom>
-          {deal.name ?? "Сделка"}
-        </Typography>
+        {isEditingName ? (
+          <Box display="flex" alignItems="center" gap={1} mb={1}>
+            <TextField
+              value={nameInput}
+              onChange={(e) => setNameInput(e.target.value)}
+              size="small"
+              fullWidth
+              autoFocus
+              onKeyDown={(e) => {
+                if (e.key === "Enter") void handleSaveName();
+                if (e.key === "Escape") handleCancelEditName();
+              }}
+            />
+            <Button size="small" variant="contained" onClick={() => void handleSaveName()} disabled={isUpdateDealLoading || !nameInput.trim()}>
+              Сохранить
+            </Button>
+            <Button size="small" onClick={handleCancelEditName} disabled={isUpdateDealLoading}>
+              Отмена
+            </Button>
+          </Box>
+        ) : (
+          <Box display="flex" alignItems="center" gap={1} mb={1}>
+            <Typography variant="h6" fontWeight={600}>
+              {deal.name ?? "Сделка"}
+            </Typography>
+            {isParticipant && !isFinalStatus(deal.status) && (
+              <Tooltip title="Переименовать">
+                <IconButton size="small" onClick={() => { setNameInput(deal.name ?? ""); setIsEditingName(true); }}>
+                  <EditIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
+            )}
+          </Box>
+        )}
 
         <Box mb={1.5}>
           <Chip
@@ -474,7 +541,7 @@ function DealCard({ deal }: DealCardProps) {
                   variant="outlined"
                   color="error"
                   onClick={() => void handleChangeStatus("Cancelled")}
-                  disabled={isStatusLoading || deal.status === "Cancelled"}
+                  disabled={isStatusLoading || deal.status === "Cancelled" || isFailurePending}
                 >
                   Отменить сделку
                 </Button>
@@ -510,7 +577,7 @@ function DealCard({ deal }: DealCardProps) {
             <Alert severity="error" sx={{ mt: 1.5 }}>
               {dealErrorMessage(changeStatusError, {
                 400: "Статус сделки изменился. Обновите страницу",
-                403: "Недостаточно прав для смены статуса",
+                403: isFailurePending ? "Сделка уже передана на разбор по провалу" : "Недостаточно прав для смены статуса",
                 404: "Сделка не найдена",
               }, "Не удалось отправить голос за статус сделки")}
             </Alert>
@@ -530,7 +597,7 @@ function DealCard({ deal }: DealCardProps) {
             <Alert severity="error" sx={{ mt: 1.5 }}>
               {dealErrorMessage(leaveError, {
                 400: "Невозможно покинуть сделку на данном этапе",
-                403: "Вы не можете покинуть эту сделку",
+                403: isFailurePending ? "Сделка уже передана на разбор по провалу" : "Вы не можете покинуть эту сделку",
                 404: "Сделка не найдена",
               }, "Не удалось покинуть сделку")}
             </Alert>
@@ -540,9 +607,16 @@ function DealCard({ deal }: DealCardProps) {
             <Alert severity="error" sx={{ mt: 1.5 }}>
               {dealErrorMessage(processJoinError, {
                 400: "Невозможно обработать заявку",
-                403: "Недостаточно прав для обработки заявки",
+                403: isFailurePending ? "Сделка уже передана на разбор по провалу" : "Недостаточно прав для обработки заявки",
                 404: "Пользователь или сделка не найдены",
               }, "Не удалось обработать заявку на вступление")}
+            </Alert>
+          )}
+
+          {isFailurePending && (
+            <Alert severity="warning" sx={{ mt: 1.5 }}>
+              По сделке достигнут порог голосов о провале. Изменение состава, позиций и статуса
+              заблокировано до решения администратора.
             </Alert>
           )}
 
@@ -706,6 +780,7 @@ function DealCard({ deal }: DealCardProps) {
                 key={item.id}
                 item={item}
                 dealId={deal.id}
+                dealStatus={deal.status}
                 myId={me?.id}
                 isParticipant={isParticipant}
                 getUserName={getUserName}
@@ -714,6 +789,8 @@ function DealCard({ deal }: DealCardProps) {
             ))}
           </List>
         )}
+
+        <DealFailureSection deal={deal} me={me} isParticipant={isParticipant} getUserName={getUserName} />
       </CardContent>
 
       {editingItem && (

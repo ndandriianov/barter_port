@@ -1,0 +1,390 @@
+dealFailuresReview:
+  get:
+    tags:
+      - Failures
+    summary: Получить список сделок, требующих рассмотрения админом
+    description: |
+      Эндпоинт предназначен только для админа.
+
+      Возвращает сделки, по которым создана запись о провале в `deal_failures`,
+      но решение админа еще не принято.
+    operationId: getDealsForFailureReview
+    security:
+      - bearerAuth: [ ]
+    responses:
+      '200':
+        description: Список сделок, ожидающих решения админа, успешно получен
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/FailureModerationDealsResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: 'Операция запрещена по бизнес-правилам: пользователь не является админом'
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+dealFailuresVotes:
+  post:
+    tags:
+      - Failures
+    summary: Проголосовать за виновника в провале сделки
+    description: |
+      Голос за провал сделки и виновника.
+      
+      Если половина участников с округлением в меньшую сторону проголосует за одного и того же виновника,
+      сделка будет передана на рассмотрение админа с предварительно определенным виновником.
+      
+      Округление в меньшую сторону означает, что при нечетном количестве участников,
+      для признания виновным достаточно половины минус 0.5 голосов.
+      Например, при 5 участниках достаточно 2 голосов, при 3 участниках достаточно 1 голоса.
+
+      Порог считается по суммарному количеству любых голосов за провал сделки.
+      Если суммарное количество голосов за провал достигло порога, по сделке создается запись в `deal_failures`,
+      после чего сделка остается в текущем статусе и дальнейшие действия по ней блокируются
+      до итогового решения админа.
+      
+      Голосовать можно сколько угодно раз, пока сделка находится в одном из статусов:
+      Discussion, Confirmed,
+      и пока по сделке нет записи в `deal_failures`, а также окончательного решения админа.
+      
+      До достижения порога голос можно изменить или отозвать.
+      После достижения порога голос нельзя изменить или отозвать.
+      
+      Если половина участников проголосовали за провал сделки, но голоса распределились между несколькими кандидатами,
+      сделка также передается на рассмотрение админа, но без предварительно определенного виновника.
+      
+      Проголосовать за провал может только участник сделки
+    operationId: voteForFailure
+    parameters:
+      - name: dealId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/requests.yaml#/VoteForFailureRequest'
+    security:
+      - bearerAuth: [ ]
+    responses:
+      '204':
+        description: Голос успешно учтен
+      '400':
+        description: Некорректный запрос (пустое тело)
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: |
+          Операция запрещена по бизнес-правилам: пользователь не является участником сделки,
+          либо статус сделки не входит в Discussion / Confirmed,
+          либо по сделке уже создана запись в deal_failures,
+          либо решение админа уже принято
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Сделка не найдена
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+  delete:
+    tags:
+      - Failures
+    summary: Отозвать голос за виновника в провале сделки
+    description: |
+      Участник сделки может отозвать свой голос за провал сделки, если он передумал или проголосовал по ошибке.
+      
+      Голос можно отозвать сколько угодно раз, пока сделка находится в одном из статусов:
+      Discussion, Confirmed,
+      и пока по сделке нет записи в `deal_failures`, а также окончательного решения админа.
+
+      После достижения порога и создания записи в `deal_failures` голос отзывать нельзя.
+      
+      Отозвать голос может только участник сделки
+    operationId: revokeVoteForFailure
+    parameters:
+      - name: dealId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    security:
+      - bearerAuth: [ ]
+    responses:
+      '204':
+        description: Голос успешно отозван
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: |
+          Операция запрещена по бизнес-правилам: пользователь не является участником сделки,
+          либо статус сделки не входит в Discussion / Confirmed,
+          либо по сделке уже создана запись в deal_failures,
+          либо решение админа уже принято
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Сделка не найдена
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+  get:
+    tags:
+      - Failures
+    summary: Получить список голосов за виновника в провале сделки
+    description: |
+      Получить список голосов за виновника в провале сделки могут только участники сделки и админ
+      
+      Если голосов по сделке нет, будет возвращен пустой массив
+    operationId: getFailureVotes
+    parameters:
+      - name: dealId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    security:
+      - bearerAuth: [ ]
+    responses:
+      '200':
+        description: Список голосов успешно получен
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/FailureVotesResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: |
+          Пользователь не является участником сделки и не является админом,
+          Противоречащий бизнес правилам случай сюда не относится
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Сделка не найдена
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+dealMaterials:
+  get:
+    tags:
+      - Failures
+    summary: Получить материалы по провалу сделки
+    description: |
+      Эндпоинт предназначен для использования только админом. Остальным возвращает 403.
+
+      Если по сделке еще не создана запись в `deal_failures`, эндпоинт также возвращает 403.
+      Если чат для сделки не был создан, поле chatId отсутствует в ответе.
+    operationId: getFailureMaterials
+    parameters:
+      - name: dealId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    security:
+      - bearerAuth: [ ]
+    responses:
+      '200':
+        description: Материалы по провалу сделки успешно получены
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/FailureMaterialResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: |
+          Операция запрещена по бизнес-правилам: пользователь не является админом,
+          либо по сделке еще не создана запись в `deal_failures`,
+          либо сделка уже отменена/завершена
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Сделка не найдена
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+
+dealFailureModeratorResolution:
+  post:
+    tags:
+      - Failures
+    summary: Решение админа по провалу сделки
+    description: |
+      Админ принимает решение о виновнике провала сделки в случае,
+      если голоса участников распределились между несколькими кандидатами,
+      либо если он не согласен с результатом голосования. Решение админа является окончательным.
+
+      Если `confirmed = true`, сделка переходит в статус `Failed`.
+      Если при этом `userId` не передан, в `deal_failures.user_id` сохраняется `null`.
+      
+      Админ может принять решение что сделка не провалена, тогда она переходит в статус Completed,
+      если была в статусе Confirmed, в ином случае она переходит в Cancelled.
+
+      Если confirmed = false, передавать userId и punishmentPoints нельзя.
+      Если confirmed = true, userId можно не передавать.
+      Решение админа можно отправить только один раз.
+      
+      Эндпоинт предназначен для использования только админом. Остальным возвращает 403
+    operationId: moderatorResolutionForFailure
+    parameters:
+      - name: dealId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/requests.yaml#/ModeratorResolutionForFailureRequest'
+    security:
+      - bearerAuth: [ ]
+    responses:
+      '200':
+        description: Решение админа успешно учтено
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/DealFailureModeratorResolution'
+      '400':
+        description: |
+          Некорректный запрос: пустое тело, неконсистентные поля решения,
+          либо userId / punishmentPoints переданы при confirmed = false
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: |
+          Операция запрещена по бизнес-правилам: сделка не находится на рассмотрении админа,
+          либо пользователь не является админом
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '409':
+        description: Решение админа по провалу сделки уже было принято ранее
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Сделка не найдена
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+  get:
+    tags:
+      - Failures
+    summary: Получить решение админа по провалу сделки
+    description: |
+      Получить решение админа по провалу сделки могут только участники сделки и админ.
+
+      Если сделка существует, но по ней еще не создана запись в `deal_failures`,
+      эндпоинт возвращает 403.
+    operationId: getModeratorResolutionForFailure
+    parameters:
+      - name: dealId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    security:
+      - bearerAuth: [ ]
+    responses:
+      '200':
+        description: Решение админа успешно получено
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/DealFailureModeratorResolution'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: |
+          Операция запрещена по бизнес-правилам:
+          пользователь не является участником сделки и не является админом,
+          либо по сделке еще не создана запись в `deal_failures`
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Сделка не найдена
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'

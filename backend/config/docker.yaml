@@ -11,5 +11,10 @@ mailer:
 
 port: 8080
 auth_grpc_addr: "auth:50051"
+auth_grpc_listen_addr: ":50051"
+deals_grpc_addr: "deals:50054"
+deals_grpc_listen_addr: ":50054"
 users_grpc_addr: "users:50051"
 users_grpc_listen_addr: ":50051"
+chats_grpc_addr: "chats:50053"
+chats_grpc_listen_addr: ":50053"
