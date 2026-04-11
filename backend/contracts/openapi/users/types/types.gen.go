@@ -35,6 +35,9 @@ type Me struct {
 	// Id User ID
 	Id UserId `json:"id"`
 
+	// IsAdmin Whether the current user has admin access
+	IsAdmin bool `json:"isAdmin"`
+
 	// Name User name
 	Name *Name `json:"name,omitempty"`
 }

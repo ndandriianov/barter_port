@@ -5,6 +5,7 @@ import (
 	"barter-port/pkg/db"
 	"barter-port/pkg/repox"
 	"errors"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -191,8 +192,51 @@ func (r *Repository) GetOffersOrderByPopularity(
 }
 
 // ================================================================================
+// GET OFFER NAMES BY IDS
+// ================================================================================
+
+// GetOfferNamesByIDs returns offer names for the given IDs, preserving input order.
+// IDs not found in the database are silently skipped.
+func (r *Repository) GetOfferNamesByIDs(ctx context.Context, exec db.DB, ids []uuid.UUID) ([]string, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	query := `
+		SELECT o.name
+		FROM unnest($1::uuid[]) WITH ORDINALITY u(id, ord)
+		JOIN offers o ON o.id = u.id
+		ORDER BY u.ord`
+
+	rows, err := exec.Query(ctx, query, ids)
+	if err != nil {
+		return nil, fmt.Errorf("sql get offer names: %w", err)
+	}
+	defer rows.Close()
+
+	var names []string
+	for rows.Next() {
+		var name string
+		if err = rows.Scan(&name); err != nil {
+			return nil, fmt.Errorf("scan offer name: %w", err)
+		}
+		names = append(names, name)
+	}
+
+	return names, rows.Err()
+}
+
+// ================================================================================
 // GET OFFER
 // ================================================================================
+
+// GetOfferByID retrieves a single offer by its ID using the repository's own pool.
+//
+// Errors:
+//   - domain.ErrOfferNotFound: if no item with the given ID exists.
+func (r *Repository) GetOfferByID(ctx context.Context, id uuid.UUID) (*domain.Offer, error) {
+	return r.GetOffer(ctx, r.db, id)
+}
 
 // GetOffer retrieves a single item from the database by its ID.
 //

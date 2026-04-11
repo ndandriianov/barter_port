@@ -42,12 +42,13 @@ func (s *Server) GetMe(ctx context.Context, req *authpb.GetMeRequest) (*authpb.G
 		return nil, status.Error(codes.Internal, "failed to get user")
 	}
 
-	return toGetMeResponse(me), nil
+	return toGetMeResponse(me, s.authService.IsAdminEmail(me.Email)), nil
 }
 
-func toGetMeResponse(user domain.User) *authpb.GetMeResponse {
+func toGetMeResponse(user domain.User, isAdmin bool) *authpb.GetMeResponse {
 	return &authpb.GetMeResponse{
 		Email:     user.Email,
 		CreatedAt: timestamppb.New(user.CreatedAt),
+		IsAdmin:   isAdmin,
 	}
 }

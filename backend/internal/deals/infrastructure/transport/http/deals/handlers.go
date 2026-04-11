@@ -5,6 +5,7 @@ import (
 	dealssvc "barter-port/internal/deals/application/deals"
 	"barter-port/internal/deals/domain"
 	"barter-port/internal/deals/domain/htypes"
+	"barter-port/internal/deals/infrastructure/transport/http/common"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/httpx"
 	"barter-port/pkg/logger"
@@ -53,7 +54,7 @@ func (h *Handlers) GetDeals(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.WriteJSON(w, http.StatusOK, mapDealIDsWithParticipantIDsToDTO(deals))
+	httpx.WriteJSON(w, http.StatusOK, common.MapDealIDsWithParticipantIDsToDTO(deals))
 }
 
 // ================================================================================
@@ -90,7 +91,64 @@ func (h *Handlers) GetDealByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.WriteJSON(w, http.StatusOK, mapDealToDTO(deal))
+	httpx.WriteJSON(w, http.StatusOK, common.MapDealToDTO(deal))
+}
+
+// ================================================================================
+// UPDATE DEAL
+// ================================================================================
+
+func (h *Handlers) UpdateDeal(w http.ResponseWriter, r *http.Request) {
+	log := logger.LogFrom(r.Context(), h.log).With(slog.String("handler", "UpdateDeal"))
+	log.Info("handling update deal request")
+
+	idStr := chi.URLParam(r, "dealId")
+	if idStr == "" {
+		log.Error("dealId is required")
+		httpx.WriteEmptyError(w, http.StatusBadRequest)
+		return
+	}
+
+	dealID, err := uuid.Parse(idStr)
+	if err != nil {
+		log.Error("error parsing deal id")
+		httpx.WriteEmptyError(w, http.StatusBadRequest)
+		return
+	}
+
+	userID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		log.Error("failed to get userID from context")
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
+	var req types.UpdateDealRequest
+	if err = httpx.DecodeJSON(r, &req); err != nil {
+		log.Error("error decoding request", slog.Any("error", err))
+		httpx.WriteError(w, http.StatusBadRequest, httpx.ErrCannotDecodeRequestBody)
+		return
+	}
+
+	deal, err := h.dealsService.UpdateDealName(r.Context(), dealID, userID, req.Name)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrDealNotFound):
+			log.Info("deal not found", slog.String("dealId", idStr))
+			httpx.WriteEmptyError(w, http.StatusNotFound)
+			return
+		case errors.Is(err, domain.ErrForbidden):
+			log.Info("user not a participant", slog.String("dealId", idStr), slog.String("userID", userID.String()))
+			httpx.WriteEmptyError(w, http.StatusForbidden)
+			return
+		default:
+			log.Error("error updating deal", slog.Any("error", err))
+			httpx.WriteEmptyError(w, http.StatusInternalServerError)
+			return
+		}
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, common.MapDealToDTO(deal))
 }
 
 // ================================================================================
@@ -130,7 +188,9 @@ func (h *Handlers) AddDealItem(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteEmptyError(w, http.StatusNotFound)
 		case errors.Is(err, domain.ErrInvalidQuantity):
 			httpx.WriteEmptyError(w, http.StatusBadRequest)
-		case errors.Is(err, domain.ErrForbidden), errors.Is(err, domain.ErrInvalidDealStatus):
+		case errors.Is(err, domain.ErrForbidden),
+			errors.Is(err, domain.ErrInvalidDealStatus),
+			errors.Is(err, domain.ErrFailureReviewRequired):
 			httpx.WriteEmptyError(w, http.StatusForbidden)
 		default:
 			log.Error("error adding deal item", slog.Any("error", err))
@@ -139,7 +199,7 @@ func (h *Handlers) AddDealItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.WriteJSON(w, http.StatusOK, mapDealToDTO(deal))
+	httpx.WriteJSON(w, http.StatusOK, common.MapDealToDTO(deal))
 }
 
 // ================================================================================
@@ -211,6 +271,7 @@ func (h *Handlers) UpdateDealItem(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, domain.ErrInvalidDealStatus):
 			httpx.WriteEmptyError(w, http.StatusBadRequest)
 		case errors.Is(err, domain.ErrForbidden),
+			errors.Is(err, domain.ErrFailureReviewRequired),
 			errors.Is(err, domain.ErrRoleAlreadyTaken),
 			errors.Is(err, domain.ErrNotRoleHolder),
 			errors.Is(err, domain.ErrDuplicateRole):
@@ -269,7 +330,9 @@ func (h *Handlers) ChangeDealStatus(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteEmptyError(w, http.StatusNotFound)
 		case errors.Is(err, domain.ErrInvalidDealStatus):
 			httpx.WriteEmptyError(w, http.StatusBadRequest)
-		case errors.Is(err, domain.ErrDealParticipantsUnready):
+		case errors.Is(err, domain.ErrDealParticipantsUnready),
+			errors.Is(err, domain.ErrForbidden),
+			errors.Is(err, domain.ErrFailureReviewRequired):
 			httpx.WriteEmptyError(w, http.StatusForbidden)
 		default:
 			log.Error("error changing deal status", slog.Any("error", err))
@@ -278,7 +341,7 @@ func (h *Handlers) ChangeDealStatus(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	httpx.WriteJSON(w, http.StatusOK, mapDealToDTO(deal))
+	httpx.WriteJSON(w, http.StatusOK, common.MapDealToDTO(deal))
 }
 
 // ================================================================================

@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
 
@@ -76,6 +77,37 @@ func (h *Handlers) HandleCreateOffer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpx.WriteJSON(w, http.StatusCreated, offer.ToDto())
+}
+
+// ================================================================================
+// GET OFFER BY ID
+// ================================================================================
+
+func (h *Handlers) HandleGetOfferByID(w http.ResponseWriter, r *http.Request) {
+	log := logger.LogFrom(r.Context(), slog.Default()).With(slog.String("handler", "GetOfferByID"))
+	log.Info("handling get offer by id request")
+
+	idStr := chi.URLParam(r, "offerId")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		log.Error("error parsing offer id")
+		httpx.WriteEmptyError(w, http.StatusBadRequest)
+		return
+	}
+
+	offer, err := h.offerService.GetOfferByID(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, domain.ErrOfferNotFound) {
+			log.Info("offer not found", slog.String("offerId", idStr))
+			httpx.WriteEmptyError(w, http.StatusNotFound)
+			return
+		}
+		log.Error("failed to get offer", slog.Any("error", err))
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		return
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, offer.ToDto())
 }
 
 // ================================================================================

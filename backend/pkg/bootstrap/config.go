@@ -52,11 +52,18 @@ type Config struct {
 		WriteTimeout            time.Duration `mapstructure:"write_timeout"`
 	} `mapstructure:"kafka"`
 
+	Admin struct {
+		Email    string `mapstructure:"email"`
+		Password string `mapstructure:"password"`
+	} `mapstructure:"admin"`
+
 	Port                int    `mapstructure:"port"`
 	AuthGRPCAddr        string `mapstructure:"auth_grpc_addr"`
 	AuthGRPCListenAddr  string `mapstructure:"auth_grpc_listen_addr"`
 	UsersGRPCAddr       string `mapstructure:"users_grpc_addr"`
 	UsersGRPCListenAddr string `mapstructure:"users_grpc_listen_addr"`
+	DealsGRPCAddr       string `mapstructure:"deals_grpc_addr"`
+	DealsGRPCListenAddr string `mapstructure:"deals_grpc_listen_addr"`
 	ChatsGRPCAddr       string `mapstructure:"chats_grpc_addr"`
 	ChatsGRPCListenAddr string `mapstructure:"chats_grpc_listen_addr"`
 }
@@ -106,6 +113,8 @@ func LoadConfig(options ConfigOptions) (Config, error) {
 	bindEnv(v, "jwt.refresh_secret")
 	bindEnv(v, "kafka.user_creation_topic")
 	bindEnv(v, "mailer.bypass")
+	bindEnv(v, "admin.email")
+	bindEnv(v, "admin.password")
 
 	// десериализация в структуру
 	var config Config

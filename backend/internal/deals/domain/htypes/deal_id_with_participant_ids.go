@@ -9,5 +9,6 @@ import (
 type DealIDWithParticipantIDs struct {
 	ID             uuid.UUID
 	Status         enums.DealStatus
+	Name           *string
 	ParticipantIDs []uuid.UUID
 }

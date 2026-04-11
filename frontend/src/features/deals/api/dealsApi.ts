@@ -7,11 +7,17 @@ import {
   createDraftDealResponseSchema,
   dealSchema,
   draftSchema,
+  failureMaterialsSchema,
+  failureModerationDealsResponseSchema,
+  failureResolutionSchema,
   getDealJoinRequestsResponseSchema,
+  getFailureVotesResponseSchema,
   getDealStatusVotesResponseSchema,
   getDealsResponseSchema,
   getMyDraftDealsResponseSchema,
   itemSchema,
+  moderatorResolutionForFailureRequestSchema,
+  voteForFailureRequestSchema,
 } from "@/features/deals/model/schemas.ts";
 import type {
   AddDealItemRequest,
@@ -20,6 +26,10 @@ import type {
   CreateDraftDealRequest,
   CreateDraftDealResponse,
   Deal,
+  FailureMaterials,
+  FailureModerationDealsResponse,
+  FailureResolution,
+  GetFailureVotesResponse,
   GetDealJoinRequestsResponse,
   GetDealStatusVotesResponse,
   Draft,
@@ -28,13 +38,15 @@ import type {
   GetMyDraftDealsParams,
   GetMyDraftDealsResponse,
   Item,
+  ModeratorResolutionForFailureRequest,
   UpdateDealItemRequest,
+  VoteForFailureRequest,
 } from "@/features/deals/model/types.ts";
 
 const dealsApi = createApi({
   reducerPath: "dealsApi",
   baseQuery: baseQueryWithReauth,
-  tagTypes: ["Deals", "DraftDeals", "DealJoins", "DealStatusVotes"],
+  tagTypes: ["Deals", "DraftDeals", "DealJoins", "DealStatusVotes", "FailureReview", "FailureVotes", "FailureResolution", "FailureMaterials"],
   endpoints: (builder) => ({
     createDraftDeal: builder.mutation<CreateDraftDealResponse, CreateDraftDealRequest>({
       query: (body) => ({
@@ -87,6 +99,17 @@ const dealsApi = createApi({
       ],
     }),
 
+    deleteDraftDeal: builder.mutation<void, string>({
+      query: (draftId) => ({
+        url: `/deals/drafts/${draftId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (_result, _error, draftId) => [
+        {type: "DraftDeals", id: draftId},
+        "DraftDeals",
+      ],
+    }),
+
     getDeals: builder.query<GetDealsResponse, GetDealsParams | void>({
       query: (params) =>
         params
@@ -103,6 +126,19 @@ const dealsApi = createApi({
       query: (dealId) => `/deals/${dealId}`,
       transformResponse: (response: unknown) => dealSchema.parse(response),
       providesTags: (_result, _error, dealId) => [{type: "Deals", id: dealId}],
+    }),
+
+    updateDeal: builder.mutation<Deal, { dealId: string; name: string }>({
+      query: ({ dealId, name }) => ({
+        url: `/deals/${dealId}`,
+        method: "PATCH",
+        body: { name },
+      }),
+      transformResponse: (response: unknown) => dealSchema.parse(response),
+      invalidatesTags: (_result, _error, { dealId }) => [
+        {type: "Deals", id: dealId},
+        "Deals",
+      ],
     }),
 
     joinDeal: builder.mutation<void, string>({
@@ -190,8 +226,76 @@ const dealsApi = createApi({
       transformResponse: (response: unknown) => itemSchema.parse(response),
       invalidatesTags: (_result, _error, { dealId }) => [{type: "Deals", id: dealId}],
     }),
+
+    getDealsForFailureReview: builder.query<FailureModerationDealsResponse, void>({
+      query: () => "/deals/failures/review",
+      transformResponse: (response: unknown) => failureModerationDealsResponseSchema.parse(response),
+      providesTags: ["FailureReview"],
+    }),
+
+    voteForFailure: builder.mutation<void, { dealId: string; body: VoteForFailureRequest }>({
+      query: ({ dealId, body }) => ({
+        url: `/deals/failures/${dealId}/votes`,
+        method: "POST",
+        body: voteForFailureRequestSchema.parse(body),
+      }),
+      invalidatesTags: (_result, _error, { dealId }) => [
+        { type: "FailureVotes", id: dealId },
+        { type: "FailureResolution", id: dealId },
+        { type: "FailureMaterials", id: dealId },
+        "FailureReview",
+      ],
+    }),
+
+    revokeVoteForFailure: builder.mutation<void, string>({
+      query: (dealId) => ({
+        url: `/deals/failures/${dealId}/votes`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (_result, _error, dealId) => [
+        { type: "FailureVotes", id: dealId },
+        { type: "FailureResolution", id: dealId },
+        { type: "FailureMaterials", id: dealId },
+        "FailureReview",
+      ],
+    }),
+
+    getFailureVotes: builder.query<GetFailureVotesResponse, string>({
+      query: (dealId) => `/deals/failures/${dealId}/votes`,
+      transformResponse: (response: unknown) => getFailureVotesResponseSchema.parse(response),
+      providesTags: (_result, _error, dealId) => [{ type: "FailureVotes", id: dealId }],
+    }),
+
+    getFailureMaterials: builder.query<FailureMaterials, string>({
+      query: (dealId) => `/deals/failures/${dealId}/materials`,
+      transformResponse: (response: unknown) => failureMaterialsSchema.parse(response),
+      providesTags: (_result, _error, dealId) => [{ type: "FailureMaterials", id: dealId }],
+    }),
+
+    moderatorResolutionForFailure: builder.mutation<FailureResolution, { dealId: string; body: ModeratorResolutionForFailureRequest }>({
+      query: ({ dealId, body }) => ({
+        url: `/deals/failures/${dealId}/moderator-resolution`,
+        method: "POST",
+        body: moderatorResolutionForFailureRequestSchema.parse(body),
+      }),
+      transformResponse: (response: unknown) => failureResolutionSchema.parse(response),
+      invalidatesTags: (_result, _error, { dealId }) => [
+        { type: "FailureReview", id: dealId },
+        { type: "FailureVotes", id: dealId },
+        { type: "FailureResolution", id: dealId },
+        { type: "FailureMaterials", id: dealId },
+        { type: "Deals", id: dealId },
+        "Deals",
+        "FailureReview",
+      ],
+    }),
+
+    getModeratorResolutionForFailure: builder.query<FailureResolution, string>({
+      query: (dealId) => `/deals/failures/${dealId}/moderator-resolution`,
+      transformResponse: (response: unknown) => failureResolutionSchema.parse(response),
+      providesTags: (_result, _error, dealId) => [{ type: "FailureResolution", id: dealId }],
+    }),
   }),
 });
 
 export default dealsApi;
-

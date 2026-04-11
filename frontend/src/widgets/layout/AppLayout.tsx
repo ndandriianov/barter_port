@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Outlet, Link as RouterLink, useNavigate } from "react-router-dom";
 import {
   AppBar,
+  Badge,
   Box,
   Button,
   Container,
@@ -17,10 +18,14 @@ import {
 import MenuIcon from "@mui/icons-material/Menu";
 import { useAppDispatch } from "@/hooks/redux";
 import { performLogout } from "@/features/auth/model/logoutThunk";
+import dealsApi from "@/features/deals/api/dealsApi.ts";
+import usePendingReviews from "@/features/reviews/model/usePendingReviews.ts";
 
 const navLinks = [
+  { label: "Админка", to: "/admin" },
   { label: "Объявления", to: "/offers" },
   { label: "Сделки", to: "/deals" },
+  { label: "Отзывы", to: "/reviews" },
   { label: "Черновики", to: "/deals/drafts" },
   { label: "Профиль", to: "/profile" },
   { label: "Чаты", to: "/chats" },
@@ -30,10 +35,40 @@ function AppLayout() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const { pendingCount } = usePendingReviews();
+  const { data: drafts } = dealsApi.useGetMyDraftDealsQuery({
+    createdByMe: false,
+    participating: true,
+  });
+  const draftCount = drafts?.length ?? 0;
 
   const handleLogout = async () => {
     await dispatch(performLogout());
     navigate("/login");
+  };
+
+  const renderNavLabel = (label: string, to: string) => {
+    if (to === "/reviews") {
+      return (
+        <Badge badgeContent={pendingCount} color="error" max={99}>
+          <Box component="span" sx={{ pr: pendingCount > 0 ? 1 : 0 }}>
+            {label}
+          </Box>
+        </Badge>
+      );
+    }
+
+    if (to === "/deals/drafts") {
+      return (
+        <Badge badgeContent={draftCount} color="warning" max={99}>
+          <Box component="span" sx={{ pr: draftCount > 0 ? 1 : 0 }}>
+            {label}
+          </Box>
+        </Badge>
+      );
+    }
+
+    return label;
   };
 
   const drawer = (
@@ -42,7 +77,7 @@ function AppLayout() {
         {navLinks.map((link) => (
           <ListItem key={link.to} disablePadding>
             <ListItemButton component={RouterLink} to={link.to}>
-              <ListItemText primary={link.label} />
+              <ListItemText primary={renderNavLabel(link.label, link.to)} />
             </ListItemButton>
           </ListItem>
         ))}
@@ -80,7 +115,7 @@ function AppLayout() {
           <Box sx={{ display: { xs: "none", sm: "flex" }, gap: 1 }}>
             {navLinks.map((link) => (
               <Button key={link.to} color="inherit" component={RouterLink} to={link.to}>
-                {link.label}
+                {renderNavLabel(link.label, link.to)}
               </Button>
             ))}
             <Button color="inherit" variant="outlined" onClick={handleLogout} sx={{ borderColor: "rgba(255,255,255,0.5)" }}>

@@ -1,6 +1,7 @@
 package app
 
 import (
+	"barter-port/internal/auth/application"
 	ucrprocessor "barter-port/internal/auth/application/uc-result-inbox-processor"
 	authconsumer "barter-port/internal/auth/infrastructure/kafka/consumer"
 	authkafka "barter-port/internal/auth/infrastructure/kafka/producer"
@@ -23,6 +24,7 @@ import (
 type App struct {
 	logger            *slog.Logger
 	db                *pgxpool.Pool
+	authService       *application.Service
 	server            *http.Server
 	grpcServer        *grpc.Server
 	grpcListener      net.Listener
@@ -138,4 +140,12 @@ func (a *App) Close() {
 	if a.grpcListener != nil {
 		_ = a.grpcListener.Close()
 	}
+}
+
+func (a *App) EnsureAdmin(ctx context.Context, email, password string) (application.RegisterResult, error) {
+	if a.authService == nil {
+		return application.RegisterResult{}, errors.New("auth service is not initialized")
+	}
+
+	return a.authService.CreateAdmin(ctx, email, password)
 }

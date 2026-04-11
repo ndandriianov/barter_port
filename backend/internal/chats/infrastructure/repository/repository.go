@@ -95,6 +95,20 @@ func (r *Repository) GetChatByID(ctx context.Context, chatID uuid.UUID) (*domain
 	return &chat, nil
 }
 
+// GetDealChatID returns the ID of the chat associated with the deal.
+func (r *Repository) GetDealChatID(ctx context.Context, dealID uuid.UUID) (uuid.UUID, error) {
+	var chatID uuid.UUID
+	err := r.db.QueryRow(ctx, `SELECT id FROM chats WHERE deal_id = $1`, dealID).Scan(&chatID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return uuid.Nil, domain.ErrChatNotFound
+		}
+		return uuid.Nil, fmt.Errorf("query deal chat id: %w", err)
+	}
+
+	return chatID, nil
+}
+
 // ListChatsForUser returns all chats where the given user is a participant.
 func (r *Repository) ListChatsForUser(ctx context.Context, userID uuid.UUID) ([]domain.Chat, error) {
 	rows, err := r.db.Query(ctx, `

@@ -166,5 +166,6 @@ func (h *Handlers) getMe(ctx context.Context, userID uuid.UUID) (types.Me, error
 		Bio:       me.Bio,
 		Email:     me.Email, // TODO: конвертировать при отключенном bypass
 		CreatedAt: me.CreatedAt,
+		IsAdmin:   me.IsAdmin,
 	}, nil
 }

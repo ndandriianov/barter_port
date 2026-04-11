@@ -40,6 +40,12 @@ const chatsApi = createApi({
       invalidatesTags: ["Chats"],
     }),
 
+    getDealChat: builder.query<Chat, string>({
+      query: (dealId) => `/chats/deals/${dealId}`,
+      transformResponse: (response: unknown) => chatSchema.parse(response),
+      providesTags: (_result, _error, dealId) => [{ type: "Chats", id: dealId }],
+    }),
+
     getMessages: builder.query<GetMessagesResponse, { chatId: string; after?: string }>({
       query: ({ chatId, after }) => ({
         url: `/chats/${chatId}/messages`,

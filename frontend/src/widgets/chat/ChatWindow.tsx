@@ -2,22 +2,25 @@ import { useEffect, useRef, useState } from "react";
 import chatsApi from "@/features/chats/api/chatsApi.ts";
 import usersApi from "@/features/users/api/usersApi.ts";
 import type { Message, User } from "@/features/chats/model/types.ts";
+import { getErrorMessage } from "@/shared/utils/getErrorMessage.ts";
 
 interface Props {
   chatId: string;
   participants: string[];
+  readOnly?: boolean;
 }
 
 const POLL_INTERVAL_MS = 3000;
 
-function ChatWindow({ chatId, participants }: Props) {
+function ChatWindow({ chatId, participants, readOnly = false }: Props) {
   const [content, setContent] = useState("");
+  const [sendError, setSendError] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   const { data: messages = [], refetch } = chatsApi.useGetMessagesQuery({ chatId });
   const { data: me } = usersApi.useGetCurrentUserQuery();
   const { data: allUsers = [] } = chatsApi.useListUsersQuery();
-  const [sendMessage] = chatsApi.useSendMessageMutation();
+  const [sendMessage, { isLoading: isSending }] = chatsApi.useSendMessageMutation();
 
   // Map userId → name for participants
   const userMap = new Map<string, string>(
@@ -43,17 +46,27 @@ function ChatWindow({ chatId, participants }: Props) {
   }, [refetch]);
 
   async function handleSend() {
+    if (readOnly) return;
     const trimmed = content.trim();
     if (!trimmed) return;
-    setContent("");
-    await sendMessage({ chatId, body: { content: trimmed } });
-    refetch();
+
+    setSendError(null);
+
+    try {
+      await sendMessage({ chatId, body: { content: trimmed } }).unwrap();
+      setContent("");
+      await refetch();
+    } catch (error) {
+      setSendError(getErrorMessage(error) ?? "Не удалось отправить сообщение");
+    }
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      handleSend();
+      if (!readOnly) {
+        void handleSend();
+      }
     }
   }
 
@@ -103,40 +116,72 @@ function ChatWindow({ chatId, participants }: Props) {
         <div ref={bottomRef} />
       </div>
 
-      <div style={{ borderTop: "1px solid #e0e0e0", padding: 12, display: "flex", gap: 8 }}>
-        <textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Сообщение... (Enter — отправить)"
-          rows={2}
+      {readOnly ? (
+        <div
           style={{
-            flex: 1,
-            resize: "none",
-            padding: 8,
-            borderRadius: 4,
-            border: "1px solid #ccc",
-            fontFamily: "inherit",
-            fontSize: 14,
-          }}
-        />
-        <button
-          onClick={handleSend}
-          disabled={!content.trim()}
-          style={{
-            padding: "8px 20px",
-            borderRadius: 4,
-            border: "none",
-            cursor: "pointer",
-            background: "#1976d2",
-            color: "#fff",
-            alignSelf: "flex-end",
-            opacity: content.trim() ? 1 : 0.5,
+            borderTop: "1px solid #e0e0e0",
+            padding: 12,
+            color: "#666",
+            fontSize: 13,
+            background: "#fafafa",
           }}
         >
-          Отправить
-        </button>
-      </div>
+          Чат доступен только для просмотра.
+        </div>
+      ) : (
+        <div style={{ borderTop: "1px solid #e0e0e0", padding: 12, display: "flex", gap: 8 }}>
+          <textarea
+            value={content}
+            onChange={(e) => {
+              setContent(e.target.value);
+              if (sendError) {
+                setSendError(null);
+              }
+            }}
+            onKeyDown={handleKeyDown}
+            placeholder="Сообщение... (Enter — отправить)"
+            rows={2}
+            style={{
+              flex: 1,
+              resize: "none",
+              padding: 8,
+              borderRadius: 4,
+              border: "1px solid #ccc",
+              fontFamily: "inherit",
+              fontSize: 14,
+            }}
+          />
+          <button
+            onClick={() => void handleSend()}
+            disabled={!content.trim() || isSending}
+            style={{
+              padding: "8px 20px",
+              borderRadius: 4,
+              border: "none",
+              cursor: !content.trim() || isSending ? "default" : "pointer",
+              background: "#1976d2",
+              color: "#fff",
+              alignSelf: "flex-end",
+              opacity: content.trim() && !isSending ? 1 : 0.5,
+            }}
+          >
+            {isSending ? "Отправка..." : "Отправить"}
+          </button>
+        </div>
+      )}
+      {sendError && (
+        <div
+          style={{
+            borderTop: readOnly ? undefined : "1px solid #f0d3d3",
+            padding: "10px 12px",
+            color: "#b42318",
+            background: "#fef3f2",
+            fontSize: 13,
+          }}
+        >
+          {sendError}
+        </div>
+      )}
     </div>
   );
 }

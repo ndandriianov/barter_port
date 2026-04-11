@@ -1,0 +1,610 @@
+package integration
+
+import (
+	"barter-port/contracts/openapi/deals/types"
+	"bytes"
+	"encoding/json"
+	"fmt"
+	"io"
+	"net/http"
+	"testing"
+	"time"
+
+	"github.com/google/uuid"
+	"github.com/stretchr/testify/require"
+)
+
+const (
+	adminEmail    = "admin@barterport.com"
+	adminPassword = "admin"
+)
+
+type reviewedDealContext struct {
+	DealID      uuid.UUID
+	ProviderID  uuid.UUID
+	ReceiverID  uuid.UUID
+	ItemID      uuid.UUID
+	OtherItemID uuid.UUID
+	OfferID     uuid.UUID
+	Review      types.Review
+}
+
+func dumpDealsLogs(t *testing.T) {
+	t.Helper()
+	DumpLogsOnFailure(t, globalFixture.Items, "deals")
+}
+
+func dealsURL() string {
+	return globalFixture.DealsURL
+}
+
+func boolPtr(v bool) *bool {
+	return &v
+}
+
+func intPtr(v int) *int {
+	return &v
+}
+
+func mustJSONBody(t *testing.T, v any) io.Reader {
+	t.Helper()
+
+	body, err := json.Marshal(v)
+	require.NoError(t, err)
+
+	return bytes.NewReader(body)
+}
+
+func mustDo(t *testing.T, req *http.Request) *http.Response {
+	t.Helper()
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+
+	return resp
+}
+
+func mustRequest(t *testing.T, method, url string, body io.Reader) *http.Request {
+	t.Helper()
+
+	req, err := http.NewRequest(method, url, body)
+	require.NoError(t, err)
+
+	return req
+}
+
+func mustBearerRequest(t *testing.T, method, url, token string, body io.Reader) *http.Request {
+	t.Helper()
+
+	req := mustRequest(t, method, url, body)
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+
+	return req
+}
+
+func mustUserRequest(t *testing.T, method, url string, userID uuid.UUID, body io.Reader) *http.Request {
+	t.Helper()
+
+	return mustBearerRequest(t, method, url, mustAccessToken(t, userID), body)
+}
+
+func mustAdminAccessToken(t *testing.T) string {
+	t.Helper()
+
+	resp := mustLogin(t, adminEmail, adminPassword)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var result loginResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
+	require.NotEmpty(t, result.AccessToken)
+
+	return result.AccessToken
+}
+
+func mustCreateOffer(t *testing.T, userID uuid.UUID) uuid.UUID {
+	t.Helper()
+	return mustCreateOfferWithAction(t, userID, types.Give)
+}
+
+func mustCreateOfferWithAction(t *testing.T, userID uuid.UUID, action types.OfferAction) uuid.UUID {
+	t.Helper()
+
+	offer := mustCreateOfferDetails(t, userID, types.CreateOfferRequest{
+		Name:        fmt.Sprintf("offer-%d", time.Now().UnixNano()),
+		Description: "test offer",
+		Type:        types.Good,
+		Action:      action,
+	})
+
+	return offer.Id
+}
+
+func mustCreateOfferDetails(t *testing.T, userID uuid.UUID, body types.CreateOfferRequest) types.Offer {
+	t.Helper()
+
+	req := mustUserRequest(t, http.MethodPost, dealsURL()+"/offers", userID, mustJSONBody(t, body))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	var offer types.Offer
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&offer))
+	require.NotEqual(t, uuid.Nil, offer.Id)
+
+	return offer
+}
+
+func mustGetOfferByID(t *testing.T, userID uuid.UUID, offerID uuid.UUID) types.Offer {
+	t.Helper()
+
+	req := mustUserRequest(t, http.MethodGet, dealsURL()+"/offers/"+offerID.String(), userID, nil)
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var offer types.Offer
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&offer))
+
+	return offer
+}
+
+func mustGetOffers(t *testing.T, userID uuid.UUID, my *bool) types.ListOffersResponse {
+	t.Helper()
+
+	url := dealsURL() + "/offers?sort=ByTime&cursor_limit=100"
+	if my != nil {
+		url += fmt.Sprintf("&my=%t", *my)
+	}
+
+	req := mustUserRequest(t, http.MethodGet, url, userID, nil)
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var result types.ListOffersResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
+
+	return result
+}
+
+func mustCreateDraft(
+	t *testing.T,
+	userID uuid.UUID,
+	name *string,
+	description *string,
+	offers []types.OfferIDAndQuantity,
+) uuid.UUID {
+	t.Helper()
+
+	reqBody := map[string]any{
+		"offers":      offers,
+		"name":        name,
+		"description": description,
+	}
+
+	req := mustUserRequest(t, http.MethodPost, dealsURL()+"/deals/drafts", userID, mustJSONBody(t, reqBody))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	var created types.CreateDraftDealResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&created))
+	require.NotEqual(t, uuid.Nil, created.Id)
+
+	return created.Id
+}
+
+func mustGetDraftIDs(t *testing.T, userID uuid.UUID, createdByMe *bool) []uuid.UUID {
+	t.Helper()
+
+	url := dealsURL() + "/deals/drafts"
+	if createdByMe != nil {
+		url += fmt.Sprintf("?createdByMe=%t", *createdByMe)
+	}
+
+	req := mustUserRequest(t, http.MethodGet, url, userID, nil)
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var drafts types.GetMyDraftDealsResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&drafts))
+
+	ids := make([]uuid.UUID, 0, len(drafts))
+	for _, draft := range drafts {
+		ids = append(ids, draft.Id)
+	}
+
+	return ids
+}
+
+func mustConfirmDraft(t *testing.T, userID uuid.UUID, draftID uuid.UUID) {
+	t.Helper()
+
+	req := mustUserRequest(t, http.MethodPatch, dealsURL()+"/deals/drafts/"+draftID.String(), userID, nil)
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+func mustGetDealIDs(t *testing.T, userID uuid.UUID, my bool) []uuid.UUID {
+	t.Helper()
+
+	url := dealsURL() + "/deals"
+	if my {
+		url += "?my=true"
+	}
+
+	req := mustUserRequest(t, http.MethodGet, url, userID, nil)
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var result types.GetDealsResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
+
+	ids := make([]uuid.UUID, 0, len(result))
+	for _, item := range result {
+		ids = append(ids, item.Id)
+	}
+
+	return ids
+}
+
+func mustGetDealByID(t *testing.T, userID uuid.UUID, dealID uuid.UUID) types.Deal {
+	t.Helper()
+
+	req := mustUserRequest(t, http.MethodGet, dealsURL()+"/deals/"+dealID.String(), userID, nil)
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var deal types.Deal
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&deal))
+	require.NotEmpty(t, deal.Status)
+	require.True(t, deal.Status.Valid())
+
+	return deal
+}
+
+func mustCreateDeal(t *testing.T, userID uuid.UUID) uuid.UUID {
+	t.Helper()
+
+	before := mustGetDealIDs(t, userID, true)
+	beforeSet := make(map[uuid.UUID]struct{}, len(before))
+	for _, id := range before {
+		beforeSet[id] = struct{}{}
+	}
+
+	offerID := mustCreateOffer(t, userID)
+	draftID := mustCreateDraft(t, userID, nil, nil, []types.OfferIDAndQuantity{{OfferID: offerID, Quantity: 1}})
+	mustConfirmDraft(t, userID, draftID)
+
+	after := mustGetDealIDs(t, userID, true)
+	require.NotEmpty(t, after)
+
+	for _, id := range after {
+		if _, ok := beforeSet[id]; !ok {
+			return id
+		}
+	}
+
+	return after[0]
+}
+
+func mustCreateTwoPartyDeal(t *testing.T, userA uuid.UUID, userB uuid.UUID) (uuid.UUID, uuid.UUID) {
+	t.Helper()
+
+	beforeA := mustGetDealIDs(t, userA, true)
+	beforeSet := make(map[uuid.UUID]struct{}, len(beforeA))
+	for _, id := range beforeA {
+		beforeSet[id] = struct{}{}
+	}
+
+	offerA := mustCreateOfferWithAction(t, userA, types.Give)
+	offerB := mustCreateOfferWithAction(t, userB, types.Give)
+	draftID := mustCreateDraft(t, userA, nil, nil, []types.OfferIDAndQuantity{
+		{OfferID: offerA, Quantity: 1},
+		{OfferID: offerB, Quantity: 1},
+	})
+	mustConfirmDraft(t, userA, draftID)
+	mustConfirmDraft(t, userB, draftID)
+
+	afterA := mustGetDealIDs(t, userA, true)
+	require.NotEmpty(t, afterA)
+
+	dealID := afterA[0]
+	for _, id := range afterA {
+		if _, ok := beforeSet[id]; !ok {
+			dealID = id
+			break
+		}
+	}
+
+	deal := mustGetDealByID(t, userA, dealID)
+	for _, item := range deal.Items {
+		if item.AuthorId == userA {
+			return dealID, item.Id
+		}
+	}
+
+	require.FailNow(t, "item authored by userA was not found in created deal")
+	return uuid.Nil, uuid.Nil
+}
+
+func mustGetDealItemIDByAuthor(t *testing.T, viewerID uuid.UUID, dealID uuid.UUID, authorID uuid.UUID) uuid.UUID {
+	t.Helper()
+
+	deal := mustGetDealByID(t, viewerID, dealID)
+	for _, item := range deal.Items {
+		if item.AuthorId == authorID {
+			return item.Id
+		}
+	}
+
+	require.FailNow(t, "item authored by user was not found", "deal_id=%s author_id=%s", dealID, authorID)
+	return uuid.Nil
+}
+
+func mustGetDealItemIDsByAuthor(t *testing.T, viewerID uuid.UUID, dealID uuid.UUID) map[uuid.UUID]uuid.UUID {
+	t.Helper()
+
+	deal := mustGetDealByID(t, viewerID, dealID)
+	result := make(map[uuid.UUID]uuid.UUID, len(deal.Items))
+	for _, item := range deal.Items {
+		result[item.AuthorId] = item.Id
+	}
+
+	return result
+}
+
+func doChangeDealStatus(t *testing.T, dealID uuid.UUID, userID *uuid.UUID, rawBody []byte) *http.Response {
+	t.Helper()
+
+	if rawBody == nil {
+		rawBody = []byte(`{}`)
+	}
+
+	var req *http.Request
+	if userID == nil {
+		req = mustRequest(t, http.MethodPatch, dealsURL()+"/deals/"+dealID.String()+"/status", bytes.NewReader(rawBody))
+	} else {
+		req = mustUserRequest(t, http.MethodPatch, dealsURL()+"/deals/"+dealID.String()+"/status", *userID, bytes.NewReader(rawBody))
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	return mustDo(t, req)
+}
+
+func doGetDealStatusVotes(t *testing.T, dealID string, userID *uuid.UUID) *http.Response {
+	t.Helper()
+
+	if userID == nil {
+		return mustDo(t, mustRequest(t, http.MethodGet, dealsURL()+"/deals/"+dealID+"/status", nil))
+	}
+
+	return mustDo(t, mustUserRequest(t, http.MethodGet, dealsURL()+"/deals/"+dealID+"/status", *userID, nil))
+}
+
+func doAddDealItem(t *testing.T, dealID string, userID *uuid.UUID, rawBody []byte) *http.Response {
+	t.Helper()
+
+	if rawBody == nil {
+		rawBody = []byte(`{}`)
+	}
+
+	var req *http.Request
+	if userID == nil {
+		req = mustRequest(t, http.MethodPost, dealsURL()+"/deals/"+dealID+"/items", bytes.NewReader(rawBody))
+	} else {
+		req = mustUserRequest(t, http.MethodPost, dealsURL()+"/deals/"+dealID+"/items", *userID, bytes.NewReader(rawBody))
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	return mustDo(t, req)
+}
+
+func mustChangeDealStatus(t *testing.T, dealID uuid.UUID, userID uuid.UUID, status types.DealStatus) types.Deal {
+	t.Helper()
+
+	body, err := json.Marshal(types.ChangeDealStatusRequest{ExpectedStatus: status})
+	require.NoError(t, err)
+
+	resp := doChangeDealStatus(t, dealID, &userID, body)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var deal types.Deal
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&deal))
+
+	return deal
+}
+
+func mustUpdateDealItem(
+	t *testing.T,
+	userID uuid.UUID,
+	dealID uuid.UUID,
+	itemID uuid.UUID,
+	body types.UpdateDealItemRequest,
+) types.Item {
+	t.Helper()
+
+	req := mustUserRequest(
+		t,
+		http.MethodPatch,
+		dealsURL()+"/deals/"+dealID.String()+"/items/"+itemID.String(),
+		userID,
+		mustJSONBody(t, body),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var item types.Item
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&item))
+
+	return item
+}
+
+func mustCreateDiscussionDeal(t *testing.T, userIDs ...uuid.UUID) (uuid.UUID, map[uuid.UUID]uuid.UUID) {
+	t.Helper()
+	require.GreaterOrEqual(t, len(userIDs), 2)
+
+	before := mustGetDealIDs(t, userIDs[0], true)
+	beforeSet := make(map[uuid.UUID]struct{}, len(before))
+	for _, id := range before {
+		beforeSet[id] = struct{}{}
+	}
+
+	offers := make([]types.OfferIDAndQuantity, 0, len(userIDs))
+	for _, userID := range userIDs {
+		offers = append(offers, types.OfferIDAndQuantity{
+			OfferID:  mustCreateOfferWithAction(t, userID, types.Give),
+			Quantity: 1,
+		})
+	}
+
+	draftID := mustCreateDraft(t, userIDs[0], nil, nil, offers)
+	for _, userID := range userIDs {
+		mustConfirmDraft(t, userID, draftID)
+	}
+
+	after := mustGetDealIDs(t, userIDs[0], true)
+	require.NotEmpty(t, after)
+
+	dealID := after[0]
+	for _, id := range after {
+		if _, ok := beforeSet[id]; !ok {
+			dealID = id
+			break
+		}
+	}
+
+	itemIDsByAuthor := mustGetDealItemIDsByAuthor(t, userIDs[0], dealID)
+	for idx, authorID := range userIDs {
+		receiverID := userIDs[(idx+1)%len(userIDs)]
+		mustUpdateDealItem(t, receiverID, dealID, itemIDsByAuthor[authorID], types.UpdateDealItemRequest{
+			ClaimReceiver: boolPtr(true),
+		})
+	}
+
+	for _, userID := range userIDs {
+		_ = mustChangeDealStatus(t, dealID, userID, types.Discussion)
+	}
+
+	return dealID, itemIDsByAuthor
+}
+
+func mustCreateCompletedReviewableTwoPartyDeal(t *testing.T, userA uuid.UUID, userB uuid.UUID) (uuid.UUID, uuid.UUID, uuid.UUID) {
+	t.Helper()
+
+	dealID, itemIDsByAuthor := mustCreateDiscussionDeal(t, userA, userB)
+	itemIDByA := itemIDsByAuthor[userA]
+	itemIDByB := itemIDsByAuthor[userB]
+
+	_ = mustUpdateDealItem(t, userA, dealID, itemIDByA, types.UpdateDealItemRequest{
+		Name: stringPtr(fmt.Sprintf("updated-item-%d", time.Now().UnixNano())),
+	})
+
+	_ = mustChangeDealStatus(t, dealID, userA, types.Confirmed)
+	_ = mustChangeDealStatus(t, dealID, userB, types.Confirmed)
+	_ = mustChangeDealStatus(t, dealID, userA, types.Completed)
+	_ = mustChangeDealStatus(t, dealID, userB, types.Completed)
+
+	return dealID, itemIDByA, itemIDByB
+}
+
+func mustCreateDealItemReview(
+	t *testing.T,
+	userID uuid.UUID,
+	dealID uuid.UUID,
+	itemID uuid.UUID,
+	rating int,
+	comment *string,
+) types.Review {
+	t.Helper()
+
+	req := mustUserRequest(
+		t,
+		http.MethodPost,
+		dealsURL()+"/deals/"+dealID.String()+"/items/"+itemID.String()+"/reviews",
+		userID,
+		mustJSONBody(t, types.CreateReviewRequest{
+			Rating:  rating,
+			Comment: comment,
+		}),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	var review types.Review
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&review))
+
+	return review
+}
+
+func mustCreateReviewedOfferItemContext(t *testing.T) reviewedDealContext {
+	t.Helper()
+
+	providerID := uuid.New()
+	receiverID := uuid.New()
+	dealID, itemID, otherItemID := mustCreateCompletedReviewableTwoPartyDeal(t, providerID, receiverID)
+	comment := "excellent"
+	review := mustCreateDealItemReview(t, receiverID, dealID, itemID, 5, &comment)
+
+	require.NotNil(t, review.OfferRef)
+
+	return reviewedDealContext{
+		DealID:      dealID,
+		ProviderID:  providerID,
+		ReceiverID:  receiverID,
+		ItemID:      itemID,
+		OtherItemID: otherItemID,
+		OfferID:     review.OfferRef.OfferId,
+		Review:      review,
+	}
+}
+
+func mustGetJoinRequests(t *testing.T, userID uuid.UUID, dealID uuid.UUID) types.GetDealJoinRequestsResponse {
+	t.Helper()
+
+	req := mustUserRequest(t, http.MethodGet, dealsURL()+"/deals/"+dealID.String()+"/joins", userID, nil)
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var result types.GetDealJoinRequestsResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
+
+	return result
+}
+
+func mustVoteForFailure(t *testing.T, userID uuid.UUID, dealID uuid.UUID, votedForID uuid.UUID) {
+	t.Helper()
+
+	req := mustUserRequest(
+		t,
+		http.MethodPost,
+		dealsURL()+"/deals/failures/"+dealID.String()+"/votes",
+		userID,
+		mustJSONBody(t, types.VoteForFailureRequest{UserId: votedForID}),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusNoContent, resp.StatusCode)
+}

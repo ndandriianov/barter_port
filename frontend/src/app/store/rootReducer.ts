@@ -6,6 +6,7 @@ import offersApi from "@/features/offers/api/offersApi.ts";
 import dealsApi from "@/features/deals/api/dealsApi.ts";
 import usersApi from "@/features/users/api/usersApi.ts";
 import chatsApi from "@/features/chats/api/chatsApi.ts";
+import reviewsApi from "@/features/reviews/api/reviewsApi.ts";
 import { resetAllApiCaches } from "@/app/store/resetCaches.ts";
 
 const combinedReducer = combineReducers({
@@ -15,6 +16,7 @@ const combinedReducer = combineReducers({
   [dealsApi.reducerPath]: dealsApi.reducer,
   [usersApi.reducerPath]: usersApi.reducer,
   [chatsApi.reducerPath]: chatsApi.reducer,
+  [reviewsApi.reducerPath]: reviewsApi.reducer,
 });
 
 type CombinedState = ReturnType<typeof combinedReducer>;

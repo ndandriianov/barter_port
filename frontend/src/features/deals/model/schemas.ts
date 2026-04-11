@@ -54,6 +54,7 @@ export const createDraftDealResponseSchema = z.object({
 
 export const draftIdAndParticipantsSchema = z.object({
   id: z.string(),
+  name: z.string().optional(),
   participants: z.array(z.string()),
 });
 
@@ -62,6 +63,7 @@ export const getMyDraftDealsResponseSchema = z.array(draftIdAndParticipantsSchem
 export const itemSchema = z.object({
   id: z.string(),
   authorId: z.string(),
+  offerId: z.string().optional(),
   providerId: z.string().optional(),
   receiverId: z.string().optional(),
   name: z.string(),
@@ -118,8 +120,41 @@ export const getDealStatusVotesResponseSchema = z.array(getDealStatusVotesRespon
 
 export const dealIdAndParticipantsSchema = z.object({
   id: z.string(),
+  name: z.string().optional(),
   status: dealStatusSchema,
   participants: z.array(z.string()),
 });
 
 export const getDealsResponseSchema = z.array(dealIdAndParticipantsSchema);
+
+export const voteForFailureRequestSchema = z.object({
+  userId: z.string(),
+});
+
+export const failureVoteSchema = z.object({
+  userId: z.string(),
+  vote: z.string(),
+});
+
+export const getFailureVotesResponseSchema = z.array(failureVoteSchema);
+
+export const moderatorResolutionForFailureRequestSchema = z.object({
+  confirmed: z.boolean(),
+  userId: z.string().optional(),
+  punishmentPoints: z.number().int().min(0).optional(),
+  comment: z.string().optional(),
+});
+
+export const failureResolutionSchema = z.object({
+  userId: z.string().optional(),
+  confirmed: z.boolean().optional(),
+  punishmentPoints: z.number().int().optional(),
+  comment: z.string().optional(),
+});
+
+export const failureMaterialsSchema = z.object({
+  deal: dealSchema,
+  chatId: z.string().optional(),
+});
+
+export const failureModerationDealsResponseSchema = getDealsResponseSchema;

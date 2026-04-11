@@ -45,14 +45,15 @@ func (r *Repository) CreateDeal(ctx context.Context, tx pgx.Tx, deal domain.Deal
 	}
 
 	offersQuery := `
-		INSERT INTO items (deal_id, author_id, receiver_id, provider_id, name, description, type, quantity) 
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8);`
+		INSERT INTO items (deal_id, offer_id, author_id, receiver_id, provider_id, name, description, type, quantity) 
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);`
 
 	for _, item := range deal.Items {
 		_, err = tx.Exec(
 			ctx,
 			offersQuery,
 			id,
+			item.OfferID,
 			item.AuthorID,
 			item.ReceiverID,
 			item.ProviderID,
@@ -101,16 +102,16 @@ func (r *Repository) CreateDeal(ctx context.Context, tx pgx.Tx, deal domain.Deal
 func (r *Repository) GetDealIDs(ctx context.Context, exec db.DB, userID *uuid.UUID, open bool) ([]htypes.DealIDWithParticipantIDs, error) {
 	query := `
 		SELECT d.id,
-		       d.status,
-			   COALESCE(array_agg(DISTINCT p) FILTER (WHERE p IS NOT NULL), '{}') AS participant_ids
+			   d.status,
+			   d.name,
+			   COALESCE(array_agg(DISTINCT p.user_id) FILTER ( WHERE p.user_id IS NOT NULL), '{}'::uuid[]) AS participant_ids
 		FROM deals d
-				 LEFT JOIN items i ON i.deal_id = d.id
-				 LEFT JOIN LATERAL (VALUES (i.author_id), (i.provider_id), (i.receiver_id)) AS t(p) ON true
+				 LEFT JOIN participants p ON p.deal_id = d.id
 		WHERE ($1::uuid IS NULL
 			OR EXISTS(SELECT 1
-					  FROM items i2
-					  WHERE i2.deal_id = d.id
-						AND (i2.author_id = $1 OR i2.provider_id = $1 OR i2.receiver_id = $1)))
+					  FROM participants p2
+					  WHERE p2.deal_id = d.id
+						AND (p2.user_id = $1)))
 		  AND (NOT $2::boolean OR d.status::text NOT IN ('Completed', 'Cancelled', 'Failed'))
 		GROUP BY d.id`
 
@@ -124,8 +125,9 @@ func (r *Repository) GetDealIDs(ctx context.Context, exec db.DB, userID *uuid.UU
 	for rows.Next() {
 		var id uuid.UUID
 		var statusStr string
+		var name *string
 		var participantIDs []uuid.UUID
-		if err = rows.Scan(&id, &statusStr, &participantIDs); err != nil {
+		if err = rows.Scan(&id, &statusStr, &name, &participantIDs); err != nil {
 			return nil, fmt.Errorf("scan deal id row: %w", err)
 		}
 
@@ -137,6 +139,7 @@ func (r *Repository) GetDealIDs(ctx context.Context, exec db.DB, userID *uuid.UU
 		result = append(result, htypes.DealIDWithParticipantIDs{
 			ID:             id,
 			Status:         status,
+			Name:           name,
 			ParticipantIDs: participantIDs,
 		})
 	}
@@ -146,6 +149,22 @@ func (r *Repository) GetDealIDs(ctx context.Context, exec db.DB, userID *uuid.UU
 	}
 
 	return result, nil
+}
+
+// ================================================================================
+// UPDATE DEAL NAME
+// ================================================================================
+
+// UpdateDealName sets a new name for the deal.
+//
+// No domain errors.
+func (r *Repository) UpdateDealName(ctx context.Context, tx pgx.Tx, dealID uuid.UUID, name string) error {
+	query := `UPDATE deals SET name = $1, updated_at = NOW() WHERE id = $2`
+	_, err := tx.Exec(ctx, query, name, dealID)
+	if err != nil {
+		return fmt.Errorf("sql update deal name: %w", err)
+	}
+	return nil
 }
 
 // ================================================================================
@@ -159,7 +178,7 @@ func (r *Repository) GetDealIDs(ctx context.Context, exec db.DB, userID *uuid.UU
 func (r *Repository) GetDealByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (domain.Deal, error) {
 	query := `
 		SELECT d.id, d.name, d.description, d.created_at, d.updated_at, d.status,
-		       i.id, i.author_id, i.provider_id, i.receiver_id,
+		       i.id, i.offer_id, i.author_id, i.provider_id, i.receiver_id,
 		       i.name, i.description, i.type, i.updated_at, i.quantity
 		FROM deals d
 		LEFT JOIN items i ON i.deal_id = d.id
@@ -176,6 +195,7 @@ func (r *Repository) GetDealByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (
 
 	for rows.Next() {
 		var itemID *uuid.UUID
+		var itemOfferID *uuid.UUID
 		var itemAuthorID *uuid.UUID
 		var itemProviderID *uuid.UUID
 		var itemReceiverID *uuid.UUID
@@ -193,6 +213,7 @@ func (r *Repository) GetDealByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (
 			&deal.UpdatedAt,
 			&deal.Status,
 			&itemID,
+			&itemOfferID,
 			&itemAuthorID,
 			&itemProviderID,
 			&itemReceiverID,
@@ -222,6 +243,7 @@ func (r *Repository) GetDealByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (
 
 		deal.Items = append(deal.Items, domain.Item{
 			ID:          *itemID,
+			OfferID:     itemOfferID,
 			AuthorID:    *itemAuthorID,
 			ProviderID:  itemProviderID,
 			ReceiverID:  itemReceiverID,
@@ -281,15 +303,16 @@ func (r *Repository) AddItem(ctx context.Context, exec db.DB, dealID uuid.UUID, 
 	}
 
 	query := `
-		INSERT INTO items (deal_id, author_id, provider_id, receiver_id, name, description, type, quantity)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-		RETURNING id, author_id, provider_id, receiver_id,
+		INSERT INTO items (deal_id, offer_id, author_id, provider_id, receiver_id, name, description, type, quantity)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		RETURNING id, offer_id, author_id, provider_id, receiver_id,
 		          name, description, type, updated_at, quantity`
 
 	itemCreated, err := scanItem(exec.QueryRow(
 		ctx,
 		query,
 		dealID,
+		item.OfferID,
 		item.AuthorID,
 		item.ProviderID,
 		item.ReceiverID,
@@ -383,7 +406,7 @@ func (r *Repository) UpdateItem(
 		WHERE id = $1
 		  AND deal_id   = $2
 		  AND author_id = $3
-		RETURNING id, author_id, provider_id, receiver_id,
+		RETURNING id, offer_id, author_id, provider_id, receiver_id,
 		          name, description, type, updated_at, quantity`
 
 	row := exec.QueryRow(ctx, updateQuery, itemID, dealID, userID, patch.Name, patch.Description, patch.Quantity)
@@ -427,7 +450,7 @@ func (r *Repository) ClaimItemProvider(ctx context.Context, exec db.DB, dealID, 
 		UPDATE items
 		SET provider_id = $3, updated_at = NOW()
 		WHERE id = $1 AND deal_id = $2 AND provider_id IS NULL
-		RETURNING id, author_id, provider_id, receiver_id,
+		RETURNING id, offer_id, author_id, provider_id, receiver_id,
 				  name, description, type, updated_at, quantity`
 
 	const check = `SELECT provider_id FROM items WHERE id = $1 AND deal_id = $2`
@@ -445,7 +468,7 @@ func (r *Repository) ReleaseItemProvider(ctx context.Context, exec db.DB, dealID
 		UPDATE items
 		SET provider_id = NULL, updated_at = NOW()
 		WHERE id = $1 AND deal_id = $2 AND provider_id = $3
-		RETURNING id, author_id, provider_id, receiver_id,
+		RETURNING id, offer_id, author_id, provider_id, receiver_id,
 				  name, description, type, updated_at, quantity`
 
 	const check = `SELECT provider_id FROM items WHERE id = $1 AND deal_id = $2`
@@ -463,7 +486,7 @@ func (r *Repository) ClaimItemReceiver(ctx context.Context, exec db.DB, dealID, 
 		UPDATE items
 		SET receiver_id = $3, updated_at = NOW()
 		WHERE id = $1 AND deal_id = $2 AND receiver_id IS NULL
-		RETURNING id, author_id, provider_id, receiver_id,
+		RETURNING id, offer_id, author_id, provider_id, receiver_id,
 				  name, description, type, updated_at, quantity`
 
 	const check = `SELECT receiver_id FROM items WHERE id = $1 AND deal_id = $2`
@@ -481,7 +504,7 @@ func (r *Repository) ReleaseItemReceiver(ctx context.Context, exec db.DB, dealID
 		UPDATE items
 		SET receiver_id = NULL, updated_at = NOW()
 		WHERE id = $1 AND deal_id = $2 AND receiver_id = $3
-		RETURNING id, author_id, provider_id, receiver_id,
+		RETURNING id, offer_id, author_id, provider_id, receiver_id,
 				  name, description, type, updated_at, quantity`
 
 	const check = `SELECT receiver_id FROM items WHERE id = $1 AND deal_id = $2`
@@ -584,33 +607,6 @@ func (r *Repository) GetStatusVotes(ctx context.Context, exec db.DB, dealID uuid
 // PARTICIPANTS
 // ================================================================================
 
-// GetParticipants returns all unique user IDs that hold any role (author/provider/receiver) in the deal's items.
-func (r *Repository) GetParticipants(ctx context.Context, exec db.DB, dealID uuid.UUID) ([]uuid.UUID, error) {
-	query := `
-		SELECT user_id
-		FROM participants
-		WHERE deal_id = $1`
-
-	rows, err := exec.Query(ctx, query, dealID)
-	if err != nil {
-		return nil, fmt.Errorf("sql get participants: %w", err)
-	}
-	defer rows.Close()
-
-	var participants []uuid.UUID
-	for rows.Next() {
-		var id uuid.UUID
-		if err = rows.Scan(&id); err != nil {
-			return nil, fmt.Errorf("scan participant: %w", err)
-		}
-		participants = append(participants, id)
-	}
-	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("rows participants: %w", err)
-	}
-	return participants, nil
-}
-
 func (r *Repository) DeleteParticipant(ctx context.Context, exec db.DB, dealID, userID uuid.UUID) error {
 	query := `
 		DELETE
@@ -666,7 +662,8 @@ func (r *Repository) ensureDealMutable(ctx context.Context, exec db.DB, dealID u
 // DeleteStatusVotes removes all votes for a deal (called after a status transition).
 func (r *Repository) DeleteStatusVotes(ctx context.Context, tx pgx.Tx, dealID uuid.UUID) error {
 	query := `
-		DELETE FROM join_requests_votes
+		UPDATE participants
+		SET requested_status = NULL
 		WHERE deal_id = $1`
 
 	_, err := tx.Exec(ctx, query, dealID)
@@ -676,12 +673,13 @@ func (r *Repository) DeleteStatusVotes(ctx context.Context, tx pgx.Tx, dealID uu
 	return nil
 }
 
-// scanItem scans an item row returned from an UPDATE … RETURNING or SELECT query.
-func scanItem(row interface{ Scan(...any) error }) (domain.Item, error) {
+// ScanItem scans an item row returned from an UPDATE RETURNING or SELECT query.
+func ScanItem(row interface{ Scan(...any) error }) (domain.Item, error) {
 	var item domain.Item
 	var itemType string
 	err := row.Scan(
 		&item.ID,
+		&item.OfferID,
 		&item.AuthorID,
 		&item.ProviderID,
 		&item.ReceiverID,
@@ -699,4 +697,8 @@ func scanItem(row interface{ Scan(...any) error }) (domain.Item, error) {
 		return domain.Item{}, fmt.Errorf("item type: %w", err)
 	}
 	return item, nil
+}
+
+func scanItem(row interface{ Scan(...any) error }) (domain.Item, error) {
+	return ScanItem(row)
 }

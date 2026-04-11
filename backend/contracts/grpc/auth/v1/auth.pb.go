@@ -71,6 +71,7 @@ type GetMeResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Email         string                 `protobuf:"bytes,1,opt,name=email,proto3" json:"email,omitempty"`
 	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	IsAdmin       bool                   `protobuf:"varint,3,opt,name=is_admin,json=isAdmin,proto3" json:"is_admin,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -119,17 +120,25 @@ func (x *GetMeResponse) GetCreatedAt() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *GetMeResponse) GetIsAdmin() bool {
+	if x != nil {
+		return x.IsAdmin
+	}
+	return false
+}
+
 var File_contracts_grpc_auth_v1_auth_proto protoreflect.FileDescriptor
 
 const file_contracts_grpc_auth_v1_auth_proto_rawDesc = "" +
 	"\n" +
 	"!contracts/grpc/auth/v1/auth.proto\x12\x13linktracker.auth.v1\x1a\x1fgoogle/protobuf/timestamp.proto\"\x1e\n" +
 	"\fGetMeRequest\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\tR\x02id\"`\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\"{\n" +
 	"\rGetMeResponse\x12\x14\n" +
 	"\x05email\x18\x01 \x01(\tR\x05email\x129\n" +
 	"\n" +
-	"created_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt2]\n" +
+	"created_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\x12\x19\n" +
+	"\bis_admin\x18\x03 \x01(\bR\aisAdmin2]\n" +
 	"\vAuthService\x12N\n" +
 	"\x05GetMe\x12!.linktracker.auth.v1.GetMeRequest\x1a\".linktracker.auth.v1.GetMeResponseB5Z3link-tracker/internal/contracts/grpc/auth/v1;authpbb\x06proto3"
 

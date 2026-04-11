@@ -16,6 +16,17 @@ CreateDraftDealRequest:
 
 
 
+UpdateDealRequest:
+  type: object
+  required:
+    - name
+  properties:
+    name:
+      type: string
+      description: Новое название сделки
+
+
+
 CreateOfferRequest:
   type: object
   required:
@@ -64,3 +75,82 @@ AddDealItemRequest:
       description: |
         Количество единиц предложения, которые пользователь хочет добавить в сделку.
         Должно быть положительным числом.
+
+
+
+CreateReviewRequest:
+  type: object
+  required:
+    - rating
+  properties:
+    rating:
+      type: integer
+      minimum: 1
+      maximum: 5
+      description: Оценка по шкале от 1 до 5.
+    comment:
+      type: string
+      description: Текстовый отзыв после завершения сделки.
+
+
+
+UpdateReviewRequest:
+  type: object
+  minProperties: 1
+  description: |
+    Хотя бы одно поле обязательно.
+    Изменять можно только содержимое отзыва: `rating` и/или `comment`.
+    Поля контекста (`authorId`, `providerId`, `offerRef`, `itemRef`) не редактируются.
+  properties:
+    rating:
+      type: integer
+      minimum: 1
+      maximum: 5
+      description: Новая оценка по шкале от 1 до 5.
+    comment:
+      type: string
+      description: Новый текст отзыва.
+
+
+
+VoteForFailureRequest:
+  type: object
+  required:
+    - userId
+  properties:
+    userId:
+      type: string
+      format: uuid
+      description: ID пользователя, за которого голосует участник сделки.
+
+
+
+ModeratorResolutionForFailureRequest:
+  type: object
+  required:
+    - confirmed
+  properties:
+    confirmed:
+      type: boolean
+      description: |
+        Подтверждение админом провала сделки.
+        Если true, сделка признается проваленной.
+        Если false, сделка признается не проваленной и переводится в Completed либо Cancelled в зависимости от текущего статуса.
+    userId:
+      type: string
+      format: uuid
+      description: |
+        ID пользователя, которого админ признает виновным в провале сделки.
+        Должен быть участником сделки.
+        Используется только если confirmed = true.
+    punishmentPoints:
+      type: integer
+      minimum: 0
+      description: |
+        Количество штрафных очков, которые админ назначает виновнику провала сделки.
+        Должно быть неотрицательным числом.
+        Разрешено только если confirmed = true.
+    comment:
+      type: string
+      description: |
+        Комментарий админа, объясняющий его решение. Может быть пустым

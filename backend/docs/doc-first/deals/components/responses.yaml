@@ -34,6 +34,9 @@ GetMyDraftDealsResponseItem:
       type: string
       format: uuid
       description: Уникальный идентификатор черновой сделки
+    name:
+      type: string
+      description: Название черновой сделки
     participants:
       type: array
       description: Список ID всех пользователей, участвующих в этой сделке
@@ -59,6 +62,63 @@ ListOffersResponse:
       allOf:
         - $ref: 'schemas.yaml#/OffersCursor'
       description: Cursor for fetching the next page; null if there is no next page
+
+
+
+GetOfferReviewsResponse:
+  type: array
+  items:
+    $ref: 'schemas.yaml#/Review'
+
+
+
+GetItemReviewsResponse:
+  type: array
+  items:
+    $ref: 'schemas.yaml#/Review'
+
+
+
+GetProviderReviewsResponse:
+  type: array
+  items:
+    $ref: 'schemas.yaml#/Review'
+
+
+
+GetAuthorReviewsResponse:
+  type: array
+  items:
+    $ref: 'schemas.yaml#/Review'
+
+
+
+GetDealReviewsResponse:
+  type: array
+  items:
+    $ref: 'schemas.yaml#/Review'
+
+
+
+GetPendingDealReviewsResponse:
+  type: array
+  items:
+    $ref: 'schemas.yaml#/PendingDealReview'
+
+
+
+OfferReviewsSummaryResponse:
+  $ref: 'schemas.yaml#/ReviewSummary'
+
+
+
+ProviderReviewsSummaryResponse:
+  $ref: 'schemas.yaml#/ReviewSummary'
+
+
+
+ReviewEligibilityResponse:
+  $ref: 'schemas.yaml#/ReviewEligibility'
 
 
 
@@ -90,6 +150,9 @@ GetDealsResponseItem:
       type: string
       format: uuid
       description: Уникальный идентификатор сделки
+    name:
+      type: string
+      description: Название сделки
     status:
       $ref: 'schemas.yaml#/DealStatus'
     participants:
@@ -149,3 +212,44 @@ GetDealStatusVotesResponseItem:
       description: Уникальный идентификатор пользователя, который проголосовал за переход сделки в следующий статус
     vote:
       $ref: 'schemas.yaml#/DealStatus'
+
+
+FailureModerationDealsResponse:
+  type: array
+  items:
+    $ref: '#/GetDealsResponseItem'
+
+
+FailureVotesResponse:
+  type: array
+  items:
+    $ref: '#/FailureVotesResponseItem'
+
+FailureVotesResponseItem:
+  type: object
+  required:
+    - userId
+    - vote
+  properties:
+    userId:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор пользователя, который проголосовал за виновника провала сделки
+    vote:
+      type: string
+      format: uuid
+      description: Идентификатор пользователя, за которого проголосовал пользователь как за виновника
+
+
+
+FailureMaterialResponse:
+  type: object
+  required:
+    - deal
+  properties:
+    deal:
+      $ref: 'schemas.yaml#/Deal'
+    chatId:
+      type: string
+      format: uuid
+      description: Идентификатор чата, в котором обсуждалась сделка, если чат был создан

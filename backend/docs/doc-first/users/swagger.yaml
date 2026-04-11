@@ -15,7 +15,7 @@ paths:
       summary: Получить информацию о себе
       description: |
         Возвращает информацию о текущем пользователе.
-        Обращается к auth сервису для получения email и createdAt.
+        Обращается к auth сервису для получения email, createdAt и признака admin.
       operationId: getCurrentUser
       security:
         - bearerAuth: [ ]

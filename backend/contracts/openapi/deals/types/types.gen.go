@@ -79,6 +79,57 @@ func (e OfferAction) Valid() bool {
 	}
 }
 
+// Defines values for ReviewContextType.
+const (
+	ItemOnly  ReviewContextType = "item-only"
+	OfferItem ReviewContextType = "offer+item"
+	OfferOnly ReviewContextType = "offer-only"
+)
+
+// Valid indicates whether the value is a known member of the ReviewContextType enum.
+func (e ReviewContextType) Valid() bool {
+	switch e {
+	case ItemOnly:
+		return true
+	case OfferItem:
+		return true
+	case OfferOnly:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReviewEligibilityReason.
+const (
+	AlreadyReviewed         ReviewEligibilityReason = "already_reviewed"
+	DealNotCompleted        ReviewEligibilityReason = "deal_not_completed"
+	ForbiddenNotReceiver    ReviewEligibilityReason = "forbidden_not_receiver"
+	ProviderMissing         ReviewEligibilityReason = "provider_missing"
+	ReceiverMissing         ReviewEligibilityReason = "receiver_missing"
+	SameProviderAndReceiver ReviewEligibilityReason = "same_provider_and_receiver"
+)
+
+// Valid indicates whether the value is a known member of the ReviewEligibilityReason enum.
+func (e ReviewEligibilityReason) Valid() bool {
+	switch e {
+	case AlreadyReviewed:
+		return true
+	case DealNotCompleted:
+		return true
+	case ForbiddenNotReceiver:
+		return true
+	case ProviderMissing:
+		return true
+	case ReceiverMissing:
+		return true
+	case SameProviderAndReceiver:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SortType.
 const (
 	SortTypeByPopularity SortType = "ByPopularity"
@@ -165,6 +216,15 @@ type CreateOfferRequest struct {
 	Type ItemType `json:"type"`
 }
 
+// CreateReviewRequest defines model for CreateReviewRequest.
+type CreateReviewRequest struct {
+	// Comment Текстовый отзыв после завершения сделки.
+	Comment *string `json:"comment,omitempty"`
+
+	// Rating Оценка по шкале от 1 до 5.
+	Rating int `json:"rating"`
+}
+
 // Deal defines model for Deal.
 type Deal struct {
 	// CreatedAt Временная метка создания сделки
@@ -190,6 +250,35 @@ type Deal struct {
 
 	// UpdatedAt Временная метка последнего обновления сделки
 	UpdatedAt *time.Time `json:"updatedAt,omitempty"`
+}
+
+// DealFailureModeratorResolution defines model for DealFailureModeratorResolution.
+type DealFailureModeratorResolution struct {
+	// Comment Комментарий админа к его решению.
+	Comment *string `json:"comment,omitempty"`
+
+	// Confirmed Поле null если нет решения админа,
+	// true если админ признал сделку проваленной,
+	// false если админ признал сделку не проваленной.
+	Confirmed *bool `json:"confirmed,omitempty"`
+
+	// PunishmentPoints Количество штрафных баллов, которые админ назначает пользователю, признанному виновным в провале сделки.
+	// Должны быть неотрицательным числом.
+	// Отсутствует, если сделка признана не проваленной.
+	PunishmentPoints *int `json:"punishmentPoints,omitempty"`
+
+	// UserId ID пользователя, которого админ признает виновным в провале сделки.
+	// Должен быть участником сделки.
+	UserId *openapi_types.UUID `json:"userId,omitempty"`
+}
+
+// DealItemRef defines model for DealItemRef.
+type DealItemRef struct {
+	// DealId Идентификатор сделки, в рамках которой был создан item.
+	DealId openapi_types.UUID `json:"dealId"`
+
+	// ItemId Идентификатор item внутри завершенной сделки.
+	ItemId openapi_types.UUID `json:"itemId"`
 }
 
 // DealStatus Статус сделки
@@ -224,6 +313,31 @@ type ErrorResponse struct {
 	Message *string `json:"message,omitempty"`
 }
 
+// FailureMaterialResponse defines model for FailureMaterialResponse.
+type FailureMaterialResponse struct {
+	// ChatId Идентификатор чата, в котором обсуждалась сделка, если чат был создан
+	ChatId *openapi_types.UUID `json:"chatId,omitempty"`
+	Deal   Deal                `json:"deal"`
+}
+
+// FailureModerationDealsResponse defines model for FailureModerationDealsResponse.
+type FailureModerationDealsResponse = []GetDealsResponseItem
+
+// FailureVotesResponse defines model for FailureVotesResponse.
+type FailureVotesResponse = []FailureVotesResponseItem
+
+// FailureVotesResponseItem defines model for FailureVotesResponseItem.
+type FailureVotesResponseItem struct {
+	// UserId Уникальный идентификатор пользователя, который проголосовал за виновника провала сделки
+	UserId openapi_types.UUID `json:"userId"`
+
+	// Vote Идентификатор пользователя, за которого проголосовал пользователь как за виновника
+	Vote openapi_types.UUID `json:"vote"`
+}
+
+// GetAuthorReviewsResponse defines model for GetAuthorReviewsResponse.
+type GetAuthorReviewsResponse = []Review
+
 // GetDealJoinRequestsResponse defines model for GetDealJoinRequestsResponse.
 type GetDealJoinRequestsResponse = []GetDealJoinRequestsResponseItem
 
@@ -238,6 +352,9 @@ type GetDealJoinRequestsResponseItem struct {
 	// Voters Список ID пользователей, которые поддерживают заявку на присоединение к сделке
 	Voters []openapi_types.UUID `json:"voters"`
 }
+
+// GetDealReviewsResponse defines model for GetDealReviewsResponse.
+type GetDealReviewsResponse = []Review
 
 // GetDealStatusVotesResponse defines model for GetDealStatusVotesResponse.
 type GetDealStatusVotesResponse = []GetDealStatusVotesResponseItem
@@ -259,12 +376,18 @@ type GetDealsResponseItem struct {
 	// Id Уникальный идентификатор сделки
 	Id openapi_types.UUID `json:"id"`
 
+	// Name Название сделки
+	Name *string `json:"name,omitempty"`
+
 	// Participants Список ID всех пользователей, участвующих в этой сделке
 	Participants []openapi_types.UUID `json:"participants"`
 
 	// Status Статус сделки
 	Status *DealStatus `json:"status,omitempty"`
 }
+
+// GetItemReviewsResponse defines model for GetItemReviewsResponse.
+type GetItemReviewsResponse = []Review
 
 // GetMyDraftDealsResponse defines model for GetMyDraftDealsResponse.
 type GetMyDraftDealsResponse = []GetMyDraftDealsResponseItem
@@ -274,9 +397,21 @@ type GetMyDraftDealsResponseItem struct {
 	// Id Уникальный идентификатор черновой сделки
 	Id openapi_types.UUID `json:"id"`
 
+	// Name Название черновой сделки
+	Name *string `json:"name,omitempty"`
+
 	// Participants Список ID всех пользователей, участвующих в этой сделке
 	Participants []openapi_types.UUID `json:"participants"`
 }
+
+// GetOfferReviewsResponse defines model for GetOfferReviewsResponse.
+type GetOfferReviewsResponse = []Review
+
+// GetPendingDealReviewsResponse defines model for GetPendingDealReviewsResponse.
+type GetPendingDealReviewsResponse = []PendingDealReview
+
+// GetProviderReviewsResponse defines model for GetProviderReviewsResponse.
+type GetProviderReviewsResponse = []Review
 
 // Item defines model for Item.
 type Item struct {
@@ -291,6 +426,9 @@ type Item struct {
 
 	// Name Краткое название позиции сделки
 	Name string `json:"name"`
+
+	// OfferId Идентификатор исходного offer, на базе которого создана позиция сделки
+	OfferId *openapi_types.UUID `json:"offerId,omitempty"`
 
 	// ProviderId Уникальный идентификатор пользователя, который отдает эту позицию в сделке
 	ProviderId *openapi_types.UUID `json:"providerId,omitempty"`
@@ -318,6 +456,27 @@ type ListOffersResponse struct {
 
 	// Offers List of offers
 	Offers []Offer `json:"offers"`
+}
+
+// ModeratorResolutionForFailureRequest defines model for ModeratorResolutionForFailureRequest.
+type ModeratorResolutionForFailureRequest struct {
+	// Comment Комментарий админа, объясняющий его решение. Может быть пустым
+	Comment *string `json:"comment,omitempty"`
+
+	// Confirmed Подтверждение админом провала сделки.
+	// Если true, сделка признается проваленной.
+	// Если false, сделка признается не проваленной и переводится в Completed либо Cancelled в зависимости от текущего статуса.
+	Confirmed bool `json:"confirmed"`
+
+	// PunishmentPoints Количество штрафных очков, которые админ назначает виновнику провала сделки.
+	// Должно быть неотрицательным числом.
+	// Разрешено только если confirmed = true.
+	PunishmentPoints *int `json:"punishmentPoints,omitempty"`
+
+	// UserId ID пользователя, которого админ признает виновным в провале сделки.
+	// Должен быть участником сделки.
+	// Используется только если confirmed = true.
+	UserId *openapi_types.UUID `json:"userId,omitempty"`
 }
 
 // Offer defines model for Offer.
@@ -371,6 +530,12 @@ type OfferInfo struct {
 	Quantity int `json:"quantity"`
 }
 
+// OfferRef defines model for OfferRef.
+type OfferRef struct {
+	// OfferId Идентификатор исходного offer.
+	OfferId openapi_types.UUID `json:"offerId"`
+}
+
 // OfferWithInfo defines model for OfferWithInfo.
 type OfferWithInfo struct {
 	// Action Whether the user offers or requests something
@@ -414,6 +579,138 @@ type OffersCursor struct {
 	Views     *int64             `json:"views,omitempty"`
 }
 
+// PendingDealReview defines model for PendingDealReview.
+type PendingDealReview struct {
+	// CanCreate Может ли текущий пользователь оставить отзыв по этому контексту.
+	CanCreate bool `json:"canCreate"`
+
+	// ContextType Тип контекста, к которому относится отзыв.
+	ContextType ReviewContextType `json:"contextType"`
+
+	// DealId Идентификатор сделки.
+	DealId openapi_types.UUID `json:"dealId"`
+
+	// ItemRef Ссылка на item, если отзыв затрагивает item.
+	ItemRef *DealItemRef `json:"itemRef,omitempty"`
+
+	// OfferRef Ссылка на offer, если отзыв затрагивает offer.
+	OfferRef *OfferRef `json:"offerRef,omitempty"`
+
+	// ProviderId Идентификатор пользователя, который будет сохранен как `review.providerId`.
+	// Может быть `null`, если контекст недоступен из-за `provider_missing`.
+	ProviderId *openapi_types.UUID `json:"providerId,omitempty"`
+
+	// Reason Причина, по которой отзыв недоступен для создания. Заполняется только если `canCreate = false`.
+	// Если `canCreate = true`, поле равно `null`.
+	Reason *ReviewEligibilityReason `json:"reason,omitempty"`
+}
+
+// Review defines model for Review.
+type Review struct {
+	// AuthorId Идентификатор пользователя, оставившего отзыв.
+	AuthorId openapi_types.UUID `json:"authorId"`
+
+	// Comment Текстовый отзыв.
+	Comment *string `json:"comment,omitempty"`
+
+	// CreatedAt Временная метка создания отзыва.
+	CreatedAt time.Time `json:"createdAt"`
+
+	// DealId Идентификатор завершенной сделки, по итогам которой оставлен отзыв.
+	DealId openapi_types.UUID `json:"dealId"`
+
+	// Id Уникальный идентификатор отзыва.
+	Id openapi_types.UUID `json:"id"`
+
+	// ItemRef Ссылка на `item`, если отзыв относится к item.
+	//
+	// Правила заполнения:
+	// - `items.offer_id IS NULL` -> отзыв относится только к `item`,
+	//   поэтому `offerRef = null`, `itemRef != null`;
+	// - `items.offer_id IS NOT NULL` и `items.updated_at IS NULL` -> отзыв относится только к `offer`,
+	//   поэтому `itemRef = null`;
+	// - `items.offer_id IS NOT NULL` и `items.updated_at IS NOT NULL` -> отзыв относится и к `offer`, и к `item`,
+	//   поэтому `offerRef != null`, `itemRef != null`.
+	ItemRef *DealItemRef `json:"itemRef,omitempty"`
+
+	// OfferRef Ссылка на исходный `offer`, если отзыв относится к offer.
+	//
+	// Правила заполнения:
+	// - `items.offer_id IS NULL` -> `offerRef = null`;
+	// - `items.offer_id IS NOT NULL` и `items.updated_at IS NULL` -> отзыв относится только к `offer`,
+	//   поэтому `offerRef != null`, `itemRef = null`;
+	// - `items.offer_id IS NOT NULL` и `items.updated_at IS NOT NULL` -> отзыв относится и к `offer`, и к `item`,
+	//   поэтому `offerRef != null`, `itemRef != null`.
+	OfferRef *OfferRef `json:"offerRef,omitempty"`
+
+	// ProviderId Идентификатор пользователя, который фактически предоставил товар либо услугу по item.
+	// Это значение берется из `items.provider_id` в момент создания отзыва и после этого не меняется.
+	ProviderId openapi_types.UUID `json:"providerId"`
+
+	// Rating Оценка предложения по шкале от 1 до 5.
+	Rating int `json:"rating"`
+
+	// UpdatedAt Временная метка последнего редактирования отзыва.
+	UpdatedAt *time.Time `json:"updatedAt,omitempty"`
+}
+
+// ReviewContextType Тип контекста, к которому относится отзыв.
+type ReviewContextType string
+
+// ReviewEligibility defines model for ReviewEligibility.
+type ReviewEligibility struct {
+	// CanCreate Может ли текущий пользователь создать отзыв для этого item.
+	CanCreate bool `json:"canCreate"`
+
+	// ContextType Тип контекста, к которому относится отзыв.
+	ContextType ReviewContextType `json:"contextType"`
+
+	// ItemRef Ссылка на item, если отзыв затрагивает item.
+	ItemRef *DealItemRef `json:"itemRef,omitempty"`
+
+	// OfferRef Ссылка на offer, если отзыв затрагивает offer.
+	OfferRef *OfferRef `json:"offerRef,omitempty"`
+
+	// ProviderId Идентификатор пользователя, который будет сохранен как `review.providerId`.
+	// Может быть `null`, если eligibility вычислена в состоянии `provider_missing`.
+	ProviderId *openapi_types.UUID `json:"providerId,omitempty"`
+
+	// Reason Причина, по которой отзыв нельзя создать. Заполняется только если `canCreate = false`.
+	// Если `canCreate = true`, поле равно `null`.
+	Reason *ReviewEligibilityReason `json:"reason,omitempty"`
+}
+
+// ReviewEligibilityReason Машинно-стабильная причина, по которой отзыв нельзя создать.
+type ReviewEligibilityReason string
+
+// ReviewRatingBreakdown defines model for ReviewRatingBreakdown.
+type ReviewRatingBreakdown struct {
+	// Rating1 Количество отзывов с оценкой 1.
+	Rating1 int `json:"rating1"`
+
+	// Rating2 Количество отзывов с оценкой 2.
+	Rating2 int `json:"rating2"`
+
+	// Rating3 Количество отзывов с оценкой 3.
+	Rating3 int `json:"rating3"`
+
+	// Rating4 Количество отзывов с оценкой 4.
+	Rating4 int `json:"rating4"`
+
+	// Rating5 Количество отзывов с оценкой 5.
+	Rating5 int `json:"rating5"`
+}
+
+// ReviewSummary defines model for ReviewSummary.
+type ReviewSummary struct {
+	// AvgRating Средняя оценка по выборке. Для пустой выборки возвращается `0`.
+	AvgRating float64 `json:"avgRating"`
+
+	// Count Общее количество отзывов в выборке.
+	Count           int                   `json:"count"`
+	RatingBreakdown ReviewRatingBreakdown `json:"ratingBreakdown"`
+}
+
 // UpdateDealItemRequest Хотя бы одно поле обязательно.
 // Один и тот же пользователь не может одновременно быть `provider` и `receiver` для одной позиции.
 type UpdateDealItemRequest struct {
@@ -439,12 +736,35 @@ type UpdateDealItemRequest struct {
 	ReleaseReceiver *bool `json:"releaseReceiver,omitempty"`
 }
 
+// UpdateDealRequest defines model for UpdateDealRequest.
+type UpdateDealRequest struct {
+	// Name Новое название сделки
+	Name string `json:"name"`
+}
+
+// UpdateReviewRequest Хотя бы одно поле обязательно.
+// Изменять можно только содержимое отзыва: `rating` и/или `comment`.
+// Поля контекста (`authorId`, `providerId`, `offerRef`, `itemRef`) не редактируются.
+type UpdateReviewRequest struct {
+	// Comment Новый текст отзыва.
+	Comment *string `json:"comment,omitempty"`
+
+	// Rating Новая оценка по шкале от 1 до 5.
+	Rating *int `json:"rating,omitempty"`
+}
+
 // UserConfirm defines model for UserConfirm.
 type UserConfirm struct {
 	// Confirmed Статус подтверждения участия пользователя в сделке
 	Confirmed bool `json:"confirmed"`
 
 	// UserId Уникальный идентификатор пользователя
+	UserId openapi_types.UUID `json:"userId"`
+}
+
+// VoteForFailureRequest defines model for VoteForFailureRequest.
+type VoteForFailureRequest struct {
+	// UserId ID пользователя, за которого голосует участник сделки.
 	UserId openapi_types.UUID `json:"userId"`
 }
 
@@ -512,14 +832,29 @@ type ListOffersParamsSort string
 // CreateDraftDealJSONRequestBody defines body for CreateDraftDeal for application/json ContentType.
 type CreateDraftDealJSONRequestBody = CreateDraftDealRequest
 
+// ModeratorResolutionForFailureJSONRequestBody defines body for ModeratorResolutionForFailure for application/json ContentType.
+type ModeratorResolutionForFailureJSONRequestBody = ModeratorResolutionForFailureRequest
+
+// VoteForFailureJSONRequestBody defines body for VoteForFailure for application/json ContentType.
+type VoteForFailureJSONRequestBody = VoteForFailureRequest
+
+// UpdateDealJSONRequestBody defines body for UpdateDeal for application/json ContentType.
+type UpdateDealJSONRequestBody = UpdateDealRequest
+
 // AddDealItemJSONRequestBody defines body for AddDealItem for application/json ContentType.
 type AddDealItemJSONRequestBody = AddDealItemRequest
 
 // UpdateDealItemJSONRequestBody defines body for UpdateDealItem for application/json ContentType.
 type UpdateDealItemJSONRequestBody = UpdateDealItemRequest
 
+// CreateDealItemReviewJSONRequestBody defines body for CreateDealItemReview for application/json ContentType.
+type CreateDealItemReviewJSONRequestBody = CreateReviewRequest
+
 // ChangeDealStatusJSONRequestBody defines body for ChangeDealStatus for application/json ContentType.
 type ChangeDealStatusJSONRequestBody = ChangeDealStatusRequest
 
 // CreateOffersJSONRequestBody defines body for CreateOffers for application/json ContentType.
 type CreateOffersJSONRequestBody = CreateOfferRequest
+
+// UpdateReviewJSONRequestBody defines body for UpdateReview for application/json ContentType.
+type UpdateReviewJSONRequestBody = UpdateReviewRequest

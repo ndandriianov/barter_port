@@ -139,5 +139,23 @@ func (s *Service) GetOffers(
 	return offers, universalCursor, nil
 }
 
+// GetOfferByID retrieves a single offer by its ID, including the author name.
+//
+// Errors:
+//   - domain.ErrOfferNotFound
+func (s *Service) GetOfferByID(ctx context.Context, id uuid.UUID) (*domain.Offer, error) {
+	offer, err := s.repo.GetOfferByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := s.usersClient.GetUsersWithInfo(ctx, &userspb.GetUsersWithInfoRequest{Ids: []string{offer.AuthorId.String()}})
+	if err == nil && len(response.Users) > 0 && response.Users[0] != nil {
+		offer.AuthorName = &response.Users[0].Name
+	}
+
+	return offer, nil
+}
+
 // TODO: hide
 // TODO: unhide

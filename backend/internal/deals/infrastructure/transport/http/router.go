@@ -4,8 +4,10 @@ import (
 	dealsdocfirst "barter-port/docs/doc-first/deals"
 	"barter-port/internal/deals/infrastructure/transport/http/deals"
 	draftsh "barter-port/internal/deals/infrastructure/transport/http/drafts"
+	failuresh "barter-port/internal/deals/infrastructure/transport/http/failures"
 	joinsh "barter-port/internal/deals/infrastructure/transport/http/joins"
 	"barter-port/internal/deals/infrastructure/transport/http/offers"
+	reviewsh "barter-port/internal/deals/infrastructure/transport/http/reviews"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/authkit/validators"
 	"barter-port/pkg/logger"
@@ -23,7 +25,9 @@ func NewRouter(
 	offersHandlers *offers.Handlers,
 	draftsHandlers *draftsh.Handlers,
 	dealsHandlers *deals.Handlers,
+	failuresHandlers *failuresh.Handlers,
 	joinsHandlers *joinsh.Handlers,
+	reviewsHandlers *reviewsh.Handlers,
 ) http.Handler {
 	if logg == nil {
 		log.Fatal("logger is required")
@@ -37,8 +41,14 @@ func NewRouter(
 	if dealsHandlers == nil {
 		log.Fatal("deals handlers are required")
 	}
+	if failuresHandlers == nil {
+		log.Fatal("failures handlers are required")
+	}
 	if joinsHandlers == nil {
 		log.Fatal("joins handlers are required")
+	}
+	if reviewsHandlers == nil {
+		log.Fatal("reviews handlers are required")
 	}
 
 	r := chi.NewRouter()
@@ -68,10 +78,27 @@ func NewRouter(
 		r.Route("/offers", func(r chi.Router) {
 			r.Post("/", offersHandlers.HandleCreateOffer)
 			r.Get("/", offersHandlers.HandleGetOffers)
+			r.Get("/{offerId}", offersHandlers.HandleGetOfferByID)
+			r.Get("/{offerId}/reviews", reviewsHandlers.GetOfferReviews)
+			r.Get("/{offerId}/reviews-summary", reviewsHandlers.GetOfferReviewsSummary)
 		})
+		r.Get("/providers/{providerId}/reviews", reviewsHandlers.GetProviderReviews)
+		r.Get("/providers/{providerId}/reviews-summary", reviewsHandlers.GetProviderReviewsSummary)
+		r.Get("/authors/{authorId}/reviews", reviewsHandlers.GetAuthorReviews)
+		r.Get("/reviews/{reviewId}", reviewsHandlers.GetReviewByID)
+		r.Patch("/reviews/{reviewId}", reviewsHandlers.UpdateReview)
+		r.Delete("/reviews/{reviewId}", reviewsHandlers.DeleteReview)
 		r.Route("/deals", func(r chi.Router) {
 			r.Get("/", dealsHandlers.GetDeals)
 			r.Get("/{dealId}", dealsHandlers.GetDealByID)
+			r.Patch("/{dealId}", dealsHandlers.UpdateDeal)
+			r.Get("/failures/review", failuresHandlers.GetDealsForFailureReview)
+			r.Post("/failures/{dealId}/votes", failuresHandlers.VoteForFailure)
+			r.Delete("/failures/{dealId}/votes", failuresHandlers.RevokeVoteForFailure)
+			r.Get("/failures/{dealId}/votes", failuresHandlers.GetFailureVotes)
+			r.Get("/failures/{dealId}/materials", failuresHandlers.GetFailureMaterials)
+			r.Post("/failures/{dealId}/moderator-resolution", failuresHandlers.ModeratorResolutionForFailure)
+			r.Get("/failures/{dealId}/moderator-resolution", failuresHandlers.GetModeratorResolutionForFailure)
 			r.Post("/{dealId}/items", dealsHandlers.AddDealItem)
 			r.Get("/{dealId}/status", dealsHandlers.GetDealStatusVotes)
 			r.Patch("/{dealId}/status", dealsHandlers.ChangeDealStatus)
@@ -83,8 +110,14 @@ func NewRouter(
 			r.Post("/drafts", draftsHandlers.CreateDraft)
 			r.Get("/drafts", draftsHandlers.GetDrafts)
 			r.Get("/drafts/{draftId}", draftsHandlers.GetDraftByID)
+			r.Delete("/drafts/{draftId}", draftsHandlers.DeleteDraft)
 			r.Patch("/drafts/{draftId}", draftsHandlers.ConfirmDraft)
 			r.Patch("/drafts/{draftId}/cancel", draftsHandlers.CancelDraft)
+			r.Get("/{dealId}/reviews", reviewsHandlers.GetDealReviews)
+			r.Get("/{dealId}/reviews-pending", reviewsHandlers.GetDealPendingReviews)
+			r.Get("/{dealId}/items/{itemId}/reviews/eligibility", reviewsHandlers.GetDealItemReviewEligibility)
+			r.Get("/{dealId}/items/{itemId}/reviews", reviewsHandlers.GetDealItemReviews)
+			r.Post("/{dealId}/items/{itemId}/reviews", reviewsHandlers.CreateDealItemReview)
 		})
 	})
 

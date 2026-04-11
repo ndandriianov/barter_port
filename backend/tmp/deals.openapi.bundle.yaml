@@ -197,6 +197,55 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - drafts
+      summary: Удалить черновой договор
+      description: |
+        Удаляет черновой договор. Доступно любому участнику чернового договора.
+      operationId: deleteDraftDeal
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: draftId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden. User is not a participant of the draft deal'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Draft deal not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /deals/drafts/{draftId}/cancel:
     patch:
       tags:
@@ -297,6 +346,64 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
   /deals/{dealId}:
+    patch:
+      tags:
+        - Deals
+      summary: Обновить название сделки
+      description: Обновить название сделки. Только участники сделки могут изменять её название.
+      operationId: updateDeal
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDealRequest'
+      responses:
+        '200':
+          description: Обновлённая сделка
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Deal'
+        '400':
+          description: Некорректный запрос
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Пользователь не является участником сделки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Сделка не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
     get:
       tags:
         - Deals
@@ -353,6 +460,10 @@ paths:
         Когда все пользователи указали один и тот же статус сделки (вперед), то выполняется переход к новому статусу.
         Сделка должна быть в статусе, предшествующем указанному.
         Если пользователь выбирает статус отмены, то сделка сразу же переходит в статус отменён.
+        Статус Failed не может быть установлен через этот эндпоинт.
+
+        Если по сделке уже создана запись в `deal_failures` и она ожидает решения админа,
+        менять статус сделки через этот эндпоинт нельзя.
       operationId: ChangeDealStatus
       parameters:
         - name: dealId
@@ -384,6 +495,15 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: |
+            Операция запрещена по бизнес-правилам
+            (пользователь не является участником сделки, либо голосовал за Failed,
+            либо по сделке уже создана запись в `deal_failures`, ожидающая решения админа)
           content:
             application/json:
               schema:
@@ -453,8 +573,10 @@ paths:
       description: |
         Редактировать позицию сделки.
 
+        - Редактирование доступно только в статусах `LookingForParticipants` и `Discussion`.
         - Поля `name`, `description`, `quantity` может менять только автор позиции (`author_id`).
         - Роли `provider`/`receiver` можно claim/release по бизнес-правилам.
+        - Если по сделке уже создана запись в `deal_failures` и она ожидает решения админа, редактирование позиции запрещено.
       operationId: updateDealItem
       parameters:
         - name: dealId
@@ -485,7 +607,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/Item'
         '400':
-          description: Некорректный запрос (пустое тело)
+          description: |
+            Некорректный запрос:
+            - пустое тело запроса;
+            - сделка не находится в статусе `LookingForParticipants` или `Discussion`.
           content:
             application/json:
               schema:
@@ -502,7 +627,8 @@ paths:
             - пользователь не является автором позиции при изменении контентных полей;
             - роль уже занята другим пользователем;
             - пользователь не владеет ролью при release;
-            - пользователь уже занимает другую роль (`provider`/`receiver`) для этой же позиции.
+            - пользователь уже занимает другую роль (`provider`/`receiver`) для этой же позиции;
+            - по сделке уже создана запись в `deal_failures`, ожидающая решения админа.
           content:
             application/json:
               schema:
@@ -519,7 +645,10 @@ paths:
         - Deals
       summary: Добавить позицию в сделку
       description: |
-        Пользователь указывает id одного из своих offers, на основании offer формируется item, item добавляется в сделку
+        Пользователь указывает id одного из своих offers, на основании offer формируется item, item добавляется в сделку.
+
+        Если по сделке уже создана запись в `deal_failures` и она ожидает решения админа,
+        добавление новой позиции запрещено.
       operationId: addDealItem
       parameters:
         - name: dealId
@@ -558,7 +687,8 @@ paths:
         '403':
           description: |
             Операция запрещена по бизнес-правилам:
-            сделка не в статусе LookingForParticipants, либо пользователь не является участником сделки
+            сделка не в статусе LookingForParticipants, либо пользователь не является участником сделки,
+            либо по сделке уже создана запись в `deal_failures`, ожидающая решения админа
           content:
             application/json:
               schema:
@@ -569,11 +699,715 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /deals/{dealId}/items/{itemId}/reviews:
+    get:
+      tags:
+        - Reviews
+      summary: Получить отзывы по item
+      description: |
+        Возвращает отзывы, относящиеся к конкретному `item` завершенной сделки.
+
+        Доступ:
+        - endpoint доступен любому авторизованному пользователю.
+
+        Особенности:
+        - отзывы возвращаются в порядке от новых к старым;
+        - `providerId` обязателен в каждом отзыве и указывает, кто именно фактически предоставил товар/услугу;
+        - если отзыв относится только к `item`, будет заполнен только `itemRef`;
+        - если отзыв относится и к `offer`, и к `item`, в ответе будут заполнены обе ссылки.
+      operationId: getDealItemReviews
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Список отзывов по item
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetItemReviewsResponse'
+        '400':
+          description: Invalid path parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Сделка или item не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - Reviews
+      summary: Оставить отзыв о позиции сделки
+      description: |
+        Оставить отзыв по `item` завершенной сделки. Конкретная цель отзыва определяется автоматически
+        по полям `items.offer_id` и `items.updated_at`.
+
+        Бизнес-правила:
+        - отзыв можно оставить только если сделка находится в статусе `Completed`;
+        - отзыв может оставить только пользователь, который является `items.receiver_id` для этого item;
+        - `items.provider_id` должен быть заполнен; именно это значение сохраняется в `review.providerId`;
+        - если `items.provider_id = items.receiver_id`, отзыв создать нельзя;
+        - `authorId` в созданном отзыве всегда равен `items.receiver_id`;
+        - `providerId` в созданном отзыве всегда равен `items.provider_id`;
+        - один пользователь может оставить не более одного отзыва на один и тот же контекст в рамках сделки.
+
+        При создании отзыва:
+        - если `items.offer_id IS NULL`, отзыв создается только на `item`;
+        - если `items.offer_id IS NOT NULL` и `items.updated_at IS NULL`, отзыв создается только на `offer`;
+        - если `items.offer_id IS NOT NULL` и `items.updated_at IS NOT NULL`, отзыв создается одновременно на `offer` и `item`.
+
+        Контекст уникальности определяется так:
+        - `item-only`: `(deal_id, item_id, author_id)`;
+        - `offer-only`: `(deal_id, offer_id, author_id, provider_id)`;
+        - `offer+item`: `(deal_id, offer_id, item_id, author_id, provider_id)`.
+      operationId: createDealItemReview
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateReviewRequest'
+      responses:
+        '201':
+          description: Отзыв создан
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        '400':
+          description: |
+            Некорректный запрос:
+            - сделка не находится в статусе `Completed`;
+            - у item не заполнен `provider_id`;
+            - у item не заполнен `receiver_id`;
+            - `provider_id = receiver_id`;
+            - рейтинг вне диапазона `1..5`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: |
+            Операция запрещена:
+            - пользователь не является `receiver_id` этого item;
+            - пользователь пытается оставить отзыв на собственный offer в кейсах, где отзыв относится к offer.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Сделка или item не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: |
+            Пользователь уже оставил отзыв для этого контекста в рамках данной сделки:
+            - `item-only`: `(deal_id, item_id, author_id)`;
+            - `offer-only`: `(deal_id, offer_id, author_id, provider_id)`;
+            - `offer+item`: `(deal_id, offer_id, item_id, author_id, provider_id)`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /deals/{dealId}/items/{itemId}/reviews/eligibility:
+    get:
+      tags:
+        - Reviews
+      summary: Проверить возможность оставить отзыв по item
+      description: |
+        Возвращает для текущего пользователя вычисленную eligibility по одному `item`.
+
+        Бизнес-правила:
+        - endpoint вычисляется относительно текущего аутентифицированного пользователя;
+        - endpoint доступен любому авторизованному пользователю;
+        - если сделка не находится в статусе `Completed`, `canCreate = false` и `reason = deal_not_completed`;
+        - если текущий пользователь не является `receiver_id` этого item, `canCreate = false`
+          и `reason = forbidden_not_receiver`;
+        - если `provider_id` отсутствует, `canCreate = false` и `reason = provider_missing`;
+        - если `receiver_id` отсутствует, `canCreate = false` и `reason = receiver_missing`;
+        - если `provider_id = receiver_id`, `canCreate = false` и `reason = same_provider_and_receiver`;
+        - если по вычисленному контексту отзыв уже существует, `canCreate = false` и `reason = already_reviewed`.
+
+        Вычисление контекста:
+        - `items.offer_id IS NULL` -> `contextType = item-only`;
+        - `items.offer_id IS NOT NULL` и `items.updated_at IS NULL` -> `contextType = offer-only`;
+        - `items.offer_id IS NOT NULL` и `items.updated_at IS NOT NULL` -> `contextType = offer+item`.
+      operationId: getDealItemReviewEligibility
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+        - name: itemId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Eligibility по item
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewEligibility'
+        '400':
+          description: Invalid path parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Сделка или item не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /deals/{dealId}/reviews:
+    get:
+      tags:
+        - Reviews
+      summary: Получить все отзывы по сделке
+      description: |
+        Возвращает все отзывы, оставленные в рамках конкретной сделки.
+
+        Доступ:
+        - endpoint доступен любому авторизованному пользователю.
+
+        Правила выборки:
+        - в выборку попадают отзывы всех трех типов контекста: `item-only`, `offer-only`, `offer+item`;
+        - отзывы возвращаются в порядке от новых к старым;
+        - endpoint предназначен для целостного просмотра review-активности по завершенной сделке.
+      operationId: getDealReviews
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Список отзывов по сделке
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetDealReviewsResponse'
+        '400':
+          description: Invalid deal ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Deal not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /deals/{dealId}/reviews-pending:
+    get:
+      tags:
+        - Reviews
+      summary: Получить pending отзывы по сделке
+      description: |
+        Возвращает для текущего пользователя все review-контексты в рамках сделки, по которым отзыв
+        еще потенциально может быть оставлен или уже недоступен.
+
+        Бизнес-правила:
+        - endpoint вычисляется относительно текущего аутентифицированного пользователя;
+        - endpoint доступен любому авторизованному пользователю;
+        - в выборку попадают только item, где текущий пользователь является `receiver_id`;
+        - для каждого контекста возвращается `canCreate` и, если нужно, `reason`;
+        - если по контексту уже существует отзыв текущего пользователя, возвращается `canCreate = false`
+          и `reason = already_reviewed`;
+        - если сделка не находится в статусе `Completed`, endpoint возвращает `400`.
+      operationId: getDealPendingReviews
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Список pending review-контекстов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetPendingDealReviewsResponse'
+        '400':
+          description: |
+            Некорректный запрос:
+            - invalid deal ID;
+            - сделка не находится в статусе `Completed`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Пользователь не является участником сделки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Deal not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /reviews/{reviewId}:
+    get:
+      tags:
+        - Reviews
+      summary: Получить отзыв по ID
+      description: |
+        Возвращает один конкретный отзыв по его `reviewId`.
+
+        Доступ:
+        - endpoint доступен любому авторизованному пользователю.
+
+        Особенности:
+        - `providerId` обязателен всегда;
+        - комбинация `offerRef`/`itemRef` в ответе отражает один из трех типов контекста:
+          `item-only`, `offer-only`, `offer+item`.
+      operationId: getReviewById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Отзыв найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        '400':
+          description: Invalid review ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Отзыв не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    patch:
+      tags:
+        - Reviews
+      summary: Обновить отзыв
+      description: |
+        Обновляет существующий отзыв по его `reviewId`.
+
+        Бизнес-правила:
+        - редактировать отзыв может только его автор;
+        - редактирование доступно только пока связанная сделка находится в статусе `Completed`;
+        - изменять можно только поля `rating` и `comment`;
+        - контекст отзыва не меняется: `authorId`, `providerId`, `offerRef`, `itemRef` и тип контекста
+          (`item-only`, `offer-only`, `offer+item`) после создания immutable;
+        - после успешного обновления поле `updatedAt` должно быть установлено в текущее время.
+      operationId: updateReview
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateReviewRequest'
+      responses:
+        '200':
+          description: Отзыв обновлен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Review'
+        '400':
+          description: |
+            Некорректный запрос:
+            - пустое тело запроса;
+            - рейтинг вне диапазона `1..5`;
+            - связанная сделка не находится в статусе `Completed`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Пользователь не является автором отзыва
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Отзыв не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - Reviews
+      summary: Удалить отзыв
+      description: |
+        Удаляет существующий отзыв по его `reviewId`.
+
+        Бизнес-правила:
+        - удалить отзыв может только его автор;
+        - удаление доступно только пока связанная сделка находится в статусе `Completed`;
+        - удаление полностью снимает занятость соответствующего review-контекста, поэтому после этого
+          автор может заново создать отзыв для того же контекста, если остальные бизнес-правила соблюдены.
+      operationId: deleteReview
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Отзыв удален
+        '400':
+          description: |
+            Некорректный запрос:
+            - invalid review ID;
+            - связанная сделка не находится в статусе `Completed`.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Пользователь не является автором отзыва
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Отзыв не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /authors/{authorId}/reviews:
+    get:
+      tags:
+        - Reviews
+      summary: Получить отзывы по автору
+      description: |
+        Возвращает отзывы, оставленные конкретным пользователем как автором отзыва.
+
+        Доступ:
+        - endpoint доступен любому авторизованному пользователю.
+
+        Правила выборки:
+        - фильтрация выполняется строго по `review.authorId`;
+        - `authorId` в каждом объекте ответа всегда совпадает со значением path-параметра `{authorId}`;
+        - в выборку попадают отзывы всех трех типов контекста: `item-only`, `offer-only`, `offer+item`;
+        - отзывы возвращаются в порядке от новых к старым.
+        - если отзывов по этому `authorId` нет, endpoint возвращает `200` и пустой массив;
+        - существование пользователя с таким `authorId` отдельно не проверяется.
+      operationId: getAuthorReviews
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: authorId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Список отзывов, оставленных автором
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetAuthorReviewsResponse'
+        '400':
+          description: Invalid author ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /providers/{providerId}/reviews:
+    get:
+      tags:
+        - Reviews
+      summary: Получить отзывы по provider
+      description: |
+        Возвращает отзывы, где указанный пользователь выступает фактическим поставщиком товара или услуги.
+
+        Доступ:
+        - endpoint доступен любому авторизованному пользователю.
+
+        Правила выборки:
+        - фильтрация выполняется строго по `review.providerId`;
+        - `providerId` в каждом объекте ответа всегда совпадает со значением path-параметра `{providerId}`;
+        - в выборку попадают отзывы всех трех типов контекста: `item-only`, `offer-only`, `offer+item`;
+        - отзывы возвращаются в порядке от новых к старым.
+        - если отзывов по этому `providerId` нет, endpoint возвращает `200` и пустой массив;
+        - существование пользователя с таким `providerId` отдельно не проверяется.
+
+        Интерпретация ссылок:
+        - если отзыв относится только к `offer`, в ответе будет заполнен только `offerRef`;
+        - если отзыв относится только к `item`, в ответе будет заполнен только `itemRef`;
+        - если отзыв относится и к `offer`, и к `item`, в ответе будут заполнены обе ссылки.
+      operationId: getProviderReviews
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: providerId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Список отзывов по provider
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetProviderReviewsResponse'
+        '400':
+          description: Invalid provider ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /providers/{providerId}/reviews-summary:
+    get:
+      tags:
+        - Reviews
+      summary: Получить summary отзывов по provider
+      description: |
+        Возвращает агрегированную статистику отзывов по фактическому поставщику товара или услуги.
+
+        Правила выборки:
+        - фильтрация выполняется строго по `review.providerId`;
+        - учитываются отзывы всех трех типов контекста: `item-only`, `offer-only`, `offer+item`;
+        - endpoint доступен любому авторизованному пользователю;
+        - если отзывов нет, `count = 0`, `avgRating = 0`, а все поля breakdown равны `0`.
+        - существование пользователя с таким `providerId` отдельно не проверяется.
+      operationId: getProviderReviewsSummary
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: providerId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Summary отзывов по provider
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewSummary'
+        '400':
+          description: Invalid provider ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /deals/{dealId}/joins:
     post:
       tags:
         - Joins
       summary: Присоединиться к сделке
+      description: |
+        Создает заявку на присоединение к сделке.
+
+        Если по сделке уже создана запись в `deal_failures` и она ожидает решения админа,
+        подать заявку на присоединение нельзя.
       operationId: joinDeal
       parameters:
         - name: dealId
@@ -604,7 +1438,11 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '403':
-          description: Операция запрещена по бизнес-правилам
+          description: |
+            Операция запрещена по бизнес-правилам:
+            сделка не допускает присоединение по текущему статусу,
+            либо пользователь уже участвует в сделке,
+            либо по сделке уже создана запись в `deal_failures`, ожидающая решения админа
           content:
             application/json:
               schema:
@@ -664,6 +1502,11 @@ paths:
       tags:
         - Joins
       summary: Покинуть сделку
+      description: |
+        Удаляет заявку на присоединение к сделке или исключает пользователя из участников по текущим бизнес-правилам.
+
+        Если по сделке уже создана запись в `deal_failures` и она ожидает решения админа,
+        покинуть сделку или отозвать заявку нельзя.
       operationId: leaveDeal
       parameters:
         - name: dealId
@@ -690,7 +1533,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '403':
-          description: Операция запрещена по бизнес-правилам
+          description: |
+            Операция запрещена по бизнес-правилам: сделка не в статусе LookingForParticipants
           content:
             application/json:
               schema:
@@ -706,6 +1550,11 @@ paths:
       tags:
         - Joins
       summary: Обработать заявку на присоединение к сделке
+      description: |
+        Участник сделки голосует за принятие или отклонение заявки на присоединение.
+
+        Если по сделке уже создана запись в `deal_failures` и она ожидает решения админа,
+        обрабатывать заявки на присоединение нельзя.
       operationId: processJoinRequest
       parameters:
         - name: dealId
@@ -743,13 +1592,394 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '403':
-          description: Операция запрещена по бизнес-правилам
+          description: |
+            Операция запрещена по бизнес-правилам:
+            пользователь не вправе обрабатывать заявку,
+            либо текущий статус сделки не допускает обработку заявки,
+            либо по сделке уже создана запись в `deal_failures`, ожидающая решения админа
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Сделка или пользователь не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /deals/failures/review:
+    get:
+      tags:
+        - Failures
+      summary: Получить список сделок, требующих рассмотрения админом
+      description: |
+        Эндпоинт предназначен только для админа.
+
+        Возвращает сделки, по которым создана запись о провале в `deal_failures`,
+        но решение админа еще не принято.
+      operationId: getDealsForFailureReview
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Список сделок, ожидающих решения админа, успешно получен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailureModerationDealsResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: 'Операция запрещена по бизнес-правилам: пользователь не является админом'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /deals/failures/{dealId}/votes:
+    post:
+      tags:
+        - Failures
+      summary: Проголосовать за виновника в провале сделки
+      description: |
+        Голос за провал сделки и виновника.
+
+        Если половина участников с округлением в меньшую сторону проголосует за одного и того же виновника,
+        сделка будет передана на рассмотрение админа с предварительно определенным виновником.
+
+        Округление в меньшую сторону означает, что при нечетном количестве участников,
+        для признания виновным достаточно половины минус 0.5 голосов.
+        Например, при 5 участниках достаточно 2 голосов, при 3 участниках достаточно 1 голоса.
+
+        Порог считается по суммарному количеству любых голосов за провал сделки.
+        Если суммарное количество голосов за провал достигло порога, по сделке создается запись в `deal_failures`,
+        после чего сделка остается в текущем статусе и дальнейшие действия по ней блокируются
+        до итогового решения админа.
+
+        Голосовать можно сколько угодно раз, пока сделка находится в одном из статусов:
+        Discussion, Confirmed,
+        и пока по сделке нет записи в `deal_failures`, а также окончательного решения админа.
+
+        До достижения порога голос можно изменить или отозвать.
+        После достижения порога голос нельзя изменить или отозвать.
+
+        Если половина участников проголосовали за провал сделки, но голоса распределились между несколькими кандидатами,
+        сделка также передается на рассмотрение админа, но без предварительно определенного виновника.
+
+        Проголосовать за провал может только участник сделки
+      operationId: voteForFailure
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/VoteForFailureRequest'
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Голос успешно учтен
+        '400':
+          description: Некорректный запрос (пустое тело)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: |
+            Операция запрещена по бизнес-правилам: пользователь не является участником сделки,
+            либо статус сделки не входит в Discussion / Confirmed,
+            либо по сделке уже создана запись в deal_failures,
+            либо решение админа уже принято
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Сделка не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - Failures
+      summary: Отозвать голос за виновника в провале сделки
+      description: |
+        Участник сделки может отозвать свой голос за провал сделки, если он передумал или проголосовал по ошибке.
+
+        Голос можно отозвать сколько угодно раз, пока сделка находится в одном из статусов:
+        Discussion, Confirmed,
+        и пока по сделке нет записи в `deal_failures`, а также окончательного решения админа.
+
+        После достижения порога и создания записи в `deal_failures` голос отзывать нельзя.
+
+        Отозвать голос может только участник сделки
+      operationId: revokeVoteForFailure
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - bearerAuth: []
+      responses:
+        '204':
+          description: Голос успешно отозван
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: |
+            Операция запрещена по бизнес-правилам: пользователь не является участником сделки,
+            либо статус сделки не входит в Discussion / Confirmed,
+            либо по сделке уже создана запись в deal_failures,
+            либо решение админа уже принято
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Сделка не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags:
+        - Failures
+      summary: Получить список голосов за виновника в провале сделки
+      description: |
+        Получить список голосов за виновника в провале сделки могут только участники сделки и админ
+
+        Если голосов по сделке нет, будет возвращен пустой массив
+      operationId: getFailureVotes
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Список голосов успешно получен
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailureVotesResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: |
+            Пользователь не является участником сделки и не является админом,
+            Противоречащий бизнес правилам случай сюда не относится
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Сделка не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /deals/failures/{dealId}/materials:
+    get:
+      tags:
+        - Failures
+      summary: Получить материалы по провалу сделки
+      description: |
+        Эндпоинт предназначен для использования только админом. Остальным возвращает 403.
+
+        Если по сделке еще не создана запись в `deal_failures`, эндпоинт также возвращает 403.
+        Если чат для сделки не был создан, поле chatId отсутствует в ответе.
+      operationId: getFailureMaterials
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Материалы по провалу сделки успешно получены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FailureMaterialResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: |
+            Операция запрещена по бизнес-правилам: пользователь не является админом,
+            либо по сделке еще не создана запись в `deal_failures`,
+            либо сделка уже отменена/завершена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Сделка не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /deals/failures/{dealId}/moderator-resolution:
+    post:
+      tags:
+        - Failures
+      summary: Решение админа по провалу сделки
+      description: |
+        Админ принимает решение о виновнике провала сделки в случае,
+        если голоса участников распределились между несколькими кандидатами,
+        либо если он не согласен с результатом голосования. Решение админа является окончательным.
+
+        Если `confirmed = true`, сделка переходит в статус `Failed`.
+        Если при этом `userId` не передан, в `deal_failures.user_id` сохраняется `null`.
+
+        Админ может принять решение что сделка не провалена, тогда она переходит в статус Completed,
+        если была в статусе Confirmed, в ином случае она переходит в Cancelled.
+
+        Если confirmed = false, передавать userId и punishmentPoints нельзя.
+        Если confirmed = true, userId можно не передавать.
+        Решение админа можно отправить только один раз.
+
+        Эндпоинт предназначен для использования только админом. Остальным возвращает 403
+      operationId: moderatorResolutionForFailure
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ModeratorResolutionForFailureRequest'
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Решение админа успешно учтено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DealFailureModeratorResolution'
+        '400':
+          description: |
+            Некорректный запрос: пустое тело, неконсистентные поля решения,
+            либо userId / punishmentPoints переданы при confirmed = false
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: |
+            Операция запрещена по бизнес-правилам: сделка не находится на рассмотрении админа,
+            либо пользователь не является админом
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Сделка не найдена
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Решение админа по провалу сделки уже было принято ранее
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags:
+        - Failures
+      summary: Получить решение админа по провалу сделки
+      description: |
+        Получить решение админа по провалу сделки могут только участники сделки и админ.
+
+        Если сделка существует, но по ней еще не создана запись в `deal_failures`,
+        эндпоинт возвращает 403.
+      operationId: getModeratorResolutionForFailure
+      parameters:
+        - name: dealId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Решение админа успешно получено
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DealFailureModeratorResolution'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: |
+            Операция запрещена по бизнес-правилам:
+            пользователь не является участником сделки и не является админом,
+            либо по сделке еще не создана запись в `deal_failures`
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Сделка не найдена
           content:
             application/json:
               schema:
@@ -850,6 +2080,165 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /offers/{offerId}:
+    get:
+      tags:
+        - offers
+      summary: Get offer by ID
+      description: Returns a single offer by its ID.
+      operationId: getOfferById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: offerId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Offer'
+        '400':
+          description: Invalid offer ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Offer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /offers/{offerId}/reviews:
+    get:
+      tags:
+        - Reviews
+      summary: Получить отзывы по offer
+      description: |
+        Возвращает отзывы, оставленные по конкретному `offer` после завершенных сделок.
+
+        Доступ:
+        - endpoint доступен любому авторизованному пользователю.
+
+        Особенности:
+        - отзывы возвращаются в порядке от новых к старым;
+        - сюда попадают только отзывы, у которых заполнен `offerRef`;
+        - `providerId` обязателен в каждом отзыве и указывает, кто именно фактически предоставил товар/услугу;
+        - если отзыв одновременно относится и к `item`, в ответе будет заполнен `itemRef`,
+          чтобы было понятно, о какой модифицированной позиции шла речь.
+      operationId: getOfferReviews
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: offerId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Список отзывов по offer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetOfferReviewsResponse'
+        '400':
+          description: Invalid offer ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Offer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /offers/{offerId}/reviews-summary:
+    get:
+      tags:
+        - Reviews
+      summary: Получить summary отзывов по offer
+      description: |
+        Возвращает агрегированную статистику отзывов по конкретному `offer`.
+
+        Правила выборки:
+        - в summary включаются только отзывы, у которых заполнен `offerRef`;
+        - учитываются как `offer-only`, так и `offer+item` отзывы;
+        - endpoint доступен любому авторизованному пользователю;
+        - если отзывов нет, `count = 0`, `avgRating = 0`, а все поля breakdown равны `0`.
+      operationId: getOfferReviewsSummary
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: offerId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Summary отзывов по offer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewSummary'
+        '400':
+          description: Invalid offer ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Offer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
   securitySchemes:
     bearerAuth:
@@ -867,6 +2256,9 @@ components:
           type: string
           format: uuid
           description: Уникальный идентификатор черновой сделки
+        name:
+          type: string
+          description: Название черновой сделки
         participants:
           type: array
           description: Список ID всех пользователей, участвующих в этой сделке
@@ -1072,6 +2464,9 @@ components:
           type: string
           format: uuid
           description: Уникальный идентификатор сделки
+        name:
+          type: string
+          description: Название сделки
         status:
           $ref: '#/components/schemas/DealStatus'
         participants:
@@ -1103,6 +2498,10 @@ components:
           type: string
           format: uuid
           description: Уникальный идентификатор пользователя, который предложил эту позицию в сделке
+        offerId:
+          type: string
+          format: uuid
+          description: Идентификатор исходного offer, на базе которого создана позиция сделки
         providerId:
           type: string
           format: uuid
@@ -1169,6 +2568,14 @@ components:
             type: string
             format: uuid
             description: Уникальный идентификатор пользователя, участвующего в сделке
+    UpdateDealRequest:
+      type: object
+      required:
+        - name
+      properties:
+        name:
+          type: string
+          description: Новое название сделки
     GetDealStatusVotesResponseItem:
       type: object
       required:
@@ -1239,6 +2646,289 @@ components:
           description: |
             Количество единиц предложения, которые пользователь хочет добавить в сделку.
             Должно быть положительным числом.
+    OfferRef:
+      type: object
+      required:
+        - offerId
+      properties:
+        offerId:
+          type: string
+          format: uuid
+          description: Идентификатор исходного offer.
+    DealItemRef:
+      type: object
+      required:
+        - dealId
+        - itemId
+      properties:
+        dealId:
+          type: string
+          format: uuid
+          description: Идентификатор сделки, в рамках которой был создан item.
+        itemId:
+          type: string
+          format: uuid
+          description: Идентификатор item внутри завершенной сделки.
+    Review:
+      type: object
+      required:
+        - id
+        - dealId
+        - authorId
+        - providerId
+        - rating
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор отзыва.
+        dealId:
+          type: string
+          format: uuid
+          description: Идентификатор завершенной сделки, по итогам которой оставлен отзыв.
+        authorId:
+          type: string
+          format: uuid
+          description: Идентификатор пользователя, оставившего отзыв.
+        providerId:
+          type: string
+          format: uuid
+          description: |
+            Идентификатор пользователя, который фактически предоставил товар либо услугу по item.
+            Это значение берется из `items.provider_id` в момент создания отзыва и после этого не меняется.
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+          description: Оценка предложения по шкале от 1 до 5.
+        comment:
+          type: string
+          description: Текстовый отзыв.
+        createdAt:
+          type: string
+          format: date-time
+          description: Временная метка создания отзыва.
+        updatedAt:
+          type: string
+          format: date-time
+          description: Временная метка последнего редактирования отзыва.
+        offerRef:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/OfferRef'
+          description: |
+            Ссылка на исходный `offer`, если отзыв относится к offer.
+
+            Правила заполнения:
+            - `items.offer_id IS NULL` -> `offerRef = null`;
+            - `items.offer_id IS NOT NULL` и `items.updated_at IS NULL` -> отзыв относится только к `offer`,
+              поэтому `offerRef != null`, `itemRef = null`;
+            - `items.offer_id IS NOT NULL` и `items.updated_at IS NOT NULL` -> отзыв относится и к `offer`, и к `item`,
+              поэтому `offerRef != null`, `itemRef != null`.
+        itemRef:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/DealItemRef'
+          description: |
+            Ссылка на `item`, если отзыв относится к item.
+
+            Правила заполнения:
+            - `items.offer_id IS NULL` -> отзыв относится только к `item`,
+              поэтому `offerRef = null`, `itemRef != null`;
+            - `items.offer_id IS NOT NULL` и `items.updated_at IS NULL` -> отзыв относится только к `offer`,
+              поэтому `itemRef = null`;
+            - `items.offer_id IS NOT NULL` и `items.updated_at IS NOT NULL` -> отзыв относится и к `offer`, и к `item`,
+              поэтому `offerRef != null`, `itemRef != null`.
+    GetItemReviewsResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/Review'
+    CreateReviewRequest:
+      type: object
+      required:
+        - rating
+      properties:
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+          description: Оценка по шкале от 1 до 5.
+        comment:
+          type: string
+          description: Текстовый отзыв после завершения сделки.
+    ReviewContextType:
+      type: string
+      description: Тип контекста, к которому относится отзыв.
+      enum:
+        - item-only
+        - offer-only
+        - offer+item
+    ReviewEligibilityReason:
+      type: string
+      description: Машинно-стабильная причина, по которой отзыв нельзя создать.
+      enum:
+        - deal_not_completed
+        - forbidden_not_receiver
+        - receiver_missing
+        - provider_missing
+        - same_provider_and_receiver
+        - already_reviewed
+    ReviewEligibility:
+      type: object
+      required:
+        - canCreate
+        - contextType
+      properties:
+        canCreate:
+          type: boolean
+          description: Может ли текущий пользователь создать отзыв для этого item.
+        contextType:
+          $ref: '#/components/schemas/ReviewContextType'
+        providerId:
+          nullable: true
+          type: string
+          format: uuid
+          description: |
+            Идентификатор пользователя, который будет сохранен как `review.providerId`.
+            Может быть `null`, если eligibility вычислена в состоянии `provider_missing`.
+        offerRef:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/OfferRef'
+          description: Ссылка на offer, если отзыв затрагивает offer.
+        itemRef:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/DealItemRef'
+          description: Ссылка на item, если отзыв затрагивает item.
+        reason:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/ReviewEligibilityReason'
+          description: |
+            Причина, по которой отзыв нельзя создать. Заполняется только если `canCreate = false`.
+            Если `canCreate = true`, поле равно `null`.
+    GetDealReviewsResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/Review'
+    PendingDealReview:
+      type: object
+      required:
+        - dealId
+        - contextType
+        - canCreate
+      properties:
+        dealId:
+          type: string
+          format: uuid
+          description: Идентификатор сделки.
+        contextType:
+          $ref: '#/components/schemas/ReviewContextType'
+        providerId:
+          nullable: true
+          type: string
+          format: uuid
+          description: |
+            Идентификатор пользователя, который будет сохранен как `review.providerId`.
+            Может быть `null`, если контекст недоступен из-за `provider_missing`.
+        offerRef:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/OfferRef'
+          description: Ссылка на offer, если отзыв затрагивает offer.
+        itemRef:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/DealItemRef'
+          description: Ссылка на item, если отзыв затрагивает item.
+        canCreate:
+          type: boolean
+          description: Может ли текущий пользователь оставить отзыв по этому контексту.
+        reason:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/ReviewEligibilityReason'
+          description: |
+            Причина, по которой отзыв недоступен для создания. Заполняется только если `canCreate = false`.
+            Если `canCreate = true`, поле равно `null`.
+    GetPendingDealReviewsResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/PendingDealReview'
+    UpdateReviewRequest:
+      type: object
+      minProperties: 1
+      description: |
+        Хотя бы одно поле обязательно.
+        Изменять можно только содержимое отзыва: `rating` и/или `comment`.
+        Поля контекста (`authorId`, `providerId`, `offerRef`, `itemRef`) не редактируются.
+      properties:
+        rating:
+          type: integer
+          minimum: 1
+          maximum: 5
+          description: Новая оценка по шкале от 1 до 5.
+        comment:
+          type: string
+          description: Новый текст отзыва.
+    GetAuthorReviewsResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/Review'
+    GetProviderReviewsResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/Review'
+    ReviewRatingBreakdown:
+      type: object
+      required:
+        - rating1
+        - rating2
+        - rating3
+        - rating4
+        - rating5
+      properties:
+        rating1:
+          type: integer
+          minimum: 0
+          description: Количество отзывов с оценкой 1.
+        rating2:
+          type: integer
+          minimum: 0
+          description: Количество отзывов с оценкой 2.
+        rating3:
+          type: integer
+          minimum: 0
+          description: Количество отзывов с оценкой 3.
+        rating4:
+          type: integer
+          minimum: 0
+          description: Количество отзывов с оценкой 4.
+        rating5:
+          type: integer
+          minimum: 0
+          description: Количество отзывов с оценкой 5.
+    ReviewSummary:
+      type: object
+      required:
+        - count
+        - avgRating
+        - ratingBreakdown
+      properties:
+        count:
+          type: integer
+          minimum: 0
+          description: Общее количество отзывов в выборке.
+        avgRating:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 5
+          description: Средняя оценка по выборке. Для пустой выборки возвращается `0`.
+        ratingBreakdown:
+          $ref: '#/components/schemas/ReviewRatingBreakdown'
     GetDealJoinRequestsResponseItem:
       type: object
       required:
@@ -1265,6 +2955,101 @@ components:
       type: array
       items:
         $ref: '#/components/schemas/GetDealJoinRequestsResponseItem'
+    FailureModerationDealsResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/GetDealsResponseItem'
+    FailureVotesResponseItem:
+      type: object
+      required:
+        - userId
+        - vote
+      properties:
+        userId:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор пользователя, который проголосовал за виновника провала сделки
+        vote:
+          type: string
+          format: uuid
+          description: Идентификатор пользователя, за которого проголосовал пользователь как за виновника
+    FailureVotesResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/FailureVotesResponseItem'
+    VoteForFailureRequest:
+      type: object
+      required:
+        - userId
+      properties:
+        userId:
+          type: string
+          format: uuid
+          description: ID пользователя, за которого голосует участник сделки.
+    FailureMaterialResponse:
+      type: object
+      required:
+        - deal
+      properties:
+        deal:
+          $ref: '#/components/schemas/Deal'
+        chatId:
+          type: string
+          format: uuid
+          description: Идентификатор чата, в котором обсуждалась сделка, если чат был создан
+    DealFailureModeratorResolution:
+      type: object
+      properties:
+        userId:
+          type: string
+          format: uuid
+          description: |
+            ID пользователя, которого админ признает виновным в провале сделки.
+            Должен быть участником сделки.
+        confirmed:
+          type: boolean
+          description: |
+            Поле null если нет решения админа,
+            true если админ признал сделку проваленной,
+            false если админ признал сделку не проваленной.
+        punishmentPoints:
+          type: integer
+          description: |
+            Количество штрафных баллов, которые админ назначает пользователю, признанному виновным в провале сделки.
+            Должны быть неотрицательным числом.
+            Отсутствует, если сделка признана не проваленной.
+        comment:
+          type: string
+          description: Комментарий админа к его решению.
+    ModeratorResolutionForFailureRequest:
+      type: object
+      required:
+        - confirmed
+      properties:
+        confirmed:
+          type: boolean
+          description: |
+            Подтверждение админом провала сделки.
+            Если true, сделка признается проваленной.
+            Если false, сделка признается не проваленной и переводится в Completed либо Cancelled в зависимости от текущего статуса.
+        userId:
+          type: string
+          format: uuid
+          description: |
+            ID пользователя, которого админ признает виновным в провале сделки.
+            Должен быть участником сделки.
+            Используется только если confirmed = true.
+        punishmentPoints:
+          type: integer
+          minimum: 0
+          description: |
+            Количество штрафных очков, которые админ назначает виновнику провала сделки.
+            Должно быть неотрицательным числом.
+            Разрешено только если confirmed = true.
+        comment:
+          type: string
+          description: |
+            Комментарий админа, объясняющий его решение. Может быть пустым
     OffersCursor:
       type: object
       description: Cursor for stable pagination
@@ -1316,6 +3101,10 @@ components:
           $ref: '#/components/schemas/ItemType'
         action:
           $ref: '#/components/schemas/OfferAction'
+    GetOfferReviewsResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/Review'
   parameters:
     SortType:
       name: sort

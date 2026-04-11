@@ -176,6 +176,56 @@ func (h *Handlers) GetDraftByID(w http.ResponseWriter, r *http.Request) {
 }
 
 // ================================================================================
+// DELETE DRAFT
+// ================================================================================
+
+func (h *Handlers) DeleteDraft(w http.ResponseWriter, r *http.Request) {
+	log := logger.LogFrom(r.Context(), h.log).With(slog.String("handler", "DeleteDraft"))
+	log.Info("handling delete draft request")
+
+	idStr := chi.URLParam(r, "draftId")
+	if idStr == "" {
+		log.Error("draftId is required")
+		httpx.WriteEmptyError(w, http.StatusBadRequest)
+		return
+	}
+
+	draftID, err := uuid.Parse(idStr)
+	if err != nil {
+		log.Error("error parsing draft id", slog.Any("error", err))
+		httpx.WriteEmptyError(w, http.StatusBadRequest)
+		return
+	}
+
+	userID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		log.Error("failed to get userID from context")
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
+	err = h.dealsService.DeleteDraftByID(r.Context(), draftID, userID)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrDraftNotFound):
+			log.Info("draft not found", slog.String("draftId", idStr))
+			httpx.WriteEmptyError(w, http.StatusNotFound)
+			return
+		case errors.Is(err, domain.ErrForbidden):
+			log.Info("user is not in draft", slog.String("draftId", idStr), slog.String("userID", userID.String()))
+			httpx.WriteEmptyError(w, http.StatusForbidden)
+			return
+		default:
+			log.Error("error deleting draft", slog.Any("error", err))
+			httpx.WriteEmptyError(w, http.StatusInternalServerError)
+			return
+		}
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+// ================================================================================
 // CONFIRM DRAFT
 // ================================================================================
 

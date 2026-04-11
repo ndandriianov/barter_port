@@ -7,12 +7,15 @@ import (
 	"barter-port/internal/deals/domain/htypes"
 	"barter-port/internal/deals/infrastructure/repository/deals"
 	"barter-port/internal/deals/infrastructure/repository/drafts"
+	failuresrepo "barter-port/internal/deals/infrastructure/repository/failures"
 	"barter-port/internal/deals/infrastructure/repository/joins"
 	"barter-port/internal/deals/infrastructure/repository/offers"
+	"barter-port/pkg/authkit"
 	"barter-port/pkg/db"
 	"context"
 	"fmt"
 	"log/slog"
+	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -23,9 +26,11 @@ type Service struct {
 	db               *pgxpool.Pool
 	draftsRepository *drafts.Repository
 	dealsRepository  *deals.Repository
+	failuresRepo     *failuresrepo.Repository
 	joinsRepository  *joins.Repository
 	offersRepository *offers.Repository
 	chatsClient      chatspb.ChatsServiceClient
+	adminChecker     *authkit.AdminChecker
 	logger           *slog.Logger
 }
 
@@ -33,6 +38,7 @@ func NewService(
 	db *pgxpool.Pool,
 	draftsRepo *drafts.Repository,
 	dealsRepo *deals.Repository,
+	failuresRepo *failuresrepo.Repository,
 	joinsRepo *joins.Repository,
 	offersRepo *offers.Repository,
 ) *Service {
@@ -40,6 +46,7 @@ func NewService(
 		db:               db,
 		draftsRepository: draftsRepo,
 		dealsRepository:  dealsRepo,
+		failuresRepo:     failuresRepo,
 		joinsRepository:  joinsRepo,
 		offersRepository: offersRepo,
 		logger:           slog.Default(),
@@ -51,9 +58,50 @@ func (s *Service) WithChatsClient(client chatspb.ChatsServiceClient) *Service {
 	return s
 }
 
+func (s *Service) WithAdminChecker(checker *authkit.AdminChecker) *Service {
+	s.adminChecker = checker
+	return s
+}
+
 func (s *Service) WithLogger(logger *slog.Logger) *Service {
 	s.logger = logger
 	return s
+}
+
+func (s *Service) DB() *pgxpool.Pool {
+	return s.db
+}
+
+func (s *Service) DraftsRepository() *drafts.Repository {
+	return s.draftsRepository
+}
+
+func (s *Service) DealsRepository() *deals.Repository {
+	return s.dealsRepository
+}
+
+func (s *Service) FailuresRepository() *failuresrepo.Repository {
+	return s.failuresRepo
+}
+
+func (s *Service) JoinsRepository() *joins.Repository {
+	return s.joinsRepository
+}
+
+func (s *Service) OffersRepository() *offers.Repository {
+	return s.offersRepository
+}
+
+func (s *Service) ChatsClient() chatspb.ChatsServiceClient {
+	return s.chatsClient
+}
+
+func (s *Service) AdminChecker() *authkit.AdminChecker {
+	return s.adminChecker
+}
+
+func (s *Service) Logger() *slog.Logger {
+	return s.logger
 }
 
 // ================================================================================
@@ -69,18 +117,31 @@ func (s *Service) CreateDraft(
 	authorID uuid.UUID,
 	name *string,
 	description *string,
-	offers []domain.OfferIDAndInfo,
+	offersList []domain.OfferIDAndInfo,
 ) (uuid.UUID, error) {
+	if len(offersList) == 0 {
+		return uuid.Nil, domain.ErrNoOffers
+	}
+
+	if name == nil {
+		offerIDs := make([]uuid.UUID, len(offersList))
+		for i, o := range offersList {
+			offerIDs[i] = o.ID
+		}
+
+		names, err := s.offersRepository.GetOfferNamesByIDs(ctx, s.db, offerIDs)
+		if err != nil {
+			return uuid.Nil, fmt.Errorf("get offer names for draft name: %w", err)
+		}
+
+		name = new(strings.Join(names, ", "))
+	}
+
 	var id uuid.UUID
 	var err error
 
 	txErr := db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
-		if len(offers) == 0 {
-			return domain.ErrNoOffers
-		}
-		// TODO: проверить offers
-
-		id, err = s.draftsRepository.CreateDraft(ctx, tx, authorID, name, description, offers)
+		id, err = s.draftsRepository.CreateDraft(ctx, tx, authorID, name, description, offersList)
 		return err
 	})
 
@@ -112,6 +173,43 @@ func (s *Service) GetDraftsByAuthor(
 // - domain.ErrDraftNotFound: if no draft deal with the specified ID exists.
 func (s *Service) GetDraftByID(ctx context.Context, id uuid.UUID) (domain.Draft, error) {
 	return s.draftsRepository.GetDraftByID(ctx, s.db, id)
+}
+
+// DeleteDraftByID deletes a draft deal by its ID.
+//
+// Domain errors:
+// - domain.ErrDraftNotFound: if no draft deal with the specified ID exists.
+// - domain.ErrForbidden: if the user is not a participant of the draft.
+func (s *Service) DeleteDraftByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) error {
+	return db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
+		_, err := s.draftsRepository.GetDraftByID(ctx, tx, id)
+		if err != nil {
+			return fmt.Errorf("get draft: %w", err)
+		}
+
+		isParticipant := false
+		participants, err := s.draftsRepository.GetParticipants(ctx, tx, id)
+		if err != nil {
+			return fmt.Errorf("get draft participants: %w", err)
+		}
+
+		for _, p := range participants {
+			if p == userID {
+				isParticipant = true
+				break
+			}
+		}
+		if !isParticipant {
+			return domain.ErrForbidden
+		}
+
+		err = s.draftsRepository.DeleteDraft(ctx, tx, id)
+		if err != nil {
+			return fmt.Errorf("delete draft: %w", err)
+		}
+
+		return nil
+	})
 }
 
 // ================================================================================
@@ -225,6 +323,72 @@ func (s *Service) GetDealByID(ctx context.Context, id uuid.UUID) (domain.Deal, e
 	return deal, nil
 }
 
+// GetDealStatus returns the current status of a deal.
+//
+// Domain errors:
+//   - domain.ErrDealNotFound: if no deal with the specified ID exists.
+func (s *Service) GetDealStatus(ctx context.Context, id uuid.UUID) (enums.DealStatus, error) {
+	deal, err := s.GetDealByID(ctx, id)
+	if err != nil {
+		return 0, err
+	}
+
+	return deal.Status, nil
+}
+
+func (s *Service) HasPendingFailureReview(ctx context.Context, id uuid.UUID) (bool, error) {
+	if _, err := s.GetDealByID(ctx, id); err != nil {
+		return false, err
+	}
+
+	return s.failuresRepo.HasPendingFailureReview(ctx, s.db, id)
+}
+
+// ================================================================================
+// UPDATE DEAL NAME
+// ================================================================================
+
+// UpdateDealName changes the name of an existing deal.
+//
+// Domain errors:
+//   - domain.ErrDealNotFound: if no deal with the specified ID exists.
+//   - domain.ErrForbidden: if the user is not a participant of the deal.
+func (s *Service) UpdateDealName(ctx context.Context, dealID uuid.UUID, userID uuid.UUID, name string) (domain.Deal, error) {
+	var deal domain.Deal
+
+	txErr := db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
+		var err error
+		deal, err = s.dealsRepository.GetDealByID(ctx, tx, dealID)
+		if err != nil {
+			return err
+		}
+
+		isParticipant := false
+		for _, p := range deal.Participants {
+			if p == userID {
+				isParticipant = true
+				break
+			}
+		}
+		if !isParticipant {
+			return domain.ErrForbidden
+		}
+
+		if err = s.dealsRepository.UpdateDealName(ctx, tx, dealID, name); err != nil {
+			return err
+		}
+
+		deal, err = s.dealsRepository.GetDealByID(ctx, tx, dealID)
+		return err
+	})
+
+	if txErr != nil {
+		return domain.Deal{}, txErr
+	}
+
+	return deal, nil
+}
+
 // ================================================================================
 // GET DEAL STATUS VOTES
 // ================================================================================
@@ -287,7 +451,11 @@ func (s *Service) AddDealItem(
 			return domain.ErrInvalidDealStatus
 		}
 
-		if !containsUserID(deal.Participants, userID) {
+		if err = s.EnsureNoPendingFailureReview(ctx, tx, dealID); err != nil {
+			return err
+		}
+
+		if !ContainsUserID(deal.Participants, userID) {
 			return domain.ErrForbidden
 		}
 
@@ -301,6 +469,7 @@ func (s *Service) AddDealItem(
 		}
 
 		newItem := domain.Item{
+			OfferID:     &offerID,
 			AuthorID:    offer.AuthorId,
 			Name:        offer.Name,
 			Description: offer.Description,
@@ -353,7 +522,16 @@ func (s *Service) UpdateDealItem(
 	var item domain.Item
 
 	err := db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
-		if _, err := s.dealsRepository.GetDealByID(ctx, tx, dealID); err != nil {
+		deal, err := s.dealsRepository.GetDealByID(ctx, tx, dealID)
+		if err != nil {
+			return err
+		}
+
+		if deal.Status != enums.DealStatusLookingForParticipants && deal.Status != enums.DealStatusDiscussion {
+			return domain.ErrInvalidDealStatus
+		}
+
+		if err := s.EnsureNoPendingFailureReview(ctx, tx, dealID); err != nil {
 			return err
 		}
 
@@ -430,8 +608,10 @@ func (s *Service) ProcessDealStatusUpdateRequest(
 	switch status {
 	case enums.DealStatusDiscussion, enums.DealStatusConfirmed, enums.DealStatusCompleted:
 		return s.confirmDeal(ctx, dealID, userID, status)
-	case enums.DealStatusCancelled, enums.DealStatusFailed:
+	case enums.DealStatusCancelled:
 		return s.cancelDeal(ctx, dealID, status)
+	case enums.DealStatusFailed:
+		return domain.Deal{}, domain.ErrForbidden
 	default:
 		return domain.Deal{}, fmt.Errorf("invalid status: %s", status)
 	}
@@ -462,7 +642,7 @@ func (s *Service) createDeal(ctx context.Context, tx pgx.Tx, draft domain.Draft)
 		}
 
 		items[i] = domain.Item{
-			ID:          o.Offer.ID,
+			OfferID:     new(o.Offer.ID),
 			AuthorID:    o.Offer.AuthorId,
 			ProviderID:  provider,
 			ReceiverID:  receiver,
@@ -500,6 +680,10 @@ func (s *Service) confirmDeal(ctx context.Context, id uuid.UUID, userID uuid.UUI
 			return err
 		}
 
+		if err = s.EnsureNoPendingFailureReview(ctx, tx, id); err != nil {
+			return err
+		}
+
 		if deal.Status+1 != targetStatus {
 			return domain.ErrInvalidDealStatus
 		}
@@ -508,17 +692,12 @@ func (s *Service) confirmDeal(ctx context.Context, id uuid.UUID, userID uuid.UUI
 			return err
 		}
 
-		participants, err := s.dealsRepository.GetParticipants(ctx, tx, id)
-		if err != nil {
-			return err
-		}
-
 		votes, err := s.dealsRepository.GetStatusVotes(ctx, tx, id)
 		if err != nil {
 			return err
 		}
 
-		allVoted := len(votes) == len(participants)
+		allVoted := len(votes) == len(deal.Participants)
 		if allVoted {
 			for _, v := range votes {
 				if v != targetStatus {
@@ -628,6 +807,10 @@ func (s *Service) cancelDeal(ctx context.Context, id uuid.UUID, targetStatus enu
 			return err
 		}
 
+		if err = s.EnsureNoPendingFailureReview(ctx, tx, id); err != nil {
+			return err
+		}
+
 		finalStatuses := []enums.DealStatus{
 			enums.DealStatusCompleted,
 			enums.DealStatusCancelled,
@@ -651,4 +834,25 @@ func (s *Service) cancelDeal(ctx context.Context, id uuid.UUID, targetStatus enu
 	})
 
 	return deal, err
+}
+
+func (s *Service) EnsureNoPendingFailureReview(ctx context.Context, tx pgx.Tx, dealID uuid.UUID) error {
+	hasPending, err := s.failuresRepo.HasPendingFailureReview(ctx, tx, dealID)
+	if err != nil {
+		return err
+	}
+	if hasPending {
+		return domain.ErrFailureReviewRequired
+	}
+
+	return nil
+}
+
+func ContainsUserID(items []uuid.UUID, userID uuid.UUID) bool {
+	for _, item := range items {
+		if item == userID {
+			return true
+		}
+	}
+	return false
 }
