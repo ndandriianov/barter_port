@@ -249,6 +249,29 @@ func (r *Repository) GetDraftByID(ctx context.Context, exec db.DB, id uuid.UUID)
 }
 
 // ================================================================================
+// GetParticipants
+// ================================================================================
+
+// GetParticipants returns the IDs of all users participating in a draft deal.
+//
+// No domain errors
+func (r *Repository) GetParticipants(ctx context.Context, exec db.DB, draftID uuid.UUID) ([]uuid.UUID, error) {
+	query := `
+		SELECT array_agg(DISTINCT o.author_id)
+		FROM draft_deal_offers ddo
+		JOIN offers o ON o.id = ddo.offer_id
+		WHERE ddo.draft_deal_id = $1;`
+
+	var participants []uuid.UUID
+	err := exec.QueryRow(ctx, query, draftID).Scan(&participants)
+	if err != nil {
+		return nil, fmt.Errorf("sql get participants: %w", err)
+	}
+
+	return participants, nil
+}
+
+// ================================================================================
 // ConfirmDraftByID
 // ================================================================================
 
@@ -426,8 +449,8 @@ func (r *Repository) GetConfirms(ctx context.Context, exec db.DB, draftID uuid.U
 //   - SQL errors are wrapped.
 func (r *Repository) DeleteDraft(ctx context.Context, exec db.DB, id uuid.UUID) error {
 	query := `
-		DELETE FROM draft_deal_offers ddo
-		WHERE draft_deal_id = $1;`
+		DELETE FROM draft_deals
+		WHERE id = $1;`
 
 	tags, err := exec.Exec(ctx, query, id)
 	if err != nil {
