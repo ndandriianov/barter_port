@@ -15,6 +15,31 @@ CREATE TABLE offers
         )
 );
 
+CREATE TABLE offer_groups
+(
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    name        TEXT NOT NULL,
+    description TEXT
+);
+
+CREATE TABLE offer_group_units -- объединение ИЛИ, если offer предлагается безальтернативно, он будет один в группе
+(
+    id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    offer_group_id UUID NOT NULL,
+
+    FOREIGN KEY (offer_group_id) REFERENCES offer_groups (id) ON DELETE CASCADE
+);
+
+CREATE TABLE unit_offers
+(
+    unit_id  UUID NOT NULL,
+    offer_id UUID NOT NULL,
+
+    FOREIGN KEY (unit_id) REFERENCES offer_group_units (id) ON DELETE CASCADE,
+    FOREIGN KEY (offer_id) REFERENCES offers (id) ON DELETE CASCADE,
+    PRIMARY KEY (unit_id, offer_id)
+);
+
 CREATE TABLE draft_deals
 (
     id          UUID PRIMARY KEY     DEFAULT gen_random_uuid(),

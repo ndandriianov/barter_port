@@ -1,0 +1,189 @@
+offerGroups:
+  post:
+    tags:
+      - offer-groups
+    summary: Создать композитное объявление
+    description: |
+      Создает `offer_group` как альтернативу обычному объявлению.
+
+      Группа объявлений состоит из `units`, объединенных по логике `AND`.
+      Внутри каждого `unit` объявления объединены по логике `OR`.
+
+      Пример:
+
+      - `unit A`: `offer-1 OR offer-2`
+      - `unit B`: `offer-3`
+
+      Это означает, что при отклике пользователь должен выбрать ровно одно объявление из каждого `unit`.
+
+      В группу можно включать только существующие объявления текущего пользователя.
+    operationId: createOfferGroup
+    security:
+      - bearerAuth: [ ]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/requests.yaml#/CreateOfferGroupRequest'
+    responses:
+      '201':
+        description: Offer group created
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/OfferGroup'
+      '400':
+        description: Invalid request body
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: Один или несколько указанных объявлений принадлежат другому пользователю
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Один или несколько указанных объявлений не найдены
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+offerGroupById:
+  get:
+    tags:
+      - offer-groups
+    summary: Получить композитное объявление по ID
+    description: |
+      Возвращает структуру `offer_group` целиком:
+
+      - метаданные группы
+      - список `units`
+      - список `offers` внутри каждого `unit`
+
+      Этот endpoint нужен клиенту, чтобы пользователь мог выбрать конкретный `offer`
+      из каждой OR-группы перед созданием `draft deal`.
+    operationId: getOfferGroupById
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - name: offerGroupId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: OK
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/OfferGroup'
+      '400':
+        description: Invalid offer group ID
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Offer group not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+offerGroupDrafts:
+  post:
+    tags:
+      - offer-groups
+    summary: Создать черновик сделки по композитному объявлению
+    description: |
+      Создает обычный `draft deal` на основании `offer_group`.
+
+      Пользователь передает список `selectedOfferIds` и должен выбрать:
+
+      - ровно один `offer` из каждого `unit`
+      - только `offer`, которые входят в указанный `offer_group`
+
+      Каждый выбранный `offer` попадает в `draft deal` с `quantity = 1`.
+
+      После успешной валидации сервер формирует обычный `draft deal`,
+      после чего продолжает работать существующая логика подтверждения,
+      отмены и превращения черновика в `deal`.
+
+      Этот endpoint является альтернативой прямому созданию черновика через `/deals/drafts`.
+    operationId: createDraftDealFromOfferGroup
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - name: offerGroupId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/requests.yaml#/CreateOfferGroupDraftRequest'
+    responses:
+      '201':
+        description: Draft deal created
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/CreateDraftDealResponse'
+      '400':
+        description: Invalid selection. The request must contain exactly one selected offer per unit.
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Offer group or selected offers not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
