@@ -60,6 +60,12 @@ paths:
     $ref: './paths/reviews.yaml#/offerReviews'
   /offers/{offerId}/reviews-summary:
     $ref: './paths/reviews.yaml#/offerReviewsSummary'
+  /offer-groups:
+    $ref: './paths/offer-groups.yaml#/offerGroups'
+  /offer-groups/{offerGroupId}:
+    $ref: './paths/offer-groups.yaml#/offerGroupById'
+  /offer-groups/{offerGroupId}/drafts:
+    $ref: './paths/offer-groups.yaml#/offerGroupDrafts'
 
 components:
   securitySchemes:

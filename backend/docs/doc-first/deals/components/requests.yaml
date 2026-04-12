@@ -16,6 +16,56 @@ CreateDraftDealRequest:
 
 
 
+CreateOfferGroupRequest:
+  type: object
+  required:
+    - name
+    - units
+  properties:
+    name:
+      type: string
+      description: Название композитного объявления
+      example: Обмен велосипеда на набор услуг
+    description:
+      type: string
+      description: Описание сценария обмена для всей группы
+    units:
+      type: array
+      minItems: 1
+      description: |
+        Список AND-групп. Для каждой группы при отклике должен быть выбран ровно один `offer`.
+      items:
+        $ref: 'schemas.yaml#/OfferGroupUnitInput'
+
+
+
+CreateOfferGroupDraftRequest:
+  type: object
+  required:
+    - selectedOfferIds
+  properties:
+    selectedOfferIds:
+      type: array
+      minItems: 1
+      uniqueItems: true
+      description: |
+        Список выбранных `offerId`.
+        Должен содержать ровно по одному `offer` из каждого `unit` указанной группы.
+        Для каждого выбранного `offer` сервер создаёт запись в `draft deal` с `quantity = 1`.
+      items:
+        type: string
+        format: uuid
+    name:
+      type: string
+      description: |
+        Необязательное имя черновой сделки.
+        Если не передано, сервер может сгенерировать его автоматически по существующим правилам.
+    description:
+      type: string
+      description: Необязательное описание черновой сделки.
+
+
+
 UpdateDealRequest:
   type: object
   required:
