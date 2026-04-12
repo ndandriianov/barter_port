@@ -230,9 +230,21 @@ interface RoleRowProps {
   onRelease: () => void;
   isLoading: boolean;
   canClaim?: boolean;
+  canRelease?: boolean;
 }
 
-function RoleRow({ label, userId, myId, isParticipant, getUserName, onClaim, onRelease, isLoading, canClaim = true }: RoleRowProps) {
+function RoleRow({
+  label,
+  userId,
+  myId,
+  isParticipant,
+  getUserName,
+  onClaim,
+  onRelease,
+  isLoading,
+  canClaim = true,
+  canRelease = true,
+}: RoleRowProps) {
   const isMe = userId !== undefined && userId === myId;
   const isEmpty = userId === undefined;
 
@@ -247,7 +259,14 @@ function RoleRow({ label, userId, myId, isParticipant, getUserName, onClaim, onR
       {isLoading ? (
         <CircularProgress size={14} />
       ) : isMe ? (
-        <Button size="small" variant="text" color="error" sx={{ minWidth: 0, p: 0, fontSize: 11 }} onClick={onRelease}>
+        <Button
+          size="small"
+          variant="text"
+          color="error"
+          sx={{ minWidth: 0, p: 0, fontSize: 11 }}
+          onClick={onRelease}
+          disabled={!canRelease}
+        >
           снять себя
         </Button>
       ) : isEmpty && isParticipant && canClaim ? (
@@ -275,8 +294,9 @@ function ItemRow({ item, dealId, dealStatus, myId, isParticipant, getUserName, o
   const [updateDealItem, { isLoading }] = dealsApi.useUpdateDealItemMutation();
 
   const isEditableStatus = dealStatus === "LookingForParticipants" || dealStatus === "Discussion";
-  const canClaimProvider = myId !== undefined && item.receiverId !== myId && isEditableStatus;
-  const canClaimReceiver = myId !== undefined && item.providerId !== myId && isEditableStatus;
+  const canManageRoles = dealStatus === "LookingForParticipants";
+  const canClaimProvider = myId !== undefined && item.receiverId !== myId && canManageRoles;
+  const canClaimReceiver = myId !== undefined && item.providerId !== myId && canManageRoles;
 
   const handleClaim = (field: "claimProvider" | "claimReceiver") => () =>
     updateDealItem({ dealId, itemId: item.id, body: { [field]: true } });
@@ -328,6 +348,7 @@ function ItemRow({ item, dealId, dealStatus, myId, isParticipant, getUserName, o
           onRelease={handleRelease("releaseProvider")}
           isLoading={isLoading}
           canClaim={canClaimProvider}
+          canRelease={canManageRoles}
         />
         <RoleRow
           label="Получатель"
@@ -339,6 +360,7 @@ function ItemRow({ item, dealId, dealStatus, myId, isParticipant, getUserName, o
           onRelease={handleRelease("releaseReceiver")}
           isLoading={isLoading}
           canClaim={canClaimReceiver}
+          canRelease={canManageRoles}
         />
       </Box>
     </ListItem>
