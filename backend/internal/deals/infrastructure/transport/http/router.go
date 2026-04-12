@@ -6,6 +6,7 @@ import (
 	draftsh "barter-port/internal/deals/infrastructure/transport/http/drafts"
 	failuresh "barter-port/internal/deals/infrastructure/transport/http/failures"
 	joinsh "barter-port/internal/deals/infrastructure/transport/http/joins"
+	offergroupsh "barter-port/internal/deals/infrastructure/transport/http/offergroups"
 	"barter-port/internal/deals/infrastructure/transport/http/offers"
 	reviewsh "barter-port/internal/deals/infrastructure/transport/http/reviews"
 	"barter-port/pkg/authkit"
@@ -23,6 +24,7 @@ func NewRouter(
 	logg *slog.Logger,
 	validator *validators.LocalJWT,
 	offersHandlers *offers.Handlers,
+	offerGroupsHandlers *offergroupsh.Handlers,
 	draftsHandlers *draftsh.Handlers,
 	dealsHandlers *deals.Handlers,
 	failuresHandlers *failuresh.Handlers,
@@ -34,6 +36,9 @@ func NewRouter(
 	}
 	if offersHandlers == nil {
 		log.Fatal("offers handlers are required")
+	}
+	if offerGroupsHandlers == nil {
+		log.Fatal("offer groups handlers are required")
 	}
 	if draftsHandlers == nil {
 		log.Fatal("drafts handlers are required")
@@ -81,6 +86,12 @@ func NewRouter(
 			r.Get("/{offerId}", offersHandlers.HandleGetOfferByID)
 			r.Get("/{offerId}/reviews", reviewsHandlers.GetOfferReviews)
 			r.Get("/{offerId}/reviews-summary", reviewsHandlers.GetOfferReviewsSummary)
+		})
+		r.Route("/offer-groups", func(r chi.Router) {
+			r.Get("/", offerGroupsHandlers.ListOfferGroups)
+			r.Post("/", offerGroupsHandlers.CreateOfferGroup)
+			r.Get("/{offerGroupId}", offerGroupsHandlers.GetOfferGroupByID)
+			r.Post("/{offerGroupId}/drafts", offerGroupsHandlers.CreateDraftFromOfferGroup)
 		})
 		r.Get("/providers/{providerId}/reviews", reviewsHandlers.GetProviderReviews)
 		r.Get("/providers/{providerId}/reviews-summary", reviewsHandlers.GetProviderReviewsSummary)
