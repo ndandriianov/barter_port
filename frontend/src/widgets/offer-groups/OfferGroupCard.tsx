@@ -3,10 +3,13 @@ import HubOutlinedIcon from "@mui/icons-material/HubOutlined";
 import AltRouteOutlinedIcon from "@mui/icons-material/AltRouteOutlined";
 import { Link as RouterLink } from "react-router-dom";
 import type { OfferGroup } from "@/features/offer-groups/model/types.ts";
+import usersApi from "@/features/users/api/usersApi.ts";
 import {
+  getOfferGroupOwnerId,
   getOfferGroupOwnerName,
   getOfferGroupVariantCount,
 } from "@/features/offer-groups/model/utils.ts";
+import UserAvatarLabel from "@/shared/UserAvatarLabel.tsx";
 
 interface OfferGroupCardProps {
   offerGroup: OfferGroup;
@@ -14,8 +17,12 @@ interface OfferGroupCardProps {
 }
 
 function OfferGroupCard({ offerGroup, href }: OfferGroupCardProps) {
+  const ownerId = getOfferGroupOwnerId(offerGroup);
   const ownerName = getOfferGroupOwnerName(offerGroup);
   const variantCount = getOfferGroupVariantCount(offerGroup);
+  const { data: author } = usersApi.useGetUserByIdQuery(ownerId ?? "", {
+    skip: !ownerId,
+  });
 
   return (
     <Card
@@ -44,9 +51,13 @@ function OfferGroupCard({ offerGroup, href }: OfferGroupCardProps) {
           <Typography variant="h6" fontWeight={700} gutterBottom>
             {offerGroup.name}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
-            Автор: {ownerName}
-          </Typography>
+          <UserAvatarLabel
+            name={author?.name ?? ownerName}
+            avatarUrl={author?.avatarUrl}
+            size={30}
+            textVariant="body2"
+            fontWeight={400}
+          />
         </Box>
 
         <Typography
