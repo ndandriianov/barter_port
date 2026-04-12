@@ -16,7 +16,7 @@ export type CreateOfferGroupResponse = z.Infer<typeof createOfferGroupResponseSc
 export type CreateOfferGroupDraftResponse = z.Infer<typeof createOfferGroupDraftResponseSchema>;
 
 export interface CreateOfferGroupRequest {
-  name: string;
+  name?: string;
   description?: string;
   units: Array<{
     offers: OfferGroupOfferRef[];

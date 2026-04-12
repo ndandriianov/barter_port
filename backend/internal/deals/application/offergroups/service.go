@@ -44,15 +44,10 @@ func NewService(
 func (s *Service) CreateOfferGroup(
 	ctx context.Context,
 	userID uuid.UUID,
-	name string,
+	name *string,
 	description *string,
 	units []domain.OfferGroupUnitCreateInput,
 ) (domain.OfferGroup, error) {
-	name = strings.TrimSpace(name)
-	if name == "" {
-		return domain.OfferGroup{}, domain.ErrInvalidOfferName
-	}
-
 	offerIDs, err := validateCreateUnits(units)
 	if err != nil {
 		return domain.OfferGroup{}, err
@@ -78,7 +73,17 @@ func (s *Service) CreateOfferGroup(
 			return err
 		}
 
-		groupID, err = s.repo.CreateOfferGroup(ctx, tx, name, description, units)
+		resolvedName := ""
+		if name != nil {
+			resolvedName = *name
+		} else {
+			resolvedName = buildOfferGroupName(units, offers)
+		}
+		if strings.TrimSpace(resolvedName) == "" {
+			return domain.ErrInvalidOfferName
+		}
+
+		groupID, err = s.repo.CreateOfferGroup(ctx, tx, resolvedName, description, units)
 		if err != nil {
 			return fmt.Errorf("create offer group: %w", err)
 		}
@@ -252,6 +257,33 @@ func validateUnitActions(units []domain.OfferGroupUnitCreateInput, offers []doma
 	}
 
 	return nil
+}
+
+func buildOfferGroupName(units []domain.OfferGroupUnitCreateInput, offers []domain.Offer) string {
+	offersByID := make(map[uuid.UUID]domain.Offer, len(offers))
+	for _, offer := range offers {
+		offersByID[offer.ID] = offer
+	}
+
+	unitNames := make([]string, 0, len(units))
+	for _, unit := range units {
+		names := make([]string, 0, len(unit.OfferIDs))
+		for _, offerID := range unit.OfferIDs {
+			offer, ok := offersByID[offerID]
+			if !ok {
+				continue
+			}
+			names = append(names, offer.Name)
+		}
+
+		if len(names) == 0 {
+			continue
+		}
+
+		unitNames = append(unitNames, strings.Join(names, " и "))
+	}
+
+	return strings.Join(unitNames, ", ")
 }
 
 func getUniformGroupAction(group domain.OfferGroup) (enums.OfferAction, bool) {

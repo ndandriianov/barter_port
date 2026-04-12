@@ -83,6 +83,18 @@ function CreateOfferGroupForm() {
 
   const hasMixedActions = unitHasMixedActions.some(Boolean);
 
+  const generatedName = useMemo(() => {
+    return units
+      .map((unit) =>
+        unit
+          .map((offerId) => offers.find((offer) => offer.id === offerId)?.name)
+          .filter((name): name is string => Boolean(name))
+          .join(" и "),
+      )
+      .filter(Boolean)
+      .join(", ");
+  }, [offers, units]);
+
   const updateUnit = (unitIndex: number, nextOfferIds: string[]) => {
     setUnits((current) => current.map((unit, index) => (index === unitIndex ? nextOfferIds : unit)));
   };
@@ -96,11 +108,11 @@ function CreateOfferGroupForm() {
   };
 
   const canSubmit =
-    name.trim().length > 0 &&
     units.length > 0 &&
     units.every((unit) => unit.length > 0) &&
     offers.length > 0 &&
-    !hasMixedActions;
+    !hasMixedActions &&
+    generatedName.trim().length > 0;
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -109,7 +121,7 @@ function CreateOfferGroupForm() {
     }
 
     const result = await createOfferGroup({
-      name: name.trim(),
+      name: name.trim() || undefined,
       description: description.trim() ? description.trim() : undefined,
       units: units.map((unit) => ({
         offers: unit.map((offerId) => ({ offerId })),
@@ -122,11 +134,15 @@ function CreateOfferGroupForm() {
   return (
     <Box component="form" onSubmit={submit} display="flex" flexDirection="column" gap={3}>
       <TextField
-        label="Название композитного объявления"
-        required
+        label="Название"
         fullWidth
         value={name}
         onChange={(event) => setName(event.target.value)}
+        helperText={
+          name.trim()
+            ? "Будет использовано как есть."
+            : `Если оставить пустым, сервер создаст: ${generatedName || "название появится после выбора offers"}`
+        }
       />
 
       <TextField
