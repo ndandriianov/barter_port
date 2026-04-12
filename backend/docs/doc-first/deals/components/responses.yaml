@@ -62,6 +62,10 @@ ListOffersResponse:
       allOf:
         - $ref: 'schemas.yaml#/OffersCursor'
       description: Cursor for fetching the next page; null if there is no next page
+ListOfferGroupsResponse:
+  type: array
+  items:
+    $ref: 'schemas.yaml#/OfferGroup'
 
 
 
