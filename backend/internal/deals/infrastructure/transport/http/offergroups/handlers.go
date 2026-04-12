@@ -94,7 +94,8 @@ func (h *Handlers) CreateOfferGroup(w http.ResponseWriter, r *http.Request) {
 		case errors.Is(err, domain.ErrInvalidOfferName),
 			errors.Is(err, domain.ErrNoOfferGroupUnits),
 			errors.Is(err, domain.ErrEmptyOfferGroupUnit),
-			errors.Is(err, domain.ErrDuplicateOfferInGroup):
+			errors.Is(err, domain.ErrDuplicateOfferInGroup),
+			errors.Is(err, domain.ErrMixedOfferActionsInUnit):
 			httpx.WriteError(w, http.StatusBadRequest, err)
 		case errors.Is(err, domain.ErrOfferNotFound):
 			httpx.WriteError(w, http.StatusNotFound, err)

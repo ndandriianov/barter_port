@@ -34,6 +34,7 @@ CreateOfferGroupRequest:
       minItems: 1
       description: |
         Список AND-групп. Для каждой группы при отклике должен быть выбран ровно один `offer`.
+        Внутри одного `unit` все `offers` должны иметь одинаковый `action`.
       items:
         $ref: 'schemas.yaml#/OfferGroupUnitInput'
 

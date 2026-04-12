@@ -55,6 +55,7 @@ offerGroups:
       Это означает, что при отклике пользователь должен выбрать ровно одно объявление из каждого `unit`.
 
       В группу можно включать только существующие объявления текущего пользователя.
+      Внутри одного `unit` разрешены только объявления с одинаковым `action`.
     operationId: createOfferGroup
     security:
       - bearerAuth: [ ]
@@ -72,7 +73,7 @@ offerGroups:
             schema:
               $ref: '../components/schemas.yaml#/OfferGroup'
       '400':
-        description: Invalid request body
+        description: Invalid request body or mixed `action` values inside one unit
         content:
           application/json:
             schema:

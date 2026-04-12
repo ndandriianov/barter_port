@@ -4,6 +4,7 @@ import authReducer from "@/features/auth/model/authSlice.ts";
 import authApi from "@/features/auth/api/authApi.ts";
 import offersApi from "@/features/offers/api/offersApi.ts";
 import dealsApi from "@/features/deals/api/dealsApi.ts";
+import offerGroupsApi from "@/features/offer-groups/api/offerGroupsApi.ts";
 import usersApi from "@/features/users/api/usersApi.ts";
 import chatsApi from "@/features/chats/api/chatsApi.ts";
 import reviewsApi from "@/features/reviews/api/reviewsApi.ts";
@@ -14,6 +15,7 @@ const combinedReducer = combineReducers({
   [authApi.reducerPath]: authApi.reducer,
   [offersApi.reducerPath]: offersApi.reducer,
   [dealsApi.reducerPath]: dealsApi.reducer,
+  [offerGroupsApi.reducerPath]: offerGroupsApi.reducer,
   [usersApi.reducerPath]: usersApi.reducer,
   [chatsApi.reducerPath]: chatsApi.reducer,
   [reviewsApi.reducerPath]: reviewsApi.reducer,
