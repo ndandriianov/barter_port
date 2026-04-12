@@ -6,12 +6,14 @@ import (
 	dealssvc "barter-port/internal/deals/application/deals"
 	failuressvc "barter-port/internal/deals/application/failures"
 	joinssvc "barter-port/internal/deals/application/joins"
+	offergroupssvc "barter-port/internal/deals/application/offergroups"
 	"barter-port/internal/deals/application/offers"
 	reviewssvc "barter-port/internal/deals/application/reviews"
 	"barter-port/internal/deals/infrastructure/repository/deals"
 	"barter-port/internal/deals/infrastructure/repository/drafts"
 	failuresrepo "barter-port/internal/deals/infrastructure/repository/failures"
 	"barter-port/internal/deals/infrastructure/repository/joins"
+	offergroupsrepo "barter-port/internal/deals/infrastructure/repository/offergroups"
 	offersr "barter-port/internal/deals/infrastructure/repository/offers"
 	reviewsrepo "barter-port/internal/deals/infrastructure/repository/reviews"
 	transportgrpc "barter-port/internal/deals/infrastructure/transport/grpc"
@@ -20,6 +22,7 @@ import (
 	draftsh "barter-port/internal/deals/infrastructure/transport/http/drafts"
 	failuresh "barter-port/internal/deals/infrastructure/transport/http/failures"
 	joinsh "barter-port/internal/deals/infrastructure/transport/http/joins"
+	offergroupsh "barter-port/internal/deals/infrastructure/transport/http/offergroups"
 	offersh "barter-port/internal/deals/infrastructure/transport/http/offers"
 	reviewsh "barter-port/internal/deals/infrastructure/transport/http/reviews"
 	"barter-port/pkg/authkit"
@@ -84,6 +87,7 @@ func main() {
 	dealsRepo := deals.NewRepository()
 	failuresRepo := failuresrepo.NewRepository(dealsRepo)
 	joinsRepo := joins.NewRepository()
+	offerGroupsRepo := offergroupsrepo.NewRepository(db)
 	reviewsRepo := reviewsrepo.NewRepository(dealsRepo)
 	dealsService := dealssvc.NewService(db, draftsRepo, dealsRepo, failuresRepo, joinsRepo, offersRepo).
 		WithAdminChecker(authkit.NewAdminChecker(authClient)).
@@ -91,6 +95,7 @@ func main() {
 	if chatsClient != nil {
 		dealsService = dealsService.WithChatsClient(chatsClient)
 	}
+	offerGroupsService := offergroupssvc.NewService(db, offerGroupsRepo, offersRepo, dealsService, usersClient)
 	failuresService := failuressvc.NewService(dealsService, failuresRepo)
 	joinsService := joinssvc.NewService(dealsService)
 	reviewsService := reviewssvc.NewService(dealsService, reviewsRepo)
@@ -119,12 +124,13 @@ func main() {
 	}()
 
 	offersHandlers := offersh.NewHandlers(offersService)
+	offerGroupsHandlers := offergroupsh.NewHandlers(logg, offerGroupsService)
 	draftsHandlers := draftsh.NewHandlers(logg, dealsService)
 	dealsHandlers := dealsh.NewHandlers(logg, dealsService)
 	failuresHandlers := failuresh.NewHandlers(logg, failuresService)
 	joinsHandlers := joinsh.NewHandlers(logg, joinsService)
 	reviewsHandlers := reviewsh.NewHandlers(logg, reviewsService)
-	router := transporthttp.NewRouter(logg, validator, offersHandlers, draftsHandlers, dealsHandlers, failuresHandlers, joinsHandlers, reviewsHandlers)
+	router := transporthttp.NewRouter(logg, validator, offersHandlers, offerGroupsHandlers, draftsHandlers, dealsHandlers, failuresHandlers, joinsHandlers, reviewsHandlers)
 
 	port := bootstrap.InitPortStringFromConfig(cfg, 8080)
 	log.Println("backend listening on", port)

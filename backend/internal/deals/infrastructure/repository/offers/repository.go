@@ -226,6 +226,54 @@ func (r *Repository) GetOfferNamesByIDs(ctx context.Context, exec db.DB, ids []u
 	return names, rows.Err()
 }
 
+// GetOffersByIDs returns offers for the provided IDs, preserving input order.
+// IDs not found in the database are silently skipped.
+func (r *Repository) GetOffersByIDs(ctx context.Context, exec db.DB, ids []uuid.UUID) ([]domain.Offer, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	query := `
+		SELECT
+			o.id,
+			o.author_id,
+			o.name,
+			o.type,
+			o.action,
+			o.description,
+			o.created_at,
+			o.views
+		FROM unnest($1::uuid[]) WITH ORDINALITY u(id, ord)
+		JOIN offers o ON o.id = u.id
+		ORDER BY u.ord`
+
+	rows, err := exec.Query(ctx, query, ids)
+	if err != nil {
+		return nil, fmt.Errorf("sql get offers by ids: %w", err)
+	}
+	defer rows.Close()
+
+	result := make([]domain.Offer, 0, len(ids))
+	for rows.Next() {
+		var item domain.Offer
+		if err = rows.Scan(
+			&item.ID,
+			&item.AuthorId,
+			&item.Name,
+			&item.Type,
+			&item.Action,
+			&item.Description,
+			&item.CreatedAt,
+			&item.Views,
+		); err != nil {
+			return nil, fmt.Errorf("scan offer: %w", err)
+		}
+		result = append(result, item)
+	}
+
+	return result, rows.Err()
+}
+
 // ================================================================================
 // GET OFFER
 // ================================================================================
