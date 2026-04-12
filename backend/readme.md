@@ -51,6 +51,15 @@ make seed-demo
 - создаёт активную и завершённую сделки;
 - добавляет отзывы и сообщения в чаты.
 
+Demo-аккаунты:
+- `alice.demo@barterport.local`
+- `bob.demo@barterport.local`
+- `clara.demo@barterport.local`
+- `dan.demo@barterport.local`
+
+Пароль по умолчанию: `password123`.
+Если задан `SEED_PASSWORD`, seed использует его для этих же аккаунтов.
+
 По умолчанию команда ходит в `http://localhost:80`, то есть ожидает поднятый app-контур через `caddy`.
 Для локального сценария требуется `MAILER_BYPASS=true`, иначе обычная клиентская регистрация не сможет залогиниться без подтверждения почты.
 
