@@ -5,6 +5,8 @@ import StarRoundedIcon from "@mui/icons-material/StarRounded";
 import { Link as RouterLink } from "react-router-dom";
 import type { Offer, OfferAction, OfferType } from "@/features/offers/model/types";
 import reviewsApi from "@/features/reviews/api/reviewsApi.ts";
+import usersApi from "@/features/users/api/usersApi.ts";
+import UserAvatarLabel from "@/shared/UserAvatarLabel.tsx";
 
 const actionLabels: Record<OfferAction, string> = {
   give: "Отдаю",
@@ -44,6 +46,7 @@ function OfferCard({
   draftsHref,
 }: OfferCardProps) {
   const authorName = offer.authorName?.trim() || "Имя не указано";
+  const { data: author } = usersApi.useGetUserByIdQuery(offer.authorId);
   const { data: summary } = reviewsApi.useGetOfferReviewsSummaryQuery(offer.id, {
     skip: !showRating,
   });
@@ -63,9 +66,18 @@ function OfferCard({
           {offer.name}
         </Typography>
 
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }} noWrap>
-          Автор: {authorName}
-        </Typography>
+        <Box sx={{ mb: 1 }}>
+          <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 0.5 }}>
+            Автор
+          </Typography>
+          <UserAvatarLabel
+            name={author?.name ?? authorName}
+            avatarUrl={author?.avatarUrl}
+            size={30}
+            textVariant="body2"
+            fontWeight={400}
+          />
+        </Box>
 
         <Typography variant="body2" color="text.secondary" sx={{ mb: 2, display: "-webkit-box", WebkitLineClamp: 3, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
           {offer.description}

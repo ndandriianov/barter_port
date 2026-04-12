@@ -34,6 +34,7 @@ import { getStatusCode } from "@/shared/utils/getStatusCode";
 import type { FetchBaseQueryError } from "@reduxjs/toolkit/query";
 import type { SerializedError } from "@reduxjs/toolkit";
 import DealFailureSection from "@/widgets/deals/DealFailureSection.tsx";
+import UserAvatarLabel from "@/shared/UserAvatarLabel.tsx";
 
 function dealErrorMessage(
   error: FetchBaseQueryError | SerializedError | undefined,
@@ -226,6 +227,7 @@ interface RoleRowProps {
   myId: string | undefined;
   isParticipant: boolean;
   getUserName: (id: string) => string;
+  getUserAvatarUrl: (id: string) => string | undefined;
   onClaim: () => void;
   onRelease: () => void;
   isLoading: boolean;
@@ -239,6 +241,7 @@ function RoleRow({
   myId,
   isParticipant,
   getUserName,
+  getUserAvatarUrl,
   onClaim,
   onRelease,
   isLoading,
@@ -253,9 +256,19 @@ function RoleRow({
       <Typography variant="caption" color="text.secondary" sx={{ minWidth: 80 }}>
         {label}:
       </Typography>
-      <Typography variant="caption" fontWeight={isMe ? 600 : 400}>
-        {userId ? getUserName(userId) : "не назначен"}
-      </Typography>
+      {userId ? (
+        <UserAvatarLabel
+          name={getUserName(userId)}
+          avatarUrl={getUserAvatarUrl(userId)}
+          size={24}
+          textVariant="caption"
+          fontWeight={isMe ? 600 : 400}
+        />
+      ) : (
+        <Typography variant="caption" fontWeight={isMe ? 600 : 400}>
+          не назначен
+        </Typography>
+      )}
       {isLoading ? (
         <CircularProgress size={14} />
       ) : isMe ? (
@@ -287,10 +300,11 @@ interface ItemRowProps {
   myId: string | undefined;
   isParticipant: boolean;
   getUserName: (id: string) => string;
+  getUserAvatarUrl: (id: string) => string | undefined;
   onEditClick: () => void;
 }
 
-function ItemRow({ item, dealId, dealStatus, myId, isParticipant, getUserName, onEditClick }: ItemRowProps) {
+function ItemRow({ item, dealId, dealStatus, myId, isParticipant, getUserName, getUserAvatarUrl, onEditClick }: ItemRowProps) {
   const [updateDealItem, { isLoading }] = dealsApi.useUpdateDealItemMutation();
 
   const isEditableStatus = dealStatus === "LookingForParticipants" || dealStatus === "Discussion";
@@ -344,6 +358,7 @@ function ItemRow({ item, dealId, dealStatus, myId, isParticipant, getUserName, o
           myId={myId}
           isParticipant={isParticipant}
           getUserName={getUserName}
+          getUserAvatarUrl={getUserAvatarUrl}
           onClaim={handleClaim("claimProvider")}
           onRelease={handleRelease("releaseProvider")}
           isLoading={isLoading}
@@ -356,6 +371,7 @@ function ItemRow({ item, dealId, dealStatus, myId, isParticipant, getUserName, o
           myId={myId}
           isParticipant={isParticipant}
           getUserName={getUserName}
+          getUserAvatarUrl={getUserAvatarUrl}
           onClaim={handleClaim("claimReceiver")}
           onRelease={handleRelease("releaseReceiver")}
           isLoading={isLoading}
@@ -446,6 +462,7 @@ function DealCard({ deal }: DealCardProps) {
   );
 
   const getUserName = (id: string) => usersById[id]?.name?.trim() || "имя не указано";
+  const getUserAvatarUrl = (id: string) => usersById[id]?.avatarUrl;
 
   const groupedStatusVotes = useMemo(() => {
     if (!statusVotes || statusVotes.length === 0) return [] as Array<{ status: DealStatus; voters: string[] }>;
@@ -702,9 +719,13 @@ function DealCard({ deal }: DealCardProps) {
           ) : (
             <Box display="flex" flexDirection="column" gap={0.5}>
               {deal.participants.map((participantId) => (
-                <Typography key={participantId} variant="body2">
-                  • {getUserName(participantId)}
-                </Typography>
+                <UserAvatarLabel
+                  key={participantId}
+                  name={getUserName(participantId)}
+                  avatarUrl={getUserAvatarUrl(participantId)}
+                  size={28}
+                  textVariant="body2"
+                />
               ))}
             </Box>
           )}
@@ -806,6 +827,7 @@ function DealCard({ deal }: DealCardProps) {
                 myId={me?.id}
                 isParticipant={isParticipant}
                 getUserName={getUserName}
+                getUserAvatarUrl={getUserAvatarUrl}
                 onEditClick={() => setEditingItem(item)}
               />
             ))}
