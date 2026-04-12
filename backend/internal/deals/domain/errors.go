@@ -15,6 +15,7 @@ var (
 	ErrNoOfferGroupUnits       = errors.New("offer group must contain at least one unit")
 	ErrEmptyOfferGroupUnit     = errors.New("offer group unit must contain at least one offer")
 	ErrDuplicateOfferInGroup   = errors.New("offer is duplicated in offer group")
+	ErrMixedOfferActionsInUnit = errors.New("all offers in unit must have the same action")
 	ErrInvalidOfferGroupSelect = errors.New("invalid offer group selection")
 	ErrUserNotInDraft          = errors.New("user not in draft")
 	ErrForbidden               = errors.New("forbidden")

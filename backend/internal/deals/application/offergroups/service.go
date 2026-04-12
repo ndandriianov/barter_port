@@ -73,6 +73,10 @@ func (s *Service) CreateOfferGroup(
 			}
 		}
 
+		if err = validateUnitActions(units, offers); err != nil {
+			return err
+		}
+
 		groupID, err = s.repo.CreateOfferGroup(ctx, tx, name, description, units)
 		if err != nil {
 			return fmt.Errorf("create offer group: %w", err)
@@ -188,6 +192,36 @@ func validateCreateUnits(units []domain.OfferGroupUnitCreateInput) ([]uuid.UUID,
 	}
 
 	return offerIDs, nil
+}
+
+func validateUnitActions(units []domain.OfferGroupUnitCreateInput, offers []domain.Offer) error {
+	offersByID := make(map[uuid.UUID]domain.Offer, len(offers))
+	for _, offer := range offers {
+		offersByID[offer.ID] = offer
+	}
+
+	for _, unit := range units {
+		var expectedAction *string
+
+		for _, offerID := range unit.OfferIDs {
+			offer, ok := offersByID[offerID]
+			if !ok {
+				return domain.ErrOfferNotFound
+			}
+
+			action := offer.Action.String()
+			if expectedAction == nil {
+				expectedAction = &action
+				continue
+			}
+
+			if *expectedAction != action {
+				return domain.ErrMixedOfferActionsInUnit
+			}
+		}
+	}
+
+	return nil
 }
 
 func (s *Service) populateAuthorNames(ctx context.Context, items []domain.OfferGroup) ([]domain.OfferGroup, error) {

@@ -94,6 +94,37 @@ func TestListOfferGroupsReturnsCreatedGroup(t *testing.T) {
 	require.True(t, found)
 }
 
+func TestCreateOfferGroupWithMixedActionsInUnitReturnsBadRequest(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	offerGive := mustCreateOfferWithAction(t, userID, types.Give)
+	offerTake := mustCreateOfferWithAction(t, userID, types.Take)
+
+	req := mustUserRequest(t, http.MethodPost, dealsURL()+"/offer-groups", userID, mustJSONBody(t, map[string]any{
+		"name": "mixed-actions",
+		"units": []map[string]any{
+			{
+				"offers": []map[string]any{
+					{"offerId": offerGive.String()},
+					{"offerId": offerTake.String()},
+				},
+			},
+		},
+	}))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	var apiErr types.ErrorResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&apiErr))
+	require.NotNil(t, apiErr.Message)
+	require.Equal(t, domain.ErrMixedOfferActionsInUnit.Error(), *apiErr.Message)
+}
+
 func TestGetOfferGroupByIDSuccess(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)
