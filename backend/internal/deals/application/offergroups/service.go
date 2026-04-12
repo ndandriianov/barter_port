@@ -4,6 +4,7 @@ import (
 	userspb "barter-port/contracts/grpc/users/v1"
 	dealssvc "barter-port/internal/deals/application/deals"
 	"barter-port/internal/deals/domain"
+	"barter-port/internal/deals/domain/enums"
 	offergroupsrepo "barter-port/internal/deals/infrastructure/repository/offergroups"
 	offersrepo "barter-port/internal/deals/infrastructure/repository/offers"
 	"barter-port/pkg/db"
@@ -120,6 +121,7 @@ func (s *Service) CreateDraftFromOfferGroup(
 	name *string,
 	description *string,
 	selectedOfferIDs []uuid.UUID,
+	responderOfferID *uuid.UUID,
 ) (uuid.UUID, error) {
 	if len(selectedOfferIDs) == 0 {
 		return uuid.Nil, domain.ErrInvalidOfferGroupSelect
@@ -141,6 +143,8 @@ func (s *Service) CreateDraftFromOfferGroup(
 	if len(group.Units) == 0 || len(selectedOfferIDs) != len(group.Units) {
 		return uuid.Nil, domain.ErrInvalidOfferGroupSelect
 	}
+
+	uniformAction, hasUniformAction := getUniformGroupAction(group)
 
 	selectedOffers := make([]domain.OfferIDAndInfo, 0, len(selectedOfferIDs))
 	for _, unit := range group.Units {
@@ -164,6 +168,32 @@ func (s *Service) CreateDraftFromOfferGroup(
 				Quantity: 1,
 			},
 		})
+	}
+
+	if responderOfferID != nil {
+		if _, alreadySelected := selectedSet[*responderOfferID]; alreadySelected {
+			return uuid.Nil, domain.ErrInvalidOfferGroupSelect
+		}
+
+		offer, err := s.offersRepo.GetOfferByID(ctx, *responderOfferID)
+		if err != nil {
+			return uuid.Nil, err
+		}
+		if offer.AuthorId != userID {
+			return uuid.Nil, domain.ErrForbidden
+		}
+		if hasUniformAction && offer.Action != uniformAction {
+			return uuid.Nil, domain.ErrOfferGroupResponderOfferAction
+		}
+
+		selectedOffers = append(selectedOffers, domain.OfferIDAndInfo{
+			ID: offer.ID,
+			Info: domain.OfferInfo{
+				Quantity: 1,
+			},
+		})
+	} else if hasUniformAction {
+		return uuid.Nil, domain.ErrOfferGroupResponderOfferRequired
 	}
 
 	return s.dealsService.CreateDraft(ctx, userID, name, description, selectedOffers)
@@ -222,6 +252,28 @@ func validateUnitActions(units []domain.OfferGroupUnitCreateInput, offers []doma
 	}
 
 	return nil
+}
+
+func getUniformGroupAction(group domain.OfferGroup) (enums.OfferAction, bool) {
+	actions := make(map[enums.OfferAction]struct{})
+	var zeroAction enums.OfferAction
+
+	for _, unit := range group.Units {
+		if len(unit.Offers) == 0 {
+			continue
+		}
+		actions[unit.Offers[0].Action] = struct{}{}
+	}
+
+	if len(actions) != 1 {
+		return zeroAction, false
+	}
+
+	for action := range actions {
+		return action, true
+	}
+
+	return zeroAction, false
 }
 
 func (s *Service) populateAuthorNames(ctx context.Context, items []domain.OfferGroup) ([]domain.OfferGroup, error) {

@@ -13,9 +13,18 @@ import {
 } from "@mui/material";
 import usersApi from "@/features/users/api/usersApi.ts";
 import offerGroupsApi from "@/features/offer-groups/api/offerGroupsApi.ts";
-import { getOfferGroupOwnerId, getOfferGroupOwnerName } from "@/features/offer-groups/model/utils.ts";
+import {
+  getOfferGroupOwnerId,
+  getOfferGroupOwnerName,
+  getOfferGroupUniformAction,
+} from "@/features/offer-groups/model/utils.ts";
 import OfferCard from "@/widgets/offers/OfferCard.tsx";
 import RespondToOfferGroupModal from "@/widgets/offer-groups/RespondToOfferGroupModal.tsx";
+
+const actionLabels = {
+  give: "Отдаю",
+  take: "Ищу",
+} as const;
 
 function OfferGroupPage() {
   const { offerGroupId } = useParams<{ offerGroupId: string }>();
@@ -29,6 +38,10 @@ function OfferGroupPage() {
 
   const ownerId = useMemo(
     () => (offerGroup ? getOfferGroupOwnerId(offerGroup) : undefined),
+    [offerGroup],
+  );
+  const uniformAction = useMemo(
+    () => (offerGroup ? getOfferGroupUniformAction(offerGroup) : null),
     [offerGroup],
   );
   const isOwnOfferGroup = !!me && !!ownerId && me.id === ownerId;
@@ -92,6 +105,11 @@ function OfferGroupPage() {
         <Typography variant="body1" color="text.secondary">
           {offerGroup.description?.trim() || "Описание не указано"}
         </Typography>
+        <Alert severity={uniformAction ? "info" : "success"} sx={{ mt: 2 }}>
+          {uniformAction
+            ? `У всех unit одинаковый action: "${actionLabels[uniformAction]}". При отклике потребуется приложить свой offer с тем же action.`
+            : "В группе есть разные action. При отклике можно выбрать unit-варианты и при желании приложить свой offer."}
+        </Alert>
       </Paper>
 
       <Box display="flex" gap={2} flexWrap="wrap" mb={3}>

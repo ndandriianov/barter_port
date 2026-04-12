@@ -172,7 +172,14 @@ offerGroupDrafts:
       - ровно один `offer` из каждого `unit`
       - только `offer`, которые входят в указанный `offer_group`
 
-      Каждый выбранный `offer` попадает в `draft deal` с `quantity = 1`.
+      Дополнительно пользователь может передать `responderOfferId`:
+
+      - если у всех `unit` в группе одинаковый `action`, `responderOfferId` обязателен
+      - в этом случае `responderOfferId` должен принадлежать текущему пользователю
+        и иметь тот же `action`
+      - если в группе есть разные `action`, `responderOfferId` опционален
+
+      Каждый выбранный `offer` и `responderOfferId` попадает в `draft deal` с `quantity = 1`.
 
       После успешной валидации сервер формирует обычный `draft deal`,
       после чего продолжает работать существующая логика подтверждения,
@@ -203,13 +210,22 @@ offerGroupDrafts:
             schema:
               $ref: '../components/responses.yaml#/CreateDraftDealResponse'
       '400':
-        description: Invalid selection. The request must contain exactly one selected offer per unit.
+        description: |
+          Invalid selection or invalid responder offer.
+          The request must contain exactly one selected offer per unit, and `responderOfferId`
+          must satisfy the group action rules.
         content:
           application/json:
             schema:
               $ref: '../components/responses.yaml#/ErrorResponse'
       '401':
         description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: `responderOfferId` does not belong to the current user
         content:
           application/json:
             schema:

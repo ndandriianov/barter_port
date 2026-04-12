@@ -43,6 +43,7 @@ type offerRef struct {
 
 type createOfferGroupDraftRequest struct {
 	SelectedOfferIDs []uuid.UUID `json:"selectedOfferIds"`
+	ResponderOfferID *uuid.UUID  `json:"responderOfferId,omitempty"`
 	Name             *string     `json:"name,omitempty"`
 	Description      *string     `json:"description,omitempty"`
 }
@@ -165,11 +166,16 @@ func (h *Handlers) CreateDraftFromOfferGroup(w http.ResponseWriter, r *http.Requ
 		req.Name,
 		req.Description,
 		req.SelectedOfferIDs,
+		req.ResponderOfferID,
 	)
 	if err != nil {
 		switch {
-		case errors.Is(err, domain.ErrInvalidOfferGroupSelect):
+		case errors.Is(err, domain.ErrInvalidOfferGroupSelect),
+			errors.Is(err, domain.ErrOfferGroupResponderOfferRequired),
+			errors.Is(err, domain.ErrOfferGroupResponderOfferAction):
 			httpx.WriteError(w, http.StatusBadRequest, err)
+		case errors.Is(err, domain.ErrForbidden):
+			httpx.WriteError(w, http.StatusForbidden, err)
 		case errors.Is(err, domain.ErrOfferGroupNotFound), errors.Is(err, domain.ErrOfferNotFound):
 			httpx.WriteError(w, http.StatusNotFound, err)
 		default:
