@@ -13,3 +13,9 @@ Bio:
   type: string
   description: User bio
   example: 'I am a software developer who loves bartering.'
+
+AvatarUrl:
+  type: string
+  format: uri
+  description: User avatar URL
+  example: 'http://localhost:8333/avatars/user-123/avatar.jpg'

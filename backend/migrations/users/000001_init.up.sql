@@ -1,8 +1,9 @@
 CREATE TABLE users
 (
-    id   UUID PRIMARY KEY,
-    name TEXT,
-    bio  TEXT
+    id         UUID PRIMARY KEY,
+    name       TEXT,
+    bio        TEXT,
+    avatar_url TEXT
 );
 
 CREATE TABLE user_creation_inbox

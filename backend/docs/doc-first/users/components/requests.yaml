@@ -5,3 +5,5 @@ UpdateUserRequest:
       $ref: './properties.yaml#/Name'
     bio:
       $ref: './properties.yaml#/Bio'
+    avatarUrl:
+      $ref: './properties.yaml#/AvatarUrl'

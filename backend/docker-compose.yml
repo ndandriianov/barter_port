@@ -76,6 +76,19 @@ services:
       KAFKA_CLUSTERS_0_NAME: barter-port
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
 
+  seaweedfs:
+    profiles: ["infra", "app"]
+    image: chrislusf/seaweedfs:4.06
+    container_name: barter-port-seaweedfs
+    restart: unless-stopped
+    command: server -s3
+    ports:
+      - "8333:8333"
+      - "8888:8888"
+      - "9333:9333"
+    volumes:
+      - seaweed_data:/data
+
   caddy-infra:
     profiles: ["infra"]
     image: caddy:2
@@ -202,3 +215,4 @@ services:
 volumes:
   db_data:
   kafka_data:
+  seaweed_data:

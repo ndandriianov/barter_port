@@ -52,9 +52,10 @@ func (h *Handlers) HandleGetUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpx.WriteJSON(w, http.StatusOK, types.User{
-		Id:   u.Id,
-		Name: u.Name,
-		Bio:  u.Bio,
+		Id:        u.Id,
+		Name:      u.Name,
+		Bio:       u.Bio,
+		AvatarUrl: u.AvatarURL,
 	})
 }
 
@@ -109,7 +110,7 @@ func (h *Handlers) HandleUpdateMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Name == nil && req.Bio == nil {
+	if req.Name == nil && req.Bio == nil && req.AvatarUrl == nil {
 		httpx.WriteErrorStr(w, http.StatusBadRequest, "empty update payload")
 		return
 	}
@@ -123,6 +124,13 @@ func (h *Handlers) HandleUpdateMe(w http.ResponseWriter, r *http.Request) {
 
 	if req.Bio != nil {
 		if err := h.userService.UpdateBio(r.Context(), userID, req.Bio); err != nil {
+			handleUpdateError(w, log, err, userID)
+			return
+		}
+	}
+
+	if req.AvatarUrl != nil {
+		if err := h.userService.UpdateAvatarURL(r.Context(), userID, req.AvatarUrl); err != nil {
 			handleUpdateError(w, log, err, userID)
 			return
 		}
@@ -164,6 +172,7 @@ func (h *Handlers) getMe(ctx context.Context, userID uuid.UUID) (types.Me, error
 		Id:        me.Id,
 		Name:      me.Name,
 		Bio:       me.Bio,
+		AvatarUrl: me.AvatarURL,
 		Email:     me.Email, // TODO: конвертировать при отключенном bypass
 		CreatedAt: me.CreatedAt,
 		IsAdmin:   me.IsAdmin,

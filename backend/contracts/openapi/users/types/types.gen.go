@@ -13,6 +13,9 @@ const (
 	BearerAuthScopes = "bearerAuth.Scopes"
 )
 
+// AvatarUrl User avatar URL
+type AvatarUrl = string
+
 // Bio User bio
 type Bio = string
 
@@ -23,6 +26,9 @@ type ErrorResponse struct {
 
 // Me defines model for Me.
 type Me struct {
+	// AvatarUrl User avatar URL
+	AvatarUrl *AvatarUrl `json:"avatarUrl,omitempty"`
+
 	// Bio User bio
 	Bio *Bio `json:"bio,omitempty"`
 
@@ -47,6 +53,9 @@ type Name = string
 
 // UpdateUserRequest defines model for UpdateUserRequest.
 type UpdateUserRequest struct {
+	// AvatarUrl User avatar URL
+	AvatarUrl *AvatarUrl `json:"avatarUrl,omitempty"`
+
 	// Bio User bio
 	Bio *Bio `json:"bio,omitempty"`
 
@@ -56,6 +65,9 @@ type UpdateUserRequest struct {
 
 // User defines model for User.
 type User struct {
+	// AvatarUrl User avatar URL
+	AvatarUrl *AvatarUrl `json:"avatarUrl,omitempty"`
+
 	// Bio User bio
 	Bio *Bio `json:"bio,omitempty"`
 
