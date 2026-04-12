@@ -218,6 +218,18 @@ func runSeed(ctx context.Context, client *seedClient, cfg seedConfig) (*seedSumm
 		return nil, fmt.Errorf("promote completed deal to discussion: %w", err)
 	}
 
+	completedDealChatID, err := client.waitForDealChat(ctx, clara.Token, completedDealID)
+	if err != nil {
+		return nil, fmt.Errorf("wait for deal chat: %w", err)
+	}
+
+	if err := client.sendChatMessages(ctx, completedDealChatID, []chatMessage{
+		{Token: clara.Token, Content: "Все устраивает?"},
+		{Token: dan.Token, Content: "Да, договорились! Когда и где встретимся?"},
+	}); err != nil {
+		return nil, fmt.Errorf("send chat messages for completed deal: %w", err)
+	}
+
 	if err := client.completeTwoPartyDeal(ctx, completedDealID, clara, dan); err != nil {
 		return nil, fmt.Errorf("complete deal: %w", err)
 	}
