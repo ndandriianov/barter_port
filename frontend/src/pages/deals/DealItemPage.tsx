@@ -20,6 +20,7 @@ import usersApi from "@/features/users/api/usersApi.ts";
 import { useAppDispatch, useAppSelector } from "@/hooks/redux.ts";
 import type { User } from "@/features/users/model/types.ts";
 import type { UpdateDealItemRequest } from "@/features/deals/model/types.ts";
+import UserAvatarLabel from "@/shared/UserAvatarLabel.tsx";
 
 const formatDateTime = (value: string) =>
   new Intl.DateTimeFormat("ru-RU", {
@@ -38,13 +39,14 @@ interface RoleRowProps {
   myId: string | undefined;
   isParticipant: boolean;
   getUserName: (id: string) => string;
+  getUserAvatarUrl: (id: string) => string | undefined;
   onClaim: () => void;
   onRelease: () => void;
   isLoading: boolean;
   canClaim?: boolean;
 }
 
-function RoleRow({ label, userId, myId, isParticipant, getUserName, onClaim, onRelease, isLoading, canClaim = true }: RoleRowProps) {
+function RoleRow({ label, userId, myId, isParticipant, getUserName, getUserAvatarUrl, onClaim, onRelease, isLoading, canClaim = true }: RoleRowProps) {
   const isMe = userId !== undefined && userId === myId;
   const isEmpty = userId === undefined;
 
@@ -53,9 +55,19 @@ function RoleRow({ label, userId, myId, isParticipant, getUserName, onClaim, onR
       <Typography variant="body2" color="text.secondary" sx={{ minWidth: 100 }}>
         {label}:
       </Typography>
-      <Typography variant="body2" fontWeight={isMe ? 600 : 400}>
-        {userId ? getUserName(userId) : "не назначен"}
-      </Typography>
+      {userId ? (
+        <UserAvatarLabel
+          name={getUserName(userId)}
+          avatarUrl={getUserAvatarUrl(userId)}
+          size={26}
+          textVariant="body2"
+          fontWeight={isMe ? 600 : 400}
+        />
+      ) : (
+        <Typography variant="body2" fontWeight={isMe ? 600 : 400}>
+          не назначен
+        </Typography>
+      )}
       {isLoading ? (
         <CircularProgress size={14} />
       ) : isMe ? (
@@ -116,6 +128,7 @@ function DealItemPage() {
   const { data: me } = usersApi.useGetCurrentUserQuery();
 
   const getUserName = (id: string) => usersById[id]?.name?.trim() || "имя не указано";
+  const getUserAvatarUrl = (id: string) => usersById[id]?.avatarUrl;
 
   if (!dealId || !itemId) return <Alert severity="warning">Позиция не найдена</Alert>;
 
@@ -286,7 +299,14 @@ function DealItemPage() {
           {/* Participants */}
           <Box>
             <Typography variant="caption" color="text.secondary">Автор</Typography>
-            <Typography variant="body2">{getUserName(item.authorId)}</Typography>
+            <Box mt={0.5}>
+              <UserAvatarLabel
+                name={getUserName(item.authorId)}
+                avatarUrl={getUserAvatarUrl(item.authorId)}
+                size={30}
+                textVariant="body2"
+              />
+            </Box>
           </Box>
 
           <RoleRow
@@ -295,6 +315,7 @@ function DealItemPage() {
             myId={me?.id}
             isParticipant={isParticipant}
             getUserName={getUserName}
+            getUserAvatarUrl={getUserAvatarUrl}
             onClaim={handleClaim("claimProvider")}
             onRelease={handleRelease("releaseProvider")}
             isLoading={isUpdating}
@@ -307,6 +328,7 @@ function DealItemPage() {
             myId={me?.id}
             isParticipant={isParticipant}
             getUserName={getUserName}
+            getUserAvatarUrl={getUserAvatarUrl}
             onClaim={handleClaim("claimReceiver")}
             onRelease={handleRelease("releaseReceiver")}
             isLoading={isUpdating}
