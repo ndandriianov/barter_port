@@ -15,6 +15,7 @@ type UsersRepository interface {
 	GetUserById(ctx context.Context, id uuid.UUID) (*domain.User, error)
 	UpdateName(ctx context.Context, id uuid.UUID, name string) error
 	UpdateBio(ctx context.Context, id uuid.UUID, bio *string) error
+	UpdateAvatarURL(ctx context.Context, id uuid.UUID, avatarURL *string) error
 	GetNamesForUserIDs(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]*string, error)
 	ListUsers(ctx context.Context) ([]domain.User, error)
 }
@@ -25,6 +26,7 @@ type Me struct {
 	Id        uuid.UUID
 	Name      *string
 	Bio       *string
+	AvatarURL *string
 	Email     string
 	CreatedAt time.Time
 	IsAdmin   bool
@@ -67,6 +69,7 @@ func (s *Service) GetMe(ctx context.Context, id uuid.UUID) (Me, error) {
 		Id:        u.Id,
 		Name:      u.Name,
 		Bio:       u.Bio,
+		AvatarURL: u.AvatarURL,
 		Email:     authMe.GetEmail(),
 		CreatedAt: createdAt,
 		IsAdmin:   authMe.GetIsAdmin(),
@@ -89,6 +92,14 @@ func (s *Service) UpdateBio(ctx context.Context, id uuid.UUID, bio *string) erro
 	return s.repository.UpdateBio(ctx, id, bio)
 }
 
+// UpdateAvatarURL updates the avatar URL of a user. Empty string clears the stored avatar.
+//
+// Errors:
+//   - domain.ErrUserNotFound: Occurs if no user is found with the given id.
+func (s *Service) UpdateAvatarURL(ctx context.Context, id uuid.UUID, avatarURL *string) error {
+	return s.repository.UpdateAvatarURL(ctx, id, normalizeOptionalString(avatarURL))
+}
+
 // GetNamesForUserIDs returns a map of user IDs to their corresponding names.
 //
 // No domain Errors
@@ -109,4 +120,14 @@ func (s *Service) ListUsers(ctx context.Context) ([]domain.User, error) {
 		return nil, fmt.Errorf("repository.ListUsers: %w", err)
 	}
 	return users, nil
+}
+
+func normalizeOptionalString(value *string) *string {
+	if value == nil {
+		return nil
+	}
+	if *value == "" {
+		return nil
+	}
+	return value
 }

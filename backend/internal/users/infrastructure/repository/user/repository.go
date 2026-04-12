@@ -44,7 +44,7 @@ func (r *Repository) AddUser(ctx context.Context, db db.DB, userID uuid.UUID) er
 //   - domain.ErrUserNotFound: Occurs if no user is found with the given id.
 func (r *Repository) GetUserById(ctx context.Context, id uuid.UUID) (*domain.User, error) {
 	query := `
-		SELECT id, name, bio
+		SELECT id, name, bio, avatar_url
 		FROM users
 		WHERE id = $1
 	`
@@ -117,12 +117,34 @@ func (r *Repository) UpdateBio(ctx context.Context, id uuid.UUID, bio *string) e
 	return nil
 }
 
+// UpdateAvatarURL updates the avatar URL of a user.
+//
+// Errors:
+//   - domain.ErrUserNotFound: Occurs if no user is found with the given id.
+func (r *Repository) UpdateAvatarURL(ctx context.Context, id uuid.UUID, avatarURL *string) error {
+	query := `
+		UPDATE users
+		SET avatar_url = $2
+		WHERE id = $1
+	`
+
+	tag, err := r.db.Exec(ctx, query, id, avatarURL)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return domain.ErrUserNotFound
+	}
+
+	return nil
+}
+
 // ListUsers returns all users.
 //
 // No domain Errors
 func (r *Repository) ListUsers(ctx context.Context) ([]domain.User, error) {
 	query := `
-		SELECT id, name, bio
+		SELECT id, name, bio, avatar_url
 		FROM users
 		ORDER BY id
 	`
