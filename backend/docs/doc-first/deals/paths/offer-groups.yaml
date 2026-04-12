@@ -1,4 +1,42 @@
 offerGroups:
+  get:
+    tags:
+      - offer-groups
+    summary: Получить список композитных объявлений
+    description: |
+      Возвращает список `offer_group`.
+
+      Для каждого элемента возвращается полная структура группы:
+
+      - метаданные `offer_group`
+      - список `units`
+      - список `offers` внутри каждого `unit`
+
+      Endpoint является альтернативой `GET /offers` для композитных объявлений
+      и не заменяет существующий список обычных объявлений.
+    operationId: listOfferGroups
+    security:
+      - bearerAuth: [ ]
+    responses:
+      '200':
+        description: Offer groups list
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ListOfferGroupsResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
   post:
     tags:
       - offer-groups
