@@ -33,6 +33,9 @@ local-up:
 	CONFIG_COMMON=./config/common.yaml APP_ENV=local CONFIG_SERVICE=./config/chats.yaml go run ./cmd/chats & \
 	wait
 
+seed-demo:
+	go run ./cmd/seed-demo
+
 create-migration:
 	migrate create -ext sql -dir migrations/$(db) -seq $(name)
 
