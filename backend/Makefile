@@ -44,7 +44,11 @@ db_url = postgres://postgres:$${DB_PASSWORD:-postgres}@localhost:5432/$(1)?sslmo
 define reset_and_migrate
 	@echo "Resetting $(1)..."
 	@sh -c 'set -e; \
-	out=$$(migrate -path migrations/$(2) -database "$(call db_url,$(1))" down 2>&1) || { \
+	latest=$$(find migrations/$(2) -name "*.up.sql" -exec basename {} .up.sql \; | sed "s/_.*//" | sort -n | tail -n 1); \
+	if [ -n "$$latest" ]; then \
+		migrate -path migrations/$(2) -database "$(call db_url,$(1))" force "$$latest" >/dev/null 2>&1 || true; \
+	fi; \
+	out=$$(migrate -path migrations/$(2) -database "$(call db_url,$(1))" down -all 2>&1) || { \
 		case "$$out" in \
 			*"no change"*) ;; \
 			*) printf "%s\n" "$$out"; exit 1 ;; \
