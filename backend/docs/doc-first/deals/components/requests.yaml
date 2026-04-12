@@ -19,13 +19,14 @@ CreateDraftDealRequest:
 CreateOfferGroupRequest:
   type: object
   required:
-    - name
     - units
   properties:
     name:
       type: string
-      description: Название композитного объявления
-      example: Обмен велосипеда на набор услуг
+      description: |
+        Необязательное название композитного объявления.
+        Если не передано, сервер сформирует его автоматически из названий `offers`:
+        внутри `unit` через ` и `, между `unit` через `, `.
     description:
       type: string
       description: Описание сценария обмена для всей группы

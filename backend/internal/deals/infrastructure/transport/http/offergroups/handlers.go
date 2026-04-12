@@ -28,7 +28,7 @@ func NewHandlers(log *slog.Logger, offerGroupsService *offergroupssvc.Service) *
 }
 
 type createOfferGroupRequest struct {
-	Name        string                        `json:"name"`
+	Name        *string                       `json:"name,omitempty"`
 	Description *string                       `json:"description,omitempty"`
 	Units       []createOfferGroupUnitRequest `json:"units"`
 }

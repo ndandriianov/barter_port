@@ -28,13 +28,27 @@ func TestCreateOfferGroupSuccess(t *testing.T) {
 	dumpDealsLogs(t)
 
 	userID := uuid.New()
-	offerA := mustCreateOffer(t, userID)
-	offerB := mustCreateOffer(t, userID)
-	offerC := mustCreateOffer(t, userID)
+	offerA := mustCreateOfferDetails(t, userID, types.CreateOfferRequest{
+		Name:        "Велосипед",
+		Description: "test offer",
+		Type:        types.Good,
+		Action:      types.Give,
+	}).Id
+	offerB := mustCreateOfferDetails(t, userID, types.CreateOfferRequest{
+		Name:        "Шлем",
+		Description: "test offer",
+		Type:        types.Good,
+		Action:      types.Give,
+	}).Id
+	offerC := mustCreateOfferDetails(t, userID, types.CreateOfferRequest{
+		Name:        "Ремонт",
+		Description: "test offer",
+		Type:        types.Service,
+		Action:      types.Give,
+	}).Id
 	description := "group description"
 
 	group := mustCreateOfferGroup(t, userID, map[string]any{
-		"name":        "bundle",
 		"description": description,
 		"units": []map[string]any{
 			{
@@ -52,7 +66,7 @@ func TestCreateOfferGroupSuccess(t *testing.T) {
 	})
 
 	require.NotEqual(t, uuid.Nil, group.Id)
-	require.Equal(t, "bundle", group.Name)
+	require.Equal(t, "Велосипед и Шлем, Ремонт", group.Name)
 	require.NotNil(t, group.Description)
 	require.Equal(t, description, *group.Description)
 	require.Len(t, group.Units, 2)
@@ -66,7 +80,6 @@ func TestListOfferGroupsReturnsCreatedGroup(t *testing.T) {
 
 	userID := uuid.New()
 	group := mustCreateOfferGroup(t, userID, map[string]any{
-		"name": "group-list",
 		"units": []map[string]any{
 			{
 				"offers": []map[string]any{
@@ -103,7 +116,6 @@ func TestCreateOfferGroupWithMixedActionsInUnitReturnsBadRequest(t *testing.T) {
 	offerTake := mustCreateOfferWithAction(t, userID, types.Take)
 
 	req := mustUserRequest(t, http.MethodPost, dealsURL()+"/offer-groups", userID, mustJSONBody(t, map[string]any{
-		"name": "mixed-actions",
 		"units": []map[string]any{
 			{
 				"offers": []map[string]any{
@@ -131,7 +143,6 @@ func TestGetOfferGroupByIDSuccess(t *testing.T) {
 
 	userID := uuid.New()
 	group := mustCreateOfferGroup(t, userID, map[string]any{
-		"name": "group-get",
 		"units": []map[string]any{
 			{
 				"offers": []map[string]any{
@@ -163,7 +174,6 @@ func TestCreateDraftFromOfferGroupSuccess(t *testing.T) {
 	offerC := mustCreateOffer(t, ownerID)
 	responderOffer := mustCreateOfferWithAction(t, responderID, types.Give)
 	group := mustCreateOfferGroup(t, ownerID, map[string]any{
-		"name": "group-draft",
 		"units": []map[string]any{
 			{
 				"offers": []map[string]any{
@@ -221,7 +231,6 @@ func TestCreateDraftFromUniformOfferGroupWithoutResponderOfferReturnsBadRequest(
 	offerA := mustCreateOffer(t, ownerID)
 	offerB := mustCreateOffer(t, ownerID)
 	group := mustCreateOfferGroup(t, ownerID, map[string]any{
-		"name": "group-responder-required",
 		"units": []map[string]any{
 			{
 				"offers": []map[string]any{
@@ -260,7 +269,6 @@ func TestCreateDraftFromMixedActionOfferGroupWithoutResponderOfferReturnsCreated
 	offerGive := mustCreateOfferWithAction(t, ownerID, types.Give)
 	offerTake := mustCreateOfferWithAction(t, ownerID, types.Take)
 	group := mustCreateOfferGroup(t, ownerID, map[string]any{
-		"name": "group-mixed-actions",
 		"units": []map[string]any{
 			{
 				"offers": []map[string]any{
@@ -296,7 +304,6 @@ func TestCreateDraftFromUniformOfferGroupWithDifferentActionResponderOfferReturn
 	offerC := mustCreateOffer(t, ownerID)
 	responderOffer := mustCreateOfferWithAction(t, responderID, types.Take)
 	group := mustCreateOfferGroup(t, ownerID, map[string]any{
-		"name": "group-invalid-responder-action",
 		"units": []map[string]any{
 			{
 				"offers": []map[string]any{
@@ -339,7 +346,6 @@ func TestCreateDraftFromOfferGroupInvalidSelectionReturnsBadRequest(t *testing.T
 	offerC := mustCreateOfferWithAction(t, ownerID, types.Take)
 	responderOffer := mustCreateOfferWithAction(t, responderID, types.Take)
 	group := mustCreateOfferGroup(t, ownerID, map[string]any{
-		"name": "group-invalid-select",
 		"units": []map[string]any{
 			{
 				"offers": []map[string]any{
