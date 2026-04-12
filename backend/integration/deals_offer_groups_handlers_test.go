@@ -161,6 +161,7 @@ func TestCreateDraftFromOfferGroupSuccess(t *testing.T) {
 	offerA := mustCreateOffer(t, ownerID)
 	offerB := mustCreateOffer(t, ownerID)
 	offerC := mustCreateOffer(t, ownerID)
+	responderOffer := mustCreateOfferWithAction(t, responderID, types.Give)
 	group := mustCreateOfferGroup(t, ownerID, map[string]any{
 		"name": "group-draft",
 		"units": []map[string]any{
@@ -180,6 +181,7 @@ func TestCreateDraftFromOfferGroupSuccess(t *testing.T) {
 
 	req := mustUserRequest(t, http.MethodPost, dealsURL()+"/offer-groups/"+group.Id.String()+"/drafts", responderID, mustJSONBody(t, map[string]any{
 		"selectedOfferIds": []string{offerB.String(), offerC.String()},
+		"responderOfferId": responderOffer.String(),
 	}))
 	req.Header.Set("Content-Type", "application/json")
 
@@ -199,7 +201,7 @@ func TestCreateDraftFromOfferGroupSuccess(t *testing.T) {
 	var draft types.Draft
 	require.NoError(t, json.NewDecoder(draftResp.Body).Decode(&draft))
 	require.Equal(t, responderID, draft.AuthorId)
-	require.Len(t, draft.Offers, 2)
+	require.Len(t, draft.Offers, 3)
 
 	got := map[uuid.UUID]int{}
 	for _, offer := range draft.Offers {
@@ -207,9 +209,83 @@ func TestCreateDraftFromOfferGroupSuccess(t *testing.T) {
 	}
 	require.Equal(t, 1, got[offerB])
 	require.Equal(t, 1, got[offerC])
+	require.Equal(t, 1, got[responderOffer])
 }
 
-func TestCreateDraftFromOfferGroupInvalidSelectionReturnsBadRequest(t *testing.T) {
+func TestCreateDraftFromUniformOfferGroupWithoutResponderOfferReturnsBadRequest(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	ownerID := uuid.New()
+	responderID := uuid.New()
+	offerA := mustCreateOffer(t, ownerID)
+	offerB := mustCreateOffer(t, ownerID)
+	group := mustCreateOfferGroup(t, ownerID, map[string]any{
+		"name": "group-responder-required",
+		"units": []map[string]any{
+			{
+				"offers": []map[string]any{
+					{"offerId": offerA.String()},
+				},
+			},
+			{
+				"offers": []map[string]any{
+					{"offerId": offerB.String()},
+				},
+			},
+		},
+	})
+
+	req := mustUserRequest(t, http.MethodPost, dealsURL()+"/offer-groups/"+group.Id.String()+"/drafts", responderID, mustJSONBody(t, map[string]any{
+		"selectedOfferIds": []string{offerA.String(), offerB.String()},
+	}))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	var apiErr types.ErrorResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&apiErr))
+	require.NotNil(t, apiErr.Message)
+	require.Equal(t, domain.ErrOfferGroupResponderOfferRequired.Error(), *apiErr.Message)
+}
+
+func TestCreateDraftFromMixedActionOfferGroupWithoutResponderOfferReturnsCreated(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	ownerID := uuid.New()
+	responderID := uuid.New()
+	offerGive := mustCreateOfferWithAction(t, ownerID, types.Give)
+	offerTake := mustCreateOfferWithAction(t, ownerID, types.Take)
+	group := mustCreateOfferGroup(t, ownerID, map[string]any{
+		"name": "group-mixed-actions",
+		"units": []map[string]any{
+			{
+				"offers": []map[string]any{
+					{"offerId": offerGive.String()},
+				},
+			},
+			{
+				"offers": []map[string]any{
+					{"offerId": offerTake.String()},
+				},
+			},
+		},
+	})
+
+	req := mustUserRequest(t, http.MethodPost, dealsURL()+"/offer-groups/"+group.Id.String()+"/drafts", responderID, mustJSONBody(t, map[string]any{
+		"selectedOfferIds": []string{offerGive.String(), offerTake.String()},
+	}))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusCreated, resp.StatusCode)
+}
+
+func TestCreateDraftFromUniformOfferGroupWithDifferentActionResponderOfferReturnsBadRequest(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)
 
@@ -218,6 +294,50 @@ func TestCreateDraftFromOfferGroupInvalidSelectionReturnsBadRequest(t *testing.T
 	offerA := mustCreateOffer(t, ownerID)
 	offerB := mustCreateOffer(t, ownerID)
 	offerC := mustCreateOffer(t, ownerID)
+	responderOffer := mustCreateOfferWithAction(t, responderID, types.Take)
+	group := mustCreateOfferGroup(t, ownerID, map[string]any{
+		"name": "group-invalid-responder-action",
+		"units": []map[string]any{
+			{
+				"offers": []map[string]any{
+					{"offerId": offerA.String()},
+					{"offerId": offerB.String()},
+				},
+			},
+			{
+				"offers": []map[string]any{
+					{"offerId": offerC.String()},
+				},
+			},
+		},
+	})
+
+	req := mustUserRequest(t, http.MethodPost, dealsURL()+"/offer-groups/"+group.Id.String()+"/drafts", responderID, mustJSONBody(t, map[string]any{
+		"selectedOfferIds": []string{offerA.String(), offerC.String()},
+		"responderOfferId": responderOffer.String(),
+	}))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	var apiErr types.ErrorResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&apiErr))
+	require.NotNil(t, apiErr.Message)
+	require.Equal(t, domain.ErrOfferGroupResponderOfferAction.Error(), *apiErr.Message)
+}
+
+func TestCreateDraftFromOfferGroupInvalidSelectionReturnsBadRequest(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	ownerID := uuid.New()
+	responderID := uuid.New()
+	offerA := mustCreateOfferWithAction(t, ownerID, types.Give)
+	offerB := mustCreateOfferWithAction(t, ownerID, types.Give)
+	offerC := mustCreateOfferWithAction(t, ownerID, types.Take)
+	responderOffer := mustCreateOfferWithAction(t, responderID, types.Take)
 	group := mustCreateOfferGroup(t, ownerID, map[string]any{
 		"name": "group-invalid-select",
 		"units": []map[string]any{
@@ -237,6 +357,7 @@ func TestCreateDraftFromOfferGroupInvalidSelectionReturnsBadRequest(t *testing.T
 
 	req := mustUserRequest(t, http.MethodPost, dealsURL()+"/offer-groups/"+group.Id.String()+"/drafts", responderID, mustJSONBody(t, map[string]any{
 		"selectedOfferIds": []string{offerA.String(), offerB.String()},
+		"responderOfferId": responderOffer.String(),
 	}))
 	req.Header.Set("Content-Type", "application/json")
 

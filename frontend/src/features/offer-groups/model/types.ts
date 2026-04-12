@@ -25,6 +25,7 @@ export interface CreateOfferGroupRequest {
 
 export interface CreateOfferGroupDraftRequest {
   selectedOfferIds: string[];
+  responderOfferId?: string;
   name?: string;
   description?: string;
 }

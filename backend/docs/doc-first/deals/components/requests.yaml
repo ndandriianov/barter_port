@@ -56,6 +56,19 @@ CreateOfferGroupDraftRequest:
       items:
         type: string
         format: uuid
+    responderOfferId:
+      type: string
+      format: uuid
+      description: |
+        Необязательный `offer` пользователя, который откликается на группу.
+        Сервер также добавляет его в `draft deal` с `quantity = 1`.
+
+        Правила:
+
+        - если во всех `unit` группы одинаковый `action`, поле обязательно
+        - в этом случае `responderOfferId` должен ссылаться на `offer` текущего пользователя
+          с тем же `action`
+        - если в группе встречаются разные `action`, поле можно не передавать
     name:
       type: string
       description: |
