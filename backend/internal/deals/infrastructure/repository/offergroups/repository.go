@@ -97,7 +97,8 @@ func (r *Repository) listOfferGroups(
 			o.action,
 			o.description,
 			o.created_at,
-			o.views
+			o.views,
+			COALESCE((SELECT array_agg(op.url ORDER BY op.url) FROM offer_photos op WHERE op.offer_id = o.id), '{}') AS photo_urls
 		FROM offer_groups og
 		LEFT JOIN offer_group_units ogu ON ogu.offer_group_id = og.id
 		LEFT JOIN unit_offers uo ON uo.unit_id = ogu.id
@@ -136,6 +137,7 @@ func (r *Repository) listOfferGroups(
 			offerDescription *string
 			offerCreatedAt   *time.Time
 			offerViews       *int
+			offerPhotoUrls   []string
 		)
 
 		if err = rows.Scan(
@@ -151,6 +153,7 @@ func (r *Repository) listOfferGroups(
 			&offerDescription,
 			&offerCreatedAt,
 			&offerViews,
+			&offerPhotoUrls,
 		); err != nil {
 			return nil, fmt.Errorf("scan offer group row: %w", err)
 		}
@@ -195,6 +198,7 @@ func (r *Repository) listOfferGroups(
 			Description: *offerDescription,
 			CreatedAt:   *offerCreatedAt,
 			Views:       *offerViews,
+			PhotoUrls:   offerPhotoUrls,
 		})
 	}
 

@@ -2052,7 +2052,7 @@ paths:
       requestBody:
         required: true
         content:
-          application/json:
+          multipart/form-data:
             schema:
               $ref: '#/components/schemas/CreateOfferRequest'
       responses:
@@ -2239,6 +2239,255 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /offer-groups:
+    get:
+      tags:
+        - offer-groups
+      summary: Получить список композитных объявлений
+      description: |
+        Возвращает список `offer_group`.
+
+        Для каждого элемента возвращается полная структура группы:
+
+        - метаданные `offer_group`
+        - список `units`
+        - список `offers` внутри каждого `unit`
+
+        Endpoint является альтернативой `GET /offers` для композитных объявлений
+        и не заменяет существующий список обычных объявлений.
+      operationId: listOfferGroups
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Offer groups list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListOfferGroupsResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - offer-groups
+      summary: Создать композитное объявление
+      description: |
+        Создает `offer_group` как альтернативу обычному объявлению.
+
+        Если `name` не передано, название группы генерируется сервером автоматически
+        из названий `offers`:
+
+        - внутри одного `unit` названия соединяются через ` и `
+        - между `unit` названия соединяются через `, `
+
+        Группа объявлений состоит из `units`, объединенных по логике `AND`.
+        Внутри каждого `unit` объявления объединены по логике `OR`.
+
+        Пример:
+
+        - `unit A`: `offer-1 OR offer-2`
+        - `unit B`: `offer-3`
+
+        Итоговое имя будет: `offer-1 и offer-2, offer-3`
+
+        Это означает, что при отклике пользователь должен выбрать ровно одно объявление из каждого `unit`.
+
+        В группу можно включать только существующие объявления текущего пользователя.
+        Внутри одного `unit` разрешены только объявления с одинаковым `action`.
+      operationId: createOfferGroup
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOfferGroupRequest'
+      responses:
+        '201':
+          description: Offer group created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfferGroup'
+        '400':
+          description: Invalid request body or mixed `action` values inside one unit
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Один или несколько указанных объявлений принадлежат другому пользователю
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Один или несколько указанных объявлений не найдены
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /offer-groups/{offerGroupId}:
+    get:
+      tags:
+        - offer-groups
+      summary: Получить композитное объявление по ID
+      description: |
+        Возвращает структуру `offer_group` целиком:
+
+        - метаданные группы
+        - список `units`
+        - список `offers` внутри каждого `unit`
+
+        Этот endpoint нужен клиенту, чтобы пользователь мог выбрать конкретный `offer`
+        из каждой OR-группы перед созданием `draft deal`.
+      operationId: getOfferGroupById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: offerGroupId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfferGroup'
+        '400':
+          description: Invalid offer group ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Offer group not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /offer-groups/{offerGroupId}/drafts:
+    post:
+      tags:
+        - offer-groups
+      summary: Создать черновик сделки по композитному объявлению
+      description: |
+        Создает обычный `draft deal` на основании `offer_group`.
+
+        Пользователь передает список `selectedOfferIds` и должен выбрать:
+
+        - ровно один `offer` из каждого `unit`
+        - только `offer`, которые входят в указанный `offer_group`
+
+        Дополнительно пользователь может передать `responderOfferId`:
+
+        - если у всех `unit` в группе одинаковый `action`, `responderOfferId` обязателен
+        - в этом случае `responderOfferId` должен принадлежать текущему пользователю
+          и иметь тот же `action`
+        - если в группе есть разные `action`, `responderOfferId` опционален
+
+        Каждый выбранный `offer` и `responderOfferId` попадает в `draft deal` с `quantity = 1`.
+
+        После успешной валидации сервер формирует обычный `draft deal`,
+        после чего продолжает работать существующая логика подтверждения,
+        отмены и превращения черновика в `deal`.
+
+        Этот endpoint является альтернативой прямому созданию черновика через `/deals/drafts`.
+      operationId: createDraftDealFromOfferGroup
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: offerGroupId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOfferGroupDraftRequest'
+      responses:
+        '201':
+          description: Draft deal created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateDraftDealResponse'
+        '400':
+          description: |
+            Invalid selection or invalid responder offer.
+            The request must contain exactly one selected offer per unit, and `responderOfferId`
+            must satisfy the group action rules.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: '`responderOfferId` does not belong to the current user'
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Offer group or selected offers not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
   securitySchemes:
     bearerAuth:
@@ -2371,6 +2620,12 @@ components:
           format: date-time
           description: Item creation timestamp
           example: '2026-03-04T12:00:00Z'
+        photoUrls:
+          type: array
+          description: Публичные URL фотографий объявления
+          items:
+            type: string
+            format: uri
     OfferInfo:
       type: object
       required:
@@ -3101,10 +3356,134 @@ components:
           $ref: '#/components/schemas/ItemType'
         action:
           $ref: '#/components/schemas/OfferAction'
+        photos:
+          type: array
+          description: |
+            Необязательные фотографии объявления.
+            Каждая фотография передается отдельным бинарным файлом в `multipart/form-data`.
+          items:
+            type: string
+            format: binary
     GetOfferReviewsResponse:
       type: array
       items:
         $ref: '#/components/schemas/Review'
+    OfferGroupUnit:
+      type: object
+      required:
+        - id
+        - offers
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор OR-группы
+        offers:
+          type: array
+          minItems: 1
+          description: Набор альтернативных объявлений внутри OR-группы
+          items:
+            $ref: '#/components/schemas/Offer'
+    OfferGroup:
+      type: object
+      required:
+        - id
+        - name
+        - units
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор композитного объявления
+        name:
+          type: string
+          description: Название композитного объявления
+        description:
+          type: string
+          description: Описание композитного объявления
+        units:
+          type: array
+          description: |
+            Набор обязательных AND-групп.
+            Для отклика должен быть выбран один `offer` из каждого `unit`.
+          items:
+            $ref: '#/components/schemas/OfferGroupUnit'
+    ListOfferGroupsResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/OfferGroup'
+    OfferGroupUnitInput:
+      type: object
+      required:
+        - offers
+      properties:
+        offers:
+          type: array
+          minItems: 1
+          description: |
+            Список существующих `offerId`, которые образуют OR-группу.
+            Все объявления должны принадлежать текущему пользователю.
+          items:
+            $ref: '#/components/schemas/OfferRef'
+    CreateOfferGroupRequest:
+      type: object
+      required:
+        - units
+      properties:
+        name:
+          type: string
+          description: |
+            Необязательное название композитного объявления.
+            Если не передано, сервер сформирует его автоматически из названий `offers`:
+            внутри `unit` через ` и `, между `unit` через `, `.
+        description:
+          type: string
+          description: Описание сценария обмена для всей группы
+        units:
+          type: array
+          minItems: 1
+          description: |
+            Список AND-групп. Для каждой группы при отклике должен быть выбран ровно один `offer`.
+            Внутри одного `unit` все `offers` должны иметь одинаковый `action`.
+          items:
+            $ref: '#/components/schemas/OfferGroupUnitInput'
+    CreateOfferGroupDraftRequest:
+      type: object
+      required:
+        - selectedOfferIds
+      properties:
+        selectedOfferIds:
+          type: array
+          minItems: 1
+          uniqueItems: true
+          description: |
+            Список выбранных `offerId`.
+            Должен содержать ровно по одному `offer` из каждого `unit` указанной группы.
+            Для каждого выбранного `offer` сервер создаёт запись в `draft deal` с `quantity = 1`.
+          items:
+            type: string
+            format: uuid
+        responderOfferId:
+          type: string
+          format: uuid
+          description: |
+            Необязательный `offer` пользователя, который откликается на группу.
+            Сервер также добавляет его в `draft deal` с `quantity = 1`.
+
+            Правила:
+
+            - если во всех `unit` группы одинаковый `action`, поле обязательно
+            - в этом случае `responderOfferId` должен ссылаться на `offer` текущего пользователя
+              с тем же `action`
+            - если в группе встречаются разные `action`, поле можно не передавать
+        name:
+          type: string
+          description: |
+            Необязательное имя черновой сделки.
+            Если не передано, сервер может сгенерировать его автоматически по существующим правилам.
+        description:
+          type: string
+          description: Необязательное описание черновой сделки.
   parameters:
     SortType:
       name: sort

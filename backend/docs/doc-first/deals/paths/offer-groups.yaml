@@ -233,7 +233,7 @@ offerGroupDrafts:
             schema:
               $ref: '../components/responses.yaml#/ErrorResponse'
       '403':
-        description: `responderOfferId` does not belong to the current user
+        description: "`responderOfferId` does not belong to the current user"
         content:
           application/json:
             schema:
