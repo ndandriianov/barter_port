@@ -57,6 +57,15 @@ type Config struct {
 		Password string `mapstructure:"password"`
 	} `mapstructure:"admin"`
 
+	Storage struct {
+		Endpoint        string `mapstructure:"endpoint"`
+		PublicBaseURL   string `mapstructure:"public_base_url"`
+		AvatarBucket    string `mapstructure:"avatar_bucket"`
+		AccessKeyID     string `mapstructure:"access_key_id"`
+		SecretAccessKey string `mapstructure:"secret_access_key"`
+		Region          string `mapstructure:"region"`
+	} `mapstructure:"storage"`
+
 	Port                int    `mapstructure:"port"`
 	AuthGRPCAddr        string `mapstructure:"auth_grpc_addr"`
 	AuthGRPCListenAddr  string `mapstructure:"auth_grpc_listen_addr"`
@@ -115,6 +124,12 @@ func LoadConfig(options ConfigOptions) (Config, error) {
 	bindEnv(v, "mailer.bypass")
 	bindEnv(v, "admin.email")
 	bindEnv(v, "admin.password")
+	bindEnv(v, "storage.endpoint")
+	bindEnv(v, "storage.public_base_url")
+	bindEnv(v, "storage.avatar_bucket")
+	bindEnv(v, "storage.access_key_id")
+	bindEnv(v, "storage.secret_access_key")
+	bindEnv(v, "storage.region")
 
 	// десериализация в структуру
 	var config Config

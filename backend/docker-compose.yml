@@ -1,3 +1,8 @@
+x-s3-credentials: &s3_credentials
+  S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-barter-port-s3}
+  S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-barter-port-s3-secret}
+  S3_REGION: ${S3_REGION:-us-east-1}
+
 services:
   smtp4dev:
     image: rnwood/smtp4dev:latest
@@ -81,12 +86,23 @@ services:
     image: chrislusf/seaweedfs:4.06
     container_name: barter-port-seaweedfs
     restart: unless-stopped
-    command: server -s3
+    environment:
+      <<: *s3_credentials
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - >
+        sed
+        -e "s|__S3_ACCESS_KEY_ID__|$${S3_ACCESS_KEY_ID}|g"
+        -e "s|__S3_SECRET_ACCESS_KEY__|$${S3_SECRET_ACCESS_KEY}|g"
+        /etc/seaweedfs/s3-config.json > /tmp/s3-config.json &&
+        exec weed server -s3 -s3.config=/tmp/s3-config.json
     ports:
       - "8333:8333"
       - "8888:8888"
       - "9333:9333"
     volumes:
+      - ./config/seaweedfs-s3.json:/etc/seaweedfs/s3-config.json:ro
       - seaweed_data:/data
 
   caddy-infra:
@@ -173,6 +189,10 @@ services:
       APP_ENV: docker
       CONFIG_COMMON: /app/config/common.yaml
       CONFIG_SERVICE: /app/config/users.yaml
+      <<: *s3_credentials
+      STORAGE_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-barter-port-s3}
+      STORAGE_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-barter-port-s3-secret}
+      STORAGE_REGION: ${S3_REGION:-us-east-1}
     volumes:
       - ./config:/app/config:ro
 

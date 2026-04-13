@@ -12,3 +12,7 @@ export const meSchema = userSchema.extend({
   createdAt: z.string(),
   isAdmin: z.boolean(),
 });
+
+export const userAvatarUploadSchema = z.object({
+  avatarUrl: z.string(),
+});

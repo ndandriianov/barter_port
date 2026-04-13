@@ -9,3 +9,7 @@ export interface UpdateCurrentUserRequest {
   bio?: string;
   avatarUrl?: string;
 }
+
+export interface UploadCurrentUserAvatarResponse {
+  avatarUrl: string;
+}
