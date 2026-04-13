@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	openapitypes "github.com/oapi-codegen/runtime/types"
 )
 
 type Item struct {
@@ -19,9 +20,26 @@ type Item struct {
 	Type        enums.ItemType
 	UpdatedAt   *time.Time
 	Quantity    int
+	PhotoIDs    []uuid.UUID
+	PhotoURLs   []string
 }
 
 func (i *Item) ToDTO() types.Item {
+	var photoIDs *[]openapitypes.UUID
+	if len(i.PhotoIDs) > 0 {
+		copied := make([]openapitypes.UUID, 0, len(i.PhotoIDs))
+		for _, id := range i.PhotoIDs {
+			copied = append(copied, id)
+		}
+		photoIDs = &copied
+	}
+
+	var photoURLs *[]string
+	if len(i.PhotoURLs) > 0 {
+		copied := append([]string(nil), i.PhotoURLs...)
+		photoURLs = &copied
+	}
+
 	return types.Item{
 		Id:          i.ID,
 		OfferId:     i.OfferID,
@@ -33,5 +51,7 @@ func (i *Item) ToDTO() types.Item {
 		Type:        types.ItemType(i.Type.String()),
 		UpdatedAt:   i.UpdatedAt,
 		Quantity:    i.Quantity,
+		PhotoIds:    photoIDs,
+		PhotoUrls:   photoURLs,
 	}
 }

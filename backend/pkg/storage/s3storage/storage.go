@@ -117,6 +117,32 @@ func (s *Storage) ReplaceObject(ctx context.Context, key string, contentType str
 	return nil
 }
 
+func (s *Storage) CopyObject(ctx context.Context, sourceKey string, destinationKey string) error {
+	if err := s.ensureBucket(ctx); err != nil {
+		return err
+	}
+
+	_, err := s.client.CopyObject(ctx, &s3.CopyObjectInput{
+		Bucket:     aws.String(s.bucket),
+		CopySource: aws.String(s.bucket + "/" + sourceKey),
+		Key:        aws.String(destinationKey),
+	})
+	if err != nil {
+		return fmt.Errorf("copy object: %w", err)
+	}
+
+	return nil
+}
+
+func (s *Storage) CopyManagedObject(ctx context.Context, rawURL string, destinationKey string) error {
+	sourceKey, ok := s.ObjectKeyFromManagedURL(rawURL)
+	if !ok {
+		return fmt.Errorf("managed object url is invalid")
+	}
+
+	return s.CopyObject(ctx, sourceKey, destinationKey)
+}
+
 func (s *Storage) DeleteObject(ctx context.Context, key string) error {
 	_, err := s.client.DeleteObject(ctx, &s3.DeleteObjectInput{
 		Bucket: aws.String(s.bucket),

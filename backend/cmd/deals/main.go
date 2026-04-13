@@ -16,6 +16,7 @@ import (
 	offergroupsrepo "barter-port/internal/deals/infrastructure/repository/offergroups"
 	offersr "barter-port/internal/deals/infrastructure/repository/offers"
 	reviewsrepo "barter-port/internal/deals/infrastructure/repository/reviews"
+	itemphotostorage "barter-port/internal/deals/infrastructure/storage/itemphoto"
 	offerphotostorage "barter-port/internal/deals/infrastructure/storage/offerphoto"
 	transportgrpc "barter-port/internal/deals/infrastructure/transport/grpc"
 	transporthttp "barter-port/internal/deals/infrastructure/transport/http"
@@ -73,6 +74,17 @@ func main() {
 	if err != nil {
 		log.Fatal("failed to initialize offer photo storage:", err)
 	}
+	itemPhotoStorage, err := itemphotostorage.NewStorage(itemphotostorage.Config{
+		Endpoint:        cfg.Storage.Endpoint,
+		PublicBaseURL:   cfg.Storage.PublicBaseURL,
+		Bucket:          cfg.Storage.OfferPhotoBucket,
+		AccessKeyID:     cfg.Storage.AccessKeyID,
+		SecretAccessKey: cfg.Storage.SecretAccessKey,
+		Region:          cfg.Storage.Region,
+	})
+	if err != nil {
+		log.Fatal("failed to initialize item photo storage:", err)
+	}
 
 	authClient, authConn, err := app.InitAuthGRPCClient(cfg)
 	if err != nil {
@@ -101,7 +113,7 @@ func main() {
 	joinsRepo := joins.NewRepository()
 	offerGroupsRepo := offergroupsrepo.NewRepository(db)
 	reviewsRepo := reviewsrepo.NewRepository(dealsRepo)
-	dealsService := dealssvc.NewService(db, draftsRepo, dealsRepo, failuresRepo, joinsRepo, offersRepo).
+	dealsService := dealssvc.NewService(db, draftsRepo, dealsRepo, failuresRepo, joinsRepo, offersRepo, itemPhotoStorage).
 		WithAdminChecker(authkit.NewAdminChecker(authClient)).
 		WithLogger(logg)
 	if chatsClient != nil {
