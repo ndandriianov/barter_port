@@ -145,3 +145,103 @@ offerById:
           application/json:
             schema:
               $ref: '../components/responses.yaml#/ErrorResponse'
+  patch:
+    tags:
+      - offers
+    summary: Update offer
+    description: Updates an existing offer. Only the author can edit it.
+    operationId: updateOfferById
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - name: offerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/requests.yaml#/UpdateOfferRequest'
+    responses:
+      '200':
+        description: Updated offer
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/Offer'
+      '400':
+        description: Invalid request body
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: Forbidden
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Offer not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+  delete:
+    tags:
+      - offers
+    summary: Delete offer
+    description: Deletes an existing offer. Only the author can delete it.
+    operationId: deleteOfferById
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - name: offerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '204':
+        description: Offer deleted
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: Forbidden
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Offer not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
