@@ -36,6 +36,7 @@ interface OfferCardProps {
   draftCount?: number;
   offerHref?: string;
   draftsHref?: string;
+  onPhotoClick?: (photoUrl: string) => void;
 }
 
 function OfferCard({
@@ -44,6 +45,7 @@ function OfferCard({
   draftCount = 0,
   offerHref,
   draftsHref,
+  onPhotoClick,
 }: OfferCardProps) {
   const authorName = offer.authorName?.trim() || "Имя не указано";
   const { data: author } = usersApi.useGetUserByIdQuery(offer.authorId);
@@ -58,7 +60,14 @@ function OfferCard({
           component="img"
           image={offer.photoUrls[0]}
           alt={offer.name}
-          sx={{ height: 220, objectFit: "cover", borderBottom: 1, borderColor: "divider" }}
+          onClick={onPhotoClick ? () => onPhotoClick(offer.photoUrls[0]) : undefined}
+          sx={{
+            height: 220,
+            objectFit: "cover",
+            borderBottom: 1,
+            borderColor: "divider",
+            cursor: onPhotoClick ? "zoom-in" : "default",
+          }}
         />
       )}
       <CardContent sx={{ flexGrow: 1 }}>
