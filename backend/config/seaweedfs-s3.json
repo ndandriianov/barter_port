@@ -1,6 +1,12 @@
 {
   "identities": [
     {
+      "name": "anonymous",
+      "actions": [
+        "Read:avatars"
+      ]
+    },
+    {
       "name": "barter-port-admin",
       "credentials": [
         {
