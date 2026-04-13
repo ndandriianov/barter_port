@@ -25,26 +25,27 @@ func NewStorage(cfg Config) (*Storage, error) {
 }
 
 func (s *Storage) UploadAvatar(ctx context.Context, userID uuid.UUID, contentType string, content []byte) (string, error) {
-	key := s.objectKey(userID)
+	key := s.objectKey(userID, uuid.NewString())
 	if err := s.storage.PutObject(ctx, key, contentType, content); err != nil {
 		return "", fmt.Errorf("put avatar object: %w", err)
 	}
 
-	return s.ManagedAvatarURL(userID), nil
+	return s.storage.ManagedObjectURL(key), nil
 }
 
-func (s *Storage) DeleteAvatar(ctx context.Context, userID uuid.UUID) error {
-	if err := s.storage.DeleteObject(ctx, s.objectKey(userID)); err != nil {
+func (s *Storage) DeleteAvatar(ctx context.Context, avatarURL string) error {
+	if err := s.storage.DeleteManagedObject(ctx, avatarURL); err != nil {
 		return fmt.Errorf("delete avatar object: %w", err)
 	}
 
 	return nil
 }
 
-func (s *Storage) ManagedAvatarURL(userID uuid.UUID) string {
-	return s.storage.ManagedObjectURL(s.objectKey(userID))
+func (s *Storage) IsManagedAvatarURL(avatarURL string) bool {
+	_, ok := s.storage.ObjectKeyFromManagedURL(avatarURL)
+	return ok
 }
 
-func (s *Storage) objectKey(userID uuid.UUID) string {
-	return "user-" + userID.String() + "/avatar"
+func (s *Storage) objectKey(userID uuid.UUID, objectID string) string {
+	return "user-" + userID.String() + "/avatar-" + objectID
 }
