@@ -8,7 +8,11 @@ import {
   CardContent,
   Chip,
   CircularProgress,
+  Dialog,
+  DialogContent,
   Divider,
+  ImageList,
+  ImageListItem,
   IconButton,
   TextField,
   Tooltip,
@@ -103,6 +107,7 @@ function DealItemPage() {
     description: string;
     quantity: string;
   } | null>(null);
+  const [openedPhotoUrl, setOpenedPhotoUrl] = useState<string | null>(null);
 
   const userIds = useMemo(() => {
     if (!item) return [];
@@ -207,6 +212,51 @@ function DealItemPage() {
 
       <Card variant="outlined">
         <CardContent sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+
+          {item.photoUrls.length > 0 && (
+            <Box
+              component="img"
+              src={item.photoUrls[0]}
+              alt={item.name}
+              onClick={() => setOpenedPhotoUrl(item.photoUrls[0])}
+              sx={{
+                width: "100%",
+                height: 280,
+                objectFit: "cover",
+                borderRadius: 2,
+                border: 1,
+                borderColor: "divider",
+                cursor: "zoom-in",
+              }}
+            />
+          )}
+
+          {item.photoUrls.length > 1 && (
+            <Box>
+              <Typography variant="h6" fontWeight={600} mb={1.5}>
+                Ещё фото
+              </Typography>
+              <ImageList cols={2} gap={12} sx={{ m: 0 }}>
+                {item.photoUrls.slice(1).map((photoUrl) => (
+                  <ImageListItem key={photoUrl} sx={{ borderRadius: 2, overflow: "hidden" }}>
+                    <Box
+                      component="img"
+                      src={photoUrl}
+                      alt={item.name}
+                      onClick={() => setOpenedPhotoUrl(photoUrl)}
+                      sx={{
+                        width: "100%",
+                        height: 220,
+                        objectFit: "cover",
+                        display: "block",
+                        cursor: "zoom-in",
+                      }}
+                    />
+                  </ImageListItem>
+                ))}
+              </ImageList>
+            </Box>
+          )}
 
           {/* Name */}
           {isEditing ? (
@@ -347,6 +397,29 @@ function DealItemPage() {
           )}
         </CardContent>
       </Card>
+
+      <Dialog
+        open={openedPhotoUrl !== null}
+        onClose={() => setOpenedPhotoUrl(null)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogContent sx={{ p: 1.5, bgcolor: "common.black" }}>
+          {openedPhotoUrl && (
+            <Box
+              component="img"
+              src={openedPhotoUrl}
+              alt={item.name}
+              sx={{
+                width: "100%",
+                maxHeight: "85vh",
+                objectFit: "contain",
+                display: "block",
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }

@@ -67,6 +67,8 @@ export const itemSchema = z.object({
   providerId: z.string().optional(),
   receiverId: z.string().optional(),
   name: z.string(),
+  photoIds: z.array(z.string()).nullish().transform((value) => value ?? []),
+  photoUrls: z.array(z.string()).nullish().transform((value) => value ?? []),
   description: z.string(),
   type: itemTypeSchema,
   updatedAt: z.string().optional(),
