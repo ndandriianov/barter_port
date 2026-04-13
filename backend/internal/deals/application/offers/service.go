@@ -5,23 +5,41 @@ import (
 	"barter-port/internal/deals/domain"
 	"barter-port/internal/deals/domain/enums"
 	offersrep "barter-port/internal/deals/infrastructure/repository/offers"
+	"barter-port/pkg/db"
 	"barter-port/pkg/logger"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/net/context"
 )
 
+var ErrOfferPhotoStorageNotConfigured = errors.New("offer photo storage is not configured")
+
+type PhotoUpload struct {
+	ContentType string
+	Content     []byte
+}
+
+type PhotoStorage interface {
+	UploadPhoto(ctx context.Context, offerID uuid.UUID, index int, contentType string, content []byte) (string, error)
+	DeletePhoto(ctx context.Context, offerID uuid.UUID, index int) error
+}
+
 type Service struct {
+	db             *pgxpool.Pool
 	repo           *offersrep.Repository
+	photoStorage   PhotoStorage
 	usersClient    userspb.UsersServiceClient
 	fallbackLogger *slog.Logger
 }
 
-func NewService(offerRepository *offersrep.Repository, usersClient userspb.UsersServiceClient, fallbackLogger *slog.Logger) *Service {
-	return &Service{repo: offerRepository, usersClient: usersClient, fallbackLogger: fallbackLogger}
+func NewService(dbPool *pgxpool.Pool, offerRepository *offersrep.Repository, usersClient userspb.UsersServiceClient, photoStorage PhotoStorage, fallbackLogger *slog.Logger) *Service {
+	return &Service{db: dbPool, repo: offerRepository, photoStorage: photoStorage, usersClient: usersClient, fallbackLogger: fallbackLogger}
 }
 
 func (s *Service) CreateOffer(
@@ -31,10 +49,18 @@ func (s *Service) CreateOffer(
 	itemType enums.ItemType,
 	action enums.OfferAction,
 	description string,
+	photos []PhotoUpload,
 ) (*domain.Offer, error) {
 	if name == "" {
 		return nil, domain.ErrInvalidOfferName
 	}
+	if len(photos) > 0 && s.photoStorage == nil {
+		return nil, ErrOfferPhotoStorageNotConfigured
+	}
+
+	log := logger.LogFrom(ctx, s.fallbackLogger).With(
+		slog.String("user_id", userID.String()),
+	)
 
 	item := domain.Offer{
 		ID:          uuid.New(),
@@ -47,9 +73,42 @@ func (s *Service) CreateOffer(
 		Views:       0,
 	}
 
-	err := s.repo.AddOffer(ctx, item)
+	photoURLs := make([]string, 0, len(photos))
+	for i, photo := range photos {
+		photoURL, err := s.photoStorage.UploadPhoto(ctx, item.ID, i, photo.ContentType, photo.Content)
+		if err != nil {
+			s.cleanupUploadedPhotos(ctx, item.ID, i)
+			return nil, err
+		}
+		log.Debug(
+			"offer photo uploaded successfully",
+			slog.String("offer_id", item.ID.String()),
+			slog.Int("photo_index", i),
+			slog.String("content_type", photo.ContentType),
+			slog.Int("size_bytes", len(photo.Content)),
+			slog.String("photo_url", photoURL),
+		)
+		photoURLs = append(photoURLs, photoURL)
+	}
+	item.PhotoUrls = photoURLs
+
+	err := db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
+		if err := s.repo.AddOffer(ctx, tx, item); err != nil {
+			return err
+		}
+		return s.repo.AddOfferPhotos(ctx, tx, item.ID, photoURLs)
+	})
 	if err != nil {
+		s.cleanupUploadedPhotos(ctx, item.ID, len(photoURLs))
 		return nil, err
+	}
+
+	if len(photoURLs) > 0 {
+		log.Debug(
+			"offer with photos created successfully",
+			slog.String("offer_id", item.ID.String()),
+			slog.Int("photo_count", len(photoURLs)),
+		)
 	}
 
 	return &item, nil
@@ -157,5 +216,15 @@ func (s *Service) GetOfferByID(ctx context.Context, id uuid.UUID) (*domain.Offer
 	return offer, nil
 }
 
-// TODO: hide
-// TODO: unhide
+func (s *Service) cleanupUploadedPhotos(ctx context.Context, offerID uuid.UUID, count int) {
+	if s.photoStorage == nil || count == 0 {
+		return
+	}
+
+	log := logger.LogFrom(ctx, s.fallbackLogger).With(slog.String("offer_id", offerID.String()))
+	for i := 0; i < count; i++ {
+		if err := s.photoStorage.DeletePhoto(ctx, offerID, i); err != nil {
+			log.Warn("failed to cleanup uploaded offer photo", slog.Int("photo_index", i), slog.Any("error", err))
+		}
+	}
+}

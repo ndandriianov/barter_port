@@ -1,7 +1,12 @@
 import {createApi} from "@reduxjs/toolkit/query/react";
 import {baseQueryWithReauth} from "@/shared/api/baseApi.ts";
-import {meSchema, userSchema} from "@/features/users/model/schemas.ts";
-import type {Me, UpdateCurrentUserRequest, User} from "@/features/users/model/types.ts";
+import {meSchema, userAvatarUploadSchema, userSchema} from "@/features/users/model/schemas.ts";
+import type {
+  Me,
+  UpdateCurrentUserRequest,
+  UploadCurrentUserAvatarResponse,
+  User
+} from "@/features/users/model/types.ts";
 
 const usersApi = createApi({
   reducerPath: "usersApi",
@@ -24,6 +29,15 @@ const usersApi = createApi({
       invalidatesTags: ["CurrentUser"],
     }),
 
+    uploadCurrentUserAvatar: builder.mutation<UploadCurrentUserAvatarResponse, FormData>({
+      query: (body) => ({
+        url: "/users/me/avatar",
+        method: "POST",
+        body,
+      }),
+      transformResponse: (response: unknown) => userAvatarUploadSchema.parse(response),
+    }),
+
     getUserById: builder.query<User, string>({
       query: (id) => `/users/${id}`,
       transformResponse: (response: unknown) => userSchema.parse(response),
@@ -33,4 +47,3 @@ const usersApi = createApi({
 });
 
 export default usersApi;
-

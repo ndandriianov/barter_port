@@ -40,6 +40,62 @@ OfferWithInfo:
     - $ref: '#/Offer'
     - $ref: '#/OfferInfo'
 
+OfferGroup:
+  type: object
+  required:
+    - id
+    - name
+    - units
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор композитного объявления
+    name:
+      type: string
+      description: Название композитного объявления
+    description:
+      type: string
+      description: Описание композитного объявления
+    units:
+      type: array
+      description: |
+        Набор обязательных AND-групп.
+        Для отклика должен быть выбран один `offer` из каждого `unit`.
+      items:
+        $ref: '#/OfferGroupUnit'
+
+OfferGroupUnit:
+  type: object
+  required:
+    - id
+    - offers
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор OR-группы
+    offers:
+      type: array
+      minItems: 1
+      description: Набор альтернативных объявлений внутри OR-группы
+      items:
+        $ref: '#/Offer'
+
+OfferGroupUnitInput:
+  type: object
+  required:
+    - offers
+  properties:
+    offers:
+      type: array
+      minItems: 1
+      description: |
+        Список существующих `offerId`, которые образуют OR-группу.
+        Все объявления должны принадлежать текущему пользователю.
+      items:
+        $ref: '#/OfferRef'
+
 OfferIDAndQuantity:
   type: object
   required:
@@ -116,6 +172,12 @@ Offer:
       format: date-time
       description: Item creation timestamp
       example: '2026-03-04T12:00:00Z'
+    photoUrls:
+      type: array
+      description: Публичные URL фотографий объявления
+      items:
+        type: string
+        format: uri
 
 
 ItemType:

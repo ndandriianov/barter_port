@@ -1,6 +1,7 @@
 import { Link as RouterLink, useSearchParams } from "react-router-dom";
-import { Box, Button, ButtonGroup, Paper, Typography } from "@mui/material";
+import { Box, Button, ButtonGroup, Paper, Stack, Typography } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
+import LayersOutlinedIcon from "@mui/icons-material/LayersOutlined";
 import OffersListWidget from "@/widgets/offers/OffersListWidget.tsx";
 
 type OffersTab = "others" | "mine";
@@ -50,6 +51,16 @@ function OffersListPage() {
         >
           Создать
         </Button>
+        <Stack direction="row" spacing={1}>
+          <Button
+            variant="outlined"
+            startIcon={<LayersOutlinedIcon />}
+            component={RouterLink}
+            to="/offer-groups"
+          >
+            Композитные
+          </Button>
+        </Stack>
       </Box>
 
       <Paper variant="outlined" sx={{ p: 1, mb: 3 }}>

@@ -13,6 +13,15 @@ const (
 	BearerAuthScopes = "bearerAuth.Scopes"
 )
 
+// AvatarUploadResponse defines model for AvatarUploadResponse.
+type AvatarUploadResponse struct {
+	// AvatarUrl User avatar URL
+	AvatarUrl AvatarUrl `json:"avatarUrl"`
+}
+
+// AvatarUrl User avatar URL
+type AvatarUrl = string
+
 // Bio User bio
 type Bio = string
 
@@ -23,6 +32,9 @@ type ErrorResponse struct {
 
 // Me defines model for Me.
 type Me struct {
+	// AvatarUrl User avatar URL
+	AvatarUrl *AvatarUrl `json:"avatarUrl,omitempty"`
+
 	// Bio User bio
 	Bio *Bio `json:"bio,omitempty"`
 
@@ -47,6 +59,9 @@ type Name = string
 
 // UpdateUserRequest defines model for UpdateUserRequest.
 type UpdateUserRequest struct {
+	// AvatarUrl User avatar URL
+	AvatarUrl *AvatarUrl `json:"avatarUrl,omitempty"`
+
 	// Bio User bio
 	Bio *Bio `json:"bio,omitempty"`
 
@@ -56,6 +71,9 @@ type UpdateUserRequest struct {
 
 // User defines model for User.
 type User struct {
+	// AvatarUrl User avatar URL
+	AvatarUrl *AvatarUrl `json:"avatarUrl,omitempty"`
+
 	// Bio User bio
 	Bio *Bio `json:"bio,omitempty"`
 
@@ -72,5 +90,13 @@ type UserId = openapi_types.UUID
 // Id defines model for Id.
 type Id = openapi_types.UUID
 
+// UploadCurrentUserAvatarMultipartBody defines parameters for UploadCurrentUserAvatar.
+type UploadCurrentUserAvatarMultipartBody struct {
+	File openapi_types.File `json:"file"`
+}
+
 // UpdateCurrentUserJSONRequestBody defines body for UpdateCurrentUser for application/json ContentType.
 type UpdateCurrentUserJSONRequestBody = UpdateUserRequest
+
+// UploadCurrentUserAvatarMultipartRequestBody defines body for UploadCurrentUserAvatar for multipart/form-data ContentType.
+type UploadCurrentUserAvatarMultipartRequestBody UploadCurrentUserAvatarMultipartBody

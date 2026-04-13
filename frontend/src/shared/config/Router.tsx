@@ -9,6 +9,9 @@ import ProfilePage from "@/pages/profile/ProfilePage";
 import CreateOfferPage from "@/pages/offers/CreateOfferPage";
 import OffersListPage from "@/pages/offers/OffersListPage";
 import OfferPage from "@/pages/offers/OfferPage";
+import OfferGroupsListPage from "@/pages/offer-groups/OfferGroupsListPage.tsx";
+import CreateOfferGroupPage from "@/pages/offer-groups/CreateOfferGroupPage.tsx";
+import OfferGroupPage from "@/pages/offer-groups/OfferGroupPage.tsx";
 import DealsListPage from "@/pages/deals/DealsListPage";
 import DealPage from "@/pages/deals/DealPage";
 import DraftsListPage from "@/pages/deals/DraftsListPage";
@@ -36,6 +39,9 @@ function AppRouter() {
           <Route path="/offers/create" element={<CreateOfferPage />} />
           <Route path="/offers/:offerId" element={<OfferPage />} />
           <Route path="/offers/:offerId/reviews" element={<OfferReviewsPage />} />
+          <Route path="/offer-groups" element={<OfferGroupsListPage />} />
+          <Route path="/offer-groups/create" element={<CreateOfferGroupPage />} />
+          <Route path="/offer-groups/:offerGroupId" element={<OfferGroupPage />} />
           <Route path="/deals" element={<DealsListPage />} />
           <Route path="/deals/:dealId" element={<DealPage />} />
           <Route path="/deals/:dealId/items/:itemId" element={<DealItemPage />} />

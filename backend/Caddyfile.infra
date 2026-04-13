@@ -48,6 +48,12 @@
 	    reverse_proxy host.docker.internal:8083
 	}
 
+	# SeaweedFS S3 — публичный доступ к файлам (аватарам) с клиента
+	handle /s3/* {
+		uri strip_prefix /s3
+		reverse_proxy seaweedfs:8333
+	}
+
 	handle /auth/* {
 		reverse_proxy host.docker.internal:8081
 	}

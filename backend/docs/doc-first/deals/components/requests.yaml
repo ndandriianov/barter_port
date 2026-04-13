@@ -16,6 +16,71 @@ CreateDraftDealRequest:
 
 
 
+CreateOfferGroupRequest:
+  type: object
+  required:
+    - units
+  properties:
+    name:
+      type: string
+      description: |
+        Необязательное название композитного объявления.
+        Если не передано, сервер сформирует его автоматически из названий `offers`:
+        внутри `unit` через ` и `, между `unit` через `, `.
+    description:
+      type: string
+      description: Описание сценария обмена для всей группы
+    units:
+      type: array
+      minItems: 1
+      description: |
+        Список AND-групп. Для каждой группы при отклике должен быть выбран ровно один `offer`.
+        Внутри одного `unit` все `offers` должны иметь одинаковый `action`.
+      items:
+        $ref: 'schemas.yaml#/OfferGroupUnitInput'
+
+
+
+CreateOfferGroupDraftRequest:
+  type: object
+  required:
+    - selectedOfferIds
+  properties:
+    selectedOfferIds:
+      type: array
+      minItems: 1
+      uniqueItems: true
+      description: |
+        Список выбранных `offerId`.
+        Должен содержать ровно по одному `offer` из каждого `unit` указанной группы.
+        Для каждого выбранного `offer` сервер создаёт запись в `draft deal` с `quantity = 1`.
+      items:
+        type: string
+        format: uuid
+    responderOfferId:
+      type: string
+      format: uuid
+      description: |
+        Необязательный `offer` пользователя, который откликается на группу.
+        Сервер также добавляет его в `draft deal` с `quantity = 1`.
+
+        Правила:
+
+        - если во всех `unit` группы одинаковый `action`, поле обязательно
+        - в этом случае `responderOfferId` должен ссылаться на `offer` текущего пользователя
+          с тем же `action`
+        - если в группе встречаются разные `action`, поле можно не передавать
+    name:
+      type: string
+      description: |
+        Необязательное имя черновой сделки.
+        Если не передано, сервер может сгенерировать его автоматически по существующим правилам.
+    description:
+      type: string
+      description: Необязательное описание черновой сделки.
+
+
+
 UpdateDealRequest:
   type: object
   required:
@@ -45,6 +110,14 @@ CreateOfferRequest:
       $ref: 'schemas.yaml#/ItemType'
     action:
       $ref: 'schemas.yaml#/OfferAction'
+    photos:
+      type: array
+      description: |
+        Необязательные фотографии объявления.
+        Каждая фотография передается отдельным бинарным файлом в `multipart/form-data`.
+      items:
+        type: string
+        format: binary
 
 
 

@@ -80,6 +80,61 @@ paths:
               schema:
                 $ref: './components/errors.yaml#/ErrorResponse'
 
+  /users/me/avatar:
+    post:
+      tags:
+        - users, me
+      summary: Загрузить аватар текущего пользователя
+      description: |
+        Принимает файл изображения, загружает его в S3-совместимое хранилище
+        и возвращает публичный URL, который затем можно сохранить в профиле.
+      operationId: uploadCurrentUserAvatar
+      security:
+        - bearerAuth: [ ]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - file
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        '200':
+          description: Публичный URL загруженного аватара
+          content:
+            application/json:
+              schema:
+                $ref: './components/responses.yaml#/UploadAvatarResponse'
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: './components/errors.yaml#/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: './components/errors.yaml#/ErrorResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: './components/errors.yaml#/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: './components/errors.yaml#/ErrorResponse'
+
 
   /users/{id}:
     get:

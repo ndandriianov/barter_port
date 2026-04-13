@@ -2,26 +2,34 @@ package offers
 
 import (
 	"barter-port/contracts/openapi/deals/types"
-	"barter-port/internal/deals/application/offers"
+	offersapp "barter-port/internal/deals/application/offers"
 	"barter-port/internal/deals/domain"
 	enums "barter-port/internal/deals/domain/enums"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/httpx"
 	"barter-port/pkg/logger"
 	"errors"
+	"io"
 	"log/slog"
+	"mime/multipart"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
 
+const (
+	maxOfferPhotoUploadSize = 5 * 1024 * 1024
+	maxOfferPhotoCount      = 10
+)
+
 type Handlers struct {
-	offerService *offers.Service
+	offerService *offersapp.Service
 }
 
-func NewHandlers(offerService *offers.Service) *Handlers {
+func NewHandlers(offerService *offersapp.Service) *Handlers {
 	return &Handlers{offerService: offerService}
 }
 
@@ -33,11 +41,21 @@ func (h *Handlers) HandleCreateOffer(w http.ResponseWriter, r *http.Request) {
 	log := logger.LogFrom(r.Context(), slog.Default())
 	log.Info("handling create offer request")
 
-	var req types.CreateOfferRequest
-	if err := httpx.DecodeJSON(r, &req); err != nil {
-		log.Error("error decoding request", slog.Any("error", err))
-		httpx.WriteError(w, http.StatusBadRequest, httpx.ErrCannotDecodeRequestBody)
+	userID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		log.Error("failed to get userID from context")
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
 		return
+	}
+
+	req, photos, err := decodeCreateOfferRequest(w, r)
+	if err != nil {
+		log.Error("error decoding request", slog.Any("error", err))
+		httpx.WriteErrorStr(w, http.StatusBadRequest, err.Error())
+		return
+	}
+	if r.MultipartForm != nil {
+		defer func() { _ = r.MultipartForm.RemoveAll() }()
 	}
 
 	log = log.With(slog.Any("request", req))
@@ -57,18 +75,16 @@ func (h *Handlers) HandleCreateOffer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	userID, ok := authkit.UserIDFromContext(r.Context())
-	if !ok {
-		log.Error("failed to get userID from context")
-		httpx.WriteEmptyError(w, http.StatusInternalServerError)
-		return
-	}
-
-	offer, err := h.offerService.CreateOffer(r.Context(), userID, req.Name, itemType, action, req.Description)
+	offer, err := h.offerService.CreateOffer(r.Context(), userID, req.Name, itemType, action, req.Description, photos)
 	if err != nil {
 		if errors.Is(err, domain.ErrInvalidOfferName) {
 			log.Warn("invalid offer name", slog.Any("error", err))
 			httpx.WriteError(w, http.StatusBadRequest, domain.ErrInvalidOfferName)
+			return
+		}
+		if errors.Is(err, offersapp.ErrOfferPhotoStorageNotConfigured) {
+			log.Error("offer photo storage is not configured", slog.Any("error", err))
+			httpx.WriteEmptyError(w, http.StatusInternalServerError)
 			return
 		}
 		log.Error("failed to create offer", slog.Any("error", err))
@@ -76,7 +92,90 @@ func (h *Handlers) HandleCreateOffer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Debug(
+		"offer created successfully",
+		slog.String("offer_id", offer.ID.String()),
+		slog.Int("photo_count", len(offer.PhotoUrls)),
+	)
+
 	httpx.WriteJSON(w, http.StatusCreated, offer.ToDto())
+}
+
+func decodeCreateOfferRequest(w http.ResponseWriter, r *http.Request) (types.CreateOfferRequest, []offersapp.PhotoUpload, error) {
+	if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
+		return decodeCreateOfferMultipartRequest(w, r)
+	}
+
+	var req types.CreateOfferRequest
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return types.CreateOfferRequest{}, nil, httpx.ErrCannotDecodeRequestBody
+	}
+
+	return req, nil, nil
+}
+
+func decodeCreateOfferMultipartRequest(w http.ResponseWriter, r *http.Request) (types.CreateOfferRequest, []offersapp.PhotoUpload, error) {
+	maxBodySize := int64(maxOfferPhotoCount*maxOfferPhotoUploadSize + (1 << 20))
+	r.Body = http.MaxBytesReader(w, r.Body, maxBodySize)
+	if err := r.ParseMultipartForm(maxBodySize); err != nil {
+		return types.CreateOfferRequest{}, nil, errors.New("invalid offer upload")
+	}
+
+	req := types.CreateOfferRequest{
+		Name:        r.FormValue("name"),
+		Description: r.FormValue("description"),
+		Type:        types.ItemType(r.FormValue("type")),
+		Action:      types.OfferAction(r.FormValue("action")),
+	}
+
+	fileHeaders := r.MultipartForm.File["photos"]
+	if len(fileHeaders) > maxOfferPhotoCount {
+		return types.CreateOfferRequest{}, nil, errors.New("too many offer photos")
+	}
+
+	photos := make([]offersapp.PhotoUpload, 0, len(fileHeaders))
+	for _, fileHeader := range fileHeaders {
+		file, err := fileHeader.Open()
+		if err != nil {
+			return types.CreateOfferRequest{}, nil, errors.New("failed to read offer photo")
+		}
+
+		content, contentType, readErr := readOfferPhotoUpload(file)
+		closeErr := file.Close()
+		if readErr != nil {
+			return types.CreateOfferRequest{}, nil, readErr
+		}
+		if closeErr != nil {
+			return types.CreateOfferRequest{}, nil, errors.New("failed to close offer photo")
+		}
+
+		photos = append(photos, offersapp.PhotoUpload{
+			ContentType: contentType,
+			Content:     content,
+		})
+	}
+
+	return req, photos, nil
+}
+
+func readOfferPhotoUpload(file multipart.File) ([]byte, string, error) {
+	content, err := io.ReadAll(io.LimitReader(file, maxOfferPhotoUploadSize+1))
+	if err != nil {
+		return nil, "", errors.New("failed to read offer photo")
+	}
+	if len(content) == 0 {
+		return nil, "", errors.New("offer photo is empty")
+	}
+	if len(content) > maxOfferPhotoUploadSize {
+		return nil, "", errors.New("offer photo exceeds 5 MB")
+	}
+
+	contentType := http.DetectContentType(content)
+	if !strings.HasPrefix(contentType, "image/") {
+		return nil, "", errors.New("offer photo must be an image")
+	}
+
+	return content, contentType, nil
 }
 
 // ================================================================================

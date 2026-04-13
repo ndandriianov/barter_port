@@ -96,6 +96,7 @@ func TestUsersGetMe(t *testing.T) {
 	require.Equal(t, registered.Email, string(me.Email))
 	require.Nil(t, me.Name)
 	require.Nil(t, me.Bio)
+	require.Nil(t, me.AvatarUrl)
 	require.False(t, me.CreatedAt.IsZero())
 }
 
@@ -108,7 +109,7 @@ func TestUsersUpdateMeAndGetUser(t *testing.T) {
 	waitForUsersProjection(t, fixture, registered.UserID)
 
 	accessToken := mustAccessToken(t, registered.UserID)
-	updateBody := []byte(`{"name":"Nick","bio":"barter enthusiast"}`)
+	updateBody := []byte(`{"name":"Nick","bio":"barter enthusiast","avatarUrl":"http://localhost:8333/avatars/user-1/avatar.jpg"}`)
 
 	req, err := http.NewRequest(http.MethodPatch, fixture.UsersURL+"/users/me", bytes.NewReader(updateBody))
 	require.NoError(t, err)
@@ -129,6 +130,8 @@ func TestUsersUpdateMeAndGetUser(t *testing.T) {
 	require.Equal(t, "Nick", string(*me.Name))
 	require.NotNil(t, me.Bio)
 	require.Equal(t, "barter enthusiast", string(*me.Bio))
+	require.NotNil(t, me.AvatarUrl)
+	require.Equal(t, "http://localhost:8333/avatars/user-1/avatar.jpg", string(*me.AvatarUrl))
 
 	getReq, err := http.NewRequest(http.MethodGet, fixture.UsersURL+"/users/"+registered.UserID.String(), nil)
 	require.NoError(t, err)
@@ -149,6 +152,54 @@ func TestUsersUpdateMeAndGetUser(t *testing.T) {
 	require.Equal(t, "Nick", string(*user.Name))
 	require.NotNil(t, user.Bio)
 	require.Equal(t, "barter enthusiast", string(*user.Bio))
+	require.NotNil(t, user.AvatarUrl)
+	require.Equal(t, "http://localhost:8333/avatars/user-1/avatar.jpg", string(*user.AvatarUrl))
+}
+
+func TestUsersUpdateAvatarOnlyAndClear(t *testing.T) {
+	t.Parallel()
+
+	fixture := globalFixture
+
+	registered := registerAuthUser(t, fixture)
+	waitForUsersProjection(t, fixture, registered.UserID)
+
+	accessToken := mustAccessToken(t, registered.UserID)
+
+	setReq, err := http.NewRequest(http.MethodPatch, fixture.UsersURL+"/users/me", bytes.NewReader([]byte(`{"avatarUrl":"http://localhost:8333/avatars/user-2/avatar.png"}`)))
+	require.NoError(t, err)
+	setReq.Header.Set("Authorization", "Bearer "+accessToken)
+	setReq.Header.Set("Content-Type", "application/json")
+
+	setResp, err := http.DefaultClient.Do(setReq)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_ = setResp.Body.Close()
+	})
+
+	require.Equal(t, http.StatusOK, setResp.StatusCode)
+
+	var afterSet usertypes.Me
+	require.NoError(t, json.NewDecoder(setResp.Body).Decode(&afterSet))
+	require.NotNil(t, afterSet.AvatarUrl)
+	require.Equal(t, "http://localhost:8333/avatars/user-2/avatar.png", string(*afterSet.AvatarUrl))
+
+	clearReq, err := http.NewRequest(http.MethodPatch, fixture.UsersURL+"/users/me", bytes.NewReader([]byte(`{"avatarUrl":""}`)))
+	require.NoError(t, err)
+	clearReq.Header.Set("Authorization", "Bearer "+accessToken)
+	clearReq.Header.Set("Content-Type", "application/json")
+
+	clearResp, err := http.DefaultClient.Do(clearReq)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_ = clearResp.Body.Close()
+	})
+
+	require.Equal(t, http.StatusOK, clearResp.StatusCode)
+
+	var afterClear usertypes.Me
+	require.NoError(t, json.NewDecoder(clearResp.Body).Decode(&afterClear))
+	require.Nil(t, afterClear.AvatarUrl)
 }
 
 func TestUsersUpdateMeRejectsEmptyPayload(t *testing.T) {

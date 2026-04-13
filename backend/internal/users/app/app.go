@@ -7,6 +7,7 @@ import (
 	ucinbox "barter-port/internal/users/infrastructure/repository/uc-inbox"
 	ucroutbox "barter-port/internal/users/infrastructure/repository/uc-result-outbox"
 	"barter-port/internal/users/infrastructure/repository/user"
+	avatarstorage "barter-port/internal/users/infrastructure/storage/avatar"
 	"barter-port/pkg/bootstrap"
 	"barter-port/pkg/logger"
 	"context"
@@ -61,11 +62,22 @@ func NewApp(cfg bootstrap.Config) (*App, error) {
 	app.inboxRepository = ucinbox.NewRepository()
 	app.outboxRepository = ucroutbox.NewRepository()
 	userRepo := user.NewRepository(app.db)
+	avatarStorage, err := avatarstorage.NewStorage(avatarstorage.Config{
+		Endpoint:        cfg.Storage.Endpoint,
+		PublicBaseURL:   cfg.Storage.PublicBaseURL,
+		Bucket:          cfg.Storage.AvatarBucket,
+		AccessKeyID:     cfg.Storage.AccessKeyID,
+		SecretAccessKey: cfg.Storage.SecretAccessKey,
+		Region:          cfg.Storage.Region,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize avatar storage: %w", err)
+	}
 	authClient, err := app.initAuthGRPCClient(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize auth grpc client: %w", err)
 	}
-	userService := userservice.NewService(userRepo, authClient)
+	userService := userservice.NewService(userRepo, authClient, avatarStorage)
 
 	// Kafka
 	app.inboxProcessor = ucinboxP.NewProcessor(

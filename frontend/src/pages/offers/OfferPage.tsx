@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
-import { Alert, Box, Button, CircularProgress, Divider, Typography } from "@mui/material";
+import { Alert, Box, Button, CircularProgress, Divider, ImageList, ImageListItem, Typography } from "@mui/material";
 import offersApi from "@/features/offers/api/offersApi";
 import usersApi from "@/features/users/api/usersApi";
 import useDraftOfferCounts from "@/features/deals/model/useDraftOfferCounts.ts";
@@ -64,6 +64,26 @@ function OfferPage() {
             : undefined
         }
       />
+
+      {offer.photoUrls.length > 1 && (
+        <Box mt={3}>
+          <Typography variant="h6" fontWeight={600} mb={1.5}>
+            Ещё фото
+          </Typography>
+          <ImageList cols={2} gap={12} sx={{ m: 0 }}>
+            {offer.photoUrls.slice(1).map((photoUrl) => (
+              <ImageListItem key={photoUrl} sx={{ borderRadius: 2, overflow: "hidden" }}>
+                <Box
+                  component="img"
+                  src={photoUrl}
+                  alt={offer.name}
+                  sx={{ width: "100%", height: 240, objectFit: "cover", display: "block" }}
+                />
+              </ImageListItem>
+            ))}
+          </ImageList>
+        </Box>
+      )}
 
       <Divider sx={{ my: 3 }} />
 

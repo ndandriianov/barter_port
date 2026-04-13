@@ -13,6 +13,7 @@ type Offer struct {
 	AuthorId    uuid.UUID         `db:"author_id"`
 	AuthorName  *string           `db:"-"`
 	Name        string            `db:"name"`
+	PhotoUrls   []string          `db:"photo_urls"`
 	Type        enums.ItemType    `db:"type"`
 	Action      enums.OfferAction `db:"action"`
 	Description string            `db:"description"`
@@ -22,11 +23,18 @@ type Offer struct {
 }
 
 func (i *Offer) ToDto() types.Offer {
+	var photoURLs *[]string
+	if len(i.PhotoUrls) > 0 {
+		copied := append([]string(nil), i.PhotoUrls...)
+		photoURLs = &copied
+	}
+
 	return types.Offer{
 		Id:          i.ID,
 		AuthorId:    i.AuthorId,
 		AuthorName:  i.AuthorName,
 		Name:        i.Name,
+		PhotoUrls:   photoURLs,
 		Type:        types.ItemType(i.Type.String()),
 		Action:      types.OfferAction(i.Action.String()),
 		Description: i.Description,
@@ -36,6 +44,12 @@ func (i *Offer) ToDto() types.Offer {
 }
 
 func (i *Offer) ToDTOWithInfo(info OfferInfo) types.OfferWithInfo {
+	var photoURLs *[]string
+	if len(i.PhotoUrls) > 0 {
+		copied := append([]string(nil), i.PhotoUrls...)
+		photoURLs = &copied
+	}
+
 	return types.OfferWithInfo{
 		Action:      types.OfferAction(i.Action.String()),
 		AuthorId:    i.AuthorId,
@@ -44,6 +58,7 @@ func (i *Offer) ToDTOWithInfo(info OfferInfo) types.OfferWithInfo {
 		Description: i.Description,
 		Id:          i.ID,
 		Name:        i.Name,
+		PhotoUrls:   photoURLs,
 		Quantity:    info.Quantity,
 		Type:        types.ItemType(i.Type.String()),
 		Views:       int64(i.Views),
