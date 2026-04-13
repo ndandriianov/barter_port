@@ -25,8 +25,8 @@ var ErrAvatarStorageNotConfigured = errors.New("avatar storage is not configured
 
 type AvatarStorage interface {
 	UploadAvatar(ctx context.Context, userID uuid.UUID, contentType string, content []byte) (string, error)
-	DeleteAvatar(ctx context.Context, userID uuid.UUID) error
-	ManagedAvatarURL(userID uuid.UUID) string
+	DeleteAvatar(ctx context.Context, avatarURL string) error
+	IsManagedAvatarURL(avatarURL string) bool
 }
 
 type Me struct {
@@ -120,9 +120,9 @@ func (s *Service) UpdateAvatarURL(ctx context.Context, id uuid.UUID, avatarURL *
 		return nil
 	}
 
-	managedAvatarURL := s.avatarStorage.ManagedAvatarURL(id)
-	if *currentUser.AvatarURL == managedAvatarURL && (normalizedAvatarURL == nil || *normalizedAvatarURL != managedAvatarURL) {
-		_ = s.avatarStorage.DeleteAvatar(ctx, id)
+	if s.avatarStorage.IsManagedAvatarURL(*currentUser.AvatarURL) &&
+		(normalizedAvatarURL == nil || *normalizedAvatarURL != *currentUser.AvatarURL) {
+		_ = s.avatarStorage.DeleteAvatar(ctx, *currentUser.AvatarURL)
 	}
 
 	return nil

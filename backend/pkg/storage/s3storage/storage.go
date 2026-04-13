@@ -5,7 +5,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
+	"net/url"
 	"strings"
+	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	awsconfig "github.com/aws/aws-sdk-go-v2/config"
@@ -60,9 +63,13 @@ func NewStorage(cfg Config) (*Storage, error) {
 		context.Background(),
 		awsconfig.WithRegion(region),
 		awsconfig.WithCredentialsProvider(credentials.NewStaticCredentialsProvider(accessKeyID, secretAccessKey, "")),
+		awsconfig.WithRetryMaxAttempts(1),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("load aws config: %w", err)
+	}
+	awsCfg.HTTPClient = &http.Client{
+		Timeout: 15 * time.Second,
 	}
 
 	client := s3.NewFromConfig(awsCfg, func(o *s3.Options) {
@@ -98,6 +105,18 @@ func (s *Storage) PutObject(ctx context.Context, key string, contentType string,
 	return nil
 }
 
+func (s *Storage) ReplaceObject(ctx context.Context, key string, contentType string, content []byte) error {
+	if err := s.DeleteObject(ctx, key); err != nil {
+		return err
+	}
+
+	if err := s.PutObject(ctx, key, contentType, content); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (s *Storage) DeleteObject(ctx context.Context, key string) error {
 	_, err := s.client.DeleteObject(ctx, &s3.DeleteObjectInput{
 		Bucket: aws.String(s.bucket),
@@ -115,8 +134,55 @@ func (s *Storage) DeleteObject(ctx context.Context, key string) error {
 	return fmt.Errorf("delete object: %w", err)
 }
 
+func (s *Storage) DeleteManagedObject(ctx context.Context, rawURL string) error {
+	key, ok := s.ObjectKeyFromManagedURL(rawURL)
+	if !ok {
+		return nil
+	}
+
+	return s.DeleteObject(ctx, key)
+}
+
 func (s *Storage) ManagedObjectURL(key string) string {
 	return s.publicBaseURL + "/" + s.bucket + "/" + key
+}
+
+func (s *Storage) ObjectKeyFromManagedURL(rawURL string) (string, bool) {
+	if strings.TrimSpace(rawURL) == "" {
+		return "", false
+	}
+
+	parsedURL, err := url.Parse(rawURL)
+	if err != nil {
+		return "", false
+	}
+
+	managedBaseURL, err := url.Parse(s.publicBaseURL)
+	if err != nil {
+		return "", false
+	}
+
+	if !sameOrigin(managedBaseURL, parsedURL) {
+		return "", false
+	}
+
+	managedBasePath := strings.Trim(managedBaseURL.EscapedPath(), "/")
+	managedObjectPrefix := s.bucket + "/"
+	if managedBasePath != "" {
+		managedObjectPrefix = managedBasePath + "/" + managedObjectPrefix
+	}
+
+	path := strings.Trim(parsedURL.EscapedPath(), "/")
+	if !strings.HasPrefix(path, managedObjectPrefix) {
+		return "", false
+	}
+
+	key := strings.TrimPrefix(path, managedObjectPrefix)
+	if key == "" {
+		return "", false
+	}
+
+	return key, true
 }
 
 func (s *Storage) ensureBucket(ctx context.Context) error {
@@ -133,4 +199,8 @@ func (s *Storage) ensureBucket(ctx context.Context) error {
 	}
 
 	return fmt.Errorf("create bucket: %w", err)
+}
+
+func sameOrigin(a *url.URL, b *url.URL) bool {
+	return strings.EqualFold(a.Scheme, b.Scheme) && strings.EqualFold(a.Host, b.Host)
 }

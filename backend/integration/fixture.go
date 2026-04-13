@@ -486,7 +486,7 @@ func launchSeaweed(ctx context.Context, net *testcontainers.DockerNetwork) (test
 		Entrypoint: []string{"/bin/sh"},
 		Cmd: []string{
 			"-c",
-			`sed -e "s|__S3_ACCESS_KEY_ID__|${S3_ACCESS_KEY_ID}|g" -e "s|__S3_SECRET_ACCESS_KEY__|${S3_SECRET_ACCESS_KEY}|g" /etc/seaweedfs/s3-config.json > /tmp/s3-config.json && exec weed server -filer -filer.allowedOrigins="*" -s3 -s3.config=/tmp/s3-config.json`,
+			`sed -e "s|__S3_ACCESS_KEY_ID__|${S3_ACCESS_KEY_ID}|g" -e "s|__S3_SECRET_ACCESS_KEY__|${S3_SECRET_ACCESS_KEY}|g" /etc/seaweedfs/s3-config.json > /tmp/s3-config.json && exec weed server -dir=/data -volume.max=5 -master.volumeSizeLimitMB=128 -filer -filer.allowedOrigins="*" -s3 -s3.config=/tmp/s3-config.json`,
 		},
 		Files: []testcontainers.ContainerFile{
 			{
