@@ -11,8 +11,7 @@ CREATE TABLE offers
     views       INTEGER     NOT NULL DEFAULT 0,
 
     CONSTRAINT offers_type_check CHECK (type IN ('good', 'service')),
-    CONSTRAINT offers_action_check CHECK (action IN ('give', 'take')
-        )
+    CONSTRAINT offers_action_check CHECK (action IN ('give', 'take'))
 );
 
 CREATE TABLE offer_groups
