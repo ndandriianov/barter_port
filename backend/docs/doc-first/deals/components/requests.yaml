@@ -110,6 +110,14 @@ CreateOfferRequest:
       $ref: 'schemas.yaml#/ItemType'
     action:
       $ref: 'schemas.yaml#/OfferAction'
+    photos:
+      type: array
+      description: |
+        Необязательные фотографии объявления.
+        Каждая фотография передается отдельным бинарным файлом в `multipart/form-data`.
+      items:
+        type: string
+        format: binary
 
 
 
