@@ -28,6 +28,29 @@ func TestCreateOfferSuccess(t *testing.T) {
 	require.Equal(t, "City bike in good condition", offer.Description)
 	require.Equal(t, types.Good, offer.Type)
 	require.Equal(t, types.Give, offer.Action)
+	require.Nil(t, offer.PhotoUrls)
+}
+
+func TestCreateOfferMultipartWithPhotosSuccess(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	offer := mustCreateOfferMultipartDetails(t, userID, types.CreateOfferRequest{
+		Name:        "Vintage bike",
+		Description: "City bike in good condition",
+		Type:        types.Good,
+		Action:      types.Give,
+	}, [][]byte{tinyPNG, tinyPNG})
+
+	require.Equal(t, userID, offer.AuthorId)
+	require.NotNil(t, offer.PhotoUrls)
+	require.Len(t, *offer.PhotoUrls, 2)
+	require.Contains(t, (*offer.PhotoUrls)[0], "/offer-photos/offer-"+offer.Id.String()+"/photo-0")
+	require.Contains(t, (*offer.PhotoUrls)[1], "/offer-photos/offer-"+offer.Id.String()+"/photo-1")
+
+	fetched := mustGetOfferByID(t, userID, offer.Id)
+	require.Equal(t, offer.PhotoUrls, fetched.PhotoUrls)
 }
 
 func TestCreateOfferUnauthorized(t *testing.T) {

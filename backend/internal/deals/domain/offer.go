@@ -23,12 +23,17 @@ type Offer struct {
 }
 
 func (i *Offer) ToDto() types.Offer {
+	var photoURLs *[]string
+	if i.PhotoUrls != nil {
+		photoURLs = &i.PhotoUrls
+	}
+
 	return types.Offer{
 		Id:          i.ID,
 		AuthorId:    i.AuthorId,
 		AuthorName:  i.AuthorName,
 		Name:        i.Name,
-		PhotoUrls:   i.PhotoUrls,
+		PhotoUrls:   photoURLs,
 		Type:        types.ItemType(i.Type.String()),
 		Action:      types.OfferAction(i.Action.String()),
 		Description: i.Description,
@@ -38,6 +43,11 @@ func (i *Offer) ToDto() types.Offer {
 }
 
 func (i *Offer) ToDTOWithInfo(info OfferInfo) types.OfferWithInfo {
+	var photoURLs *[]string
+	if i.PhotoUrls != nil {
+		photoURLs = &i.PhotoUrls
+	}
+
 	return types.OfferWithInfo{
 		Action:      types.OfferAction(i.Action.String()),
 		AuthorId:    i.AuthorId,
@@ -46,7 +56,7 @@ func (i *Offer) ToDTOWithInfo(info OfferInfo) types.OfferWithInfo {
 		Description: i.Description,
 		Id:          i.ID,
 		Name:        i.Name,
-		PhotoUrls:   i.PhotoUrls,
+		PhotoUrls:   photoURLs,
 		Quantity:    info.Quantity,
 		Type:        types.ItemType(i.Type.String()),
 		Views:       int64(i.Views),
