@@ -15,18 +15,26 @@ import {
   Typography,
 } from "@mui/material";
 import offersApi from "@/features/offers/api/offersApi";
-import type { OfferAction, OfferType } from "@/features/offers/model/types";
+import type { Offer, OfferAction, OfferType } from "@/features/offers/model/types";
 import { getErrorMessage } from "@/shared/utils/getErrorMessage.ts";
 
 const MAX_PHOTO_COUNT = 10;
 const MAX_PHOTO_SIZE = 5 * 1024 * 1024;
 
-function CreateOfferForm() {
-  const [createOffer, { isLoading, error }] = offersApi.useCreateOfferMutation();
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [action, setAction] = useState<OfferAction>("give");
-  const [type, setType] = useState<OfferType>("good");
+interface CreateOfferFormProps {
+  mode?: "create" | "edit";
+  offer?: Offer;
+}
+
+function CreateOfferForm({ mode = "create", offer }: CreateOfferFormProps) {
+  const [createOffer, createState] = offersApi.useCreateOfferMutation();
+  const [updateOffer, updateState] = offersApi.useUpdateOfferMutation();
+  const isEditMode = mode === "edit";
+  const mutationState = isEditMode ? updateState : createState;
+  const [name, setName] = useState(offer?.name ?? "");
+  const [description, setDescription] = useState(offer?.description ?? "");
+  const [action, setAction] = useState<OfferAction>(offer?.action ?? "give");
+  const [type, setType] = useState<OfferType>(offer?.type ?? "good");
   const [photos, setPhotos] = useState<File[]>([]);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -46,6 +54,18 @@ function CreateOfferForm() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isEditMode) {
+      if (!offer) {
+        return;
+      }
+      await updateOffer({
+        offerId: offer.id,
+        body: { name, description, action, type },
+      }).unwrap();
+      navigate(`/offers/${offer.id}`);
+      return;
+    }
+
     await createOffer({ name, description, action, type, photos }).unwrap();
     navigate("/offers");
   };
@@ -92,7 +112,9 @@ function CreateOfferForm() {
     setPhotoError(null);
   };
 
-  const errorMessage = getErrorMessage(error) ?? "Ошибка при создании объявления";
+  const errorMessage = getErrorMessage(mutationState.error) ?? (
+    isEditMode ? "Ошибка при обновлении объявления" : "Ошибка при создании объявления"
+  );
 
   return (
     <Box component="form" onSubmit={submit} noValidate display="flex" flexDirection="column" gap={2}>
@@ -147,62 +169,70 @@ function CreateOfferForm() {
         </Select>
       </FormControl>
 
-      <Box>
-        <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
-          <Button variant="outlined" onClick={handleSelectPhotos} disabled={isLoading}>
-            Добавить фото
-          </Button>
-          <Typography variant="body2" color="text.secondary">
-            До {MAX_PHOTO_COUNT} файлов, до 5 МБ каждый
-          </Typography>
-        </Stack>
-
-        {photoPreviewUrls.length > 0 && (
-          <Stack direction="row" spacing={1} mt={2} flexWrap="wrap" useFlexGap>
-            {photoPreviewUrls.map(({ file, url }, index) => (
-              <Box
-                key={`${file.name}-${index}`}
-                sx={{
-                  width: 120,
-                  border: 1,
-                  borderColor: "divider",
-                  borderRadius: 2,
-                  overflow: "hidden",
-                  bgcolor: "background.paper",
-                }}
-              >
-                <Box
-                  component="img"
-                  src={url}
-                  alt={file.name}
-                  sx={{ width: "100%", height: 96, objectFit: "cover", display: "block" }}
-                />
-                <Box p={1}>
-                  <Typography variant="caption" display="block" noWrap title={file.name}>
-                    {file.name}
-                  </Typography>
-                  <Button
-                    type="button"
-                    size="small"
-                    color="inherit"
-                    onClick={() => handleRemovePhoto(index)}
-                    sx={{ mt: 0.5 }}
-                  >
-                    Удалить
-                  </Button>
-                </Box>
-              </Box>
-            ))}
+      {!isEditMode && (
+        <Box>
+          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+            <Button variant="outlined" onClick={handleSelectPhotos} disabled={mutationState.isLoading}>
+              Добавить фото
+            </Button>
+            <Typography variant="body2" color="text.secondary">
+              До {MAX_PHOTO_COUNT} файлов, до 5 МБ каждый
+            </Typography>
           </Stack>
+
+          {photoPreviewUrls.length > 0 && (
+            <Stack direction="row" spacing={1} mt={2} flexWrap="wrap" useFlexGap>
+              {photoPreviewUrls.map(({ file, url }, index) => (
+                <Box
+                  key={`${file.name}-${index}`}
+                  sx={{
+                    width: 120,
+                    border: 1,
+                    borderColor: "divider",
+                    borderRadius: 2,
+                    overflow: "hidden",
+                    bgcolor: "background.paper",
+                  }}
+                >
+                  <Box
+                    component="img"
+                    src={url}
+                    alt={file.name}
+                    sx={{ width: "100%", height: 96, objectFit: "cover", display: "block" }}
+                  />
+                  <Box p={1}>
+                    <Typography variant="caption" display="block" noWrap title={file.name}>
+                      {file.name}
+                    </Typography>
+                    <Button
+                      type="button"
+                      size="small"
+                      color="inherit"
+                      onClick={() => handleRemovePhoto(index)}
+                      sx={{ mt: 0.5 }}
+                    >
+                      Удалить
+                    </Button>
+                  </Box>
+                </Box>
+              ))}
+            </Stack>
+          )}
+
+          {photoError && <FormHelperText error>{photoError}</FormHelperText>}
+        </Box>
+      )}
+
+      {mutationState.error && <Alert severity="error">{errorMessage}</Alert>}
+
+      <Button type="submit" variant="contained" size="large" disabled={mutationState.isLoading}>
+        {mutationState.isLoading ? (
+          <CircularProgress size={24} color="inherit" />
+        ) : isEditMode ? (
+          "Сохранить изменения"
+        ) : (
+          "Создать объявление"
         )}
-
-        {photoError && <FormHelperText error>{photoError}</FormHelperText>}
-      </Box>
-
-      {error && <Alert severity="error">{errorMessage}</Alert>}
-
-      <Button type="submit" variant="contained" size="large" disabled={isLoading}>
-        {isLoading ? <CircularProgress size={24} color="inherit" /> : "Создать объявление"}
       </Button>
     </Box>
   );

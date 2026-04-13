@@ -14,6 +14,7 @@ function OfferPage() {
   const navigate = useNavigate();
   const [isRespondModalOpen, setIsRespondModalOpen] = useState(false);
   const { data: meData } = usersApi.useGetCurrentUserQuery();
+  const [deleteOffer, { isLoading: isDeleting, error: deleteError }] = offersApi.useDeleteOfferMutation();
 
   const { data: offer, isLoading, error } = offersApi.useGetOfferByIdQuery(offerId ?? "", {
     skip: !offerId,
@@ -39,6 +40,19 @@ function OfferPage() {
   }
 
   const canRespond = !!meData && offer.authorId !== meData.id;
+
+  const handleDelete = async () => {
+    if (!window.confirm("Удалить объявление?")) {
+      return;
+    }
+
+    try {
+      await deleteOffer(offer.id).unwrap();
+      navigate("/offers?tab=mine", { replace: true });
+    } catch {
+      // The error is surfaced via RTK Query state.
+    }
+  };
 
   return (
     <Box maxWidth={700} mx="auto">
@@ -93,10 +107,26 @@ function OfferPage() {
         </Box>
       )}
 
+      {deleteError && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          Не удалось удалить объявление
+        </Alert>
+      )}
+
       <Box display="flex" gap={2} flexWrap="wrap">
         {canRespond && (
           <Button variant="contained" onClick={() => setIsRespondModalOpen(true)}>
             Откликнуться
+          </Button>
+        )}
+        {isOwnOffer && (
+          <Button component={RouterLink} to={`/offers/${offer.id}/edit`} variant="contained">
+            Редактировать
+          </Button>
+        )}
+        {isOwnOffer && (
+          <Button variant="outlined" color="error" onClick={handleDelete} disabled={isDeleting}>
+            {isDeleting ? "Удаление..." : "Удалить"}
           </Button>
         )}
         <Button component={RouterLink} to={`/offers/${offer.id}/reviews`} variant="outlined">

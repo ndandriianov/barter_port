@@ -14,6 +14,7 @@ export const offerSchema = z.object({
   type: offerTypeSchema,
   views: z.number(),
   createdAt: z.string(),
+  updatedAt: z.string().nullish(),
 });
 
 export const universalCursorSchema = z.object({

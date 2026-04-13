@@ -7,6 +7,7 @@ import VerifyEmailPage from "@/pages/auth/VerifyEmailPage";
 import AdminPage from "@/pages/admin/AdminPage";
 import ProfilePage from "@/pages/profile/ProfilePage";
 import CreateOfferPage from "@/pages/offers/CreateOfferPage";
+import EditOfferPage from "@/pages/offers/EditOfferPage";
 import OffersListPage from "@/pages/offers/OffersListPage";
 import OfferPage from "@/pages/offers/OfferPage";
 import OfferGroupsListPage from "@/pages/offer-groups/OfferGroupsListPage.tsx";
@@ -37,6 +38,7 @@ function AppRouter() {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/offers" element={<OffersListPage />} />
           <Route path="/offers/create" element={<CreateOfferPage />} />
+          <Route path="/offers/:offerId/edit" element={<EditOfferPage />} />
           <Route path="/offers/:offerId" element={<OfferPage />} />
           <Route path="/offers/:offerId/reviews" element={<OfferReviewsPage />} />
           <Route path="/offer-groups" element={<OfferGroupsListPage />} />
