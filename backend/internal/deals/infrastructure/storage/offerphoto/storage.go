@@ -69,6 +69,9 @@ func NewStorage(cfg Config) (*Storage, error) {
 	client := s3.NewFromConfig(awsCfg, func(o *s3.Options) {
 		o.BaseEndpoint = aws.String(endpoint)
 		o.UsePathStyle = true
+		o.RequestChecksumCalculation = aws.RequestChecksumCalculationWhenRequired
+		o.ResponseChecksumValidation = aws.ResponseChecksumValidationWhenRequired
+		o.ContinueHeaderThresholdBytes = -1
 	})
 
 	return &Storage{
@@ -79,6 +82,10 @@ func NewStorage(cfg Config) (*Storage, error) {
 }
 
 func (s *Storage) UploadPhoto(ctx context.Context, offerID uuid.UUID, index int, contentType string, content []byte) (string, error) {
+	if err := s.ensureBucket(ctx); err != nil {
+		return "", err
+	}
+
 	_, err := s.client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket:      aws.String(s.bucket),
 		Key:         aws.String(s.objectKey(offerID, index)),
@@ -86,24 +93,7 @@ func (s *Storage) UploadPhoto(ctx context.Context, offerID uuid.UUID, index int,
 		ContentType: aws.String(contentType),
 	})
 	if err != nil {
-		var noSuchBucket *types.NoSuchBucket
-		if !errors.As(err, &noSuchBucket) {
-			return "", fmt.Errorf("put offer photo object: %w", err)
-		}
-
-		if err = s.ensureBucket(ctx); err != nil {
-			return "", err
-		}
-
-		_, err = s.client.PutObject(ctx, &s3.PutObjectInput{
-			Bucket:      aws.String(s.bucket),
-			Key:         aws.String(s.objectKey(offerID, index)),
-			Body:        bytes.NewReader(content),
-			ContentType: aws.String(contentType),
-		})
-		if err != nil {
-			return "", fmt.Errorf("put offer photo object after bucket creation: %w", err)
-		}
+		return "", fmt.Errorf("put offer photo object: %w", err)
 	}
 
 	return s.ManagedPhotoURL(offerID, index), nil

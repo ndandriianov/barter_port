@@ -69,6 +69,9 @@ func NewStorage(cfg Config) (*Storage, error) {
 	client := s3.NewFromConfig(awsCfg, func(o *s3.Options) {
 		o.BaseEndpoint = aws.String(endpoint)
 		o.UsePathStyle = true
+		o.RequestChecksumCalculation = aws.RequestChecksumCalculationWhenRequired
+		o.ResponseChecksumValidation = aws.ResponseChecksumValidationWhenRequired
+		o.ContinueHeaderThresholdBytes = -1
 	})
 
 	return &Storage{
