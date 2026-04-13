@@ -205,12 +205,57 @@ type CreateDraftDealResponse struct {
 	Id openapi_types.UUID `json:"id"`
 }
 
+// CreateOfferGroupDraftRequest defines model for CreateOfferGroupDraftRequest.
+type CreateOfferGroupDraftRequest struct {
+	// Description Необязательное описание черновой сделки.
+	Description *string `json:"description,omitempty"`
+
+	// Name Необязательное имя черновой сделки.
+	// Если не передано, сервер может сгенерировать его автоматически по существующим правилам.
+	Name *string `json:"name,omitempty"`
+
+	// ResponderOfferId Необязательный `offer` пользователя, который откликается на группу.
+	// Сервер также добавляет его в `draft deal` с `quantity = 1`.
+	//
+	// Правила:
+	//
+	// - если во всех `unit` группы одинаковый `action`, поле обязательно
+	// - в этом случае `responderOfferId` должен ссылаться на `offer` текущего пользователя
+	//   с тем же `action`
+	// - если в группе встречаются разные `action`, поле можно не передавать
+	ResponderOfferId *openapi_types.UUID `json:"responderOfferId,omitempty"`
+
+	// SelectedOfferIds Список выбранных `offerId`.
+	// Должен содержать ровно по одному `offer` из каждого `unit` указанной группы.
+	// Для каждого выбранного `offer` сервер создаёт запись в `draft deal` с `quantity = 1`.
+	SelectedOfferIds []openapi_types.UUID `json:"selectedOfferIds"`
+}
+
+// CreateOfferGroupRequest defines model for CreateOfferGroupRequest.
+type CreateOfferGroupRequest struct {
+	// Description Описание сценария обмена для всей группы
+	Description *string `json:"description,omitempty"`
+
+	// Name Необязательное название композитного объявления.
+	// Если не передано, сервер сформирует его автоматически из названий `offers`:
+	// внутри `unit` через ` и `, между `unit` через `, `.
+	Name *string `json:"name,omitempty"`
+
+	// Units Список AND-групп. Для каждой группы при отклике должен быть выбран ровно один `offer`.
+	// Внутри одного `unit` все `offers` должны иметь одинаковый `action`.
+	Units []OfferGroupUnitInput `json:"units"`
+}
+
 // CreateOfferRequest defines model for CreateOfferRequest.
 type CreateOfferRequest struct {
 	// Action Whether the user offers or requests something
 	Action      OfferAction `json:"action"`
 	Description string      `json:"description"`
 	Name        string      `json:"name"`
+
+	// Photos Необязательные фотографии объявления.
+	// Каждая фотография передается отдельным бинарным файлом в `multipart/form-data`.
+	Photos *[]openapi_types.File `json:"photos,omitempty"`
 
 	// Type Type of barter item
 	Type ItemType `json:"type"`
@@ -449,6 +494,9 @@ type Item struct {
 // ItemType Type of barter item
 type ItemType string
 
+// ListOfferGroupsResponse defines model for ListOfferGroupsResponse.
+type ListOfferGroupsResponse = []OfferGroup
+
 // ListOffersResponse defines model for ListOffersResponse.
 type ListOffersResponse struct {
 	// NextCursor Cursor for fetching the next page; null if there is no next page
@@ -502,6 +550,9 @@ type Offer struct {
 	// Name Short item title
 	Name string `json:"name"`
 
+	// PhotoUrls Публичные URL фотографий объявления
+	PhotoUrls *[]string `json:"photoUrls,omitempty"`
+
 	// Type Type of barter item
 	Type ItemType `json:"type"`
 
@@ -511,6 +562,38 @@ type Offer struct {
 
 // OfferAction Whether the user offers or requests something
 type OfferAction string
+
+// OfferGroup defines model for OfferGroup.
+type OfferGroup struct {
+	// Description Описание композитного объявления
+	Description *string `json:"description,omitempty"`
+
+	// Id Уникальный идентификатор композитного объявления
+	Id openapi_types.UUID `json:"id"`
+
+	// Name Название композитного объявления
+	Name string `json:"name"`
+
+	// Units Набор обязательных AND-групп.
+	// Для отклика должен быть выбран один `offer` из каждого `unit`.
+	Units []OfferGroupUnit `json:"units"`
+}
+
+// OfferGroupUnit defines model for OfferGroupUnit.
+type OfferGroupUnit struct {
+	// Id Уникальный идентификатор OR-группы
+	Id openapi_types.UUID `json:"id"`
+
+	// Offers Набор альтернативных объявлений внутри OR-группы
+	Offers []Offer `json:"offers"`
+}
+
+// OfferGroupUnitInput defines model for OfferGroupUnitInput.
+type OfferGroupUnitInput struct {
+	// Offers Список существующих `offerId`, которые образуют OR-группу.
+	// Все объявления должны принадлежать текущему пользователю.
+	Offers []OfferRef `json:"offers"`
+}
 
 // OfferIDAndQuantity defines model for OfferIDAndQuantity.
 type OfferIDAndQuantity struct {
@@ -561,6 +644,9 @@ type OfferWithInfo struct {
 
 	// Name Short item title
 	Name string `json:"name"`
+
+	// PhotoUrls Публичные URL фотографий объявления
+	PhotoUrls *[]string `json:"photoUrls,omitempty"`
 
 	// Quantity The quantity of the offer to include in the draft deal
 	Quantity int `json:"quantity"`
@@ -853,8 +939,14 @@ type CreateDealItemReviewJSONRequestBody = CreateReviewRequest
 // ChangeDealStatusJSONRequestBody defines body for ChangeDealStatus for application/json ContentType.
 type ChangeDealStatusJSONRequestBody = ChangeDealStatusRequest
 
-// CreateOffersJSONRequestBody defines body for CreateOffers for application/json ContentType.
-type CreateOffersJSONRequestBody = CreateOfferRequest
+// CreateOfferGroupJSONRequestBody defines body for CreateOfferGroup for application/json ContentType.
+type CreateOfferGroupJSONRequestBody = CreateOfferGroupRequest
+
+// CreateDraftDealFromOfferGroupJSONRequestBody defines body for CreateDraftDealFromOfferGroup for application/json ContentType.
+type CreateDraftDealFromOfferGroupJSONRequestBody = CreateOfferGroupDraftRequest
+
+// CreateOffersMultipartRequestBody defines body for CreateOffers for multipart/form-data ContentType.
+type CreateOffersMultipartRequestBody = CreateOfferRequest
 
 // UpdateReviewJSONRequestBody defines body for UpdateReview for application/json ContentType.
 type UpdateReviewJSONRequestBody = UpdateReviewRequest

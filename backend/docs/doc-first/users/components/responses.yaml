@@ -3,3 +3,6 @@ GetMeResponse:
 
 GetUserResponse:
   $ref: './schemas.yaml#/User'
+
+UploadAvatarResponse:
+  $ref: './schemas.yaml#/AvatarUploadResponse'

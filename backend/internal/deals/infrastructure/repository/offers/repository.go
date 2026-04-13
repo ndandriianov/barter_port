@@ -27,14 +27,33 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 
 // AddOffer inserts a new item into the database.
 // Returns an error if the insertion fails.
-func (r *Repository) AddOffer(ctx context.Context, offer domain.Offer) error {
+func (r *Repository) AddOffer(ctx context.Context, exec db.DB, offer domain.Offer) error {
 	query := `
 		INSERT INTO offers (id, author_id, name, type, action, description, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
 
-	_, err := r.db.Exec(ctx, query, offer.ID, offer.AuthorId, offer.Name, offer.Type.String(), offer.Action.String(), offer.Description, offer.CreatedAt)
+	_, err := exec.Exec(ctx, query, offer.ID, offer.AuthorId, offer.Name, offer.Type.String(), offer.Action.String(), offer.Description, offer.CreatedAt)
 	return err
+}
+
+func (r *Repository) AddOfferPhotos(ctx context.Context, exec db.DB, offerID uuid.UUID, photoURLs []string) error {
+	if len(photoURLs) == 0 {
+		return nil
+	}
+
+	query := `
+		INSERT INTO offer_photos (offer_id, url)
+		VALUES ($1, $2)
+	`
+
+	for _, photoURL := range photoURLs {
+		if _, err := exec.Exec(ctx, query, offerID, photoURL); err != nil {
+			return fmt.Errorf("insert offer photo: %w", err)
+		}
+	}
+
+	return nil
 }
 
 // ================================================================================
@@ -58,7 +77,8 @@ func (r *Repository) GetOffersOrderByTime(
 	if authorID == nil {
 		if cursor == nil {
 			query = `
-		SELECT id, author_id, name, type, action, description, created_at, views
+		SELECT id, author_id, name, type, action, description, created_at, views,
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.url) FROM offer_photos op WHERE op.offer_id = offers.id), '{}') AS photo_urls
 		FROM offers
 		ORDER BY created_at DESC
 		LIMIT $1
@@ -66,7 +86,8 @@ func (r *Repository) GetOffersOrderByTime(
 			args = append(args, limit)
 		} else {
 			query = `
-		SELECT id, author_id, name, type, action, description, created_at, views
+		SELECT id, author_id, name, type, action, description, created_at, views,
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.url) FROM offer_photos op WHERE op.offer_id = offers.id), '{}') AS photo_urls
 		FROM offers
 		WHERE (created_at, id) < ($1, $2)
 		ORDER BY created_at DESC 
@@ -77,7 +98,8 @@ func (r *Repository) GetOffersOrderByTime(
 	} else {
 		if cursor == nil {
 			query = `
-		SELECT id, author_id, name, type, action, description, created_at, views
+		SELECT id, author_id, name, type, action, description, created_at, views,
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.url) FROM offer_photos op WHERE op.offer_id = offers.id), '{}') AS photo_urls
 		FROM offers
 		WHERE author_id = $1
 		ORDER BY created_at DESC
@@ -86,7 +108,8 @@ func (r *Repository) GetOffersOrderByTime(
 			args = append(args, *authorID, limit)
 		} else {
 			query = `
-		SELECT id, author_id, name, type, action, description, created_at, views
+		SELECT id, author_id, name, type, action, description, created_at, views,
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.url) FROM offer_photos op WHERE op.offer_id = offers.id), '{}') AS photo_urls
 		FROM offers
 		WHERE author_id = $1 AND (created_at, id) < ($2, $3)
 		ORDER BY created_at DESC
@@ -135,7 +158,8 @@ func (r *Repository) GetOffersOrderByPopularity(
 	if authorID == nil {
 		if cursor == nil {
 			query = `
-		SELECT id, author_id, name, type, action, description, created_at, views
+		SELECT id, author_id, name, type, action, description, created_at, views,
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.url) FROM offer_photos op WHERE op.offer_id = offers.id), '{}') AS photo_urls
 		FROM offers
 		ORDER BY created_at DESC
 		LIMIT $1
@@ -143,7 +167,8 @@ func (r *Repository) GetOffersOrderByPopularity(
 			args = append(args, limit)
 		} else {
 			query = `
-		SELECT id, author_id, name, type, action, description, created_at, views
+		SELECT id, author_id, name, type, action, description, created_at, views,
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.url) FROM offer_photos op WHERE op.offer_id = offers.id), '{}') AS photo_urls
 		FROM offers
 		WHERE (views, id) < ($1, $2) 
 		ORDER BY views DESC 
@@ -154,7 +179,8 @@ func (r *Repository) GetOffersOrderByPopularity(
 	} else {
 		if cursor == nil {
 			query = `
-		SELECT id, author_id, name, type, action, description, created_at, views
+		SELECT id, author_id, name, type, action, description, created_at, views,
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.url) FROM offer_photos op WHERE op.offer_id = offers.id), '{}') AS photo_urls
 		FROM offers
 		WHERE author_id = $1
 		ORDER BY created_at DESC
@@ -163,7 +189,8 @@ func (r *Repository) GetOffersOrderByPopularity(
 			args = append(args, *authorID, limit)
 		} else {
 			query = `
-		SELECT id, author_id, name, type, action, description, created_at, views
+		SELECT id, author_id, name, type, action, description, created_at, views,
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.url) FROM offer_photos op WHERE op.offer_id = offers.id), '{}') AS photo_urls
 		FROM offers
 		WHERE author_id = $1 AND (views, id) < ($2, $3)
 		ORDER BY views DESC
@@ -226,6 +253,56 @@ func (r *Repository) GetOfferNamesByIDs(ctx context.Context, exec db.DB, ids []u
 	return names, rows.Err()
 }
 
+// GetOffersByIDs returns offers for the provided IDs, preserving input order.
+// IDs not found in the database are silently skipped.
+func (r *Repository) GetOffersByIDs(ctx context.Context, exec db.DB, ids []uuid.UUID) ([]domain.Offer, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+
+	query := `
+		SELECT
+			o.id,
+			o.author_id,
+			o.name,
+			o.type,
+			o.action,
+			o.description,
+			o.created_at,
+			o.views,
+			COALESCE((SELECT array_agg(op.url ORDER BY op.url) FROM offer_photos op WHERE op.offer_id = o.id), '{}') AS photo_urls
+		FROM unnest($1::uuid[]) WITH ORDINALITY u(id, ord)
+		JOIN offers o ON o.id = u.id
+		ORDER BY u.ord`
+
+	rows, err := exec.Query(ctx, query, ids)
+	if err != nil {
+		return nil, fmt.Errorf("sql get offers by ids: %w", err)
+	}
+	defer rows.Close()
+
+	result := make([]domain.Offer, 0, len(ids))
+	for rows.Next() {
+		var item domain.Offer
+		if err = rows.Scan(
+			&item.ID,
+			&item.AuthorId,
+			&item.Name,
+			&item.Type,
+			&item.Action,
+			&item.Description,
+			&item.CreatedAt,
+			&item.Views,
+			&item.PhotoUrls,
+		); err != nil {
+			return nil, fmt.Errorf("scan offer: %w", err)
+		}
+		result = append(result, item)
+	}
+
+	return result, rows.Err()
+}
+
 // ================================================================================
 // GET OFFER
 // ================================================================================
@@ -244,7 +321,8 @@ func (r *Repository) GetOfferByID(ctx context.Context, id uuid.UUID) (*domain.Of
 //   - domain.ErrOfferNotFound: if no item with the given ID exists.
 func (r *Repository) GetOffer(ctx context.Context, exec db.DB, id uuid.UUID) (*domain.Offer, error) {
 	query := `
-		SELECT id, author_id, name, type, action, description, created_at
+		SELECT id, author_id, name, type, action, description, created_at, views,
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.url) FROM offer_photos op WHERE op.offer_id = offers.id), '{}') AS photo_urls
 		FROM offers
 		WHERE id = $1`
 
@@ -257,6 +335,8 @@ func (r *Repository) GetOffer(ctx context.Context, exec db.DB, id uuid.UUID) (*d
 		&offer.Action,
 		&offer.Description,
 		&offer.CreatedAt,
+		&offer.Views,
+		&offer.PhotoUrls,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

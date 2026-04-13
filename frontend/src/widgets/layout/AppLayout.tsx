@@ -24,6 +24,7 @@ import usePendingReviews from "@/features/reviews/model/usePendingReviews.ts";
 const navLinks = [
   { label: "Админка", to: "/admin" },
   { label: "Объявления", to: "/offers" },
+  { label: "Композиты", to: "/offer-groups" },
   { label: "Сделки", to: "/deals" },
   { label: "Отзывы", to: "/reviews" },
   { label: "Черновики", to: "/deals/drafts" },

@@ -149,6 +149,7 @@ func (r *Repository) GetDraftByID(ctx context.Context, exec db.DB, id uuid.UUID)
 		       i.description,
 		       i.created_at,
 		       i.views,
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.url) FROM offer_photos op WHERE op.offer_id = i.id), '{}') AS photo_urls,
 		       ddi.quantity,
 		       ddi.confirmed
 		FROM draft_deals d
@@ -174,6 +175,7 @@ func (r *Repository) GetDraftByID(ctx context.Context, exec db.DB, id uuid.UUID)
 		var offerDescription *string
 		var offerCreatedAt *time.Time
 		var offerViews *int
+		var offerPhotoUrls []string
 		var offerQuantity *int
 		var offerConfirmed *bool
 
@@ -192,6 +194,7 @@ func (r *Repository) GetDraftByID(ctx context.Context, exec db.DB, id uuid.UUID)
 			&offerDescription,
 			&offerCreatedAt,
 			&offerViews,
+			&offerPhotoUrls,
 			&offerQuantity,
 			&offerConfirmed,
 		); err != nil {
@@ -229,6 +232,7 @@ func (r *Repository) GetDraftByID(ctx context.Context, exec db.DB, id uuid.UUID)
 				Description: *offerDescription,
 				CreatedAt:   *offerCreatedAt,
 				Views:       *offerViews,
+				PhotoUrls:   offerPhotoUrls,
 			},
 			Info: domain.OfferInfo{
 				Quantity:  *offerQuantity,

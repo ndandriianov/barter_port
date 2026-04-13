@@ -26,6 +26,16 @@ Me:
       $ref: './properties.yaml#/Name'
     bio:
       $ref: './properties.yaml#/Bio'
+    avatarUrl:
+      $ref: './properties.yaml#/AvatarUrl'
+
+AvatarUploadResponse:
+  type: object
+  required:
+    - avatarUrl
+  properties:
+    avatarUrl:
+      $ref: './properties.yaml#/AvatarUrl'
 
 User:
   type: object
@@ -38,3 +48,5 @@ User:
       $ref: './properties.yaml#/Name'
     bio:
       $ref: './properties.yaml#/Bio'
+    avatarUrl:
+      $ref: './properties.yaml#/AvatarUrl'

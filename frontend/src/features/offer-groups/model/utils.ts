@@ -1,0 +1,29 @@
+import type { OfferGroup } from "@/features/offer-groups/model/types.ts";
+import type { OfferAction } from "@/features/offers/model/types.ts";
+
+export function getOfferGroupOwnerId(group: OfferGroup): string | undefined {
+  return group.units[0]?.offers[0]?.authorId;
+}
+
+export function getOfferGroupOwnerName(group: OfferGroup): string {
+  return group.units[0]?.offers[0]?.authorName?.trim() || "Имя не указано";
+}
+
+export function getOfferGroupVariantCount(group: OfferGroup): number {
+  return group.units.reduce((total, unit) => total + unit.offers.length, 0);
+}
+
+export function getOfferGroupUnitActions(group: OfferGroup): OfferAction[] {
+  return group.units
+    .map((unit) => unit.offers[0]?.action)
+    .filter((action): action is OfferAction => Boolean(action));
+}
+
+export function getOfferGroupUniformAction(group: OfferGroup): OfferAction | null {
+  const actions = new Set(getOfferGroupUnitActions(group));
+  if (actions.size !== 1) {
+    return null;
+  }
+
+  return Array.from(actions)[0] ?? null;
+}

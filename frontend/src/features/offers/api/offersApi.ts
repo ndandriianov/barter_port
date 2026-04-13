@@ -29,15 +29,34 @@ const offersApi = createApi({
     }),
 
     createOffer: builder.mutation<void, CreateOfferRequest>({
-      query: (body) => ({
-        url: "/offers",
-        method: "POST",
-        body,
-      }),
+      query: ({ photos = [], ...body }) => {
+        if (photos.length === 0) {
+          return {
+            url: "/offers",
+            method: "POST",
+            body,
+          };
+        }
+
+        const formData = new FormData();
+        formData.append("name", body.name);
+        formData.append("description", body.description);
+        formData.append("action", body.action);
+        formData.append("type", body.type);
+
+        for (const photo of photos) {
+          formData.append("photos", photo);
+        }
+
+        return {
+          url: "/offers",
+          method: "POST",
+          body: formData,
+        };
+      },
       invalidatesTags: ["Offers"],
     }),
   }),
 });
 
 export default offersApi;
-

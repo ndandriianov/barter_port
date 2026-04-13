@@ -1,0 +1,252 @@
+offerGroups:
+  get:
+    tags:
+      - offer-groups
+    summary: Получить список композитных объявлений
+    description: |
+      Возвращает список `offer_group`.
+
+      Для каждого элемента возвращается полная структура группы:
+
+      - метаданные `offer_group`
+      - список `units`
+      - список `offers` внутри каждого `unit`
+
+      Endpoint является альтернативой `GET /offers` для композитных объявлений
+      и не заменяет существующий список обычных объявлений.
+    operationId: listOfferGroups
+    security:
+      - bearerAuth: [ ]
+    responses:
+      '200':
+        description: Offer groups list
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ListOfferGroupsResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+  post:
+    tags:
+      - offer-groups
+    summary: Создать композитное объявление
+    description: |
+      Создает `offer_group` как альтернативу обычному объявлению.
+
+      Если `name` не передано, название группы генерируется сервером автоматически
+      из названий `offers`:
+
+      - внутри одного `unit` названия соединяются через ` и `
+      - между `unit` названия соединяются через `, `
+
+      Группа объявлений состоит из `units`, объединенных по логике `AND`.
+      Внутри каждого `unit` объявления объединены по логике `OR`.
+
+      Пример:
+
+      - `unit A`: `offer-1 OR offer-2`
+      - `unit B`: `offer-3`
+
+      Итоговое имя будет: `offer-1 и offer-2, offer-3`
+
+      Это означает, что при отклике пользователь должен выбрать ровно одно объявление из каждого `unit`.
+
+      В группу можно включать только существующие объявления текущего пользователя.
+      Внутри одного `unit` разрешены только объявления с одинаковым `action`.
+    operationId: createOfferGroup
+    security:
+      - bearerAuth: [ ]
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/requests.yaml#/CreateOfferGroupRequest'
+    responses:
+      '201':
+        description: Offer group created
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/OfferGroup'
+      '400':
+        description: Invalid request body or mixed `action` values inside one unit
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: Один или несколько указанных объявлений принадлежат другому пользователю
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Один или несколько указанных объявлений не найдены
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+offerGroupById:
+  get:
+    tags:
+      - offer-groups
+    summary: Получить композитное объявление по ID
+    description: |
+      Возвращает структуру `offer_group` целиком:
+
+      - метаданные группы
+      - список `units`
+      - список `offers` внутри каждого `unit`
+
+      Этот endpoint нужен клиенту, чтобы пользователь мог выбрать конкретный `offer`
+      из каждой OR-группы перед созданием `draft deal`.
+    operationId: getOfferGroupById
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - name: offerGroupId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: OK
+        content:
+          application/json:
+            schema:
+              $ref: '../components/schemas.yaml#/OfferGroup'
+      '400':
+        description: Invalid offer group ID
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Offer group not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+offerGroupDrafts:
+  post:
+    tags:
+      - offer-groups
+    summary: Создать черновик сделки по композитному объявлению
+    description: |
+      Создает обычный `draft deal` на основании `offer_group`.
+
+      Пользователь передает список `selectedOfferIds` и должен выбрать:
+
+      - ровно один `offer` из каждого `unit`
+      - только `offer`, которые входят в указанный `offer_group`
+
+      Дополнительно пользователь может передать `responderOfferId`:
+
+      - если у всех `unit` в группе одинаковый `action`, `responderOfferId` обязателен
+      - в этом случае `responderOfferId` должен принадлежать текущему пользователю
+        и иметь тот же `action`
+      - если в группе есть разные `action`, `responderOfferId` опционален
+
+      Каждый выбранный `offer` и `responderOfferId` попадает в `draft deal` с `quantity = 1`.
+
+      После успешной валидации сервер формирует обычный `draft deal`,
+      после чего продолжает работать существующая логика подтверждения,
+      отмены и превращения черновика в `deal`.
+
+      Этот endpoint является альтернативой прямому созданию черновика через `/deals/drafts`.
+    operationId: createDraftDealFromOfferGroup
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - name: offerGroupId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            $ref: '../components/requests.yaml#/CreateOfferGroupDraftRequest'
+    responses:
+      '201':
+        description: Draft deal created
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/CreateDraftDealResponse'
+      '400':
+        description: |
+          Invalid selection or invalid responder offer.
+          The request must contain exactly one selected offer per unit, and `responderOfferId`
+          must satisfy the group action rules.
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: "`responderOfferId` does not belong to the current user"
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Offer group or selected offers not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'

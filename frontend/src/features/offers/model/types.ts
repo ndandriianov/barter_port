@@ -31,4 +31,5 @@ export interface CreateOfferRequest {
   description: string;
   action: OfferAction;
   type: OfferType;
+  photos?: File[];
 }
