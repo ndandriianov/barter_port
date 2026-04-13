@@ -98,7 +98,7 @@ services:
         /etc/seaweedfs/s3-config.json > /tmp/s3-config.json &&
         exec weed server
         -dir=/data
-        -volume.max=5
+        -volume.max=100
         -master.volumeSizeLimitMB=128
         -filer
         -filer.allowedOrigins="*"
