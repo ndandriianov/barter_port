@@ -220,6 +220,31 @@ func mustGetOffers(t *testing.T, userID uuid.UUID, my *bool) types.ListOffersRes
 	return result
 }
 
+func mustUpdateOffer(t *testing.T, userID uuid.UUID, offerID uuid.UUID, body types.UpdateOfferRequest) types.Offer {
+	t.Helper()
+
+	req := mustUserRequest(t, http.MethodPatch, dealsURL()+"/offers/"+offerID.String(), userID, mustJSONBody(t, body))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var offer types.Offer
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&offer))
+
+	return offer
+}
+
+func mustDeleteOffer(t *testing.T, userID uuid.UUID, offerID uuid.UUID) {
+	t.Helper()
+
+	req := mustUserRequest(t, http.MethodDelete, dealsURL()+"/offers/"+offerID.String(), userID, nil)
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusNoContent, resp.StatusCode)
+}
+
 func mustCreateDraft(
 	t *testing.T,
 	userID uuid.UUID,
