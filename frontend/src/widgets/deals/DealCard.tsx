@@ -336,6 +336,49 @@ function ItemRow({ item, dealId, dealStatus, myId, isParticipant, getUserName, g
       <ListItemText
         primary={
           <Box display="flex" alignItems="center" gap={1} flexWrap="wrap">
+            {item.photoUrls.length > 0 && (
+              <Box
+                sx={{
+                  position: "relative",
+                  width: 40,
+                  height: 40,
+                  borderRadius: 1,
+                  overflow: "hidden",
+                  border: "1px solid",
+                  borderColor: "divider",
+                  flexShrink: 0,
+                }}
+              >
+                <Box
+                  component="img"
+                  src={item.photoUrls[0]}
+                  alt={item.name}
+                  sx={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                    display: "block",
+                  }}
+                />
+                {item.photoUrls.length > 1 && (
+                  <Box
+                    sx={{
+                      position: "absolute",
+                      right: 2,
+                      bottom: 2,
+                      px: 0.5,
+                      py: 0.125,
+                      borderRadius: 0.75,
+                      bgcolor: "rgba(0, 0, 0, 0.72)",
+                    }}
+                  >
+                    <Typography variant="caption" sx={{ color: "common.white", lineHeight: 1 }}>
+                      +{item.photoUrls.length - 1}
+                    </Typography>
+                  </Box>
+                )}
+              </Box>
+            )}
             <Typography variant="body2" fontWeight={500}>{item.name}</Typography>
             <Typography variant="caption" color="text.secondary">x{item.quantity}</Typography>
             <Chip label={item.type} size="small" variant="outlined" />
