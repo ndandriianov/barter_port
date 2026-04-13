@@ -3,6 +3,7 @@ package integration
 import (
 	"barter-port/contracts/openapi/deals/types"
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"testing"
@@ -78,6 +79,37 @@ func TestGetDealsOpenTrueExcludesClosedDeals(t *testing.T) {
 	require.NotContains(t, ids, closedDealID)
 }
 
+func TestGetDealsReturnsItemsWithCopiedPhotos(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	offer := mustCreateOfferMultipartDetails(t, userID, types.CreateOfferRequest{
+		Name:        "Camera",
+		Description: "Film camera",
+		Type:        types.Good,
+		Action:      types.Give,
+	}, [][]byte{tinyPNG, tinyPNG})
+	draftID := mustCreateDraft(t, userID, nil, nil, []types.OfferIDAndQuantity{{OfferID: offer.Id, Quantity: 1}})
+	mustConfirmDraft(t, userID, draftID)
+
+	deals := mustGetDealsResponse(t, userID, true)
+	require.Len(t, deals, 1)
+	require.Len(t, deals[0].Items, 1)
+
+	item := deals[0].Items[0]
+	require.NotNil(t, item.OfferId)
+	require.Equal(t, offer.Id, *item.OfferId)
+	require.NotNil(t, item.PhotoIds)
+	require.NotNil(t, item.PhotoUrls)
+	require.Len(t, *item.PhotoIds, 2)
+	require.Len(t, *item.PhotoUrls, 2)
+	require.Contains(t, (*item.PhotoUrls)[0], "/offer-photos/item-"+item.Id.String()+"/photo-0")
+	require.Contains(t, (*item.PhotoUrls)[1], "/offer-photos/item-"+item.Id.String()+"/photo-1")
+	require.NotEqual(t, (*offer.PhotoIds)[0], (*item.PhotoIds)[0])
+	require.NotEqual(t, (*offer.PhotoIds)[1], (*item.PhotoIds)[1])
+}
+
 func TestGetDealByIDSuccess(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)
@@ -95,6 +127,49 @@ func TestGetDealByIDSuccess(t *testing.T) {
 	require.False(t, deal.CreatedAt.IsZero())
 	require.Len(t, deal.Items, 1)
 	require.Equal(t, userID, deal.Items[0].AuthorId)
+}
+
+func TestGetDealByIDCopiesOfferPhotosIntoItemAndPersistsMetadata(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	offer := mustCreateOfferMultipartDetails(t, userID, types.CreateOfferRequest{
+		Name:        "Turntable",
+		Description: "Works well",
+		Type:        types.Good,
+		Action:      types.Give,
+	}, [][]byte{tinyPNG, tinyPNG})
+	draftID := mustCreateDraft(t, userID, nil, nil, []types.OfferIDAndQuantity{{OfferID: offer.Id, Quantity: 1}})
+	mustConfirmDraft(t, userID, draftID)
+
+	dealID := mustGetDealIDs(t, userID, true)[0]
+	deal := mustGetDealByID(t, userID, dealID)
+	require.Len(t, deal.Items, 1)
+
+	item := deal.Items[0]
+	require.NotNil(t, item.OfferId)
+	require.Equal(t, offer.Id, *item.OfferId)
+	require.NotNil(t, item.PhotoIds)
+	require.NotNil(t, item.PhotoUrls)
+	require.Len(t, *item.PhotoIds, 2)
+	require.Len(t, *item.PhotoUrls, 2)
+	require.Contains(t, (*item.PhotoUrls)[0], "/offer-photos/item-"+item.Id.String()+"/photo-0")
+	require.Contains(t, (*item.PhotoUrls)[1], "/offer-photos/item-"+item.Id.String()+"/photo-1")
+	require.NotEqual(t, (*offer.PhotoIds)[0], (*item.PhotoIds)[0])
+	require.NotEqual(t, (*offer.PhotoIds)[1], (*item.PhotoIds)[1])
+
+	pool := OpenDatabase(t, globalFixture, "deals_db")
+	var photoIDs []uuid.UUID
+	var photoURLs []string
+	err := pool.QueryRow(
+		context.Background(),
+		`SELECT array_agg(id ORDER BY position), array_agg(url ORDER BY position) FROM items_photos WHERE item_id = $1`,
+		item.Id,
+	).Scan(&photoIDs, &photoURLs)
+	require.NoError(t, err)
+	require.Equal(t, []uuid.UUID(*item.PhotoIds), photoIDs)
+	require.Equal(t, []string(*item.PhotoUrls), photoURLs)
 }
 
 func TestGetDealByIDNotFound(t *testing.T) {
@@ -242,6 +317,53 @@ func TestAddDealItemSuccess(t *testing.T) {
 		}
 	}
 	require.True(t, found)
+}
+
+func TestAddDealItemCopiesOfferPhotosIntoNewItem(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	dealID := mustCreateDeal(t, userID)
+	offer := mustCreateOfferMultipartDetails(t, userID, types.CreateOfferRequest{
+		Name:        "Projector",
+		Description: "With HDMI",
+		Type:        types.Good,
+		Action:      types.Give,
+	}, [][]byte{tinyPNG})
+
+	resp := doAddDealItem(t, dealID.String(), &userID, []byte(`{"offerId":"`+offer.Id.String()+`","quantity":2}`))
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var deal types.Deal
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&deal))
+
+	var addedItem *types.Item
+	for i := range deal.Items {
+		item := &deal.Items[i]
+		if item.OfferId != nil && *item.OfferId == offer.Id {
+			addedItem = item
+			break
+		}
+	}
+	require.NotNil(t, addedItem)
+	require.NotNil(t, addedItem.PhotoIds)
+	require.NotNil(t, addedItem.PhotoUrls)
+	require.Len(t, *addedItem.PhotoIds, 1)
+	require.Len(t, *addedItem.PhotoUrls, 1)
+	require.Contains(t, (*addedItem.PhotoUrls)[0], "/offer-photos/item-"+addedItem.Id.String()+"/photo-0")
+	require.NotEqual(t, (*offer.PhotoIds)[0], (*addedItem.PhotoIds)[0])
+
+	pool := OpenDatabase(t, globalFixture, "deals_db")
+	var photoCount int
+	err := pool.QueryRow(
+		context.Background(),
+		`SELECT count(*) FROM items_photos WHERE item_id = $1`,
+		addedItem.Id,
+	).Scan(&photoCount)
+	require.NoError(t, err)
+	require.Equal(t, 1, photoCount)
 }
 
 func TestAddDealItemNotParticipantForbidden(t *testing.T) {
