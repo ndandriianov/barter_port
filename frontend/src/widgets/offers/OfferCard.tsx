@@ -88,6 +88,7 @@ function OfferCard({
             Автор
           </Typography>
           <UserAvatarLabel
+            userId={offer.authorId}
             name={author?.name ?? authorName}
             avatarUrl={author?.avatarUrl}
             size={30}

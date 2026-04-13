@@ -57,6 +57,7 @@ function RoleRow({ label, userId, myId, isParticipant, getUserName, getUserAvata
       </Typography>
       {userId ? (
         <UserAvatarLabel
+          userId={userId}
           name={getUserName(userId)}
           avatarUrl={getUserAvatarUrl(userId)}
           size={26}
@@ -301,6 +302,7 @@ function DealItemPage() {
             <Typography variant="caption" color="text.secondary">Автор</Typography>
             <Box mt={0.5}>
               <UserAvatarLabel
+                userId={item.authorId}
                 name={getUserName(item.authorId)}
                 avatarUrl={getUserAvatarUrl(item.authorId)}
                 size={30}
