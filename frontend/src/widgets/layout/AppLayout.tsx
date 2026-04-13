@@ -72,12 +72,20 @@ function AppLayout() {
     return label;
   };
 
+  const getNavLinkState = (to: string) => {
+    if (to === "/reviews") {
+      return { fromLayoutReviewsButton: true };
+    }
+
+    return undefined;
+  };
+
   const drawer = (
     <Box sx={{ width: 240 }} role="presentation" onClick={() => setDrawerOpen(false)}>
       <List>
         {navLinks.map((link) => (
           <ListItem key={link.to} disablePadding>
-            <ListItemButton component={RouterLink} to={link.to}>
+            <ListItemButton component={RouterLink} to={link.to} state={getNavLinkState(link.to)}>
               <ListItemText primary={renderNavLabel(link.label, link.to)} />
             </ListItemButton>
           </ListItem>
@@ -115,7 +123,13 @@ function AppLayout() {
 
           <Box sx={{ display: { xs: "none", sm: "flex" }, gap: 1 }}>
             {navLinks.map((link) => (
-              <Button key={link.to} color="inherit" component={RouterLink} to={link.to}>
+              <Button
+                key={link.to}
+                color="inherit"
+                component={RouterLink}
+                to={link.to}
+                state={getNavLinkState(link.to)}
+              >
                 {renderNavLabel(link.label, link.to)}
               </Button>
             ))}
