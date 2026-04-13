@@ -138,6 +138,23 @@ UpdateOfferRequest:
       $ref: 'schemas.yaml#/ItemType'
     action:
       $ref: 'schemas.yaml#/OfferAction'
+    deletePhotoIds:
+      type: array
+      description: |
+        Идентификаторы существующих фотографий, которые нужно удалить.
+        Порядок остальных фотографий сохраняется, новые добавляются в конец.
+      items:
+        type: string
+        format: uuid
+    photos:
+      type: array
+      description: |
+        Новые фотографии объявления.
+        Каждая фотография передается отдельным бинарным файлом в `multipart/form-data`
+        и будет добавлена в конец списка после оставшихся фотографий.
+      items:
+        type: string
+        format: binary
 
 
 

@@ -64,11 +64,44 @@ const offersApi = createApi({
     }),
 
     updateOffer: builder.mutation<Offer, { offerId: string; body: UpdateOfferRequest }>({
-      query: ({ offerId, body }) => ({
-        url: `/offers/${offerId}`,
-        method: "PATCH",
-        body,
-      }),
+      query: ({ offerId, body }) => {
+        const hasPhotoChanges = (body.photos?.length ?? 0) > 0 || (body.deletePhotoIds?.length ?? 0) > 0;
+
+        if (!hasPhotoChanges) {
+          return {
+            url: `/offers/${offerId}`,
+            method: "PATCH",
+            body,
+          };
+        }
+
+        const formData = new FormData();
+
+        if (body.name !== undefined) {
+          formData.append("name", body.name);
+        }
+        if (body.description !== undefined) {
+          formData.append("description", body.description);
+        }
+        if (body.action !== undefined) {
+          formData.append("action", body.action);
+        }
+        if (body.type !== undefined) {
+          formData.append("type", body.type);
+        }
+        for (const photoId of body.deletePhotoIds ?? []) {
+          formData.append("deletePhotoIds", photoId);
+        }
+        for (const photo of body.photos ?? []) {
+          formData.append("photos", photo);
+        }
+
+        return {
+          url: `/offers/${offerId}`,
+          method: "PATCH",
+          body: formData,
+        };
+      },
       transformResponse: (response: unknown) => offerSchema.parse(response),
       invalidatesTags: (_result, _error, { offerId }) => ["Offers", {type: "Offers", id: offerId}],
     }),

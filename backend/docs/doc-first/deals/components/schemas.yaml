@@ -177,6 +177,14 @@ Offer:
       format: date-time
       description: Item last update timestamp
       example: '2026-03-05T12:00:00Z'
+    photoIds:
+      type: array
+      description: |
+        Идентификаторы фотографий объявления в том же порядке, что и `photoUrls`.
+        Используются для удаления отдельных фотографий при редактировании.
+      items:
+        type: string
+        format: uuid
     photoUrls:
       type: array
       description: Публичные URL фотографий объявления

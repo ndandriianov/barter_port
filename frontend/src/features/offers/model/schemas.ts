@@ -8,6 +8,7 @@ export const offerSchema = z.object({
   authorId: z.string(),
   authorName: z.string().nullish(),
   name: z.string(),
+  photoIds: z.array(z.string()).nullish().transform((value) => value ?? []),
   photoUrls: z.array(z.string()).nullish().transform((value) => value ?? []),
   description: z.string(),
   action: offerActionSchema,

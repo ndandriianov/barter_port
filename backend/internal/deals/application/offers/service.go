@@ -20,6 +20,10 @@ import (
 )
 
 var ErrOfferPhotoStorageNotConfigured = errors.New("offer photo storage is not configured")
+var ErrOfferPhotoLimitExceeded = errors.New("offer photo limit exceeded")
+var ErrOfferPhotoNotFound = errors.New("offer photo not found")
+
+const maxOfferPhotoCount = 10
 
 type PhotoUpload struct {
 	ContentType string
@@ -74,13 +78,22 @@ func (s *Service) CreateOffer(
 		Views:       0,
 	}
 
-	photoURLs := make([]string, 0, len(photos))
+	uploadedPhotos := make([]domain.OfferPhoto, 0, len(photos))
+	uploadedPositions := make([]int, 0, len(photos))
 	for i, photo := range photos {
 		photoURL, err := s.photoStorage.UploadPhoto(ctx, item.ID, i, photo.ContentType, photo.Content)
 		if err != nil {
-			s.cleanupUploadedPhotos(ctx, item.ID, i)
+			s.cleanupUploadedPhotos(ctx, item.ID, uploadedPositions)
 			return nil, err
 		}
+
+		uploadedPhotos = append(uploadedPhotos, domain.OfferPhoto{
+			ID:       uuid.New(),
+			OfferID:  item.ID,
+			URL:      photoURL,
+			Position: i,
+		})
+		uploadedPositions = append(uploadedPositions, i)
 		log.Debug(
 			"offer photo uploaded successfully",
 			slog.String("offer_id", item.ID.String()),
@@ -89,26 +102,28 @@ func (s *Service) CreateOffer(
 			slog.Int("size_bytes", len(photo.Content)),
 			slog.String("photo_url", photoURL),
 		)
-		photoURLs = append(photoURLs, photoURL)
 	}
-	item.PhotoUrls = photoURLs
+	for _, photo := range uploadedPhotos {
+		item.PhotoIds = append(item.PhotoIds, photo.ID)
+		item.PhotoUrls = append(item.PhotoUrls, photo.URL)
+	}
 
 	err := db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
 		if err := s.repo.AddOffer(ctx, tx, item); err != nil {
 			return err
 		}
-		return s.repo.AddOfferPhotos(ctx, tx, item.ID, photoURLs)
+		return s.repo.AddOfferPhotos(ctx, tx, uploadedPhotos)
 	})
 	if err != nil {
-		s.cleanupUploadedPhotos(ctx, item.ID, len(photoURLs))
+		s.cleanupUploadedPhotos(ctx, item.ID, uploadedPositions)
 		return nil, err
 	}
 
-	if len(photoURLs) > 0 {
+	if len(uploadedPhotos) > 0 {
 		log.Debug(
 			"offer with photos created successfully",
 			slog.String("offer_id", item.ID.String()),
-			slog.Int("photo_count", len(photoURLs)),
+			slog.Int("photo_count", len(uploadedPhotos)),
 		)
 	}
 
@@ -228,14 +243,116 @@ func (s *Service) UpdateOffer(
 	userID uuid.UUID,
 	offerID uuid.UUID,
 	patch htypes.OfferPatch,
+	newPhotos []PhotoUpload,
 ) (*domain.Offer, error) {
 	if patch.Name != nil && *patch.Name == "" {
 		return nil, domain.ErrInvalidOfferName
 	}
+	if len(newPhotos) > 0 && s.photoStorage == nil {
+		return nil, ErrOfferPhotoStorageNotConfigured
+	}
 
-	offer, err := s.repo.UpdateOffer(ctx, s.db, offerID, userID, patch)
+	var (
+		offer             *domain.Offer
+		deletedPhotos     []domain.OfferPhoto
+		uploadedPositions []int
+	)
+
+	err := db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
+		currentOffer, err := s.repo.GetOffer(ctx, tx, offerID)
+		if err != nil {
+			return err
+		}
+		if currentOffer.AuthorId != userID {
+			return domain.ErrForbidden
+		}
+
+		currentPhotos, err := s.repo.GetOfferPhotos(ctx, tx, offerID)
+		if err != nil {
+			return err
+		}
+
+		photosByID := make(map[uuid.UUID]domain.OfferPhoto, len(currentPhotos))
+		for _, photo := range currentPhotos {
+			photosByID[photo.ID] = photo
+		}
+
+		deleteIDs := make([]uuid.UUID, 0, len(patch.DeletePhotoIds))
+		seenDeleteIDs := make(map[uuid.UUID]struct{}, len(patch.DeletePhotoIds))
+		for _, photoID := range patch.DeletePhotoIds {
+			if _, seen := seenDeleteIDs[photoID]; seen {
+				continue
+			}
+			photo, ok := photosByID[photoID]
+			if !ok {
+				return ErrOfferPhotoNotFound
+			}
+			seenDeleteIDs[photoID] = struct{}{}
+			deleteIDs = append(deleteIDs, photoID)
+			deletedPhotos = append(deletedPhotos, photo)
+		}
+
+		remainingCount := len(currentPhotos) - len(deleteIDs) + len(newPhotos)
+		if remainingCount > maxOfferPhotoCount {
+			return ErrOfferPhotoLimitExceeded
+		}
+
+		nextPosition := 0
+		for _, photo := range currentPhotos {
+			if photo.Position >= nextPosition {
+				nextPosition = photo.Position + 1
+			}
+		}
+
+		uploadedPhotos := make([]domain.OfferPhoto, 0, len(newPhotos))
+		for i, photo := range newPhotos {
+			position := nextPosition + i
+			photoURL, uploadErr := s.photoStorage.UploadPhoto(ctx, offerID, position, photo.ContentType, photo.Content)
+			if uploadErr != nil {
+				return uploadErr
+			}
+
+			uploadedPositions = append(uploadedPositions, position)
+			uploadedPhotos = append(uploadedPhotos, domain.OfferPhoto{
+				ID:       uuid.New(),
+				OfferID:  offerID,
+				URL:      photoURL,
+				Position: position,
+			})
+		}
+
+		if err = s.repo.DeleteOfferPhotos(ctx, tx, offerID, deleteIDs); err != nil {
+			return err
+		}
+		if err = s.repo.AddOfferPhotos(ctx, tx, uploadedPhotos); err != nil {
+			return err
+		}
+
+		updatedOffer, err := s.repo.UpdateOffer(ctx, tx, offerID, userID, patch)
+		if err != nil {
+			return err
+		}
+
+		offer = &updatedOffer
+		return nil
+	})
 	if err != nil {
+		s.cleanupUploadedPhotos(ctx, offerID, uploadedPositions)
 		return nil, err
+	}
+
+	if s.photoStorage != nil {
+		for _, photo := range deletedPhotos {
+			if err = s.photoStorage.DeletePhoto(ctx, offerID, photo.Position); err != nil {
+				logger.LogFrom(ctx, s.fallbackLogger).Warn(
+					"failed to delete offer photo from storage after update",
+					slog.String("offer_id", offerID.String()),
+					slog.String("photo_id", photo.ID.String()),
+					slog.Int("photo_position", photo.Position),
+					slog.Any("error", err),
+				)
+			}
+		}
 	}
 
 	response, err := s.usersClient.GetUsersWithInfo(ctx, &userspb.GetUsersWithInfoRequest{Ids: []string{offer.AuthorId.String()}})
@@ -243,7 +360,7 @@ func (s *Service) UpdateOffer(
 		offer.AuthorName = &response.Users[0].Name
 	}
 
-	return &offer, nil
+	return offer, nil
 }
 
 // DeleteOffer deletes an offer. Only the author can delete it.
@@ -255,15 +372,15 @@ func (s *Service) DeleteOffer(ctx context.Context, userID uuid.UUID, offerID uui
 	return s.repo.DeleteOffer(ctx, s.db, offerID, userID)
 }
 
-func (s *Service) cleanupUploadedPhotos(ctx context.Context, offerID uuid.UUID, count int) {
-	if s.photoStorage == nil || count == 0 {
+func (s *Service) cleanupUploadedPhotos(ctx context.Context, offerID uuid.UUID, positions []int) {
+	if s.photoStorage == nil || len(positions) == 0 {
 		return
 	}
 
 	log := logger.LogFrom(ctx, s.fallbackLogger).With(slog.String("offer_id", offerID.String()))
-	for i := 0; i < count; i++ {
-		if err := s.photoStorage.DeletePhoto(ctx, offerID, i); err != nil {
-			log.Warn("failed to cleanup uploaded offer photo", slog.Int("photo_index", i), slog.Any("error", err))
+	for _, position := range positions {
+		if err := s.photoStorage.DeletePhoto(ctx, offerID, position); err != nil {
+			log.Warn("failed to cleanup uploaded offer photo", slog.Int("photo_index", position), slog.Any("error", err))
 		}
 	}
 }

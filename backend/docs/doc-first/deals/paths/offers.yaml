@@ -166,6 +166,9 @@ offerById:
         application/json:
           schema:
             $ref: '../components/requests.yaml#/UpdateOfferRequest'
+        multipart/form-data:
+          schema:
+            $ref: '../components/requests.yaml#/UpdateOfferRequest'
     responses:
       '200':
         description: Updated offer
