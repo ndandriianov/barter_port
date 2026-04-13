@@ -14,6 +14,15 @@ CREATE TABLE offers
     CONSTRAINT offers_action_check CHECK (action IN ('give', 'take'))
 );
 
+CREATE TABLE offer_photos
+(
+    offer_id UUID NOT NULL,
+    url      TEXT NOT NULL,
+
+    FOREIGN KEY (offer_id) REFERENCES offers (id) ON DELETE CASCADE,
+    PRIMARY KEY (offer_id, url)
+);
+
 CREATE TABLE offer_groups
 (
     id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
