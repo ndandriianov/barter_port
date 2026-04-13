@@ -362,6 +362,18 @@ func mustConfirmDraft(t *testing.T, userID uuid.UUID, draftID uuid.UUID) {
 func mustGetDealIDs(t *testing.T, userID uuid.UUID, my bool) []uuid.UUID {
 	t.Helper()
 
+	result := mustGetDealsResponse(t, userID, my)
+	ids := make([]uuid.UUID, 0, len(result))
+	for _, item := range result {
+		ids = append(ids, item.Id)
+	}
+
+	return ids
+}
+
+func mustGetDealsResponse(t *testing.T, userID uuid.UUID, my bool) types.GetDealsResponse {
+	t.Helper()
+
 	url := dealsURL() + "/deals"
 	if my {
 		url += "?my=true"
@@ -375,12 +387,7 @@ func mustGetDealIDs(t *testing.T, userID uuid.UUID, my bool) []uuid.UUID {
 	var result types.GetDealsResponse
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
 
-	ids := make([]uuid.UUID, 0, len(result))
-	for _, item := range result {
-		ids = append(ids, item.Id)
-	}
-
-	return ids
+	return result
 }
 
 func mustGetDealByID(t *testing.T, userID uuid.UUID, dealID uuid.UUID) types.Deal {
