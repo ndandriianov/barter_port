@@ -38,20 +38,20 @@ func (r *Repository) CreateOfferGroup(
 		return uuid.Nil, fmt.Errorf("insert offer group: %w", err)
 	}
 
-	for _, unit := range units {
+	for unitIdx, unit := range units {
 		unitID := uuid.New()
 		if _, err := exec.Exec(ctx, `
-			INSERT INTO offer_group_units (id, offer_group_id)
-			VALUES ($1, $2)
-		`, unitID, groupID); err != nil {
+			INSERT INTO offer_group_units (id, offer_group_id, position)
+			VALUES ($1, $2, $3)
+		`, unitID, groupID, unitIdx); err != nil {
 			return uuid.Nil, fmt.Errorf("insert offer group unit: %w", err)
 		}
 
-		for _, offerID := range unit.OfferIDs {
+		for offerIdx, offerID := range unit.OfferIDs {
 			if _, err := exec.Exec(ctx, `
-				INSERT INTO unit_offers (unit_id, offer_id)
-				VALUES ($1, $2)
-			`, unitID, offerID); err != nil {
+				INSERT INTO unit_offers (unit_id, offer_id, position)
+				VALUES ($1, $2, $3)
+			`, unitID, offerID, offerIdx); err != nil {
 				return uuid.Nil, fmt.Errorf("insert unit offer: %w", err)
 			}
 		}
@@ -111,7 +111,7 @@ func (r *Repository) listOfferGroups(
 		args = append(args, *filterID)
 	}
 
-	query += ` ORDER BY og.id, ogu.id, o.id`
+	query += ` ORDER BY og.id, ogu.position NULLS LAST, uo.position NULLS LAST, o.id`
 
 	rows, err := exec.Query(ctx, query, args...)
 	if err != nil {
