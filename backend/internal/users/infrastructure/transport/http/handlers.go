@@ -9,12 +9,17 @@ import (
 	httplog "barter-port/pkg/logger"
 	"context"
 	"errors"
+	"io"
 	"log/slog"
+	"mime/multipart"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
+
+const maxAvatarUploadSize = 5 * 1024 * 1024
 
 type Handlers struct {
 	userService *user.Service
@@ -90,6 +95,58 @@ func (h *Handlers) HandleGetMe(w http.ResponseWriter, r *http.Request) {
 }
 
 // ================================================================================
+// UploadMeAvatar
+// ================================================================================
+
+func (h *Handlers) HandleUploadMeAvatar(w http.ResponseWriter, r *http.Request) {
+	log := httplog.LogFrom(r.Context(), slog.Default())
+
+	userID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		log.Warn("failed to get user id from context")
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
+	r.Body = http.MaxBytesReader(w, r.Body, maxAvatarUploadSize+(1<<20))
+	if err := r.ParseMultipartForm(maxAvatarUploadSize + (1 << 20)); err != nil {
+		log.Warn("failed to parse avatar upload", slog.Any("error", err))
+		httpx.WriteErrorStr(w, http.StatusBadRequest, "invalid avatar upload")
+		return
+	}
+
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		log.Warn("failed to read avatar file", slog.Any("error", err))
+		httpx.WriteErrorStr(w, http.StatusBadRequest, "avatar file is required")
+		return
+	}
+	defer file.Close()
+
+	content, contentType, err := readAvatarUpload(file)
+	if err != nil {
+		log.Warn("failed to validate avatar file", slog.Any("error", err))
+		httpx.WriteErrorStr(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	avatarURL, err := h.userService.UploadAvatar(r.Context(), userID, contentType, content)
+	if err != nil {
+		if errors.Is(err, domain.ErrUserNotFound) {
+			log.Info("user not found while uploading avatar", slog.String("user_id", userID.String()))
+			httpx.WriteEmptyError(w, http.StatusNotFound)
+			return
+		}
+
+		log.Error("failed to upload avatar", slog.String("user_id", userID.String()), slog.String("error", err.Error()))
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		return
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, avatarUploadResponse{AvatarURL: avatarURL})
+}
+
+// ================================================================================
 // UpdateMe
 // ================================================================================
 
@@ -146,6 +203,10 @@ func (h *Handlers) HandleUpdateMe(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, me)
 }
 
+type avatarUploadResponse struct {
+	AvatarURL string `json:"avatarUrl"`
+}
+
 func handleUpdateError(w http.ResponseWriter, log *slog.Logger, err error, userID uuid.UUID) {
 	updateErrLog := log.With(slog.Any("userID", userID), slog.Any("error", err))
 
@@ -177,4 +238,24 @@ func (h *Handlers) getMe(ctx context.Context, userID uuid.UUID) (types.Me, error
 		CreatedAt: me.CreatedAt,
 		IsAdmin:   me.IsAdmin,
 	}, nil
+}
+
+func readAvatarUpload(file multipart.File) ([]byte, string, error) {
+	content, err := io.ReadAll(io.LimitReader(file, maxAvatarUploadSize+1))
+	if err != nil {
+		return nil, "", errors.New("failed to read avatar")
+	}
+	if len(content) == 0 {
+		return nil, "", errors.New("avatar file is empty")
+	}
+	if len(content) > maxAvatarUploadSize {
+		return nil, "", errors.New("avatar file exceeds 5 MB")
+	}
+
+	contentType := http.DetectContentType(content)
+	if !strings.HasPrefix(contentType, "image/") {
+		return nil, "", errors.New("avatar file must be an image")
+	}
+
+	return content, contentType, nil
 }

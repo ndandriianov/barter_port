@@ -13,11 +13,14 @@ function ProfilePage() {
   const { data, isLoading, refetch } = usersApi.useGetCurrentUserQuery();
   const [updateCurrentUser, { isLoading: isSaving, error: updateError }] =
     usersApi.useUpdateCurrentUserMutation();
+  const [uploadCurrentUserAvatar, { isLoading: isUploadingAvatar, error: uploadAvatarError }] =
+    usersApi.useUploadCurrentUserAvatarMutation();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const [draftName, setDraftName] = useState<string | null>(null);
   const [draftBio, setDraftBio] = useState<string | null>(null);
   const [draftAvatarUrl, setDraftAvatarUrl] = useState<string | null>(null);
+  const [draftAvatarFile, setDraftAvatarFile] = useState<File | null>(null);
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -40,6 +43,7 @@ function ProfilePage() {
   const normalizedAvatarUrl = currentAvatarUrl.trim();
   const avatarPreviewUrl = normalizedAvatarUrl || undefined;
   const hasAvatarPreview = Boolean(avatarPreviewUrl);
+  const isSubmitting = isSaving || isUploadingAvatar;
 
   const handleLogout = async () => {
     await dispatch(performLogout());
@@ -48,15 +52,25 @@ function ProfilePage() {
 
   const handleSave = async () => {
     try {
+      let nextAvatarUrl = normalizedAvatarUrl;
+
+      if (draftAvatarFile) {
+        const formData = new FormData();
+        formData.append("file", draftAvatarFile);
+        const uploadResponse = await uploadCurrentUserAvatar(formData).unwrap();
+        nextAvatarUrl = uploadResponse.avatarUrl.trim();
+      }
+
       await updateCurrentUser({
         name: currentName.trim(),
         bio: currentBio.trim(),
-        avatarUrl: normalizedAvatarUrl,
+        avatarUrl: nextAvatarUrl,
       }).unwrap();
       // Drop local draft and rely on fresh server state after mutation invalidation.
       setDraftName(null);
       setDraftBio(null);
       setDraftAvatarUrl(null);
+      setDraftAvatarFile(null);
     } catch {
       // Error state is already exposed by RTK Query and rendered in UI.
     }
@@ -66,6 +80,7 @@ function ProfilePage() {
     setDraftName("");
     setDraftBio("");
     setDraftAvatarUrl("");
+    setDraftAvatarFile(null);
     setAvatarError(null);
   };
 
@@ -94,6 +109,7 @@ function ProfilePage() {
     try {
       const nextAvatarUrl = await imageToAvatarDataUrl(file);
       setDraftAvatarUrl(nextAvatarUrl);
+      setDraftAvatarFile(file);
       setAvatarError(null);
     } catch (error) {
       setAvatarError(error instanceof Error ? error.message : "Не удалось обработать изображение.");
@@ -102,6 +118,7 @@ function ProfilePage() {
 
   const handleClearAvatar = () => {
     setDraftAvatarUrl("");
+    setDraftAvatarFile(null);
     setAvatarError(null);
   };
 
@@ -209,6 +226,12 @@ function ProfilePage() {
             </Alert>
           )}
 
+          {uploadAvatarError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              Не удалось загрузить аватар
+            </Alert>
+          )}
+
           {updateError && (
             <Alert severity="error" sx={{ mb: 2 }}>
               Не удалось обновить профиль
@@ -219,17 +242,17 @@ function ProfilePage() {
             <Button
               variant="contained"
               onClick={handleSave}
-              disabled={!hasChanges || isSaving}
+              disabled={!hasChanges || isSubmitting}
             >
               Сохранить
             </Button>
-            <Button variant="outlined" onClick={handleClear} disabled={isSaving}>
+            <Button variant="outlined" onClick={handleClear} disabled={isSubmitting}>
               Очистить поля
             </Button>
             <Button variant="contained" color="error" onClick={handleLogout}>
               Выйти
             </Button>
-            <Button variant="outlined" onClick={() => refetch()} disabled={isSaving}>
+            <Button variant="outlined" onClick={() => refetch()} disabled={isSubmitting}>
               Обновить
             </Button>
           </Box>

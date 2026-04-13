@@ -21,6 +21,13 @@ type UsersRepository interface {
 }
 
 var ErrAuthClientNotConfigured = errors.New("auth grpc client is not configured")
+var ErrAvatarStorageNotConfigured = errors.New("avatar storage is not configured")
+
+type AvatarStorage interface {
+	UploadAvatar(ctx context.Context, userID uuid.UUID, contentType string, content []byte) (string, error)
+	DeleteAvatar(ctx context.Context, userID uuid.UUID) error
+	ManagedAvatarURL(userID uuid.UUID) string
+}
 
 type Me struct {
 	Id        uuid.UUID
@@ -33,12 +40,13 @@ type Me struct {
 }
 
 type Service struct {
-	repository UsersRepository
-	authClient authpb.AuthServiceClient
+	repository    UsersRepository
+	authClient    authpb.AuthServiceClient
+	avatarStorage AvatarStorage
 }
 
-func NewService(repository UsersRepository, authClient authpb.AuthServiceClient) *Service {
-	return &Service{repository: repository, authClient: authClient}
+func NewService(repository UsersRepository, authClient authpb.AuthServiceClient, avatarStorage AvatarStorage) *Service {
+	return &Service{repository: repository, authClient: authClient, avatarStorage: avatarStorage}
 }
 
 func (s *Service) GetUser(ctx context.Context, id uuid.UUID) (*domain.User, error) {
@@ -97,7 +105,38 @@ func (s *Service) UpdateBio(ctx context.Context, id uuid.UUID, bio *string) erro
 // Errors:
 //   - domain.ErrUserNotFound: Occurs if no user is found with the given id.
 func (s *Service) UpdateAvatarURL(ctx context.Context, id uuid.UUID, avatarURL *string) error {
-	return s.repository.UpdateAvatarURL(ctx, id, normalizeOptionalString(avatarURL))
+	normalizedAvatarURL := normalizeOptionalString(avatarURL)
+
+	currentUser, err := s.repository.GetUserById(ctx, id)
+	if err != nil {
+		return err
+	}
+
+	if err = s.repository.UpdateAvatarURL(ctx, id, normalizedAvatarURL); err != nil {
+		return err
+	}
+
+	if s.avatarStorage == nil || currentUser.AvatarURL == nil {
+		return nil
+	}
+
+	managedAvatarURL := s.avatarStorage.ManagedAvatarURL(id)
+	if *currentUser.AvatarURL == managedAvatarURL && (normalizedAvatarURL == nil || *normalizedAvatarURL != managedAvatarURL) {
+		_ = s.avatarStorage.DeleteAvatar(ctx, id)
+	}
+
+	return nil
+}
+
+func (s *Service) UploadAvatar(ctx context.Context, id uuid.UUID, contentType string, content []byte) (string, error) {
+	if _, err := s.repository.GetUserById(ctx, id); err != nil {
+		return "", err
+	}
+	if s.avatarStorage == nil {
+		return "", ErrAvatarStorageNotConfigured
+	}
+
+	return s.avatarStorage.UploadAvatar(ctx, id, contentType, content)
 }
 
 // GetNamesForUserIDs returns a map of user IDs to their corresponding names.

@@ -29,6 +29,14 @@ Me:
     avatarUrl:
       $ref: './properties.yaml#/AvatarUrl'
 
+AvatarUploadResponse:
+  type: object
+  required:
+    - avatarUrl
+  properties:
+    avatarUrl:
+      $ref: './properties.yaml#/AvatarUrl'
+
 User:
   type: object
   required:
