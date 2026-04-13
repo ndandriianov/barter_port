@@ -24,8 +24,9 @@ type Offer struct {
 
 func (i *Offer) ToDto() types.Offer {
 	var photoURLs *[]string
-	if i.PhotoUrls != nil {
-		photoURLs = &i.PhotoUrls
+	if len(i.PhotoUrls) > 0 {
+		copied := append([]string(nil), i.PhotoUrls...)
+		photoURLs = &copied
 	}
 
 	return types.Offer{
@@ -44,8 +45,9 @@ func (i *Offer) ToDto() types.Offer {
 
 func (i *Offer) ToDTOWithInfo(info OfferInfo) types.OfferWithInfo {
 	var photoURLs *[]string
-	if i.PhotoUrls != nil {
-		photoURLs = &i.PhotoUrls
+	if len(i.PhotoUrls) > 0 {
+		copied := append([]string(nil), i.PhotoUrls...)
+		photoURLs = &copied
 	}
 
 	return types.OfferWithInfo{

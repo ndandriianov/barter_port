@@ -23,11 +23,13 @@ const (
 	postgresAlias = "db"
 	kafkaAlias    = "kafka"
 	smtpAlias     = "smtp4dev"
+	seaweedAlias  = "seaweedfs"
 
 	postgresPort nat.Port = "5432/tcp"
 	kafkaPort    nat.Port = "9092/tcp"
 	smtpPort     nat.Port = "25/tcp"
 	smtpUIPort   nat.Port = "80/tcp"
+	seaweedPort  nat.Port = "8333/tcp"
 
 	authHTTPPort  nat.Port = "8080/tcp"
 	itemsHTTPPort nat.Port = "8080/tcp"
@@ -48,6 +50,7 @@ type FixtureOptions struct {
 	NeedPostgres bool
 	NeedKafka    bool
 	NeedSMTP     bool
+	NeedSeaweed  bool
 
 	NeedAuth  bool
 	NeedItems bool
@@ -61,6 +64,7 @@ type Fixture struct {
 	Postgres testcontainers.Container
 	Kafka    testcontainers.Container
 	SMTP     testcontainers.Container
+	Seaweed  testcontainers.Container
 
 	Auth  testcontainers.Container
 	Items testcontainers.Container
@@ -80,7 +84,7 @@ func (f *Fixture) TerminateAll(ctx context.Context) error {
 	var errs []error
 	for _, c := range []testcontainers.Container{
 		f.Users, f.Items, f.Auth,
-		f.SMTP, f.Kafka, f.Postgres,
+		f.Seaweed, f.SMTP, f.Kafka, f.Postgres,
 	} {
 		if c != nil {
 			if err := testcontainers.TerminateContainer(c); err != nil {
@@ -119,6 +123,7 @@ func NewFixture(t *testing.T, opts FixtureOptions) *Fixture {
 	}
 	if opts.NeedItems {
 		opts.NeedPostgres = true
+		opts.NeedSeaweed = true
 	}
 	if opts.NeedUsers {
 		opts.NeedPostgres = true
@@ -177,6 +182,7 @@ func newSharedFixture(
 	}
 	if opts.NeedItems {
 		opts.NeedPostgres = true
+		opts.NeedSeaweed = true
 	}
 	if opts.NeedUsers {
 		opts.NeedPostgres = true
@@ -241,9 +247,9 @@ type infraResult struct {
 	err       error
 }
 
-// setupInfraParallel запускает Postgres/Kafka/SMTP параллельно.
+// setupInfraParallel запускает инфраструктурные контейнеры параллельно.
 //
-// Буфер канала равен максимальному числу горутин (3): это гарантирует отсутствие
+// Буфер канала равен максимальному числу горутин (4): это гарантирует отсутствие
 // утечек горутин — даже если t.FailNow() прервёт цикл после первой ошибки,
 // оставшиеся горутины смогут отправить результат и завершиться.
 //
@@ -258,7 +264,7 @@ func setupInfraParallel(
 ) {
 	t.Helper()
 
-	ch := make(chan infraResult, 3)
+	ch := make(chan infraResult, 4)
 	launched := 0
 
 	if opts.NeedPostgres {
@@ -280,6 +286,13 @@ func setupInfraParallel(
 		go func() {
 			c, err := launchSMTP(ctx, net)
 			ch <- infraResult{"smtp", c, err}
+		}()
+	}
+	if opts.NeedSeaweed {
+		launched++
+		go func() {
+			c, err := launchSeaweed(ctx, net)
+			ch <- infraResult{"seaweed", c, err}
 		}()
 	}
 
@@ -303,6 +316,8 @@ func setupInfraParallel(
 			f.Kafka = result.container
 		case "smtp":
 			f.SMTP = result.container
+		case "seaweed":
+			f.Seaweed = result.container
 		}
 	}
 }
@@ -315,7 +330,7 @@ func setupInfraParallelShared(
 	opts FixtureOptions,
 	f *Fixture,
 ) error {
-	ch := make(chan infraResult, 3)
+	ch := make(chan infraResult, 4)
 	launched := 0
 
 	if opts.NeedPostgres {
@@ -339,6 +354,13 @@ func setupInfraParallelShared(
 			ch <- infraResult{"smtp", c, err}
 		}()
 	}
+	if opts.NeedSeaweed {
+		launched++
+		go func() {
+			c, err := launchSeaweed(ctx, net)
+			ch <- infraResult{"seaweed", c, err}
+		}()
+	}
 
 	var firstErr error
 	for i := 0; i < launched; i++ {
@@ -352,6 +374,8 @@ func setupInfraParallelShared(
 			f.Kafka = result.container
 		case "smtp":
 			f.SMTP = result.container
+		case "seaweed":
+			f.Seaweed = result.container
 		}
 
 		if result.err != nil && firstErr == nil {
@@ -441,6 +465,37 @@ func launchSMTP(ctx context.Context, net *testcontainers.DockerNetwork) (testcon
 			"ServerOptions__TlsCertificate":         "",
 		},
 		WaitingFor: wait.ForListeningPort(smtpPort).WithStartupTimeout(2 * time.Minute),
+	}
+	return launchContainer(ctx, req)
+}
+
+func launchSeaweed(ctx context.Context, net *testcontainers.DockerNetwork) (testcontainers.Container, error) {
+	projectRoot := mustGetProjectRoot()
+	req := testcontainers.ContainerRequest{
+		Image:        "chrislusf/seaweedfs:4.06",
+		ExposedPorts: []string{string(seaweedPort)},
+		Networks:     []string{net.Name},
+		NetworkAliases: map[string][]string{
+			net.Name: {seaweedAlias},
+		},
+		Env: map[string]string{
+			"S3_ACCESS_KEY_ID":     "barter-port-s3",
+			"S3_SECRET_ACCESS_KEY": "barter-port-s3-secret",
+			"S3_REGION":            "us-east-1",
+		},
+		Entrypoint: []string{"/bin/sh"},
+		Cmd: []string{
+			"-c",
+			`sed -e "s|__S3_ACCESS_KEY_ID__|${S3_ACCESS_KEY_ID}|g" -e "s|__S3_SECRET_ACCESS_KEY__|${S3_SECRET_ACCESS_KEY}|g" /etc/seaweedfs/s3-config.json > /tmp/s3-config.json && exec weed server -filer -filer.allowedOrigins="*" -s3 -s3.config=/tmp/s3-config.json`,
+		},
+		Files: []testcontainers.ContainerFile{
+			{
+				HostFilePath:      filepath.Join(projectRoot, "config", "seaweedfs-s3.json"),
+				ContainerFilePath: "/etc/seaweedfs/s3-config.json",
+				FileMode:          0o644,
+			},
+		},
+		WaitingFor: wait.ForListeningPort(seaweedPort).WithStartupTimeout(2 * time.Minute),
 	}
 	return launchContainer(ctx, req)
 }
