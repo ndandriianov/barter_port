@@ -277,7 +277,7 @@ Deal:
       $ref: '#/DealStatus'
     items:
       type: array
-      description: Список позиций сделки
+      description: Список позиций сделки вместе с фотографиями, принадлежащими самим item
       items:
         $ref: '#/Item'
     participants:
@@ -341,7 +341,9 @@ Item:
     offerId:
       type: string
       format: uuid
-      description: Идентификатор исходного offer, на базе которого создана позиция сделки
+      description: |
+        Идентификатор исходного offer, на базе которого создана позиция сделки.
+        При создании item фотографии offer копируются в item, поэтому дальнейшие изменения фотографий offer на item не влияют.
     providerId:
       type: string
       format: uuid
@@ -367,6 +369,19 @@ Item:
     quantity:
       type: integer
       description: Количество позиций этого типа в сделке
+    photoIds:
+      type: array
+      description: |
+        Идентификаторы фотографий позиции сделки в том же порядке, что и `photoUrls`.
+      items:
+        type: string
+        format: uuid
+    photoUrls:
+      type: array
+      description: Публичные URL фотографий позиции сделки
+      items:
+        type: string
+        format: uri
 
 
 

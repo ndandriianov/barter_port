@@ -444,6 +444,9 @@ type GetDealsResponseItem struct {
 	// Id Уникальный идентификатор сделки
 	Id openapi_types.UUID `json:"id"`
 
+	// Items Список позиций сделки вместе с фотографиями item
+	Items []Item `json:"items"`
+
 	// Name Название сделки
 	Name *string `json:"name,omitempty"`
 
@@ -500,6 +503,12 @@ type Item struct {
 
 	// ProviderId Уникальный идентификатор пользователя, который отдает эту позицию в сделке
 	ProviderId *openapi_types.UUID `json:"providerId,omitempty"`
+
+	// PhotoIds Идентификаторы фотографий позиции сделки в том же порядке, что и `photoUrls`.
+	PhotoIds *[]openapi_types.UUID `json:"photoIds,omitempty"`
+
+	// PhotoUrls Публичные URL фотографий позиции сделки
+	PhotoUrls *[]string `json:"photoUrls,omitempty"`
 
 	// Quantity Количество позиций этого типа в сделке
 	Quantity int `json:"quantity"`
