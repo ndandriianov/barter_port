@@ -1,4 +1,4 @@
-import { Box, Button, Card, CardContent, Chip, Typography } from "@mui/material";
+import { Box, Button, Card, CardContent, CardMedia, Chip, Typography } from "@mui/material";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
 import StarRoundedIcon from "@mui/icons-material/StarRounded";
@@ -53,6 +53,14 @@ function OfferCard({
 
   return (
     <Card variant="outlined" sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
+      {offer.photoUrls.length > 0 && (
+        <CardMedia
+          component="img"
+          image={offer.photoUrls[0]}
+          alt={offer.name}
+          sx={{ height: 220, objectFit: "cover", borderBottom: 1, borderColor: "divider" }}
+        />
+      )}
       <CardContent sx={{ flexGrow: 1 }}>
         <Box display="flex" gap={1} mb={1} flexWrap="wrap">
           <Chip label={typeLabels[offer.type]} size="small" variant="outlined" />

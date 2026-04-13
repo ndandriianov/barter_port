@@ -3,7 +3,8 @@
     {
       "name": "anonymous",
       "actions": [
-        "Read:avatars"
+        "Read:avatars",
+        "Read:offer-photos"
       ]
     },
     {
