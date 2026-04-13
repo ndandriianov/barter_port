@@ -92,6 +92,12 @@ func (h *Handlers) HandleCreateOffer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	log.Debug(
+		"offer created successfully",
+		slog.String("offer_id", offer.ID.String()),
+		slog.Int("photo_count", len(offer.PhotoUrls)),
+	)
+
 	httpx.WriteJSON(w, http.StatusCreated, offer.ToDto())
 }
 
