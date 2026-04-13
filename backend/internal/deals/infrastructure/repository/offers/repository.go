@@ -27,14 +27,33 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 
 // AddOffer inserts a new item into the database.
 // Returns an error if the insertion fails.
-func (r *Repository) AddOffer(ctx context.Context, offer domain.Offer) error {
+func (r *Repository) AddOffer(ctx context.Context, exec db.DB, offer domain.Offer) error {
 	query := `
 		INSERT INTO offers (id, author_id, name, type, action, description, created_at)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)
 	`
 
-	_, err := r.db.Exec(ctx, query, offer.ID, offer.AuthorId, offer.Name, offer.Type.String(), offer.Action.String(), offer.Description, offer.CreatedAt)
+	_, err := exec.Exec(ctx, query, offer.ID, offer.AuthorId, offer.Name, offer.Type.String(), offer.Action.String(), offer.Description, offer.CreatedAt)
 	return err
+}
+
+func (r *Repository) AddOfferPhotos(ctx context.Context, exec db.DB, offerID uuid.UUID, photoURLs []string) error {
+	if len(photoURLs) == 0 {
+		return nil
+	}
+
+	query := `
+		INSERT INTO offer_photos (offer_id, url)
+		VALUES ($1, $2)
+	`
+
+	for _, photoURL := range photoURLs {
+		if _, err := exec.Exec(ctx, query, offerID, photoURL); err != nil {
+			return fmt.Errorf("insert offer photo: %w", err)
+		}
+	}
+
+	return nil
 }
 
 // ================================================================================

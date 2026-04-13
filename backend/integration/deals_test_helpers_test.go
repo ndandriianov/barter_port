@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"testing"
 	"time"
@@ -18,6 +19,18 @@ const (
 	adminEmail    = "admin@barterport.com"
 	adminPassword = "admin"
 )
+
+var tinyPNG = []byte{
+	0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
+	0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+	0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+	0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4,
+	0x89, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x44, 0x41,
+	0x54, 0x78, 0x9c, 0x63, 0xf8, 0xcf, 0xc0, 0x00,
+	0x00, 0x03, 0x01, 0x01, 0x00, 0xc9, 0xfe, 0x92,
+	0xef, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e,
+	0x44, 0xae, 0x42, 0x60, 0x82,
+}
 
 type reviewedDealContext struct {
 	DealID      uuid.UUID
@@ -128,6 +141,40 @@ func mustCreateOfferDetails(t *testing.T, userID uuid.UUID, body types.CreateOff
 
 	req := mustUserRequest(t, http.MethodPost, dealsURL()+"/offers", userID, mustJSONBody(t, body))
 	req.Header.Set("Content-Type", "application/json")
+
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	var offer types.Offer
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&offer))
+	require.NotEqual(t, uuid.Nil, offer.Id)
+
+	return offer
+}
+
+func mustCreateOfferMultipartDetails(t *testing.T, userID uuid.UUID, body types.CreateOfferRequest, photos [][]byte) types.Offer {
+	t.Helper()
+
+	var payload bytes.Buffer
+	writer := multipart.NewWriter(&payload)
+
+	require.NoError(t, writer.WriteField("name", body.Name))
+	require.NoError(t, writer.WriteField("description", body.Description))
+	require.NoError(t, writer.WriteField("type", string(body.Type)))
+	require.NoError(t, writer.WriteField("action", string(body.Action)))
+
+	for i, photo := range photos {
+		part, err := writer.CreateFormFile("photos", fmt.Sprintf("photo-%d.png", i))
+		require.NoError(t, err)
+		_, err = part.Write(photo)
+		require.NoError(t, err)
+	}
+
+	require.NoError(t, writer.Close())
+
+	req := mustUserRequest(t, http.MethodPost, dealsURL()+"/offers", userID, &payload)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
 
 	resp := mustDo(t, req)
 	defer func() { _ = resp.Body.Close() }()

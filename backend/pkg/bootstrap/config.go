@@ -58,12 +58,13 @@ type Config struct {
 	} `mapstructure:"admin"`
 
 	Storage struct {
-		Endpoint        string `mapstructure:"endpoint"`
-		PublicBaseURL   string `mapstructure:"public_base_url"`
-		AvatarBucket    string `mapstructure:"avatar_bucket"`
-		AccessKeyID     string `mapstructure:"access_key_id"`
-		SecretAccessKey string `mapstructure:"secret_access_key"`
-		Region          string `mapstructure:"region"`
+		Endpoint         string `mapstructure:"endpoint"`
+		PublicBaseURL    string `mapstructure:"public_base_url"`
+		AvatarBucket     string `mapstructure:"avatar_bucket"`
+		OfferPhotoBucket string `mapstructure:"offer_photo_bucket"`
+		AccessKeyID      string `mapstructure:"access_key_id"`
+		SecretAccessKey  string `mapstructure:"secret_access_key"`
+		Region           string `mapstructure:"region"`
 	} `mapstructure:"storage"`
 
 	Port                int    `mapstructure:"port"`
@@ -127,6 +128,7 @@ func LoadConfig(options ConfigOptions) (Config, error) {
 	bindEnv(v, "storage.endpoint")
 	bindEnv(v, "storage.public_base_url")
 	bindEnv(v, "storage.avatar_bucket")
+	bindEnv(v, "storage.offer_photo_bucket")
 	bindEnv(v, "storage.access_key_id")
 	bindEnv(v, "storage.secret_access_key")
 	bindEnv(v, "storage.region")

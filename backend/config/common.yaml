@@ -40,6 +40,7 @@ storage:
   endpoint: "http://localhost:8333"
   public_base_url: "http://localhost/s3"
   avatar_bucket: "avatars"
+  offer_photo_bucket: "offer-photos"
   access_key_id: "barter-port-s3"
   secret_access_key: "barter-port-s3-secret"
   region: "us-east-1"
