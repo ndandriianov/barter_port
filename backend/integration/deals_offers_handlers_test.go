@@ -234,3 +234,156 @@ func TestGetOffersResponseIsJSON(t *testing.T) {
 	var decoded types.ListOffersResponse
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&decoded))
 }
+
+func TestUpdateOfferSuccess(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	offer := mustCreateOfferDetails(t, userID, types.CreateOfferRequest{
+		Name:        "Old name",
+		Description: "Old description",
+		Type:        types.Good,
+		Action:      types.Give,
+	})
+
+	newName := "New name"
+	newDescription := "New description"
+	newType := types.Service
+	newAction := types.Take
+	updated := mustUpdateOffer(t, userID, offer.Id, types.UpdateOfferRequest{
+		Name:        &newName,
+		Description: &newDescription,
+		Type:        &newType,
+		Action:      &newAction,
+	})
+
+	require.Equal(t, offer.Id, updated.Id)
+	require.Equal(t, userID, updated.AuthorId)
+	require.Equal(t, newName, updated.Name)
+	require.Equal(t, newDescription, updated.Description)
+	require.Equal(t, types.Service, updated.Type)
+	require.Equal(t, types.Take, updated.Action)
+	require.NotNil(t, updated.UpdatedAt)
+
+	fetched := mustGetOfferByID(t, userID, offer.Id)
+	require.Equal(t, newName, fetched.Name)
+	require.Equal(t, newDescription, fetched.Description)
+	require.Equal(t, types.Service, fetched.Type)
+	require.Equal(t, types.Take, fetched.Action)
+	require.NotNil(t, fetched.UpdatedAt)
+}
+
+func TestUpdateOfferForbiddenForNonAuthor(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	authorID := uuid.New()
+	otherUserID := uuid.New()
+	offerID := mustCreateOffer(t, authorID)
+	name := "Forbidden rename"
+
+	req := mustUserRequest(t, http.MethodPatch, dealsURL()+"/offers/"+offerID.String(), otherUserID, mustJSONBody(t, types.UpdateOfferRequest{
+		Name: &name,
+	}))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusForbidden, resp.StatusCode)
+}
+
+func TestUpdateOfferRejectsEmptyPatch(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	offerID := mustCreateOffer(t, userID)
+
+	req := mustUserRequest(t, http.MethodPatch, dealsURL()+"/offers/"+offerID.String(), userID, bytes.NewReader([]byte(`{}`)))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestDeleteOfferSuccess(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	offerID := mustCreateOffer(t, userID)
+
+	mustDeleteOffer(t, userID, offerID)
+
+	req := mustUserRequest(t, http.MethodGet, dealsURL()+"/offers/"+offerID.String(), userID, nil)
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
+
+func TestDeleteOfferForbiddenForNonAuthor(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	authorID := uuid.New()
+	otherUserID := uuid.New()
+	offerID := mustCreateOffer(t, authorID)
+
+	req := mustUserRequest(t, http.MethodDelete, dealsURL()+"/offers/"+offerID.String(), otherUserID, nil)
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusForbidden, resp.StatusCode)
+}
+
+func TestDeleteOfferKeepsExistingDealItems(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	before := mustGetDealIDs(t, userID, true)
+	beforeSet := make(map[uuid.UUID]struct{}, len(before))
+	for _, id := range before {
+		beforeSet[id] = struct{}{}
+	}
+
+	offerID := mustCreateOffer(t, userID)
+	draftID := mustCreateDraft(t, userID, nil, nil, []types.OfferIDAndQuantity{{OfferID: offerID, Quantity: 1}})
+	mustConfirmDraft(t, userID, draftID)
+
+	after := mustGetDealIDs(t, userID, true)
+	var dealID uuid.UUID
+	for _, id := range after {
+		if _, ok := beforeSet[id]; !ok {
+			dealID = id
+			break
+		}
+	}
+	require.NotEqual(t, uuid.Nil, dealID)
+
+	dealBeforeDelete := mustGetDealByID(t, userID, dealID)
+	var itemBeforeDelete *types.Item
+	for i := range dealBeforeDelete.Items {
+		if dealBeforeDelete.Items[i].AuthorId == userID {
+			itemBeforeDelete = &dealBeforeDelete.Items[i]
+			break
+		}
+	}
+	require.NotNil(t, itemBeforeDelete)
+	require.NotNil(t, itemBeforeDelete.OfferId)
+	require.Equal(t, offerID, *itemBeforeDelete.OfferId)
+
+	mustDeleteOffer(t, userID, offerID)
+
+	dealAfterDelete := mustGetDealByID(t, userID, dealID)
+	var itemAfterDelete *types.Item
+	for i := range dealAfterDelete.Items {
+		if dealAfterDelete.Items[i].Id == itemBeforeDelete.Id {
+			itemAfterDelete = &dealAfterDelete.Items[i]
+			break
+		}
+	}
+	require.NotNil(t, itemAfterDelete)
+	require.Nil(t, itemAfterDelete.OfferId)
+}
