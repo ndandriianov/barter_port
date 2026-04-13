@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
-import { Alert, Box, Button, CircularProgress, Divider, ImageList, ImageListItem, Typography } from "@mui/material";
+import { Alert, Box, Button, CircularProgress, Dialog, DialogContent, Divider, ImageList, ImageListItem, Typography } from "@mui/material";
 import offersApi from "@/features/offers/api/offersApi";
 import usersApi from "@/features/users/api/usersApi";
 import useDraftOfferCounts from "@/features/deals/model/useDraftOfferCounts.ts";
@@ -13,6 +13,7 @@ function OfferPage() {
   const { offerId } = useParams<{ offerId: string }>();
   const navigate = useNavigate();
   const [isRespondModalOpen, setIsRespondModalOpen] = useState(false);
+  const [openedPhotoUrl, setOpenedPhotoUrl] = useState<string | null>(null);
   const { data: meData } = usersApi.useGetCurrentUserQuery();
   const [deleteOffer, { isLoading: isDeleting, error: deleteError }] = offersApi.useDeleteOfferMutation();
 
@@ -77,6 +78,7 @@ function OfferPage() {
             ? `/deals/drafts?offerId=${offer.id}`
             : undefined
         }
+        onPhotoClick={setOpenedPhotoUrl}
       />
 
       {offer.photoUrls.length > 1 && (
@@ -91,7 +93,14 @@ function OfferPage() {
                   component="img"
                   src={photoUrl}
                   alt={offer.name}
-                  sx={{ width: "100%", height: 240, objectFit: "cover", display: "block" }}
+                  onClick={() => setOpenedPhotoUrl(photoUrl)}
+                  sx={{
+                    width: "100%",
+                    height: 240,
+                    objectFit: "cover",
+                    display: "block",
+                    cursor: "zoom-in",
+                  }}
                 />
               </ImageListItem>
             ))}
@@ -145,6 +154,29 @@ function OfferPage() {
         isOpen={isRespondModalOpen}
         onClose={() => setIsRespondModalOpen(false)}
       />
+
+      <Dialog
+        open={openedPhotoUrl !== null}
+        onClose={() => setOpenedPhotoUrl(null)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogContent sx={{ p: 1.5, bgcolor: "common.black" }}>
+          {openedPhotoUrl && (
+            <Box
+              component="img"
+              src={openedPhotoUrl}
+              alt={offer.name}
+              sx={{
+                width: "100%",
+                maxHeight: "85vh",
+                objectFit: "contain",
+                display: "block",
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }
