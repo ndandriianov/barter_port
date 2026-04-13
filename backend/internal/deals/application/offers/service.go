@@ -4,6 +4,7 @@ import (
 	userspb "barter-port/contracts/grpc/users/v1"
 	"barter-port/internal/deals/domain"
 	"barter-port/internal/deals/domain/enums"
+	"barter-port/internal/deals/domain/htypes"
 	offersrep "barter-port/internal/deals/infrastructure/repository/offers"
 	"barter-port/pkg/db"
 	"barter-port/pkg/logger"
@@ -214,6 +215,44 @@ func (s *Service) GetOfferByID(ctx context.Context, id uuid.UUID) (*domain.Offer
 	}
 
 	return offer, nil
+}
+
+// UpdateOffer updates an offer. Only the author can update it.
+//
+// Domain errors:
+//   - domain.ErrOfferNotFound
+//   - domain.ErrForbidden
+//   - domain.ErrInvalidOfferName
+func (s *Service) UpdateOffer(
+	ctx context.Context,
+	userID uuid.UUID,
+	offerID uuid.UUID,
+	patch htypes.OfferPatch,
+) (*domain.Offer, error) {
+	if patch.Name != nil && *patch.Name == "" {
+		return nil, domain.ErrInvalidOfferName
+	}
+
+	offer, err := s.repo.UpdateOffer(ctx, s.db, offerID, userID, patch)
+	if err != nil {
+		return nil, err
+	}
+
+	response, err := s.usersClient.GetUsersWithInfo(ctx, &userspb.GetUsersWithInfoRequest{Ids: []string{offer.AuthorId.String()}})
+	if err == nil && len(response.Users) > 0 && response.Users[0] != nil {
+		offer.AuthorName = &response.Users[0].Name
+	}
+
+	return &offer, nil
+}
+
+// DeleteOffer deletes an offer. Only the author can delete it.
+//
+// Domain errors:
+//   - domain.ErrOfferNotFound
+//   - domain.ErrForbidden
+func (s *Service) DeleteOffer(ctx context.Context, userID uuid.UUID, offerID uuid.UUID) error {
+	return s.repo.DeleteOffer(ctx, s.db, offerID, userID)
 }
 
 func (s *Service) cleanupUploadedPhotos(ctx context.Context, offerID uuid.UUID, count int) {

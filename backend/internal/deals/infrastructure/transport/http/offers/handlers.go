@@ -5,6 +5,7 @@ import (
 	offersapp "barter-port/internal/deals/application/offers"
 	"barter-port/internal/deals/domain"
 	enums "barter-port/internal/deals/domain/enums"
+	"barter-port/internal/deals/domain/htypes"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/httpx"
 	"barter-port/pkg/logger"
@@ -178,6 +179,16 @@ func readOfferPhotoUpload(file multipart.File) ([]byte, string, error) {
 	return content, contentType, nil
 }
 
+func parseOfferID(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool) {
+	idStr := chi.URLParam(r, "offerId")
+	id, err := uuid.Parse(idStr)
+	if err != nil {
+		httpx.WriteEmptyError(w, http.StatusBadRequest)
+		return uuid.Nil, false
+	}
+	return id, true
+}
+
 // ================================================================================
 // GET OFFER BY ID
 // ================================================================================
@@ -186,18 +197,16 @@ func (h *Handlers) HandleGetOfferByID(w http.ResponseWriter, r *http.Request) {
 	log := logger.LogFrom(r.Context(), slog.Default()).With(slog.String("handler", "GetOfferByID"))
 	log.Info("handling get offer by id request")
 
-	idStr := chi.URLParam(r, "offerId")
-	id, err := uuid.Parse(idStr)
-	if err != nil {
+	id, ok := parseOfferID(w, r)
+	if !ok {
 		log.Error("error parsing offer id")
-		httpx.WriteEmptyError(w, http.StatusBadRequest)
 		return
 	}
 
 	offer, err := h.offerService.GetOfferByID(r.Context(), id)
 	if err != nil {
 		if errors.Is(err, domain.ErrOfferNotFound) {
-			log.Info("offer not found", slog.String("offerId", idStr))
+			log.Info("offer not found", slog.String("offerId", id.String()))
 			httpx.WriteEmptyError(w, http.StatusNotFound)
 			return
 		}
@@ -207,6 +216,114 @@ func (h *Handlers) HandleGetOfferByID(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpx.WriteJSON(w, http.StatusOK, offer.ToDto())
+}
+
+// ================================================================================
+// UPDATE OFFER
+// ================================================================================
+
+func (h *Handlers) HandleUpdateOffer(w http.ResponseWriter, r *http.Request) {
+	log := logger.LogFrom(r.Context(), slog.Default()).With(slog.String("handler", "UpdateOffer"))
+	log.Info("handling update offer request")
+
+	offerID, ok := parseOfferID(w, r)
+	if !ok {
+		return
+	}
+
+	userID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		log.Error("failed to get userID from context")
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
+	var req types.UpdateOfferRequest
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		httpx.WriteError(w, http.StatusBadRequest, httpx.ErrCannotDecodeRequestBody)
+		return
+	}
+	if req.Name == nil && req.Description == nil && req.Type == nil && req.Action == nil {
+		httpx.WriteEmptyError(w, http.StatusBadRequest)
+		return
+	}
+
+	var patch htypes.OfferPatch
+	patch.Name = req.Name
+	patch.Description = req.Description
+
+	if req.Type != nil {
+		itemType, err := enums.ItemTypeString(string(*req.Type))
+		if err != nil {
+			httpx.WriteErrorStr(w, http.StatusBadRequest, "invalid item type")
+			return
+		}
+		patch.Type = &itemType
+	}
+
+	if req.Action != nil {
+		action, err := enums.OfferActionString(string(*req.Action))
+		if err != nil {
+			httpx.WriteErrorStr(w, http.StatusBadRequest, "invalid offer action")
+			return
+		}
+		patch.Action = &action
+	}
+
+	offer, err := h.offerService.UpdateOffer(r.Context(), userID, offerID, patch)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrInvalidOfferName):
+			httpx.WriteError(w, http.StatusBadRequest, domain.ErrInvalidOfferName)
+		case errors.Is(err, domain.ErrOfferNotFound):
+			httpx.WriteEmptyError(w, http.StatusNotFound)
+		case errors.Is(err, domain.ErrForbidden):
+			httpx.WriteEmptyError(w, http.StatusForbidden)
+		default:
+			log.Error("failed to update offer", slog.Any("error", err))
+			httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, offer.ToDto())
+}
+
+// ================================================================================
+// DELETE OFFER
+// ================================================================================
+
+func (h *Handlers) HandleDeleteOffer(w http.ResponseWriter, r *http.Request) {
+	log := logger.LogFrom(r.Context(), slog.Default()).With(slog.String("handler", "DeleteOffer"))
+	log.Info("handling delete offer request")
+
+	offerID, ok := parseOfferID(w, r)
+	if !ok {
+		return
+	}
+
+	userID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		log.Error("failed to get userID from context")
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
+	err := h.offerService.DeleteOffer(r.Context(), userID, offerID)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrOfferNotFound):
+			httpx.WriteEmptyError(w, http.StatusNotFound)
+		case errors.Is(err, domain.ErrForbidden):
+			httpx.WriteEmptyError(w, http.StatusForbidden)
+		default:
+			log.Error("failed to delete offer", slog.Any("error", err))
+			httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // ================================================================================

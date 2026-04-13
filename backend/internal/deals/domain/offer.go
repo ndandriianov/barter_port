@@ -18,8 +18,8 @@ type Offer struct {
 	Action      enums.OfferAction `db:"action"`
 	Description string            `db:"description"`
 	CreatedAt   time.Time         `db:"created_at"`
-	// TODO: добавить updated at
-	Views int `db:"views"`
+	UpdatedAt   *time.Time        `db:"updated_at"`
+	Views       int               `db:"views"`
 }
 
 func (i *Offer) ToDto() types.Offer {
@@ -39,6 +39,7 @@ func (i *Offer) ToDto() types.Offer {
 		Action:      types.OfferAction(i.Action.String()),
 		Description: i.Description,
 		CreatedAt:   i.CreatedAt,
+		UpdatedAt:   i.UpdatedAt,
 		Views:       int64(i.Views),
 	}
 }
@@ -61,6 +62,7 @@ func (i *Offer) ToDTOWithInfo(info OfferInfo) types.OfferWithInfo {
 		PhotoUrls:   photoURLs,
 		Quantity:    info.Quantity,
 		Type:        types.ItemType(i.Type.String()),
+		UpdatedAt:   i.UpdatedAt,
 		Views:       int64(i.Views),
 		Confirmed:   info.Confirmed,
 	}
