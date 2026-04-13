@@ -22,6 +22,7 @@ import ChatsPage from "@/pages/chats/ChatsPage";
 import ReviewsPage from "@/pages/reviews/ReviewsPage";
 import UserReviewsPage from "@/pages/reviews/UserReviewsPage";
 import OfferReviewsPage from "@/pages/reviews/OfferReviewsPage";
+import UserPage from "@/pages/users/UserPage.tsx";
 
 function AppRouter() {
   return (
@@ -53,6 +54,7 @@ function AppRouter() {
           <Route path="/reviews" element={<ReviewsPage />} />
           <Route path="/reviews/pending" element={<Navigate to="/reviews?tab=available" replace />} />
           <Route path="/reviews/mine" element={<Navigate to="/reviews?tab=mine" replace />} />
+          <Route path="/users/:userId" element={<UserPage />} />
           <Route path="/users/:userId/reviews" element={<UserReviewsPage />} />
           <Route path="*" element={<Navigate to="/profile" replace />} />
         </Route>

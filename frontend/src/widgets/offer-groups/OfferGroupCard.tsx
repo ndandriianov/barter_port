@@ -52,6 +52,7 @@ function OfferGroupCard({ offerGroup, href }: OfferGroupCardProps) {
             {offerGroup.name}
           </Typography>
           <UserAvatarLabel
+            userId={ownerId ?? undefined}
             name={author?.name ?? ownerName}
             avatarUrl={author?.avatarUrl}
             size={30}

@@ -258,6 +258,7 @@ function RoleRow({
       </Typography>
       {userId ? (
         <UserAvatarLabel
+          userId={userId}
           name={getUserName(userId)}
           avatarUrl={getUserAvatarUrl(userId)}
           size={24}
@@ -720,6 +721,7 @@ function DealCard({ deal }: DealCardProps) {
             <Box display="flex" flexDirection="column" gap={0.5}>
               {deal.participants.map((participantId) => (
                 <UserAvatarLabel
+                  userId={participantId}
                   key={participantId}
                   name={getUserName(participantId)}
                   avatarUrl={getUserAvatarUrl(participantId)}
