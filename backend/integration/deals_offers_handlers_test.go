@@ -4,6 +4,7 @@ import (
 	"barter-port/contracts/openapi/deals/types"
 	"bytes"
 	"encoding/json"
+	"mime/multipart"
 	"net/http"
 	"testing"
 
@@ -28,6 +29,7 @@ func TestCreateOfferSuccess(t *testing.T) {
 	require.Equal(t, "City bike in good condition", offer.Description)
 	require.Equal(t, types.Good, offer.Type)
 	require.Equal(t, types.Give, offer.Action)
+	require.Nil(t, offer.PhotoIds)
 	require.Nil(t, offer.PhotoUrls)
 }
 
@@ -44,12 +46,17 @@ func TestCreateOfferMultipartWithPhotosSuccess(t *testing.T) {
 	}, [][]byte{tinyPNG, tinyPNG})
 
 	require.Equal(t, userID, offer.AuthorId)
+	require.NotNil(t, offer.PhotoIds)
 	require.NotNil(t, offer.PhotoUrls)
+	require.Len(t, *offer.PhotoIds, 2)
 	require.Len(t, *offer.PhotoUrls, 2)
+	require.NotEqual(t, uuid.Nil, (*offer.PhotoIds)[0])
+	require.NotEqual(t, uuid.Nil, (*offer.PhotoIds)[1])
 	require.Contains(t, (*offer.PhotoUrls)[0], "/offer-photos/offer-"+offer.Id.String()+"/photo-0")
 	require.Contains(t, (*offer.PhotoUrls)[1], "/offer-photos/offer-"+offer.Id.String()+"/photo-1")
 
 	fetched := mustGetOfferByID(t, userID, offer.Id)
+	require.Equal(t, offer.PhotoIds, fetched.PhotoIds)
 	require.Equal(t, offer.PhotoUrls, fetched.PhotoUrls)
 }
 
@@ -272,6 +279,69 @@ func TestUpdateOfferSuccess(t *testing.T) {
 	require.Equal(t, types.Service, fetched.Type)
 	require.Equal(t, types.Take, fetched.Action)
 	require.NotNil(t, fetched.UpdatedAt)
+}
+
+func TestUpdateOfferPhotosKeepsRemainingOrderAndAppendsNewPhotos(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	offer := mustCreateOfferMultipartDetails(t, userID, types.CreateOfferRequest{
+		Name:        "Vintage bike",
+		Description: "City bike in good condition",
+		Type:        types.Good,
+		Action:      types.Give,
+	}, [][]byte{tinyPNG, tinyPNG})
+
+	require.NotNil(t, offer.PhotoIds)
+	require.NotNil(t, offer.PhotoUrls)
+	require.Len(t, *offer.PhotoIds, 2)
+	require.Len(t, *offer.PhotoUrls, 2)
+
+	deletePhotoIDs := []uuid.UUID{(*offer.PhotoIds)[0]}
+	updated := mustUpdateOfferMultipartDetails(t, userID, offer.Id, types.UpdateOfferRequest{
+		DeletePhotoIds: &deletePhotoIDs,
+	}, [][]byte{tinyPNG})
+
+	require.NotNil(t, updated.PhotoIds)
+	require.NotNil(t, updated.PhotoUrls)
+	require.Len(t, *updated.PhotoIds, 2)
+	require.Len(t, *updated.PhotoUrls, 2)
+	require.Equal(t, (*offer.PhotoIds)[1], (*updated.PhotoIds)[0])
+	require.Equal(t, (*offer.PhotoUrls)[1], (*updated.PhotoUrls)[0])
+	require.NotEqual(t, (*offer.PhotoIds)[0], (*updated.PhotoIds)[1])
+	require.NotEqual(t, (*offer.PhotoIds)[1], (*updated.PhotoIds)[1])
+	require.Contains(t, (*updated.PhotoUrls)[1], "/offer-photos/offer-"+offer.Id.String()+"/photo-2")
+
+	fetched := mustGetOfferByID(t, userID, offer.Id)
+	require.Equal(t, updated.PhotoIds, fetched.PhotoIds)
+	require.Equal(t, updated.PhotoUrls, fetched.PhotoUrls)
+}
+
+func TestUpdateOfferRejectsUnknownPhotoID(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	offer := mustCreateOfferMultipartDetails(t, userID, types.CreateOfferRequest{
+		Name:        "Vintage bike",
+		Description: "City bike in good condition",
+		Type:        types.Good,
+		Action:      types.Give,
+	}, [][]byte{tinyPNG})
+
+	deletePhotoIDs := []uuid.UUID{uuid.New()}
+	var payload bytes.Buffer
+	writer := multipart.NewWriter(&payload)
+	require.NoError(t, writer.WriteField("deletePhotoIds", deletePhotoIDs[0].String()))
+	require.NoError(t, writer.Close())
+
+	req := mustUserRequest(t, http.MethodPatch, dealsURL()+"/offers/"+offer.Id.String(), userID, &payload)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 }
 
 func TestUpdateOfferForbiddenForNonAuthor(t *testing.T) {

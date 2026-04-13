@@ -39,4 +39,6 @@ export interface UpdateOfferRequest {
   description?: string;
   action?: OfferAction;
   type?: OfferType;
+  photos?: File[];
+  deletePhotoIds?: string[];
 }

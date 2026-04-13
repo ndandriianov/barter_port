@@ -36,13 +36,19 @@ function CreateOfferForm({ mode = "create", offer }: CreateOfferFormProps) {
   const [action, setAction] = useState<OfferAction>(offer?.action ?? "give");
   const [type, setType] = useState<OfferType>(offer?.type ?? "good");
   const [photos, setPhotos] = useState<File[]>([]);
+  const [deletedPhotoIds, setDeletedPhotoIds] = useState<string[]>([]);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const navigate = useNavigate();
+  const existingPhotos = useMemo(
+    () => (offer ? offer.photoUrls.map((url, index) => ({ id: offer.photoIds[index] ?? `${offer.id}-${index}`, url })) : []),
+    [offer],
+  );
   const photoPreviewUrls = useMemo(
     () => photos.map((photo) => ({ file: photo, url: URL.createObjectURL(photo) })),
     [photos],
   );
+  const activeExistingPhotoCount = existingPhotos.filter((photo) => !deletedPhotoIds.includes(photo.id)).length;
 
   useEffect(() => {
     return () => {
@@ -60,7 +66,14 @@ function CreateOfferForm({ mode = "create", offer }: CreateOfferFormProps) {
       }
       await updateOffer({
         offerId: offer.id,
-        body: { name, description, action, type },
+        body: {
+          name,
+          description,
+          action,
+          type,
+          deletePhotoIds: deletedPhotoIds.length > 0 ? deletedPhotoIds : undefined,
+          photos,
+        },
       }).unwrap();
       navigate(`/offers/${offer.id}`);
       return;
@@ -98,7 +111,7 @@ function CreateOfferForm({ mode = "create", offer }: CreateOfferFormProps) {
       nextPhotos.push(file);
     }
 
-    if (nextPhotos.length > MAX_PHOTO_COUNT) {
+    if (activeExistingPhotoCount + nextPhotos.length > MAX_PHOTO_COUNT) {
       setPhotoError("Можно загрузить не больше 10 фото.");
       return;
     }
@@ -109,6 +122,15 @@ function CreateOfferForm({ mode = "create", offer }: CreateOfferFormProps) {
 
   const handleRemovePhoto = (index: number) => {
     setPhotos((current) => current.filter((_, currentIndex) => currentIndex !== index));
+    setPhotoError(null);
+  };
+
+  const handleToggleExistingPhotoDeletion = (photoId: string) => {
+    setDeletedPhotoIds((current) => (
+      current.includes(photoId)
+        ? current.filter((currentId) => currentId !== photoId)
+        : [...current, photoId]
+    ));
     setPhotoError(null);
   };
 
@@ -169,59 +191,102 @@ function CreateOfferForm({ mode = "create", offer }: CreateOfferFormProps) {
         </Select>
       </FormControl>
 
-      {!isEditMode && (
-        <Box>
-          <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
-            <Button variant="outlined" onClick={handleSelectPhotos} disabled={mutationState.isLoading}>
-              Добавить фото
-            </Button>
+      <Box>
+        <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
+          <Button variant="outlined" onClick={handleSelectPhotos} disabled={mutationState.isLoading}>
+            Добавить фото
+          </Button>
+          <Typography variant="body2" color="text.secondary">
+            До {MAX_PHOTO_COUNT} файлов, до 5 МБ каждый
+          </Typography>
+          {isEditMode && (
             <Typography variant="body2" color="text.secondary">
-              До {MAX_PHOTO_COUNT} файлов, до 5 МБ каждый
+              Новые фото будут добавлены в конец списка.
             </Typography>
-          </Stack>
+          )}
+        </Stack>
 
-          {photoPreviewUrls.length > 0 && (
-            <Stack direction="row" spacing={1} mt={2} flexWrap="wrap" useFlexGap>
-              {photoPreviewUrls.map(({ file, url }, index) => (
+        {(existingPhotos.length > 0 || photoPreviewUrls.length > 0) && (
+          <Stack direction="row" spacing={1} mt={2} flexWrap="wrap" useFlexGap>
+            {existingPhotos.map((photo) => {
+              const isMarkedForDeletion = deletedPhotoIds.includes(photo.id);
+
+              return (
                 <Box
-                  key={`${file.name}-${index}`}
+                  key={photo.id}
                   sx={{
                     width: 120,
                     border: 1,
-                    borderColor: "divider",
+                    borderColor: isMarkedForDeletion ? "error.main" : "divider",
                     borderRadius: 2,
                     overflow: "hidden",
                     bgcolor: "background.paper",
+                    opacity: isMarkedForDeletion ? 0.55 : 1,
                   }}
                 >
                   <Box
                     component="img"
-                    src={url}
-                    alt={file.name}
+                    src={photo.url}
+                    alt={name || "offer photo"}
                     sx={{ width: "100%", height: 96, objectFit: "cover", display: "block" }}
                   />
                   <Box p={1}>
-                    <Typography variant="caption" display="block" noWrap title={file.name}>
-                      {file.name}
+                    <Typography variant="caption" display="block" noWrap>
+                      {isMarkedForDeletion ? "Будет удалено" : "Текущее фото"}
                     </Typography>
                     <Button
                       type="button"
                       size="small"
-                      color="inherit"
-                      onClick={() => handleRemovePhoto(index)}
+                      color={isMarkedForDeletion ? "inherit" : "error"}
+                      onClick={() => handleToggleExistingPhotoDeletion(photo.id)}
                       sx={{ mt: 0.5 }}
                     >
-                      Удалить
+                      {isMarkedForDeletion ? "Оставить" : "Удалить"}
                     </Button>
                   </Box>
                 </Box>
-              ))}
-            </Stack>
-          )}
+              );
+            })}
 
-          {photoError && <FormHelperText error>{photoError}</FormHelperText>}
-        </Box>
-      )}
+            {photoPreviewUrls.map(({ file, url }, index) => (
+              <Box
+                key={`${file.name}-${index}`}
+                sx={{
+                  width: 120,
+                  border: 1,
+                  borderColor: "divider",
+                  borderRadius: 2,
+                  overflow: "hidden",
+                  bgcolor: "background.paper",
+                }}
+              >
+                <Box
+                  component="img"
+                  src={url}
+                  alt={file.name}
+                  sx={{ width: "100%", height: 96, objectFit: "cover", display: "block" }}
+                />
+                <Box p={1}>
+                  <Typography variant="caption" display="block" noWrap title={file.name}>
+                    {file.name}
+                  </Typography>
+                  <Button
+                    type="button"
+                    size="small"
+                    color="inherit"
+                    onClick={() => handleRemovePhoto(index)}
+                    sx={{ mt: 0.5 }}
+                  >
+                    Удалить
+                  </Button>
+                </Box>
+              </Box>
+            ))}
+          </Stack>
+        )}
+
+        {photoError && <FormHelperText error>{photoError}</FormHelperText>}
+      </Box>
 
       {mutationState.error && <Alert severity="error">{errorMessage}</Alert>}
 

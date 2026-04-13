@@ -238,12 +238,16 @@ func (h *Handlers) HandleUpdateOffer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req types.UpdateOfferRequest
-	if err := httpx.DecodeJSON(r, &req); err != nil {
-		httpx.WriteError(w, http.StatusBadRequest, httpx.ErrCannotDecodeRequestBody)
+	req, photos, err := decodeUpdateOfferRequest(w, r)
+	if err != nil {
+		httpx.WriteErrorStr(w, http.StatusBadRequest, err.Error())
 		return
 	}
-	if req.Name == nil && req.Description == nil && req.Type == nil && req.Action == nil {
+	if r.MultipartForm != nil {
+		defer func() { _ = r.MultipartForm.RemoveAll() }()
+	}
+	if req.Name == nil && req.Description == nil && req.Type == nil && req.Action == nil &&
+		(req.DeletePhotoIds == nil || len(*req.DeletePhotoIds) == 0) && len(photos) == 0 {
 		httpx.WriteEmptyError(w, http.StatusBadRequest)
 		return
 	}
@@ -251,6 +255,12 @@ func (h *Handlers) HandleUpdateOffer(w http.ResponseWriter, r *http.Request) {
 	var patch htypes.OfferPatch
 	patch.Name = req.Name
 	patch.Description = req.Description
+	if req.DeletePhotoIds != nil {
+		patch.DeletePhotoIds = make([]uuid.UUID, 0, len(*req.DeletePhotoIds))
+		for _, photoID := range *req.DeletePhotoIds {
+			patch.DeletePhotoIds = append(patch.DeletePhotoIds, photoID)
+		}
+	}
 
 	if req.Type != nil {
 		itemType, err := enums.ItemTypeString(string(*req.Type))
@@ -270,15 +280,20 @@ func (h *Handlers) HandleUpdateOffer(w http.ResponseWriter, r *http.Request) {
 		patch.Action = &action
 	}
 
-	offer, err := h.offerService.UpdateOffer(r.Context(), userID, offerID, patch)
+	offer, err := h.offerService.UpdateOffer(r.Context(), userID, offerID, patch, photos)
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrInvalidOfferName):
 			httpx.WriteError(w, http.StatusBadRequest, domain.ErrInvalidOfferName)
+		case errors.Is(err, offersapp.ErrOfferPhotoLimitExceeded), errors.Is(err, offersapp.ErrOfferPhotoNotFound):
+			httpx.WriteErrorStr(w, http.StatusBadRequest, err.Error())
 		case errors.Is(err, domain.ErrOfferNotFound):
 			httpx.WriteEmptyError(w, http.StatusNotFound)
 		case errors.Is(err, domain.ErrForbidden):
 			httpx.WriteEmptyError(w, http.StatusForbidden)
+		case errors.Is(err, offersapp.ErrOfferPhotoStorageNotConfigured):
+			log.Error("offer photo storage is not configured", slog.Any("error", err))
+			httpx.WriteEmptyError(w, http.StatusInternalServerError)
 		default:
 			log.Error("failed to update offer", slog.Any("error", err))
 			httpx.WriteEmptyError(w, http.StatusInternalServerError)
@@ -287,6 +302,94 @@ func (h *Handlers) HandleUpdateOffer(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpx.WriteJSON(w, http.StatusOK, offer.ToDto())
+}
+
+func decodeUpdateOfferRequest(w http.ResponseWriter, r *http.Request) (types.UpdateOfferRequest, []offersapp.PhotoUpload, error) {
+	if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
+		return decodeUpdateOfferMultipartRequest(w, r)
+	}
+
+	var req types.UpdateOfferRequest
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return types.UpdateOfferRequest{}, nil, httpx.ErrCannotDecodeRequestBody
+	}
+
+	return req, nil, nil
+}
+
+func decodeUpdateOfferMultipartRequest(w http.ResponseWriter, r *http.Request) (types.UpdateOfferRequest, []offersapp.PhotoUpload, error) {
+	maxBodySize := int64(maxOfferPhotoCount*maxOfferPhotoUploadSize + (1 << 20))
+	r.Body = http.MaxBytesReader(w, r.Body, maxBodySize)
+	if err := r.ParseMultipartForm(maxBodySize); err != nil {
+		return types.UpdateOfferRequest{}, nil, errors.New("invalid offer upload")
+	}
+
+	values := r.MultipartForm.Value
+	req := types.UpdateOfferRequest{}
+
+	if value, ok := firstMultipartValue(values, "name"); ok {
+		req.Name = &value
+	}
+	if value, ok := firstMultipartValue(values, "description"); ok {
+		req.Description = &value
+	}
+	if value, ok := firstMultipartValue(values, "type"); ok {
+		itemType := types.ItemType(value)
+		req.Type = &itemType
+	}
+	if value, ok := firstMultipartValue(values, "action"); ok {
+		action := types.OfferAction(value)
+		req.Action = &action
+	}
+	if rawIDs, ok := values["deletePhotoIds"]; ok {
+		deletePhotoIDs := make([]uuid.UUID, 0, len(rawIDs))
+		for _, rawID := range rawIDs {
+			photoID, err := uuid.Parse(rawID)
+			if err != nil {
+				return types.UpdateOfferRequest{}, nil, errors.New("invalid deletePhotoIds")
+			}
+			deletePhotoIDs = append(deletePhotoIDs, photoID)
+		}
+		req.DeletePhotoIds = &deletePhotoIDs
+	}
+
+	fileHeaders := r.MultipartForm.File["photos"]
+	if len(fileHeaders) > maxOfferPhotoCount {
+		return types.UpdateOfferRequest{}, nil, errors.New("too many offer photos")
+	}
+
+	photos := make([]offersapp.PhotoUpload, 0, len(fileHeaders))
+	for _, fileHeader := range fileHeaders {
+		file, err := fileHeader.Open()
+		if err != nil {
+			return types.UpdateOfferRequest{}, nil, errors.New("failed to read offer photo")
+		}
+
+		content, contentType, readErr := readOfferPhotoUpload(file)
+		closeErr := file.Close()
+		if readErr != nil {
+			return types.UpdateOfferRequest{}, nil, readErr
+		}
+		if closeErr != nil {
+			return types.UpdateOfferRequest{}, nil, errors.New("failed to close offer photo")
+		}
+
+		photos = append(photos, offersapp.PhotoUpload{
+			ContentType: contentType,
+			Content:     content,
+		})
+	}
+
+	return req, photos, nil
+}
+
+func firstMultipartValue(values map[string][]string, key string) (string, bool) {
+	raw, ok := values[key]
+	if !ok || len(raw) == 0 {
+		return "", false
+	}
+
+	return raw[0], true
 }
 
 // ================================================================================

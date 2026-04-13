@@ -267,9 +267,18 @@ type UpdateOfferRequest struct {
 	// Action Whether the user offers or requests something
 	Action *OfferAction `json:"action,omitempty"`
 
+	// DeletePhotoIds Идентификаторы существующих фотографий, которые нужно удалить.
+	// Порядок остальных фотографий сохраняется, новые добавляются в конец.
+	DeletePhotoIds *[]openapi_types.UUID `json:"deletePhotoIds,omitempty"`
+
 	Description *string `json:"description,omitempty"`
 
 	Name *string `json:"name,omitempty"`
+
+	// Photos Новые фотографии объявления.
+	// Каждая фотография передается отдельным бинарным файлом в `multipart/form-data`
+	// и будет добавлена в конец списка после оставшихся фотографий.
+	Photos *[]openapi_types.File `json:"photos,omitempty"`
 
 	// Type Type of barter item
 	Type *ItemType `json:"type,omitempty"`
@@ -564,6 +573,10 @@ type Offer struct {
 	// Name Short item title
 	Name string `json:"name"`
 
+	// PhotoIds Идентификаторы фотографий объявления в том же порядке, что и `photoUrls`.
+	// Используются для удаления отдельных фотографий при редактировании.
+	PhotoIds *[]openapi_types.UUID `json:"photoIds,omitempty"`
+
 	// PhotoUrls Публичные URL фотографий объявления
 	PhotoUrls *[]string `json:"photoUrls,omitempty"`
 
@@ -661,6 +674,10 @@ type OfferWithInfo struct {
 
 	// Name Short item title
 	Name string `json:"name"`
+
+	// PhotoIds Идентификаторы фотографий объявления в том же порядке, что и `photoUrls`.
+	// Используются для удаления отдельных фотографий при редактировании.
+	PhotoIds *[]openapi_types.UUID `json:"photoIds,omitempty"`
 
 	// PhotoUrls Публичные URL фотографий объявления
 	PhotoUrls *[]string `json:"photoUrls,omitempty"`

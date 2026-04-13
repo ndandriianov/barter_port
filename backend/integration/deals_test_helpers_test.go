@@ -236,6 +236,58 @@ func mustUpdateOffer(t *testing.T, userID uuid.UUID, offerID uuid.UUID, body typ
 	return offer
 }
 
+func mustUpdateOfferMultipartDetails(
+	t *testing.T,
+	userID uuid.UUID,
+	offerID uuid.UUID,
+	body types.UpdateOfferRequest,
+	photos [][]byte,
+) types.Offer {
+	t.Helper()
+
+	var payload bytes.Buffer
+	writer := multipart.NewWriter(&payload)
+
+	if body.Name != nil {
+		require.NoError(t, writer.WriteField("name", *body.Name))
+	}
+	if body.Description != nil {
+		require.NoError(t, writer.WriteField("description", *body.Description))
+	}
+	if body.Type != nil {
+		require.NoError(t, writer.WriteField("type", string(*body.Type)))
+	}
+	if body.Action != nil {
+		require.NoError(t, writer.WriteField("action", string(*body.Action)))
+	}
+	if body.DeletePhotoIds != nil {
+		for _, photoID := range *body.DeletePhotoIds {
+			require.NoError(t, writer.WriteField("deletePhotoIds", photoID.String()))
+		}
+	}
+
+	for i, photo := range photos {
+		part, err := writer.CreateFormFile("photos", fmt.Sprintf("photo-%d.png", i))
+		require.NoError(t, err)
+		_, err = part.Write(photo)
+		require.NoError(t, err)
+	}
+
+	require.NoError(t, writer.Close())
+
+	req := mustUserRequest(t, http.MethodPatch, dealsURL()+"/offers/"+offerID.String(), userID, &payload)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var offer types.Offer
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&offer))
+
+	return offer
+}
+
 func mustDeleteOffer(t *testing.T, userID uuid.UUID, offerID uuid.UUID) {
 	t.Helper()
 
