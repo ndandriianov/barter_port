@@ -22,6 +22,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
+type ItemPhotoStorage interface {
+	CopyPhoto(ctx context.Context, sourceURL string, itemID uuid.UUID, index int) (string, error)
+	DeletePhoto(ctx context.Context, itemID uuid.UUID, index int) error
+}
+
 type Service struct {
 	db               *pgxpool.Pool
 	draftsRepository *drafts.Repository
@@ -29,6 +34,7 @@ type Service struct {
 	failuresRepo     *failuresrepo.Repository
 	joinsRepository  *joins.Repository
 	offersRepository *offers.Repository
+	itemPhotoStorage ItemPhotoStorage
 	chatsClient      chatspb.ChatsServiceClient
 	adminChecker     *authkit.AdminChecker
 	logger           *slog.Logger
@@ -41,6 +47,7 @@ func NewService(
 	failuresRepo *failuresrepo.Repository,
 	joinsRepo *joins.Repository,
 	offersRepo *offers.Repository,
+	itemPhotoStorage ItemPhotoStorage,
 ) *Service {
 	return &Service{
 		db:               db,
@@ -49,6 +56,7 @@ func NewService(
 		failuresRepo:     failuresRepo,
 		joinsRepository:  joinsRepo,
 		offersRepository: offersRepo,
+		itemPhotoStorage: itemPhotoStorage,
 		logger:           slog.Default(),
 	}
 }
@@ -224,6 +232,7 @@ func (s *Service) DeleteDraftByID(ctx context.Context, id uuid.UUID, userID uuid
 //   - domain.ErrUserNotInDraft
 func (s *Service) ConfirmDraft(ctx context.Context, id uuid.UUID, userID uuid.UUID) ([]htypes.UserConfirmed, error) {
 	var users []htypes.UserConfirmed
+	copiedPhotos := make([]copiedItemPhoto, 0)
 
 	err := db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
 		err := s.draftsRepository.ConfirmDraftByID(ctx, tx, id, userID)
@@ -249,7 +258,7 @@ func (s *Service) ConfirmDraft(ctx context.Context, id uuid.UUID, userID uuid.UU
 				return fmt.Errorf("could not find draft: %w", err)
 			}
 
-			id, err = s.createDeal(ctx, tx, draft)
+			id, copiedPhotos, err = s.createDeal(ctx, tx, draft)
 			if err != nil {
 				return fmt.Errorf("could not create deal: %w", err)
 			}
@@ -258,6 +267,7 @@ func (s *Service) ConfirmDraft(ctx context.Context, id uuid.UUID, userID uuid.UU
 		return nil
 	})
 	if err != nil {
+		s.cleanupCopiedItemPhotos(ctx, copiedPhotos)
 		return nil, err
 	}
 
@@ -440,6 +450,7 @@ func (s *Service) AddDealItem(
 	}
 
 	var updatedDeal domain.Deal
+	copiedPhotos := make([]copiedItemPhoto, 0)
 
 	err := db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
 		deal, err := s.dealsRepository.GetDealByID(ctx, tx, dealID)
@@ -469,6 +480,7 @@ func (s *Service) AddDealItem(
 		}
 
 		newItem := domain.Item{
+			ID:          uuid.New(),
 			OfferID:     &offerID,
 			AuthorID:    offer.AuthorId,
 			Name:        offer.Name,
@@ -487,10 +499,17 @@ func (s *Service) AddDealItem(
 			return err
 		}
 
+		itemCopies, err := s.copyOfferPhotosToItem(ctx, tx, newItem.ID, offer.PhotoUrls)
+		if err != nil {
+			return err
+		}
+		copiedPhotos = append(copiedPhotos, itemCopies...)
+
 		updatedDeal, err = s.dealsRepository.GetDealByID(ctx, tx, dealID)
 		return err
 	})
 	if err != nil {
+		s.cleanupCopiedItemPhotos(ctx, copiedPhotos)
 		return domain.Deal{}, err
 	}
 
@@ -629,11 +648,12 @@ func (s *Service) ProcessDealStatusUpdateRequest(
 //
 // Errors:
 //   - domain.ErrDraftNotFound
-func (s *Service) createDeal(ctx context.Context, tx pgx.Tx, draft domain.Draft) (uuid.UUID, error) {
+func (s *Service) createDeal(ctx context.Context, tx pgx.Tx, draft domain.Draft) (uuid.UUID, []copiedItemPhoto, error) {
 	items := make([]domain.Item, len(draft.Offers))
 	for i, o := range draft.Offers {
 		var receiver *uuid.UUID = nil
 		var provider *uuid.UUID = nil
+		offerID := o.Offer.ID
 
 		if o.Offer.Action == enums.OfferActionGive {
 			provider = &o.Offer.AuthorId
@@ -642,7 +662,8 @@ func (s *Service) createDeal(ctx context.Context, tx pgx.Tx, draft domain.Draft)
 		}
 
 		items[i] = domain.Item{
-			OfferID:     new(o.Offer.ID),
+			ID:          uuid.New(),
+			OfferID:     &offerID,
 			AuthorID:    o.Offer.AuthorId,
 			ProviderID:  provider,
 			ReceiverID:  receiver,
@@ -659,15 +680,26 @@ func (s *Service) createDeal(ctx context.Context, tx pgx.Tx, draft domain.Draft)
 		Items:       items,
 	})
 	if err != nil {
-		return uuid.Nil, fmt.Errorf("failed to create deal: %w", err)
+		return uuid.Nil, nil, fmt.Errorf("failed to create deal: %w", err)
+	}
+
+	copiedPhotos := make([]copiedItemPhoto, 0)
+	for i, offerWithInfo := range draft.Offers {
+		itemCopies, copyErr := s.copyOfferPhotosToItem(ctx, tx, items[i].ID, offerWithInfo.Offer.PhotoUrls)
+		if copyErr != nil {
+			s.cleanupCopiedItemPhotos(ctx, copiedPhotos)
+			return uuid.Nil, nil, fmt.Errorf("failed to copy item photos: %w", copyErr)
+		}
+		copiedPhotos = append(copiedPhotos, itemCopies...)
 	}
 
 	err = s.draftsRepository.DeleteDraft(ctx, tx, draft.ID)
 	if err != nil {
-		return uuid.Nil, fmt.Errorf("failed to delete draft: %w", err)
+		s.cleanupCopiedItemPhotos(ctx, copiedPhotos)
+		return uuid.Nil, nil, fmt.Errorf("failed to delete draft: %w", err)
 	}
 
-	return id, nil
+	return id, copiedPhotos, nil
 }
 
 func (s *Service) confirmDeal(ctx context.Context, id uuid.UUID, userID uuid.UUID, targetStatus enums.DealStatus) (domain.Deal, error) {
@@ -754,6 +786,68 @@ func (s *Service) confirmDeal(ctx context.Context, id uuid.UUID, userID uuid.UUI
 	}
 
 	return deal, nil
+}
+
+type copiedItemPhoto struct {
+	ItemID   uuid.UUID
+	Position int
+}
+
+func (s *Service) copyOfferPhotosToItem(
+	ctx context.Context,
+	tx pgx.Tx,
+	itemID uuid.UUID,
+	photoURLs []string,
+) ([]copiedItemPhoto, error) {
+	if len(photoURLs) == 0 {
+		return nil, nil
+	}
+	if s.itemPhotoStorage == nil {
+		return nil, fmt.Errorf("item photo storage is not configured")
+	}
+
+	photos := make([]domain.ItemPhoto, 0, len(photoURLs))
+	copies := make([]copiedItemPhoto, 0, len(photoURLs))
+	for i, photoURL := range photoURLs {
+		copiedURL, err := s.itemPhotoStorage.CopyPhoto(ctx, photoURL, itemID, i)
+		if err != nil {
+			return nil, err
+		}
+		photos = append(photos, domain.ItemPhoto{
+			ID:       uuid.New(),
+			ItemID:   itemID,
+			URL:      copiedURL,
+			Position: i,
+		})
+		copies = append(copies, copiedItemPhoto{
+			ItemID:   itemID,
+			Position: i,
+		})
+	}
+
+	if err := s.dealsRepository.AddItemPhotos(ctx, tx, photos); err != nil {
+		s.cleanupCopiedItemPhotos(ctx, copies)
+		return nil, err
+	}
+
+	return copies, nil
+}
+
+func (s *Service) cleanupCopiedItemPhotos(ctx context.Context, copies []copiedItemPhoto) {
+	if s.itemPhotoStorage == nil {
+		return
+	}
+
+	for _, photo := range copies {
+		if err := s.itemPhotoStorage.DeletePhoto(ctx, photo.ItemID, photo.Position); err != nil {
+			s.logger.Warn(
+				"failed to cleanup copied item photo",
+				slog.String("item_id", photo.ItemID.String()),
+				slog.Int("position", photo.Position),
+				slog.Any("error", err),
+			)
+		}
+	}
 }
 
 func (s *Service) checkParticipants(ctx context.Context, tx pgx.Tx, dealID uuid.UUID) (bool, error) {
