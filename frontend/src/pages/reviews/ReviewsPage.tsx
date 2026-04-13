@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import {
   Box,
   Button,
@@ -33,10 +33,13 @@ function isReviewsTab(value: string | null): value is ReviewsTab {
 }
 
 function ReviewsPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const rawTab = searchParams.get("tab");
   const tab: ReviewsTab = isReviewsTab(rawTab) ? rawTab : "available";
   const selectedDealId = searchParams.get("dealId");
+  const shouldShowBackButton = location.state?.fromLayoutReviewsButton !== true;
 
   const meta = useMemo(() => tabMeta[tab], [tab]);
 
@@ -53,6 +56,17 @@ function ReviewsPage() {
 
   return (
     <Box maxWidth={900} mx="auto">
+      {shouldShowBackButton && (
+        <Button
+          size="small"
+          variant="text"
+          onClick={() => window.history.length > 1 ? navigate(-1) : navigate("/offers")}
+          sx={{ mb: 2 }}
+        >
+          ← Назад
+        </Button>
+      )}
+
       <Typography variant="h4" fontWeight={700} mb={1}>
         Отзывы
       </Typography>
