@@ -280,10 +280,12 @@ func (r *Repository) GetItemForReview(
 	dealID, itemID uuid.UUID,
 ) (domain.Item, error) {
 	query := `
-		SELECT id, offer_id, author_id, provider_id, receiver_id,
-		       name, description, type, updated_at, quantity
-		FROM items
-		WHERE deal_id = $1 AND id = $2`
+		SELECT i.id, i.offer_id, i.author_id, i.provider_id, i.receiver_id,
+		       i.name, i.description, i.type, i.updated_at, i.quantity,
+		       COALESCE((SELECT array_agg(ip.id ORDER BY ip.position) FROM items_photos ip WHERE ip.item_id = i.id), '{}'::uuid[]),
+		       COALESCE((SELECT array_agg(ip.url ORDER BY ip.position) FROM items_photos ip WHERE ip.item_id = i.id), '{}'::text[])
+		FROM items i
+		WHERE i.deal_id = $1 AND i.id = $2`
 
 	item, err := dealsrepo.ScanItem(exec.QueryRow(ctx, query, dealID, itemID))
 	if errors.Is(err, pgx.ErrNoRows) {
