@@ -143,6 +143,14 @@ func (h *Handlers) HandleUploadMeAvatar(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	log.Debug(
+		"avatar uploaded successfully",
+		slog.String("user_id", userID.String()),
+		slog.String("content_type", contentType),
+		slog.Int("size_bytes", len(content)),
+		slog.String("avatar_url", avatarURL),
+	)
+
 	httpx.WriteJSON(w, http.StatusOK, avatarUploadResponse{AvatarURL: avatarURL})
 }
 

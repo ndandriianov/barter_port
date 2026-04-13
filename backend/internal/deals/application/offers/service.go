@@ -58,6 +58,10 @@ func (s *Service) CreateOffer(
 		return nil, ErrOfferPhotoStorageNotConfigured
 	}
 
+	log := logger.LogFrom(ctx, s.fallbackLogger).With(
+		slog.String("user_id", userID.String()),
+	)
+
 	item := domain.Offer{
 		ID:          uuid.New(),
 		AuthorId:    userID,
@@ -76,6 +80,14 @@ func (s *Service) CreateOffer(
 			s.cleanupUploadedPhotos(ctx, item.ID, i)
 			return nil, err
 		}
+		log.Debug(
+			"offer photo uploaded successfully",
+			slog.String("offer_id", item.ID.String()),
+			slog.Int("photo_index", i),
+			slog.String("content_type", photo.ContentType),
+			slog.Int("size_bytes", len(photo.Content)),
+			slog.String("photo_url", photoURL),
+		)
 		photoURLs = append(photoURLs, photoURL)
 	}
 	item.PhotoUrls = photoURLs
@@ -89,6 +101,14 @@ func (s *Service) CreateOffer(
 	if err != nil {
 		s.cleanupUploadedPhotos(ctx, item.ID, len(photoURLs))
 		return nil, err
+	}
+
+	if len(photoURLs) > 0 {
+		log.Debug(
+			"offer with photos created successfully",
+			slog.String("offer_id", item.ID.String()),
+			slog.Int("photo_count", len(photoURLs)),
+		)
 	}
 
 	return &item, nil
