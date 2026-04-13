@@ -261,6 +261,20 @@ type CreateOfferRequest struct {
 	Type ItemType `json:"type"`
 }
 
+// UpdateOfferRequest Хотя бы одно поле обязательно.
+// Редактировать объявление может только его автор.
+type UpdateOfferRequest struct {
+	// Action Whether the user offers or requests something
+	Action *OfferAction `json:"action,omitempty"`
+
+	Description *string `json:"description,omitempty"`
+
+	Name *string `json:"name,omitempty"`
+
+	// Type Type of barter item
+	Type *ItemType `json:"type,omitempty"`
+}
+
 // CreateReviewRequest defines model for CreateReviewRequest.
 type CreateReviewRequest struct {
 	// Comment Текстовый отзыв после завершения сделки.
@@ -556,6 +570,9 @@ type Offer struct {
 	// Type Type of barter item
 	Type ItemType `json:"type"`
 
+	// UpdatedAt Item last update timestamp
+	UpdatedAt *time.Time `json:"updatedAt,omitempty"`
+
 	// Views Number of item views
 	Views int64 `json:"views"`
 }
@@ -653,6 +670,9 @@ type OfferWithInfo struct {
 
 	// Type Type of barter item
 	Type ItemType `json:"type"`
+
+	// UpdatedAt Item last update timestamp
+	UpdatedAt *time.Time `json:"updatedAt,omitempty"`
 
 	// Views Number of item views
 	Views int64 `json:"views"`
@@ -947,6 +967,9 @@ type CreateDraftDealFromOfferGroupJSONRequestBody = CreateOfferGroupDraftRequest
 
 // CreateOffersMultipartRequestBody defines body for CreateOffers for multipart/form-data ContentType.
 type CreateOffersMultipartRequestBody = CreateOfferRequest
+
+// UpdateOfferJSONRequestBody defines body for UpdateOfferById for application/json ContentType.
+type UpdateOfferJSONRequestBody = UpdateOfferRequest
 
 // UpdateReviewJSONRequestBody defines body for UpdateReview for application/json ContentType.
 type UpdateReviewJSONRequestBody = UpdateReviewRequest
