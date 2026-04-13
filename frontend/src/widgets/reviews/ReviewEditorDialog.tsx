@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Alert,
   Button,
@@ -24,28 +24,27 @@ interface ReviewEditorDialogProps {
   onSubmit: (value: { rating: number; comment: string }) => Promise<void>;
 }
 
-function ReviewEditorDialog({
-  open,
-  title,
+interface ReviewEditorDialogFormProps {
+  submitLabel: string;
+  initialRating: number;
+  initialComment: string;
+  isLoading: boolean;
+  errorMessage?: string | null;
+  onClose: () => void;
+  onSubmit: (value: { rating: number; comment: string }) => Promise<void>;
+}
+
+function ReviewEditorDialogForm({
   submitLabel,
-  initialRating = 5,
-  initialComment = "",
-  isLoading = false,
+  initialRating,
+  initialComment,
+  isLoading,
   errorMessage,
   onClose,
   onSubmit,
-}: ReviewEditorDialogProps) {
+}: ReviewEditorDialogFormProps) {
   const [rating, setRating] = useState(initialRating);
   const [comment, setComment] = useState(initialComment);
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    setRating(initialRating);
-    setComment(initialComment);
-  }, [initialComment, initialRating, open]);
 
   const handleSubmit = async () => {
     if (!rating) {
@@ -56,8 +55,7 @@ function ReviewEditorDialog({
   };
 
   return (
-    <Dialog open={open} onClose={isLoading ? undefined : onClose} fullWidth maxWidth="sm">
-      <DialogTitle>{title}</DialogTitle>
+    <>
       <DialogContent>
         <Stack spacing={2} sx={{ pt: 1 }}>
           <div>
@@ -93,6 +91,34 @@ function ReviewEditorDialog({
           {submitLabel}
         </Button>
       </DialogActions>
+    </>
+  );
+}
+
+function ReviewEditorDialog({
+  open,
+  title,
+  submitLabel,
+  initialRating = 5,
+  initialComment = "",
+  isLoading = false,
+  errorMessage,
+  onClose,
+  onSubmit,
+}: ReviewEditorDialogProps) {
+  return (
+    <Dialog open={open} onClose={isLoading ? undefined : onClose} fullWidth maxWidth="sm">
+      <DialogTitle>{title}</DialogTitle>
+      <ReviewEditorDialogForm
+        key={JSON.stringify([open, initialRating, initialComment])}
+        submitLabel={submitLabel}
+        initialRating={initialRating}
+        initialComment={initialComment}
+        isLoading={isLoading}
+        errorMessage={errorMessage}
+        onClose={onClose}
+        onSubmit={onSubmit}
+      />
     </Dialog>
   );
 }
