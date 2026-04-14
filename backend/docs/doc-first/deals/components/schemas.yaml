@@ -306,6 +306,23 @@ UpdateDealItemRequest:
       type: integer
       minimum: 1
       description: Новое количество (только для автора)
+    deletePhotoIds:
+      type: array
+      description: |
+        Идентификаторы существующих фотографий позиции, которые нужно удалить.
+        Порядок остальных фотографий сохраняется, новые добавляются в конец.
+      items:
+        type: string
+        format: uuid
+    photos:
+      type: array
+      description: |
+        Новые фотографии позиции сделки.
+        Каждая фотография передается отдельным бинарным файлом в `multipart/form-data`
+        и будет добавлена в конец списка после оставшихся фотографий.
+      items:
+        type: string
+        format: binary
     claimProvider:
       type: boolean
       description: Назначить текущего пользователя поставщиком (только если слот свободен и пользователь не является receiver этой же позиции)

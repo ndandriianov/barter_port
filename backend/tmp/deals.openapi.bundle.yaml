@@ -147,7 +147,8 @@ paths:
       description: |
         Подтверждает участие текущего пользователя в сделке.
         После того, как все участники черновика подтвердят свое участие, создается сделка,
-        используемые в ней items превращаются в сущность item сделки, а не просто объявления.
+        используемые в ней offers превращаются в item сделки, а их фотографии копируются в item.
+        После этого item хранит собственные фотографии независимо от offer; из исходной связи сохраняется только `offerId`.
 
         Запрос идемпотентный.
       operationId: confirmDraftDeal
@@ -309,7 +310,8 @@ paths:
         Получить все сделки.
 
         - Если указать параметр my=true, то будут возвращены только сделки, в которых текущий пользователь является участником.
-        - Если указать параметр open=true, то будут возвращены только открытые сделки
+        - Если указать параметр open=true, то будут возвращены только открытые сделки.
+        - Для каждой сделки также возвращается список `items` с их фотографиями.
       operationId: getDeals
       parameters:
         - name: my
@@ -599,6 +601,9 @@ paths:
           application/json:
             schema:
               $ref: '#/components/schemas/UpdateDealItemRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UpdateDealItemRequest'
       responses:
         '200':
           description: Обновлённая позиция сделки
@@ -646,6 +651,7 @@ paths:
       summary: Добавить позицию в сделку
       description: |
         Пользователь указывает id одного из своих offers, на основании offer формируется item, item добавляется в сделку.
+        Фотографии offer копируются в item, после чего item использует уже собственные фотографии.
 
         Если по сделке уже создана запись в `deal_failures` и она ожидает решения админа,
         добавление новой позиции запрещено.
@@ -2127,6 +2133,109 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+    patch:
+      tags:
+        - offers
+      summary: Update offer
+      description: Updates an existing offer. Only the author can edit it.
+      operationId: updateOfferById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: offerId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateOfferRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/UpdateOfferRequest'
+      responses:
+        '200':
+          description: Updated offer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Offer'
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Offer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - offers
+      summary: Delete offer
+      description: Deletes an existing offer. Only the author can delete it.
+      operationId: deleteOfferById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: offerId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Offer deleted
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Offer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /offers/{offerId}/reviews:
     get:
       tags:
@@ -2620,6 +2729,19 @@ components:
           format: date-time
           description: Item creation timestamp
           example: '2026-03-04T12:00:00Z'
+        updatedAt:
+          type: string
+          format: date-time
+          description: Item last update timestamp
+          example: '2026-03-05T12:00:00Z'
+        photoIds:
+          type: array
+          description: |
+            Идентификаторы фотографий объявления в том же порядке, что и `photoUrls`.
+            Используются для удаления отдельных фотографий при редактировании.
+          items:
+            type: string
+            format: uuid
         photoUrls:
           type: array
           description: Публичные URL фотографий объявления
@@ -2709,32 +2831,6 @@ components:
         - Completed
         - Cancelled
         - Failed
-    GetDealsResponseItem:
-      type: object
-      required:
-        - id
-        - participants
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: Уникальный идентификатор сделки
-        name:
-          type: string
-          description: Название сделки
-        status:
-          $ref: '#/components/schemas/DealStatus'
-        participants:
-          type: array
-          description: Список ID всех пользователей, участвующих в этой сделке
-          items:
-            type: string
-            format: uuid
-            description: Уникальный идентификатор пользователя
-    GetDealsResponse:
-      type: array
-      items:
-        $ref: '#/components/schemas/GetDealsResponseItem'
     Item:
       type: object
       required:
@@ -2756,7 +2852,9 @@ components:
         offerId:
           type: string
           format: uuid
-          description: Идентификатор исходного offer, на базе которого создана позиция сделки
+          description: |
+            Идентификатор исходного offer, на базе которого создана позиция сделки.
+            При создании item фотографии offer копируются в item, поэтому дальнейшие изменения фотографий offer на item не влияют.
         providerId:
           type: string
           format: uuid
@@ -2782,6 +2880,51 @@ components:
         quantity:
           type: integer
           description: Количество позиций этого типа в сделке
+        photoIds:
+          type: array
+          description: |
+            Идентификаторы фотографий позиции сделки в том же порядке, что и `photoUrls`.
+          items:
+            type: string
+            format: uuid
+        photoUrls:
+          type: array
+          description: Публичные URL фотографий позиции сделки
+          items:
+            type: string
+            format: uri
+    GetDealsResponseItem:
+      type: object
+      required:
+        - id
+        - items
+        - participants
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор сделки
+        name:
+          type: string
+          description: Название сделки
+        status:
+          $ref: '#/components/schemas/DealStatus'
+        items:
+          type: array
+          description: Список позиций сделки вместе с фотографиями item
+          items:
+            $ref: '#/components/schemas/Item'
+        participants:
+          type: array
+          description: Список ID всех пользователей, участвующих в этой сделке
+          items:
+            type: string
+            format: uuid
+            description: Уникальный идентификатор пользователя
+    GetDealsResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/GetDealsResponseItem'
     Deal:
       type: object
       required:
@@ -2813,7 +2956,7 @@ components:
           $ref: '#/components/schemas/DealStatus'
         items:
           type: array
-          description: Список позиций сделки
+          description: Список позиций сделки вместе с фотографиями, принадлежащими самим item
           items:
             $ref: '#/components/schemas/Item'
         participants:
@@ -2871,6 +3014,23 @@ components:
           type: integer
           minimum: 1
           description: Новое количество (только для автора)
+        deletePhotoIds:
+          type: array
+          description: |
+            Идентификаторы существующих фотографий позиции, которые нужно удалить.
+            Порядок остальных фотографий сохраняется, новые добавляются в конец.
+          items:
+            type: string
+            format: uuid
+        photos:
+          type: array
+          description: |
+            Новые фотографии позиции сделки.
+            Каждая фотография передается отдельным бинарным файлом в `multipart/form-data`
+            и будет добавлена в конец списка после оставшихся фотографий.
+          items:
+            type: string
+            format: binary
         claimProvider:
           type: boolean
           description: Назначить текущего пользователя поставщиком (только если слот свободен и пользователь не является receiver этой же позиции)
@@ -3361,6 +3521,40 @@ components:
           description: |
             Необязательные фотографии объявления.
             Каждая фотография передается отдельным бинарным файлом в `multipart/form-data`.
+          items:
+            type: string
+            format: binary
+    UpdateOfferRequest:
+      type: object
+      minProperties: 1
+      description: |
+        Хотя бы одно поле обязательно.
+        Редактировать объявление может только его автор.
+      properties:
+        name:
+          type: string
+          example: Bicycle repair
+        description:
+          type: string
+          example: I can help fix city bikes and replace brake pads
+        type:
+          $ref: '#/components/schemas/ItemType'
+        action:
+          $ref: '#/components/schemas/OfferAction'
+        deletePhotoIds:
+          type: array
+          description: |
+            Идентификаторы существующих фотографий, которые нужно удалить.
+            Порядок остальных фотографий сохраняется, новые добавляются в конец.
+          items:
+            type: string
+            format: uuid
+        photos:
+          type: array
+          description: |
+            Новые фотографии объявления.
+            Каждая фотография передается отдельным бинарным файлом в `multipart/form-data`
+            и будет добавлена в конец списка после оставшихся фотографий.
           items:
             type: string
             format: binary
