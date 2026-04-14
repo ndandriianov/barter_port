@@ -248,3 +248,52 @@ offerById:
           application/json:
             schema:
               $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+
+viewOfferById:
+  post:
+    tags:
+      - offers
+    summary: Просмотр предложения
+    description: |
+      Увеличивает счетчик просмотров предложения.
+      Вызывается при открытии предложения пользователем.
+      Счетчик просмотров используется для сортировки по популярности.
+    operationId: viewOfferById
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - name: offerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: OK
+      '400':
+        description: Invalid offer ID
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Offer not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'

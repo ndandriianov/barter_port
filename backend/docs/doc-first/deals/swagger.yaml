@@ -56,6 +56,8 @@ paths:
     $ref: './paths/offers.yaml#/offers'
   /offers/{offerId}:
     $ref: './paths/offers.yaml#/offerById'
+  /offers/{offerId}/view:
+    $ref: './paths/offers.yaml#/viewOfferById'
   /offers/{offerId}/reviews:
     $ref: './paths/reviews.yaml#/offerReviews'
   /offers/{offerId}/reviews-summary:
