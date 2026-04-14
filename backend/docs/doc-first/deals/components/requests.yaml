@@ -158,6 +158,37 @@ UpdateOfferRequest:
 
 
 
+CreateOfferReportRequest:
+  type: object
+  required:
+    - messageId
+  properties:
+    messageId:
+      type: string
+      format: uuid
+      description: |
+        Идентификатор сообщения, на которое опирается жалоба.
+        Хранится как внешний UUID без `FOREIGN KEY`, потому что сообщение находится в `chats` сервисе.
+
+
+
+ResolveOfferReportRequest:
+  type: object
+  required:
+    - accepted
+  properties:
+    accepted:
+      type: boolean
+      description: |
+        Решение администратора по жалобе.
+        Если `true`, объявление скрывается и автор получает штраф `-10`.
+        Если `false`, жалоба только помечается как отклоненная.
+    comment:
+      type: string
+      description: Необязательный комментарий администратора.
+
+
+
 ChangeDealStatusRequest:
   type: object
   required:

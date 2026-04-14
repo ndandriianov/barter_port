@@ -19,3 +19,8 @@ AvatarUrl:
   format: uri
   description: User avatar URL
   example: 'http://localhost:8333/avatars/user-123/avatar.jpg'
+
+ReputationPoints:
+  type: integer
+  description: Current user reputation score
+  example: -10

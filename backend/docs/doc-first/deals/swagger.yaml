@@ -58,10 +58,18 @@ paths:
     $ref: './paths/offers.yaml#/offerById'
   /offers/{offerId}/view:
     $ref: './paths/offers.yaml#/viewOfferById'
+  /offers/{offerId}/reports:
+    $ref: './paths/offers.yaml#/offerReports'
   /offers/{offerId}/reviews:
     $ref: './paths/reviews.yaml#/offerReviews'
   /offers/{offerId}/reviews-summary:
     $ref: './paths/reviews.yaml#/offerReviewsSummary'
+  /admin/offer-reports:
+    $ref: './paths/offers.yaml#/adminOfferReports'
+  /admin/offer-reports/{reportId}:
+    $ref: './paths/offers.yaml#/adminOfferReportById'
+  /admin/offer-reports/{reportId}/resolution:
+    $ref: './paths/offers.yaml#/adminOfferReportResolution'
   /offer-groups:
     $ref: './paths/offer-groups.yaml#/offerGroups'
   /offer-groups/{offerGroupId}:

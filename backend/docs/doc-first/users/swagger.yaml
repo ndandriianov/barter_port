@@ -16,6 +16,7 @@ paths:
       description: |
         Возвращает информацию о текущем пользователе.
         Обращается к auth сервису для получения email, createdAt и признака admin.
+        Также возвращает текущий рейтинг пользователя (`reputationPoints`).
       operationId: getCurrentUser
       security:
         - bearerAuth: [ ]
