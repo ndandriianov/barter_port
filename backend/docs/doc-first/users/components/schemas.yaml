@@ -11,7 +11,7 @@ Me:
       $ref: './properties.yaml#/UserId'
     email:
       type: string
-#      format: email // TODO: раскомментировать при запуске без bypass
+      #      format: email // TODO: раскомментировать при запуске без bypass
       description: User email
       example: 'email@example.com'
     createdAt:
@@ -53,3 +53,39 @@ User:
       $ref: './properties.yaml#/Bio'
     avatarUrl:
       $ref: './properties.yaml#/AvatarUrl'
+
+
+ReputationEvent:
+  type: object
+  required:
+    - id
+    - sourceType
+    - sourceId
+    - delta
+    - createdAt
+  properties:
+    id:
+      type: string
+      format: uuid
+      description: Уникальный идентификатор события репутации
+    sourceType:
+      type: string
+      description: |
+        Источник изменения репутации. Возможные варианты: 
+        - "offerreport"
+    sourceId:
+      type: string
+      format: uuid
+      description: |
+        Идентификатор источника изменения репутации:
+        - для "offerreport" - id жалобы на оффер
+    delta:
+      type: integer
+      description: Изменение репутации (положительное или отрицательное)
+    createdAt:
+      type: string
+      format: date-time
+      description: Время изменения репутации
+    comment:
+      type: string
+      description: Комментарий к изменению репутации (например, причина изменения)
