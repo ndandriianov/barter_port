@@ -588,6 +588,7 @@ type Offer struct {
 	Id openapi_types.UUID `json:"id"`
 
 	// IsHidden Признак того, что объявление скрыто модератором.
+	// Скрытые объявления видны только автору объявления и администратору.
 	IsHidden *bool `json:"isHidden,omitempty"`
 
 	// ModificationBlocked Признак того, что объявление временно заблокировано для редактирования из-за pending-жалобы.
@@ -738,6 +739,7 @@ type OfferWithInfo struct {
 	Id openapi_types.UUID `json:"id"`
 
 	// IsHidden Признак того, что объявление скрыто модератором.
+	// Скрытые объявления видны только автору объявления и администратору.
 	IsHidden *bool `json:"isHidden,omitempty"`
 
 	// ModificationBlocked Признак того, что объявление временно заблокировано для редактирования из-за pending-жалобы.
@@ -1020,6 +1022,7 @@ type SortType string
 
 // ListOfferReportsForAdminParams defines parameters for ListOfferReportsForAdmin.
 type ListOfferReportsForAdminParams struct {
+	// Status Optional status filter. If omitted, returns all statuses.
 	Status *OfferReportStatus `form:"status,omitempty" json:"status,omitempty"`
 }
 
