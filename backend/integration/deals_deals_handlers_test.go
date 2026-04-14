@@ -290,8 +290,7 @@ func TestAddDealItemInvalidDealID(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)
 
-	userID := uuid.New()
-	resp := doAddDealItem(t, "not-a-uuid", &userID, []byte(`{"offerId":"`+uuid.NewString()+`","quantity":1}`))
+	resp := doAddDealItem(t, "not-a-uuid", new(uuid.New()), []byte(`{"offerId":"`+uuid.NewString()+`","quantity":1}`))
 	defer func() { _ = resp.Body.Close() }()
 	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 }
@@ -438,7 +437,7 @@ func TestUpdateDealItemUnauthorized(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)
 
-	body, err := json.Marshal(types.UpdateDealItemRequest{Name: stringPtr("x")})
+	body, err := json.Marshal(types.UpdateDealItemRequest{Name: new("x")})
 	require.NoError(t, err)
 
 	req := mustRequest(t, http.MethodPatch, dealsURL()+"/deals/"+uuid.NewString()+"/items/"+uuid.NewString(), bytes.NewReader(body))
@@ -598,7 +597,7 @@ func TestUpdateDealItemNonAuthorCannotEditContent(t *testing.T) {
 	dealID, itemIDByA := mustCreateTwoPartyDeal(t, userA, userB)
 
 	req := mustUserRequest(t, http.MethodPatch, dealsURL()+"/deals/"+dealID.String()+"/items/"+itemIDByA.String(), userB, mustJSONBody(t, types.UpdateDealItemRequest{
-		Name: stringPtr("forbidden update"),
+		Name: new("forbidden update"),
 	}))
 	req.Header.Set("Content-Type", "application/json")
 
@@ -616,13 +615,13 @@ func TestUpdateDealItemParticipantCanClaimAndReleaseReceiver(t *testing.T) {
 	dealID, itemIDByA := mustCreateTwoPartyDeal(t, userA, userB)
 
 	claimed := mustUpdateDealItem(t, userB, dealID, itemIDByA, types.UpdateDealItemRequest{
-		ClaimReceiver: boolPtr(true),
+		ClaimReceiver: new(true),
 	})
 	require.NotNil(t, claimed.ReceiverId)
 	require.Equal(t, userB, *claimed.ReceiverId)
 
 	released := mustUpdateDealItem(t, userB, dealID, itemIDByA, types.UpdateDealItemRequest{
-		ReleaseReceiver: boolPtr(true),
+		ReleaseReceiver: new(true),
 	})
 	require.Nil(t, released.ReceiverId)
 }
@@ -653,8 +652,7 @@ func TestChangeDealStatusNotFound(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)
 
-	userID := uuid.New()
-	resp := doChangeDealStatus(t, uuid.New(), &userID, []byte(`{"expectedStatus":"Discussion"}`))
+	resp := doChangeDealStatus(t, uuid.New(), new(uuid.New()), []byte(`{"expectedStatus":"Discussion"}`))
 	defer func() { _ = resp.Body.Close() }()
 	require.Equal(t, http.StatusNotFound, resp.StatusCode)
 }
@@ -708,10 +706,10 @@ func TestChangeDealStatusConsensusMovesToDiscussion(t *testing.T) {
 	otherItemID := mustGetDealItemIDByAuthor(t, userA, dealID, userB)
 
 	_ = mustUpdateDealItem(t, userB, dealID, itemIDByA, types.UpdateDealItemRequest{
-		ClaimReceiver: boolPtr(true),
+		ClaimReceiver: new(true),
 	})
 	_ = mustUpdateDealItem(t, userA, dealID, otherItemID, types.UpdateDealItemRequest{
-		ClaimReceiver: boolPtr(true),
+		ClaimReceiver: new(true),
 	})
 
 	firstVote := mustChangeDealStatus(t, dealID, userA, types.Discussion)
@@ -749,8 +747,7 @@ func TestGetDealStatusVotesInvalidUUID(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)
 
-	userID := uuid.New()
-	resp := doGetDealStatusVotes(t, "not-a-uuid", &userID)
+	resp := doGetDealStatusVotes(t, "not-a-uuid", new(uuid.New()))
 	defer func() { _ = resp.Body.Close() }()
 	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 }
@@ -759,8 +756,7 @@ func TestGetDealStatusVotesNotFound(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)
 
-	userID := uuid.New()
-	resp := doGetDealStatusVotes(t, uuid.NewString(), &userID)
+	resp := doGetDealStatusVotes(t, uuid.NewString(), new(uuid.New()))
 	defer func() { _ = resp.Body.Close() }()
 	require.Equal(t, http.StatusNotFound, resp.StatusCode)
 }
@@ -791,11 +787,11 @@ func TestGetDealStatusVotesReturnsRecordedVotes(t *testing.T) {
 	dealID, itemIDByA := mustCreateTwoPartyDeal(t, userA, userB)
 
 	_ = mustUpdateDealItem(t, userB, dealID, itemIDByA, types.UpdateDealItemRequest{
-		ClaimReceiver: boolPtr(true),
+		ClaimReceiver: new(true),
 	})
 	otherItemID := mustGetDealItemIDByAuthor(t, userA, dealID, userB)
 	_ = mustUpdateDealItem(t, userA, dealID, otherItemID, types.UpdateDealItemRequest{
-		ClaimReceiver: boolPtr(true),
+		ClaimReceiver: new(true),
 	})
 
 	_ = mustChangeDealStatus(t, dealID, userA, types.Discussion)

@@ -121,7 +121,6 @@ func TestModeratorResolutionForFailureSuccessAndReadableByParticipant(t *testing
 	dealID, _ := mustCreateDiscussionDeal(t, userA, userB)
 	mustVoteForFailure(t, userA, dealID, userB)
 
-	comment := "confirmed by admin"
 	points := 3
 	adminToken := mustAdminAccessToken(t)
 
@@ -129,7 +128,7 @@ func TestModeratorResolutionForFailureSuccessAndReadableByParticipant(t *testing
 		Confirmed:        true,
 		UserId:           &userB,
 		PunishmentPoints: &points,
-		Comment:          &comment,
+		Comment:          new("confirmed by admin"),
 	}))
 	resolveReq.Header.Set("Content-Type", "application/json")
 

@@ -60,15 +60,14 @@ func TestCreateDealItemReviewConflictAfterDuplicate(t *testing.T) {
 	userA := uuid.New()
 	userB := uuid.New()
 	dealID, itemIDByA, _ := mustCreateCompletedReviewableTwoPartyDeal(t, userA, userB)
-	comment := "excellent"
-	_ = mustCreateDealItemReview(t, userB, dealID, itemIDByA, 5, &comment)
+	_ = mustCreateDealItemReview(t, userB, dealID, itemIDByA, 5, new("excellent"))
 
 	req := mustUserRequest(
 		t,
 		http.MethodPost,
 		dealsURL()+"/deals/"+dealID.String()+"/items/"+itemIDByA.String()+"/reviews",
 		userB,
-		mustJSONBody(t, types.CreateReviewRequest{Rating: 4, Comment: stringPtr("still good")}),
+		mustJSONBody(t, types.CreateReviewRequest{Rating: 4, Comment: new("still good")}),
 	)
 	req.Header.Set("Content-Type", "application/json")
 
@@ -275,8 +274,8 @@ func TestUpdateReviewSuccess(t *testing.T) {
 	ctx := mustCreateReviewedOfferItemContext(t)
 
 	req := mustUserRequest(t, http.MethodPatch, dealsURL()+"/reviews/"+ctx.Review.Id.String(), ctx.ReceiverID, mustJSONBody(t, types.UpdateReviewRequest{
-		Rating:  intPtr(4),
-		Comment: stringPtr("updated"),
+		Rating:  new(4),
+		Comment: new("updated"),
 	}))
 	req.Header.Set("Content-Type", "application/json")
 
@@ -303,6 +302,6 @@ func TestDeleteReviewSuccessAllowsRecreate(t *testing.T) {
 	defer func() { _ = deleteResp.Body.Close() }()
 	require.Equal(t, http.StatusNoContent, deleteResp.StatusCode)
 
-	recreated := mustCreateDealItemReview(t, ctx.ReceiverID, ctx.DealID, ctx.ItemID, 5, stringPtr("recreated"))
+	recreated := mustCreateDealItemReview(t, ctx.ReceiverID, ctx.DealID, ctx.ItemID, 5, new("recreated"))
 	require.NotEqual(t, ctx.Review.Id, recreated.Id)
 }
