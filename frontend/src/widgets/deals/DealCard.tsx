@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { Link as RouterLink } from "react-router-dom";
+import {useEffect, useMemo, useState} from "react";
+import {Link as RouterLink} from "react-router-dom";
 import {
   Alert,
   Box,
@@ -23,18 +23,19 @@ import {
   Typography,
 } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
-import type { Deal, DealStatus, Item, UpdateDealItemRequest } from "@/features/deals/model/types";
+import type {Deal, DealStatus, Item} from "@/features/deals/model/types";
 import dealsApi from "@/features/deals/api/dealsApi";
 import offersApi from "@/features/offers/api/offersApi";
 import usersApi from "@/features/users/api/usersApi.ts";
-import { useAppDispatch, useAppSelector } from "@/hooks/redux.ts";
-import type { User } from "@/features/users/model/types.ts";
-import type { Offer } from "@/features/offers/model/types";
-import { getStatusCode } from "@/shared/utils/getStatusCode";
-import type { FetchBaseQueryError } from "@reduxjs/toolkit/query";
-import type { SerializedError } from "@reduxjs/toolkit";
+import {useAppDispatch, useAppSelector} from "@/hooks/redux.ts";
+import type {User} from "@/features/users/model/types.ts";
+import type {Offer} from "@/features/offers/model/types";
+import {getStatusCode} from "@/shared/utils/getStatusCode";
+import type {FetchBaseQueryError} from "@reduxjs/toolkit/query";
+import type {SerializedError} from "@reduxjs/toolkit";
 import DealFailureSection from "@/widgets/deals/DealFailureSection.tsx";
 import UserAvatarLabel from "@/shared/UserAvatarLabel.tsx";
+import DealItemEditDialog from "@/widgets/deals/DealItemEditDialog.tsx";
 
 function dealErrorMessage(
   error: FetchBaseQueryError | SerializedError | undefined,
@@ -58,12 +59,12 @@ const dealStatusMeta: Record<
   Deal["status"],
   { label: string; color: "default" | "primary" | "secondary" | "success" | "error" | "info" | "warning" }
 > = {
-  LookingForParticipants: { label: "Поиск участников", color: "info" },
-  Discussion: { label: "Обсуждение", color: "warning" },
-  Confirmed: { label: "Подтверждена", color: "primary" },
-  Completed: { label: "Завершена", color: "success" },
-  Cancelled: { label: "Отменена", color: "default" },
-  Failed: { label: "Провалена", color: "error" },
+  LookingForParticipants: {label: "Поиск участников", color: "info"},
+  Discussion: {label: "Обсуждение", color: "warning"},
+  Confirmed: {label: "Подтверждена", color: "primary"},
+  Completed: {label: "Завершена", color: "success"},
+  Cancelled: {label: "Отменена", color: "default"},
+  Failed: {label: "Провалена", color: "error"},
 };
 
 const nextStatusByCurrent: Partial<Record<DealStatus, DealStatus>> = {
@@ -74,67 +75,16 @@ const nextStatusByCurrent: Partial<Record<DealStatus, DealStatus>> = {
 
 const isFinalStatus = (status: DealStatus) => ["Completed", "Cancelled", "Failed"].includes(status);
 
-// ─── Edit content dialog ────────────────────────────────────────────────────
-
-interface EditItemDialogProps {
-  item: Item;
-  dealId: string;
-  onClose: () => void;
-}
-
-function EditItemDialog({ item, dealId, onClose }: EditItemDialogProps) {
-  const [name, setName] = useState(item.name);
-  const [description, setDescription] = useState(item.description);
-  const [quantity, setQuantity] = useState(String(item.quantity));
-  const [updateDealItem, { isLoading }] = dealsApi.useUpdateDealItemMutation();
-
-  const handleSave = async () => {
-    const body: UpdateDealItemRequest = {};
-    if (name !== item.name) body.name = name;
-    if (description !== item.description) body.description = description;
-    const qty = parseInt(quantity, 10);
-    if (!isNaN(qty) && qty !== item.quantity) body.quantity = qty;
-    if (Object.keys(body).length > 0) {
-      await updateDealItem({ dealId, itemId: item.id, body });
-    }
-    onClose();
-  };
-
-  const quantityError = quantity !== "" && (isNaN(parseInt(quantity, 10)) || parseInt(quantity, 10) < 1);
-
-  return (
-    <Dialog open onClose={onClose} fullWidth maxWidth="sm">
-      <DialogTitle>Редактировать позицию</DialogTitle>
-      <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 2 }}>
-        <TextField label="Название" value={name} onChange={(e) => setName(e.target.value)} fullWidth size="small" />
-        <TextField
-          label="Описание" value={description} onChange={(e) => setDescription(e.target.value)}
-          fullWidth size="small" multiline minRows={2}
-        />
-        <TextField
-          label="Количество" value={quantity} onChange={(e) => setQuantity(e.target.value)}
-          type="number" inputProps={{ min: 1 }} fullWidth size="small"
-          error={quantityError} helperText={quantityError ? "Минимум 1" : undefined}
-        />
-      </DialogContent>
-      <DialogActions>
-        <Button onClick={onClose} disabled={isLoading}>Отмена</Button>
-        <Button onClick={handleSave} variant="contained" disabled={isLoading || quantityError}>Сохранить</Button>
-      </DialogActions>
-    </Dialog>
-  );
-}
-
 interface AddItemDialogProps {
   dealId: string;
   onClose: () => void;
 }
 
-function AddItemDialog({ dealId, onClose }: AddItemDialogProps) {
+function AddItemDialog({dealId, onClose}: AddItemDialogProps) {
   const [offerId, setOfferId] = useState("");
   const [quantity, setQuantity] = useState("1");
-  const { data, isLoading, error } = offersApi.useGetOffersQuery({ sort: "ByTime", my: true, cursor_limit: 100 });
-  const [addDealItem, { isLoading: isAdding, error: addError }] = dealsApi.useAddDealItemMutation();
+  const {data, isLoading, error} = offersApi.useGetOffersQuery({sort: "ByTime", my: true, cursor_limit: 100});
+  const [addDealItem, {isLoading: isAdding, error: addError}] = dealsApi.useAddDealItemMutation();
 
   const offers: Offer[] = data?.offers ?? [];
   const quantityError = quantity !== "" && (isNaN(parseInt(quantity, 10)) || parseInt(quantity, 10) < 1);
@@ -157,10 +107,10 @@ function AddItemDialog({ dealId, onClose }: AddItemDialogProps) {
   return (
     <Dialog open onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle>Добавить позицию в сделку</DialogTitle>
-      <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 2 }}>
+      <DialogContent sx={{display: "flex", flexDirection: "column", gap: 2, pt: 2}}>
         {isLoading ? (
           <Box display="flex" justifyContent="center" py={2}>
-            <CircularProgress size={20} />
+            <CircularProgress size={20}/>
           </Box>
         ) : error ? (
           <Alert severity="error">Не удалось загрузить ваши объявления</Alert>
@@ -188,7 +138,7 @@ function AddItemDialog({ dealId, onClose }: AddItemDialogProps) {
           value={quantity}
           onChange={(e) => setQuantity(e.target.value)}
           type="number"
-          inputProps={{ min: 1 }}
+          inputProps={{min: 1}}
           fullWidth
           size="small"
           error={quantityError}
@@ -236,24 +186,24 @@ interface RoleRowProps {
 }
 
 function RoleRow({
-  label,
-  userId,
-  myId,
-  isParticipant,
-  getUserName,
-  getUserAvatarUrl,
-  onClaim,
-  onRelease,
-  isLoading,
-  canClaim = true,
-  canRelease = true,
-}: RoleRowProps) {
+                   label,
+                   userId,
+                   myId,
+                   isParticipant,
+                   getUserName,
+                   getUserAvatarUrl,
+                   onClaim,
+                   onRelease,
+                   isLoading,
+                   canClaim = true,
+                   canRelease = true,
+                 }: RoleRowProps) {
   const isMe = userId !== undefined && userId === myId;
   const isEmpty = userId === undefined;
 
   return (
     <Box display="flex" alignItems="center" gap={1} mt={0.5}>
-      <Typography variant="caption" color="text.secondary" sx={{ minWidth: 80 }}>
+      <Typography variant="caption" color="text.secondary" sx={{minWidth: 80}}>
         {label}:
       </Typography>
       {userId ? (
@@ -271,20 +221,20 @@ function RoleRow({
         </Typography>
       )}
       {isLoading ? (
-        <CircularProgress size={14} />
+        <CircularProgress size={14}/>
       ) : isMe ? (
         <Button
           size="small"
           variant="text"
           color="error"
-          sx={{ minWidth: 0, p: 0, fontSize: 11 }}
+          sx={{minWidth: 0, p: 0, fontSize: 11}}
           onClick={onRelease}
           disabled={!canRelease}
         >
           снять себя
         </Button>
       ) : isEmpty && isParticipant && canClaim ? (
-        <Button size="small" variant="text" sx={{ minWidth: 0, p: 0, fontSize: 11 }} onClick={onClaim}>
+        <Button size="small" variant="text" sx={{minWidth: 0, p: 0, fontSize: 11}} onClick={onClaim}>
           стать
         </Button>
       ) : null}
@@ -305,8 +255,17 @@ interface ItemRowProps {
   onEditClick: () => void;
 }
 
-function ItemRow({ item, dealId, dealStatus, myId, isParticipant, getUserName, getUserAvatarUrl, onEditClick }: ItemRowProps) {
-  const [updateDealItem, { isLoading }] = dealsApi.useUpdateDealItemMutation();
+function ItemRow({
+                   item,
+                   dealId,
+                   dealStatus,
+                   myId,
+                   isParticipant,
+                   getUserName,
+                   getUserAvatarUrl,
+                   onEditClick
+                 }: ItemRowProps) {
+  const [updateDealItem, {isLoading}] = dealsApi.useUpdateDealItemMutation();
 
   const isEditableStatus = dealStatus === "LookingForParticipants" || dealStatus === "Discussion";
   const canManageRoles = dealStatus === "LookingForParticipants";
@@ -314,20 +273,27 @@ function ItemRow({ item, dealId, dealStatus, myId, isParticipant, getUserName, g
   const canClaimReceiver = myId !== undefined && item.providerId !== myId && canManageRoles;
 
   const handleClaim = (field: "claimProvider" | "claimReceiver") => () =>
-    updateDealItem({ dealId, itemId: item.id, body: { [field]: true } });
+    updateDealItem({dealId, itemId: item.id, body: {[field]: true}});
 
   const handleRelease = (field: "releaseProvider" | "releaseReceiver") => () =>
-    updateDealItem({ dealId, itemId: item.id, body: { [field]: true } });
+    updateDealItem({dealId, itemId: item.id, body: {[field]: true}});
 
   return (
     <ListItem
       disableGutters
-      sx={{ borderBottom: "1px solid", borderColor: "divider", pb: 1, mb: 1, flexDirection: "column", alignItems: "flex-start" }}
+      sx={{
+        borderBottom: "1px solid",
+        borderColor: "divider",
+        pb: 1,
+        mb: 1,
+        flexDirection: "column",
+        alignItems: "flex-start"
+      }}
       secondaryAction={
         myId === item.authorId && isEditableStatus ? (
           <Tooltip title="Редактировать">
             <IconButton size="small" onClick={onEditClick}>
-              <EditIcon fontSize="small" />
+              <EditIcon fontSize="small"/>
             </IconButton>
           </Tooltip>
         ) : undefined
@@ -372,7 +338,7 @@ function ItemRow({ item, dealId, dealStatus, myId, isParticipant, getUserName, g
                       bgcolor: "rgba(0, 0, 0, 0.72)",
                     }}
                   >
-                    <Typography variant="caption" sx={{ color: "common.white", lineHeight: 1 }}>
+                    <Typography variant="caption" sx={{color: "common.white", lineHeight: 1}}>
                       +{item.photoUrls.length - 1}
                     </Typography>
                   </Box>
@@ -381,13 +347,13 @@ function ItemRow({ item, dealId, dealStatus, myId, isParticipant, getUserName, g
             )}
             <Typography variant="body2" fontWeight={500}>{item.name}</Typography>
             <Typography variant="caption" color="text.secondary">x{item.quantity}</Typography>
-            <Chip label={item.type} size="small" variant="outlined" />
+            <Chip label={item.type} size="small" variant="outlined"/>
             <Button
               component={RouterLink}
               to={`/deals/${dealId}/items/${item.id}`}
               size="small"
               variant="outlined"
-              sx={{ ml: "auto" }}
+              sx={{ml: "auto"}}
             >
               Открыть
             </Button>
@@ -433,22 +399,28 @@ interface DealCardProps {
   deal: Deal;
 }
 
-function DealCard({ deal }: DealCardProps) {
+function DealCard({deal}: DealCardProps) {
   const dispatch = useAppDispatch();
   const [editingItem, setEditingItem] = useState<Item | null>(null);
   const [isAddItemDialogOpen, setIsAddItemDialogOpen] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
   const [nameInput, setNameInput] = useState(deal.name ?? "");
-  const { data: me } = usersApi.useGetCurrentUserQuery();
-  const [updateDeal, { isLoading: isUpdateDealLoading }] = dealsApi.useUpdateDealMutation();
-  const [changeDealStatus, { isLoading: isStatusLoading, error: changeStatusError }] = dealsApi.useChangeDealStatusMutation();
-  const [joinDeal, { isLoading: isJoinLoading, error: joinError }] = dealsApi.useJoinDealMutation();
-  const [leaveDeal, { isLoading: isLeaveLoading, error: leaveError }] = dealsApi.useLeaveDealMutation();
-  const [processJoinRequest, { isLoading: isProcessJoinLoading, error: processJoinError }] = dealsApi.useProcessJoinRequestMutation();
+  const {data: me} = usersApi.useGetCurrentUserQuery();
+  const [updateDeal, {isLoading: isUpdateDealLoading}] = dealsApi.useUpdateDealMutation();
+  const [changeDealStatus, {
+    isLoading: isStatusLoading,
+    error: changeStatusError
+  }] = dealsApi.useChangeDealStatusMutation();
+  const [joinDeal, {isLoading: isJoinLoading, error: joinError}] = dealsApi.useJoinDealMutation();
+  const [leaveDeal, {isLoading: isLeaveLoading, error: leaveError}] = dealsApi.useLeaveDealMutation();
+  const [processJoinRequest, {
+    isLoading: isProcessJoinLoading,
+    error: processJoinError
+  }] = dealsApi.useProcessJoinRequestMutation();
 
   const isParticipant = me ? deal.participants.includes(me.id) : false;
   const canAccessFailureResolution = Boolean(me && (isParticipant || me.isAdmin));
-  const { data: failureResolution } = dealsApi.useGetModeratorResolutionForFailureQuery(deal.id, {
+  const {data: failureResolution} = dealsApi.useGetModeratorResolutionForFailureQuery(deal.id, {
     skip: !canAccessFailureResolution,
     pollingInterval: 10_000,
   });
@@ -512,13 +484,13 @@ function DealCard({ deal }: DealCardProps) {
     if (!statusVotes || statusVotes.length === 0) return [] as Array<{ status: DealStatus; voters: string[] }>;
 
     const grouped = new Map<DealStatus, string[]>();
-    statusVotes.forEach(({ vote, userId }) => {
+    statusVotes.forEach(({vote, userId}) => {
       const voters = grouped.get(vote) ?? [];
       voters.push(userId);
       grouped.set(vote, voters);
     });
 
-    return [...grouped.entries()].map(([status, voters]) => ({ status, voters }));
+    return [...grouped.entries()].map(([status, voters]) => ({status, voters}));
   }, [statusVotes]);
 
   const nextStatus: DealStatus | undefined = nextStatusByCurrent[deal.status as DealStatus];
@@ -531,7 +503,7 @@ function DealCard({ deal }: DealCardProps) {
   const hasActions = canVoteForNextStatus || canCancelDeal || canJoinDeal || canLeaveDeal;
 
   const handleChangeStatus = async (expectedStatus: DealStatus) => {
-    await changeDealStatus({ dealId: deal.id, body: { expectedStatus } }).unwrap();
+    await changeDealStatus({dealId: deal.id, body: {expectedStatus}}).unwrap();
   };
 
   const handleJoinDeal = async () => {
@@ -543,13 +515,13 @@ function DealCard({ deal }: DealCardProps) {
   };
 
   const handleProcessJoin = async (userId: string, accept: boolean) => {
-    await processJoinRequest({ dealId: deal.id, userId, accept }).unwrap();
+    await processJoinRequest({dealId: deal.id, userId, accept}).unwrap();
   };
 
   const handleSaveName = async () => {
     const trimmed = nameInput.trim();
     if (trimmed && trimmed !== deal.name) {
-      await updateDeal({ dealId: deal.id, name: trimmed });
+      await updateDeal({dealId: deal.id, name: trimmed});
     }
     setIsEditingName(false);
   };
@@ -575,7 +547,8 @@ function DealCard({ deal }: DealCardProps) {
                 if (e.key === "Escape") handleCancelEditName();
               }}
             />
-            <Button size="small" variant="contained" onClick={() => void handleSaveName()} disabled={isUpdateDealLoading || !nameInput.trim()}>
+            <Button size="small" variant="contained" onClick={() => void handleSaveName()}
+                    disabled={isUpdateDealLoading || !nameInput.trim()}>
               Сохранить
             </Button>
             <Button size="small" onClick={handleCancelEditName} disabled={isUpdateDealLoading}>
@@ -589,8 +562,11 @@ function DealCard({ deal }: DealCardProps) {
             </Typography>
             {isParticipant && !isFinalStatus(deal.status) && (
               <Tooltip title="Переименовать">
-                <IconButton size="small" onClick={() => { setNameInput(deal.name ?? ""); setIsEditingName(true); }}>
-                  <EditIcon fontSize="small" />
+                <IconButton size="small" onClick={() => {
+                  setNameInput(deal.name ?? "");
+                  setIsEditingName(true);
+                }}>
+                  <EditIcon fontSize="small"/>
                 </IconButton>
               </Tooltip>
             )}
@@ -657,7 +633,7 @@ function DealCard({ deal }: DealCardProps) {
           )}
 
           {changeStatusError && (
-            <Alert severity="error" sx={{ mt: 1.5 }}>
+            <Alert severity="error" sx={{mt: 1.5}}>
               {dealErrorMessage(changeStatusError, {
                 400: "Статус сделки изменился. Обновите страницу",
                 403: isFailurePending ? "Сделка уже передана на разбор по провалу" : "Недостаточно прав для смены статуса",
@@ -667,7 +643,7 @@ function DealCard({ deal }: DealCardProps) {
           )}
 
           {joinError && (
-            <Alert severity="error" sx={{ mt: 1.5 }}>
+            <Alert severity="error" sx={{mt: 1.5}}>
               {dealErrorMessage(joinError, {
                 400: "Сделка больше не принимает участников",
                 403: "Вы не можете присоединиться к этой сделке",
@@ -677,7 +653,7 @@ function DealCard({ deal }: DealCardProps) {
           )}
 
           {leaveError && (
-            <Alert severity="error" sx={{ mt: 1.5 }}>
+            <Alert severity="error" sx={{mt: 1.5}}>
               {dealErrorMessage(leaveError, {
                 400: "Невозможно покинуть сделку на данном этапе",
                 403: isFailurePending ? "Сделка уже передана на разбор по провалу" : "Вы не можете покинуть эту сделку",
@@ -687,7 +663,7 @@ function DealCard({ deal }: DealCardProps) {
           )}
 
           {processJoinError && (
-            <Alert severity="error" sx={{ mt: 1.5 }}>
+            <Alert severity="error" sx={{mt: 1.5}}>
               {dealErrorMessage(processJoinError, {
                 400: "Невозможно обработать заявку",
                 403: isFailurePending ? "Сделка уже передана на разбор по провалу" : "Недостаточно прав для обработки заявки",
@@ -697,7 +673,7 @@ function DealCard({ deal }: DealCardProps) {
           )}
 
           {isFailurePending && (
-            <Alert severity="warning" sx={{ mt: 1.5 }}>
+            <Alert severity="warning" sx={{mt: 1.5}}>
               По сделке достигнут порог голосов о провале. Изменение состава, позиций и статуса
               заблокировано до решения администратора.
             </Alert>
@@ -711,7 +687,7 @@ function DealCard({ deal }: DealCardProps) {
 
               {isStatusVotesLoading ? (
                 <Box display="flex" justifyContent="center" py={1}>
-                  <CircularProgress size={18} />
+                  <CircularProgress size={18}/>
                 </Box>
               ) : statusVotesError && getStatusCode(statusVotesError) !== 401 ? (
                 <Alert severity="error">
@@ -725,7 +701,7 @@ function DealCard({ deal }: DealCardProps) {
                 </Typography>
               ) : (
                 <Box display="flex" flexDirection="column" gap={0.5}>
-                  {groupedStatusVotes.map(({ status, voters }) => (
+                  {groupedStatusVotes.map(({status, voters}) => (
                     <Typography key={status} variant="caption" color="text.secondary">
                       За "{dealStatusMeta[status].label}": {voters.map(getUserName).join(", ")}
                     </Typography>
@@ -749,7 +725,7 @@ function DealCard({ deal }: DealCardProps) {
           )}
         </Box>
 
-        <Divider sx={{ mb: 2 }} />
+        <Divider sx={{mb: 2}}/>
 
         <Box mb={2}>
           <Typography variant="subtitle2" fontWeight={600} mb={1}>
@@ -776,7 +752,7 @@ function DealCard({ deal }: DealCardProps) {
           )}
         </Box>
 
-        <Divider sx={{ mb: 2 }} />
+        <Divider sx={{mb: 2}}/>
 
         {canSeeJoinRequests && (
           <Box mb={2}>
@@ -786,10 +762,10 @@ function DealCard({ deal }: DealCardProps) {
 
             {isJoinRequestsLoading ? (
               <Box display="flex" justifyContent="center" py={1}>
-                <CircularProgress size={18} />
+                <CircularProgress size={18}/>
               </Box>
             ) : joinRequestsError && getStatusCode(joinRequestsError) !== 401 ? (
-              <Alert severity="error" sx={{ mb: 1.5 }}>
+              <Alert severity="error" sx={{mb: 1.5}}>
                 {dealErrorMessage(joinRequestsError, {
                   404: "Данные не найдены",
                 }, "Не удалось загрузить заявки на вступление")}
@@ -806,7 +782,7 @@ function DealCard({ deal }: DealCardProps) {
                   return (
                     <Box
                       key={request.userId}
-                      sx={{ border: "1px solid", borderColor: "divider", borderRadius: 1, p: 1.5 }}
+                      sx={{border: "1px solid", borderColor: "divider", borderRadius: 1, p: 1.5}}
                     >
                       <Typography variant="body2" fontWeight={600}>
                         {getUserName(request.userId)}
@@ -844,7 +820,7 @@ function DealCard({ deal }: DealCardProps) {
               </Box>
             )}
 
-            <Divider sx={{ mt: 2 }} />
+            <Divider sx={{mt: 2}}/>
           </Box>
         )}
 
@@ -879,15 +855,20 @@ function DealCard({ deal }: DealCardProps) {
           </List>
         )}
 
-        <DealFailureSection deal={deal} me={me} isParticipant={isParticipant} getUserName={getUserName} />
+        <DealFailureSection deal={deal} me={me} isParticipant={isParticipant} getUserName={getUserName}/>
       </CardContent>
 
       {editingItem && (
-        <EditItemDialog item={editingItem} dealId={deal.id} onClose={() => setEditingItem(null)} />
+        <DealItemEditDialog
+          item={editingItem}
+          dealId={deal.id}
+          open
+          onClose={() => setEditingItem(null)}
+        />
       )}
 
       {isAddItemDialogOpen && (
-        <AddItemDialog dealId={deal.id} onClose={() => setIsAddItemDialogOpen(false)} />
+        <AddItemDialog dealId={deal.id} onClose={() => setIsAddItemDialogOpen(false)}/>
       )}
     </Card>
   );
