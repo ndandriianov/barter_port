@@ -587,6 +587,74 @@ func mustUpdateDealItem(
 	return item
 }
 
+func mustUpdateDealItemMultipartDetails(
+	t *testing.T,
+	userID uuid.UUID,
+	dealID uuid.UUID,
+	itemID uuid.UUID,
+	body types.UpdateDealItemRequest,
+	photos [][]byte,
+) types.Item {
+	t.Helper()
+
+	var payload bytes.Buffer
+	writer := multipart.NewWriter(&payload)
+
+	if body.Name != nil {
+		require.NoError(t, writer.WriteField("name", *body.Name))
+	}
+	if body.Description != nil {
+		require.NoError(t, writer.WriteField("description", *body.Description))
+	}
+	if body.Quantity != nil {
+		require.NoError(t, writer.WriteField("quantity", fmt.Sprintf("%d", *body.Quantity)))
+	}
+	if body.ClaimProvider != nil {
+		require.NoError(t, writer.WriteField("claimProvider", fmt.Sprintf("%t", *body.ClaimProvider)))
+	}
+	if body.ReleaseProvider != nil {
+		require.NoError(t, writer.WriteField("releaseProvider", fmt.Sprintf("%t", *body.ReleaseProvider)))
+	}
+	if body.ClaimReceiver != nil {
+		require.NoError(t, writer.WriteField("claimReceiver", fmt.Sprintf("%t", *body.ClaimReceiver)))
+	}
+	if body.ReleaseReceiver != nil {
+		require.NoError(t, writer.WriteField("releaseReceiver", fmt.Sprintf("%t", *body.ReleaseReceiver)))
+	}
+	if body.DeletePhotoIds != nil {
+		for _, photoID := range *body.DeletePhotoIds {
+			require.NoError(t, writer.WriteField("deletePhotoIds", photoID.String()))
+		}
+	}
+
+	for i, photo := range photos {
+		part, err := writer.CreateFormFile("photos", fmt.Sprintf("photo-%d.png", i))
+		require.NoError(t, err)
+		_, err = part.Write(photo)
+		require.NoError(t, err)
+	}
+
+	require.NoError(t, writer.Close())
+
+	req := mustUserRequest(
+		t,
+		http.MethodPatch,
+		dealsURL()+"/deals/"+dealID.String()+"/items/"+itemID.String(),
+		userID,
+		&payload,
+	)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var item types.Item
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&item))
+
+	return item
+}
+
 func mustCreateDiscussionDeal(t *testing.T, userIDs ...uuid.UUID) (uuid.UUID, map[uuid.UUID]uuid.UUID) {
 	t.Helper()
 	require.GreaterOrEqual(t, len(userIDs), 2)
