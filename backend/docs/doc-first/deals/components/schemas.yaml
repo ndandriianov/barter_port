@@ -263,7 +263,7 @@ OfferReportMessage:
   required:
     - offerReportId
     - authorId
-    - messageId
+    - message
   properties:
     offerReportId:
       type: string
@@ -271,9 +271,8 @@ OfferReportMessage:
     authorId:
       type: string
       format: uuid
-    messageId:
+    message:
       type: string
-      format: uuid
 
 
 OfferReportDetails:

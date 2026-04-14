@@ -47,7 +47,7 @@ func (h *Handlers) HandleCreateOfferReport(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	created, report, err := h.service.CreateReport(r.Context(), reporterID, offerID, req.MessageId)
+	created, report, err := h.service.CreateReport(r.Context(), reporterID, offerID, req.Message)
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrOfferNotFound):

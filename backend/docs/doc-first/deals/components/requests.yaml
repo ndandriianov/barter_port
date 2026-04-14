@@ -161,14 +161,11 @@ UpdateOfferRequest:
 CreateOfferReportRequest:
   type: object
   required:
-    - messageId
+    - message
   properties:
-    messageId:
+    message:
       type: string
-      format: uuid
-      description: |
-        Идентификатор сообщения, на которое опирается жалоба.
-        Хранится как внешний UUID без `FOREIGN KEY`, потому что сообщение находится в `chats` сервисе.
+      description: сообщение с обоснованием жалобы на объявление. Должно быть не пустым.
 
 
 

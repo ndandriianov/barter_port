@@ -39,10 +39,10 @@ func (r *Repository) CreateReport(ctx context.Context, exec db.DB, report domain
 //   - domain.ErrReporterAlreadyAttached: if the reporter already has a message in this report.
 func (r *Repository) AddReporterMessage(ctx context.Context, exec db.DB, msg domain.OfferReportMessage) error {
 	const query = `
-		INSERT INTO offer_reports_messages (offer_report_id, author_id, message_id)
+		INSERT INTO offer_reports_messages (offer_report_id, author_id, message)
 		VALUES ($1, $2, $3)`
 
-	_, err := exec.Exec(ctx, query, msg.OfferReportID, msg.AuthorID, msg.MessageID)
+	_, err := exec.Exec(ctx, query, msg.OfferReportID, msg.AuthorID, msg.Message)
 	if err != nil {
 		if repox.IsUniqueViolation(err) {
 			return domain.ErrReporterAlreadyAttached
@@ -164,7 +164,7 @@ func (r *Repository) ListReports(ctx context.Context, exec db.DB, status *domain
 // GetReportMessages returns all messages for a given report.
 func (r *Repository) GetReportMessages(ctx context.Context, exec db.DB, reportID uuid.UUID) ([]domain.OfferReportMessage, error) {
 	const query = `
-		SELECT offer_report_id, author_id, message_id
+		SELECT offer_report_id, author_id, message
 		FROM offer_reports_messages
 		WHERE offer_report_id = $1`
 
@@ -177,7 +177,7 @@ func (r *Repository) GetReportMessages(ctx context.Context, exec db.DB, reportID
 	var messages []domain.OfferReportMessage
 	for rows.Next() {
 		var msg domain.OfferReportMessage
-		if err = rows.Scan(&msg.OfferReportID, &msg.AuthorID, &msg.MessageID); err != nil {
+		if err = rows.Scan(&msg.OfferReportID, &msg.AuthorID, &msg.Message); err != nil {
 			return nil, fmt.Errorf("scan report message: %w", err)
 		}
 		messages = append(messages, msg)
@@ -192,7 +192,7 @@ func (r *Repository) GetReportMessagesForOfferReports(ctx context.Context, exec 
 	}
 
 	const query = `
-		SELECT offer_report_id, author_id, message_id
+		SELECT offer_report_id, author_id, message
 		FROM offer_reports_messages
 		WHERE offer_report_id = ANY($1)`
 
@@ -205,7 +205,7 @@ func (r *Repository) GetReportMessagesForOfferReports(ctx context.Context, exec 
 	result := make(map[uuid.UUID][]domain.OfferReportMessage)
 	for rows.Next() {
 		var msg domain.OfferReportMessage
-		if err = rows.Scan(&msg.OfferReportID, &msg.AuthorID, &msg.MessageID); err != nil {
+		if err = rows.Scan(&msg.OfferReportID, &msg.AuthorID, &msg.Message); err != nil {
 			return nil, fmt.Errorf("scan report message: %w", err)
 		}
 		result[msg.OfferReportID] = append(result[msg.OfferReportID], msg)

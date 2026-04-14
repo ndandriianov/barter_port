@@ -3972,7 +3972,7 @@ components:
       required:
         - offerReportId
         - authorId
-        - messageId
+        - message
       properties:
         offerReportId:
           type: string
@@ -3980,9 +3980,8 @@ components:
         authorId:
           type: string
           format: uuid
-        messageId:
+        message:
           type: string
-          format: uuid
     OfferReportThread:
       type: object
       required:
@@ -4010,14 +4009,11 @@ components:
     CreateOfferReportRequest:
       type: object
       required:
-        - messageId
+        - message
       properties:
-        messageId:
+        message:
           type: string
-          format: uuid
-          description: |
-            Идентификатор сообщения, на которое опирается жалоба.
-            Хранится как внешний UUID без `FOREIGN KEY`, потому что сообщение находится в `chats` сервисе.
+          description: сообщение с обоснованием жалобы на объявление. Должно быть не пустым.
     GetOfferReviewsResponse:
       type: array
       items:

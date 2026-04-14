@@ -44,13 +44,13 @@ func (r *OfferReport) ToDto() types.OfferReport {
 type OfferReportMessage struct {
 	OfferReportID uuid.UUID `db:"offer_report_id"`
 	AuthorID      uuid.UUID `db:"author_id"`
-	MessageID     uuid.UUID `db:"message_id"`
+	Message       string    `db:"message_id"`
 }
 
 func (m *OfferReportMessage) ToDto() types.OfferReportMessage {
 	return types.OfferReportMessage{
 		OfferReportId: m.OfferReportID,
 		AuthorId:      m.AuthorID,
-		MessageId:     m.MessageID,
+		Message:       m.Message,
 	}
 }

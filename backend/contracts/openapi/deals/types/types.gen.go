@@ -269,9 +269,8 @@ type CreateOfferGroupRequest struct {
 
 // CreateOfferReportRequest defines model for CreateOfferReportRequest.
 type CreateOfferReportRequest struct {
-	// MessageId Идентификатор сообщения, на которое опирается жалоба.
-	// Хранится как внешний UUID без `FOREIGN KEY`, потому что сообщение находится в `chats` сервисе.
-	MessageId openapi_types.UUID `json:"messageId"`
+	// Message сообщение с обоснованием жалобы на объявление. Должно быть не пустым.
+	Message string `json:"message"`
 }
 
 // CreateOfferRequest defines model for CreateOfferRequest.
@@ -696,7 +695,7 @@ type OfferReportDetails struct {
 // OfferReportMessage defines model for OfferReportMessage.
 type OfferReportMessage struct {
 	AuthorId      openapi_types.UUID `json:"authorId"`
-	MessageId     openapi_types.UUID `json:"messageId"`
+	Message       string             `json:"message"`
 	OfferReportId openapi_types.UUID `json:"offerReportId"`
 }
 
