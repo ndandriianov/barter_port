@@ -228,9 +228,12 @@ func TestGetOfferReportsNonAuthorForbidden(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)
 
+	email, password := "email@email.com", "password"
+
 	authorID := uuid.New()
 	reporterID := uuid.New()
-	strangerID := uuid.New()
+	mustRegister(t, email, password)
+	strangerID := mustUserIDByCreds(t, email, password)
 	offerID := mustCreateOffer(t, authorID)
 
 	mustCreateOfferReport(t, reporterID, offerID, "report for forbidden view")
@@ -437,7 +440,11 @@ func TestAdminGetReportDetailsNonAdminForbidden(t *testing.T) {
 	offerID := mustCreateOffer(t, authorID)
 	report := mustCreateOfferReport(t, reporterID, offerID, "non-admin details")
 
-	resp := doGetAdminReportDetails(t, mustAccessToken(t, uuid.New()), report.Id)
+	email, password := uniqueEmail("non-admin"), "password123"
+	mustRegister(t, email, password)
+	userID := mustUserIDByCreds(t, email, password)
+
+	resp := doGetAdminReportDetails(t, mustAccessToken(t, userID), report.Id)
 	defer func() { _ = resp.Body.Close() }()
 	require.Equal(t, http.StatusForbidden, resp.StatusCode)
 }

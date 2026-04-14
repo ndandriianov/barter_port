@@ -15,11 +15,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const (
-	adminEmail    = "admin@barterport.com"
-	adminPassword = "admin"
-)
-
 var tinyPNG = []byte{
 	0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a,
 	0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
@@ -93,21 +88,6 @@ func mustUserRequest(t *testing.T, method, url string, userID uuid.UUID, body io
 	t.Helper()
 
 	return mustBearerRequest(t, method, url, mustAccessToken(t, userID), body)
-}
-
-func mustAdminAccessToken(t *testing.T) string {
-	t.Helper()
-
-	resp := mustLogin(t, adminEmail, adminPassword)
-	defer func() { _ = resp.Body.Close() }()
-
-	require.Equal(t, http.StatusOK, resp.StatusCode)
-
-	var result loginResponse
-	require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
-	require.NotEmpty(t, result.AccessToken)
-
-	return result.AccessToken
 }
 
 func mustCreateOffer(t *testing.T, userID uuid.UUID) uuid.UUID {
