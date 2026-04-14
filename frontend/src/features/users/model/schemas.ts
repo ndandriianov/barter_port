@@ -11,6 +11,7 @@ export const meSchema = userSchema.extend({
   email: z.string(),
   createdAt: z.string(),
   isAdmin: z.boolean(),
+  reputationPoints: z.number(),
 });
 
 export const userAvatarUploadSchema = z.object({

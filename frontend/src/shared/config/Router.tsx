@@ -5,11 +5,14 @@ import LoginPage from "@/pages/auth/LoginPage";
 import RegisterPage from "@/pages/auth/RegisterPage";
 import VerifyEmailPage from "@/pages/auth/VerifyEmailPage";
 import AdminPage from "@/pages/admin/AdminPage";
+import AdminOfferReportsPage from "@/pages/admin/AdminOfferReportsPage.tsx";
+import AdminOfferReportDetailsPage from "@/pages/admin/AdminOfferReportDetailsPage.tsx";
 import ProfilePage from "@/pages/profile/ProfilePage";
 import CreateOfferPage from "@/pages/offers/CreateOfferPage";
 import EditOfferPage from "@/pages/offers/EditOfferPage";
 import OffersListPage from "@/pages/offers/OffersListPage";
 import OfferPage from "@/pages/offers/OfferPage";
+import MyOfferReportsPage from "@/pages/offers/MyOfferReportsPage.tsx";
 import OfferGroupsListPage from "@/pages/offer-groups/OfferGroupsListPage.tsx";
 import CreateOfferGroupPage from "@/pages/offer-groups/CreateOfferGroupPage.tsx";
 import OfferGroupPage from "@/pages/offer-groups/OfferGroupPage.tsx";
@@ -36,7 +39,10 @@ function AppRouter() {
 
         <Route element={<AppLayout />}>
           <Route path="/admin" element={<AdminPage />} />
+          <Route path="/admin/offer-reports" element={<AdminOfferReportsPage />} />
+          <Route path="/admin/offer-reports/:reportId" element={<AdminOfferReportDetailsPage />} />
           <Route path="/profile" element={<ProfilePage />} />
+          <Route path="/offer-reports/mine" element={<MyOfferReportsPage />} />
           <Route path="/offers" element={<OffersListPage />} />
           <Route path="/offers/create" element={<CreateOfferPage />} />
           <Route path="/offers/:offerId/edit" element={<EditOfferPage />} />

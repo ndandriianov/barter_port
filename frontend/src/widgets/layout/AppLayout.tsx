@@ -20,10 +20,11 @@ import { useAppDispatch } from "@/hooks/redux";
 import { performLogout } from "@/features/auth/model/logoutThunk";
 import dealsApi from "@/features/deals/api/dealsApi.ts";
 import usePendingReviews from "@/features/reviews/model/usePendingReviews.ts";
+import usersApi from "@/features/users/api/usersApi.ts";
 
-const navLinks = [
-  { label: "Админка", to: "/admin" },
+const baseNavLinks = [
   { label: "Объявления", to: "/offers" },
+  { label: "Жалобы на меня", to: "/offer-reports/mine" },
   { label: "Композиты", to: "/offer-groups" },
   { label: "Сделки", to: "/deals" },
   { label: "Отзывы", to: "/reviews" },
@@ -37,11 +38,15 @@ function AppLayout() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { pendingCount } = usePendingReviews();
+  const { data: currentUser } = usersApi.useGetCurrentUserQuery();
   const { data: drafts } = dealsApi.useGetMyDraftDealsQuery({
     createdByMe: false,
     participating: true,
   });
   const draftCount = drafts?.length ?? 0;
+  const navLinks = currentUser?.isAdmin
+    ? [{ label: "Админка", to: "/admin" }, ...baseNavLinks]
+    : baseNavLinks;
 
   const handleLogout = async () => {
     await dispatch(performLogout());
