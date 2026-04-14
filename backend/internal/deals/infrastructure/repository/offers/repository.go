@@ -2,6 +2,7 @@ package offers
 
 import (
 	"barter-port/internal/deals/domain"
+	"barter-port/internal/deals/domain/htypes"
 	"barter-port/pkg/db"
 	"barter-port/pkg/repox"
 	"errors"
@@ -37,20 +38,64 @@ func (r *Repository) AddOffer(ctx context.Context, exec db.DB, offer domain.Offe
 	return err
 }
 
-func (r *Repository) AddOfferPhotos(ctx context.Context, exec db.DB, offerID uuid.UUID, photoURLs []string) error {
-	if len(photoURLs) == 0 {
+func (r *Repository) AddOfferPhotos(ctx context.Context, exec db.DB, photos []domain.OfferPhoto) error {
+	if len(photos) == 0 {
 		return nil
 	}
 
 	query := `
-		INSERT INTO offer_photos (offer_id, url)
-		VALUES ($1, $2)
+		INSERT INTO offer_photos (id, offer_id, url, position)
+		VALUES ($1, $2, $3, $4)
 	`
 
-	for _, photoURL := range photoURLs {
-		if _, err := exec.Exec(ctx, query, offerID, photoURL); err != nil {
+	for _, photo := range photos {
+		if _, err := exec.Exec(ctx, query, photo.ID, photo.OfferID, photo.URL, photo.Position); err != nil {
 			return fmt.Errorf("insert offer photo: %w", err)
 		}
+	}
+
+	return nil
+}
+
+func (r *Repository) GetOfferPhotos(ctx context.Context, exec db.DB, offerID uuid.UUID) ([]domain.OfferPhoto, error) {
+	const query = `
+		SELECT id, offer_id, url, position
+		FROM offer_photos
+		WHERE offer_id = $1
+		ORDER BY position
+	`
+
+	rows, err := exec.Query(ctx, query, offerID)
+	if err != nil {
+		return nil, fmt.Errorf("sql get offer photos: %w", err)
+	}
+	defer rows.Close()
+
+	result := make([]domain.OfferPhoto, 0)
+	for rows.Next() {
+		var photo domain.OfferPhoto
+		if err = rows.Scan(&photo.ID, &photo.OfferID, &photo.URL, &photo.Position); err != nil {
+			return nil, fmt.Errorf("scan offer photo: %w", err)
+		}
+		result = append(result, photo)
+	}
+
+	return result, rows.Err()
+}
+
+func (r *Repository) DeleteOfferPhotos(ctx context.Context, exec db.DB, offerID uuid.UUID, photoIDs []uuid.UUID) error {
+	if len(photoIDs) == 0 {
+		return nil
+	}
+
+	const query = `
+		DELETE FROM offer_photos
+		WHERE offer_id = $1
+		  AND id = ANY($2)
+	`
+
+	if _, err := exec.Exec(ctx, query, offerID, photoIDs); err != nil {
+		return fmt.Errorf("delete offer photos: %w", err)
 	}
 
 	return nil
@@ -77,8 +122,9 @@ func (r *Repository) GetOffersOrderByTime(
 	if authorID == nil {
 		if cursor == nil {
 			query = `
-		SELECT id, author_id, name, type, action, description, created_at, views,
-		       COALESCE((SELECT array_agg(op.url ORDER BY op.url) FROM offer_photos op WHERE op.offer_id = offers.id), '{}') AS photo_urls
+		SELECT id, author_id, name, type, action, description, created_at, updated_at, views,
+		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls
 		FROM offers
 		ORDER BY created_at DESC
 		LIMIT $1
@@ -86,8 +132,9 @@ func (r *Repository) GetOffersOrderByTime(
 			args = append(args, limit)
 		} else {
 			query = `
-		SELECT id, author_id, name, type, action, description, created_at, views,
-		       COALESCE((SELECT array_agg(op.url ORDER BY op.url) FROM offer_photos op WHERE op.offer_id = offers.id), '{}') AS photo_urls
+		SELECT id, author_id, name, type, action, description, created_at, updated_at, views,
+		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls
 		FROM offers
 		WHERE (created_at, id) < ($1, $2)
 		ORDER BY created_at DESC 
@@ -98,8 +145,9 @@ func (r *Repository) GetOffersOrderByTime(
 	} else {
 		if cursor == nil {
 			query = `
-		SELECT id, author_id, name, type, action, description, created_at, views,
-		       COALESCE((SELECT array_agg(op.url ORDER BY op.url) FROM offer_photos op WHERE op.offer_id = offers.id), '{}') AS photo_urls
+		SELECT id, author_id, name, type, action, description, created_at, updated_at, views,
+		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls
 		FROM offers
 		WHERE author_id = $1
 		ORDER BY created_at DESC
@@ -108,8 +156,9 @@ func (r *Repository) GetOffersOrderByTime(
 			args = append(args, *authorID, limit)
 		} else {
 			query = `
-		SELECT id, author_id, name, type, action, description, created_at, views,
-		       COALESCE((SELECT array_agg(op.url ORDER BY op.url) FROM offer_photos op WHERE op.offer_id = offers.id), '{}') AS photo_urls
+		SELECT id, author_id, name, type, action, description, created_at, updated_at, views,
+		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls
 		FROM offers
 		WHERE author_id = $1 AND (created_at, id) < ($2, $3)
 		ORDER BY created_at DESC
@@ -158,20 +207,22 @@ func (r *Repository) GetOffersOrderByPopularity(
 	if authorID == nil {
 		if cursor == nil {
 			query = `
-		SELECT id, author_id, name, type, action, description, created_at, views,
-		       COALESCE((SELECT array_agg(op.url ORDER BY op.url) FROM offer_photos op WHERE op.offer_id = offers.id), '{}') AS photo_urls
+		SELECT id, author_id, name, type, action, description, created_at, updated_at, views,
+		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls
 		FROM offers
-		ORDER BY created_at DESC
+		ORDER BY views DESC, id DESC
 		LIMIT $1
 		`
 			args = append(args, limit)
 		} else {
 			query = `
-		SELECT id, author_id, name, type, action, description, created_at, views,
-		       COALESCE((SELECT array_agg(op.url ORDER BY op.url) FROM offer_photos op WHERE op.offer_id = offers.id), '{}') AS photo_urls
+		SELECT id, author_id, name, type, action, description, created_at, updated_at, views,
+		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls
 		FROM offers
 		WHERE (views, id) < ($1, $2) 
-		ORDER BY views DESC 
+		ORDER BY views DESC, id DESC
 		LIMIT $3
 		`
 			args = append(args, cursor.Views, cursor.Id, limit)
@@ -179,21 +230,23 @@ func (r *Repository) GetOffersOrderByPopularity(
 	} else {
 		if cursor == nil {
 			query = `
-		SELECT id, author_id, name, type, action, description, created_at, views,
-		       COALESCE((SELECT array_agg(op.url ORDER BY op.url) FROM offer_photos op WHERE op.offer_id = offers.id), '{}') AS photo_urls
+		SELECT id, author_id, name, type, action, description, created_at, updated_at, views,
+		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls
 		FROM offers
 		WHERE author_id = $1
-		ORDER BY created_at DESC
+		ORDER BY views DESC, id DESC
 		LIMIT $2
 		`
 			args = append(args, *authorID, limit)
 		} else {
 			query = `
-		SELECT id, author_id, name, type, action, description, created_at, views,
-		       COALESCE((SELECT array_agg(op.url ORDER BY op.url) FROM offer_photos op WHERE op.offer_id = offers.id), '{}') AS photo_urls
+		SELECT id, author_id, name, type, action, description, created_at, updated_at, views,
+		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls
 		FROM offers
 		WHERE author_id = $1 AND (views, id) < ($2, $3)
-		ORDER BY views DESC
+		ORDER BY views DESC, id DESC
 		LIMIT $4
 		`
 			args = append(args, *authorID, cursor.Views, cursor.Id, limit)
@@ -269,8 +322,10 @@ func (r *Repository) GetOffersByIDs(ctx context.Context, exec db.DB, ids []uuid.
 			o.action,
 			o.description,
 			o.created_at,
+			o.updated_at,
 			o.views,
-			COALESCE((SELECT array_agg(op.url ORDER BY op.url) FROM offer_photos op WHERE op.offer_id = o.id), '{}') AS photo_urls
+			COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = o.id), '{}'::uuid[]) AS photo_ids,
+			COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = o.id), '{}'::text[]) AS photo_urls
 		FROM unnest($1::uuid[]) WITH ORDINALITY u(id, ord)
 		JOIN offers o ON o.id = u.id
 		ORDER BY u.ord`
@@ -292,7 +347,9 @@ func (r *Repository) GetOffersByIDs(ctx context.Context, exec db.DB, ids []uuid.
 			&item.Action,
 			&item.Description,
 			&item.CreatedAt,
+			&item.UpdatedAt,
 			&item.Views,
+			&item.PhotoIds,
 			&item.PhotoUrls,
 		); err != nil {
 			return nil, fmt.Errorf("scan offer: %w", err)
@@ -321,8 +378,9 @@ func (r *Repository) GetOfferByID(ctx context.Context, id uuid.UUID) (*domain.Of
 //   - domain.ErrOfferNotFound: if no item with the given ID exists.
 func (r *Repository) GetOffer(ctx context.Context, exec db.DB, id uuid.UUID) (*domain.Offer, error) {
 	query := `
-		SELECT id, author_id, name, type, action, description, created_at, views,
-		       COALESCE((SELECT array_agg(op.url ORDER BY op.url) FROM offer_photos op WHERE op.offer_id = offers.id), '{}') AS photo_urls
+		SELECT id, author_id, name, type, action, description, created_at, updated_at, views,
+		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls
 		FROM offers
 		WHERE id = $1`
 
@@ -335,7 +393,9 @@ func (r *Repository) GetOffer(ctx context.Context, exec db.DB, id uuid.UUID) (*d
 		&offer.Action,
 		&offer.Description,
 		&offer.CreatedAt,
+		&offer.UpdatedAt,
 		&offer.Views,
+		&offer.PhotoIds,
 		&offer.PhotoUrls,
 	)
 	if err != nil {
@@ -346,4 +406,116 @@ func (r *Repository) GetOffer(ctx context.Context, exec db.DB, id uuid.UUID) (*d
 	}
 
 	return &offer, nil
+}
+
+// ViewOffer increments the offer views counter.
+//
+// Errors:
+//   - domain.ErrOfferNotFound: if no item with the given ID exists.
+func (r *Repository) ViewOffer(ctx context.Context, exec db.DB, id uuid.UUID) error {
+	tag, err := exec.Exec(ctx, `UPDATE offers SET views = views + 1 WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("sql view offer: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return domain.ErrOfferNotFound
+	}
+
+	return nil
+}
+
+// UpdateOffer applies a partial update to an offer.
+//
+// Domain errors:
+//   - domain.ErrOfferNotFound: if the offer does not exist.
+//   - domain.ErrForbidden: if the offer exists but belongs to another author.
+func (r *Repository) UpdateOffer(
+	ctx context.Context,
+	exec db.DB,
+	offerID uuid.UUID,
+	userID uuid.UUID,
+	patch htypes.OfferPatch,
+) (domain.Offer, error) {
+	var itemType *string
+	if patch.Type != nil {
+		value := patch.Type.String()
+		itemType = &value
+	}
+
+	var action *string
+	if patch.Action != nil {
+		value := patch.Action.String()
+		action = &value
+	}
+
+	const query = `
+		UPDATE offers
+		SET name        = COALESCE($3, name),
+		    description = COALESCE($4, description),
+		    type        = COALESCE($5, type),
+		    action      = COALESCE($6, action),
+		    updated_at  = NOW()
+		WHERE id = $1
+		  AND author_id = $2
+		RETURNING id, author_id, name, type, action, description, created_at, updated_at, views,
+		          COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
+		          COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls`
+
+	var offer domain.Offer
+	err := exec.QueryRow(ctx, query, offerID, userID, patch.Name, patch.Description, itemType, action).Scan(
+		&offer.ID,
+		&offer.AuthorId,
+		&offer.Name,
+		&offer.Type,
+		&offer.Action,
+		&offer.Description,
+		&offer.CreatedAt,
+		&offer.UpdatedAt,
+		&offer.Views,
+		&offer.PhotoIds,
+		&offer.PhotoUrls,
+	)
+	if err == nil {
+		return offer, nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return domain.Offer{}, fmt.Errorf("sql update offer: %w", err)
+	}
+
+	var authorID uuid.UUID
+	checkErr := exec.QueryRow(ctx, `SELECT author_id FROM offers WHERE id = $1`, offerID).Scan(&authorID)
+	if errors.Is(checkErr, pgx.ErrNoRows) {
+		return domain.Offer{}, domain.ErrOfferNotFound
+	}
+	if checkErr != nil {
+		return domain.Offer{}, fmt.Errorf("sql check offer: %w", checkErr)
+	}
+
+	return domain.Offer{}, domain.ErrForbidden
+}
+
+// DeleteOffer deletes an offer owned by the specified author.
+//
+// Domain errors:
+//   - domain.ErrOfferNotFound: if the offer does not exist.
+//   - domain.ErrForbidden: if the offer exists but belongs to another author.
+func (r *Repository) DeleteOffer(ctx context.Context, exec db.DB, offerID uuid.UUID, userID uuid.UUID) error {
+	tag, err := exec.Exec(ctx, `DELETE FROM offers WHERE id = $1 AND author_id = $2`, offerID, userID)
+	if err != nil {
+		return fmt.Errorf("sql delete offer: %w", err)
+	}
+	if tag.RowsAffected() > 0 {
+		return nil
+	}
+
+	var authorID uuid.UUID
+	checkErr := exec.QueryRow(ctx, `SELECT author_id FROM offers WHERE id = $1`, offerID).Scan(&authorID)
+	if errors.Is(checkErr, pgx.ErrNoRows) {
+		return domain.ErrOfferNotFound
+	}
+	if checkErr != nil {
+		return fmt.Errorf("sql check offer before delete: %w", checkErr)
+	}
+
+	return domain.ErrForbidden
 }

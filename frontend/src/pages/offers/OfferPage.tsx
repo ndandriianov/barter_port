@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
-import { Alert, Box, Button, CircularProgress, Divider, ImageList, ImageListItem, Typography } from "@mui/material";
+import { Alert, Box, Button, CircularProgress, Dialog, DialogContent, Divider, ImageList, ImageListItem, Typography } from "@mui/material";
 import offersApi from "@/features/offers/api/offersApi";
 import usersApi from "@/features/users/api/usersApi";
 import useDraftOfferCounts from "@/features/deals/model/useDraftOfferCounts.ts";
@@ -13,7 +13,11 @@ function OfferPage() {
   const { offerId } = useParams<{ offerId: string }>();
   const navigate = useNavigate();
   const [isRespondModalOpen, setIsRespondModalOpen] = useState(false);
+  const [openedPhotoUrl, setOpenedPhotoUrl] = useState<string | null>(null);
+  const viewedOfferIdsRef = useRef<Set<string>>(new Set());
   const { data: meData } = usersApi.useGetCurrentUserQuery();
+  const [deleteOffer, { isLoading: isDeleting, error: deleteError }] = offersApi.useDeleteOfferMutation();
+  const [viewOfferById] = offersApi.useViewOfferByIdMutation();
 
   const { data: offer, isLoading, error } = offersApi.useGetOfferByIdQuery(offerId ?? "", {
     skip: !offerId,
@@ -23,6 +27,17 @@ function OfferPage() {
   });
   const isOwnOffer = !!meData && !!offer && offer.authorId === meData.id;
   const { countsByOfferId } = useDraftOfferCounts({ enabled: isOwnOffer });
+
+  useEffect(() => {
+    if (!offer || !meData || offer.authorId === meData.id || viewedOfferIdsRef.current.has(offer.id)) {
+      return;
+    }
+
+    viewedOfferIdsRef.current.add(offer.id);
+    void viewOfferById(offer.id).unwrap().catch(() => {
+      viewedOfferIdsRef.current.delete(offer.id);
+    });
+  }, [meData, offer, viewOfferById]);
 
   if (!offerId) return <Alert severity="warning">Объявление не найдено</Alert>;
 
@@ -39,6 +54,19 @@ function OfferPage() {
   }
 
   const canRespond = !!meData && offer.authorId !== meData.id;
+
+  const handleDelete = async () => {
+    if (!window.confirm("Удалить объявление?")) {
+      return;
+    }
+
+    try {
+      await deleteOffer(offer.id).unwrap();
+      navigate("/offers?tab=mine", { replace: true });
+    } catch {
+      // The error is surfaced via RTK Query state.
+    }
+  };
 
   return (
     <Box maxWidth={700} mx="auto">
@@ -63,6 +91,7 @@ function OfferPage() {
             ? `/deals/drafts?offerId=${offer.id}`
             : undefined
         }
+        onPhotoClick={setOpenedPhotoUrl}
       />
 
       {offer.photoUrls.length > 1 && (
@@ -77,7 +106,14 @@ function OfferPage() {
                   component="img"
                   src={photoUrl}
                   alt={offer.name}
-                  sx={{ width: "100%", height: 240, objectFit: "cover", display: "block" }}
+                  onClick={() => setOpenedPhotoUrl(photoUrl)}
+                  sx={{
+                    width: "100%",
+                    height: 240,
+                    objectFit: "cover",
+                    display: "block",
+                    cursor: "zoom-in",
+                  }}
                 />
               </ImageListItem>
             ))}
@@ -93,10 +129,26 @@ function OfferPage() {
         </Box>
       )}
 
+      {deleteError && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          Не удалось удалить объявление
+        </Alert>
+      )}
+
       <Box display="flex" gap={2} flexWrap="wrap">
         {canRespond && (
           <Button variant="contained" onClick={() => setIsRespondModalOpen(true)}>
             Откликнуться
+          </Button>
+        )}
+        {isOwnOffer && (
+          <Button component={RouterLink} to={`/offers/${offer.id}/edit`} variant="contained">
+            Редактировать
+          </Button>
+        )}
+        {isOwnOffer && (
+          <Button variant="outlined" color="error" onClick={handleDelete} disabled={isDeleting}>
+            {isDeleting ? "Удаление..." : "Удалить"}
           </Button>
         )}
         <Button component={RouterLink} to={`/offers/${offer.id}/reviews`} variant="outlined">
@@ -115,6 +167,29 @@ function OfferPage() {
         isOpen={isRespondModalOpen}
         onClose={() => setIsRespondModalOpen(false)}
       />
+
+      <Dialog
+        open={openedPhotoUrl !== null}
+        onClose={() => setOpenedPhotoUrl(null)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogContent sx={{ p: 1.5, bgcolor: "common.black" }}>
+          {openedPhotoUrl && (
+            <Box
+              component="img"
+              src={openedPhotoUrl}
+              alt={offer.name}
+              sx={{
+                width: "100%",
+                maxHeight: "85vh",
+                objectFit: "contain",
+                display: "block",
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }

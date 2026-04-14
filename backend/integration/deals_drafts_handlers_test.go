@@ -154,7 +154,7 @@ func TestGetDraftsCreatedByMeTrueReturnsOnlyAuthoredDrafts(t *testing.T) {
 	draftByA := mustCreateDraft(t, userA, nil, nil, []types.OfferIDAndQuantity{{OfferID: offerA, Quantity: 1}})
 	draftByBWithOfferA := mustCreateDraft(t, userB, nil, nil, []types.OfferIDAndQuantity{{OfferID: offerA, Quantity: 1}})
 
-	ids := mustGetDraftIDs(t, userA, boolPtr(true))
+	ids := mustGetDraftIDs(t, userA, new(true))
 	require.Contains(t, ids, draftByA)
 	require.NotContains(t, ids, draftByBWithOfferA)
 }
@@ -171,7 +171,7 @@ func TestGetDraftsCreatedByMeFalseReturnsParticipatingDrafts(t *testing.T) {
 	draftByBWithOfferA := mustCreateDraft(t, userB, nil, nil, []types.OfferIDAndQuantity{{OfferID: offerA, Quantity: 1}})
 	draftByBWithOfferB := mustCreateDraft(t, userB, nil, nil, []types.OfferIDAndQuantity{{OfferID: offerB, Quantity: 1}})
 
-	ids := mustGetDraftIDs(t, userA, boolPtr(false))
+	ids := mustGetDraftIDs(t, userA, new(false))
 	require.Contains(t, ids, draftByBWithOfferA)
 	require.NotContains(t, ids, draftByBWithOfferB)
 }
@@ -186,7 +186,7 @@ func TestGetDraftsCreatedByMeDefaultFalse(t *testing.T) {
 	_ = mustCreateDraft(t, userB, nil, nil, []types.OfferIDAndQuantity{{OfferID: offerA, Quantity: 1}})
 
 	idsDefault := mustGetDraftIDs(t, userA, nil)
-	idsFalse := mustGetDraftIDs(t, userA, boolPtr(false))
+	idsFalse := mustGetDraftIDs(t, userA, new(false))
 	require.ElementsMatch(t, idsFalse, idsDefault)
 }
 

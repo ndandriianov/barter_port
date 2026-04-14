@@ -51,14 +51,6 @@ func dealsURL() string {
 	return globalFixture.DealsURL
 }
 
-func boolPtr(v bool) *bool {
-	return &v
-}
-
-func intPtr(v int) *int {
-	return &v
-}
-
 func mustJSONBody(t *testing.T, v any) io.Reader {
 	t.Helper()
 
@@ -204,7 +196,13 @@ func mustGetOfferByID(t *testing.T, userID uuid.UUID, offerID uuid.UUID) types.O
 func mustGetOffers(t *testing.T, userID uuid.UUID, my *bool) types.ListOffersResponse {
 	t.Helper()
 
-	url := dealsURL() + "/offers?sort=ByTime&cursor_limit=100"
+	return mustGetOffersBySort(t, userID, "ByTime", my)
+}
+
+func mustGetOffersBySort(t *testing.T, userID uuid.UUID, sort string, my *bool) types.ListOffersResponse {
+	t.Helper()
+
+	url := dealsURL() + "/offers?sort=" + sort + "&cursor_limit=100"
 	if my != nil {
 		url += fmt.Sprintf("&my=%t", *my)
 	}
@@ -218,6 +216,92 @@ func mustGetOffers(t *testing.T, userID uuid.UUID, my *bool) types.ListOffersRes
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
 
 	return result
+}
+
+func mustViewOfferByID(t *testing.T, userID uuid.UUID, offerID uuid.UUID) {
+	t.Helper()
+
+	req := mustUserRequest(t, http.MethodPost, dealsURL()+"/offers/"+offerID.String()+"/view", userID, nil)
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+func mustUpdateOffer(t *testing.T, userID uuid.UUID, offerID uuid.UUID, body types.UpdateOfferRequest) types.Offer {
+	t.Helper()
+
+	req := mustUserRequest(t, http.MethodPatch, dealsURL()+"/offers/"+offerID.String(), userID, mustJSONBody(t, body))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var offer types.Offer
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&offer))
+
+	return offer
+}
+
+func mustUpdateOfferMultipartDetails(
+	t *testing.T,
+	userID uuid.UUID,
+	offerID uuid.UUID,
+	body types.UpdateOfferRequest,
+	photos [][]byte,
+) types.Offer {
+	t.Helper()
+
+	var payload bytes.Buffer
+	writer := multipart.NewWriter(&payload)
+
+	if body.Name != nil {
+		require.NoError(t, writer.WriteField("name", *body.Name))
+	}
+	if body.Description != nil {
+		require.NoError(t, writer.WriteField("description", *body.Description))
+	}
+	if body.Type != nil {
+		require.NoError(t, writer.WriteField("type", string(*body.Type)))
+	}
+	if body.Action != nil {
+		require.NoError(t, writer.WriteField("action", string(*body.Action)))
+	}
+	if body.DeletePhotoIds != nil {
+		for _, photoID := range *body.DeletePhotoIds {
+			require.NoError(t, writer.WriteField("deletePhotoIds", photoID.String()))
+		}
+	}
+
+	for i, photo := range photos {
+		part, err := writer.CreateFormFile("photos", fmt.Sprintf("photo-%d.png", i))
+		require.NoError(t, err)
+		_, err = part.Write(photo)
+		require.NoError(t, err)
+	}
+
+	require.NoError(t, writer.Close())
+
+	req := mustUserRequest(t, http.MethodPatch, dealsURL()+"/offers/"+offerID.String(), userID, &payload)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var offer types.Offer
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&offer))
+
+	return offer
+}
+
+func mustDeleteOffer(t *testing.T, userID uuid.UUID, offerID uuid.UUID) {
+	t.Helper()
+
+	req := mustUserRequest(t, http.MethodDelete, dealsURL()+"/offers/"+offerID.String(), userID, nil)
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusNoContent, resp.StatusCode)
 }
 
 func mustCreateDraft(
@@ -285,6 +369,18 @@ func mustConfirmDraft(t *testing.T, userID uuid.UUID, draftID uuid.UUID) {
 func mustGetDealIDs(t *testing.T, userID uuid.UUID, my bool) []uuid.UUID {
 	t.Helper()
 
+	result := mustGetDealsResponse(t, userID, my)
+	ids := make([]uuid.UUID, 0, len(result))
+	for _, item := range result {
+		ids = append(ids, item.Id)
+	}
+
+	return ids
+}
+
+func mustGetDealsResponse(t *testing.T, userID uuid.UUID, my bool) types.GetDealsResponse {
+	t.Helper()
+
 	url := dealsURL() + "/deals"
 	if my {
 		url += "?my=true"
@@ -298,12 +394,7 @@ func mustGetDealIDs(t *testing.T, userID uuid.UUID, my bool) []uuid.UUID {
 	var result types.GetDealsResponse
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
 
-	ids := make([]uuid.UUID, 0, len(result))
-	for _, item := range result {
-		ids = append(ids, item.Id)
-	}
-
-	return ids
+	return result
 }
 
 func mustGetDealByID(t *testing.T, userID uuid.UUID, dealID uuid.UUID) types.Deal {
@@ -503,6 +594,74 @@ func mustUpdateDealItem(
 	return item
 }
 
+func mustUpdateDealItemMultipartDetails(
+	t *testing.T,
+	userID uuid.UUID,
+	dealID uuid.UUID,
+	itemID uuid.UUID,
+	body types.UpdateDealItemRequest,
+	photos [][]byte,
+) types.Item {
+	t.Helper()
+
+	var payload bytes.Buffer
+	writer := multipart.NewWriter(&payload)
+
+	if body.Name != nil {
+		require.NoError(t, writer.WriteField("name", *body.Name))
+	}
+	if body.Description != nil {
+		require.NoError(t, writer.WriteField("description", *body.Description))
+	}
+	if body.Quantity != nil {
+		require.NoError(t, writer.WriteField("quantity", fmt.Sprintf("%d", *body.Quantity)))
+	}
+	if body.ClaimProvider != nil {
+		require.NoError(t, writer.WriteField("claimProvider", fmt.Sprintf("%t", *body.ClaimProvider)))
+	}
+	if body.ReleaseProvider != nil {
+		require.NoError(t, writer.WriteField("releaseProvider", fmt.Sprintf("%t", *body.ReleaseProvider)))
+	}
+	if body.ClaimReceiver != nil {
+		require.NoError(t, writer.WriteField("claimReceiver", fmt.Sprintf("%t", *body.ClaimReceiver)))
+	}
+	if body.ReleaseReceiver != nil {
+		require.NoError(t, writer.WriteField("releaseReceiver", fmt.Sprintf("%t", *body.ReleaseReceiver)))
+	}
+	if body.DeletePhotoIds != nil {
+		for _, photoID := range *body.DeletePhotoIds {
+			require.NoError(t, writer.WriteField("deletePhotoIds", photoID.String()))
+		}
+	}
+
+	for i, photo := range photos {
+		part, err := writer.CreateFormFile("photos", fmt.Sprintf("photo-%d.png", i))
+		require.NoError(t, err)
+		_, err = part.Write(photo)
+		require.NoError(t, err)
+	}
+
+	require.NoError(t, writer.Close())
+
+	req := mustUserRequest(
+		t,
+		http.MethodPatch,
+		dealsURL()+"/deals/"+dealID.String()+"/items/"+itemID.String(),
+		userID,
+		&payload,
+	)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var item types.Item
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&item))
+
+	return item
+}
+
 func mustCreateDiscussionDeal(t *testing.T, userIDs ...uuid.UUID) (uuid.UUID, map[uuid.UUID]uuid.UUID) {
 	t.Helper()
 	require.GreaterOrEqual(t, len(userIDs), 2)
@@ -541,7 +700,7 @@ func mustCreateDiscussionDeal(t *testing.T, userIDs ...uuid.UUID) (uuid.UUID, ma
 	for idx, authorID := range userIDs {
 		receiverID := userIDs[(idx+1)%len(userIDs)]
 		mustUpdateDealItem(t, receiverID, dealID, itemIDsByAuthor[authorID], types.UpdateDealItemRequest{
-			ClaimReceiver: boolPtr(true),
+			ClaimReceiver: new(true),
 		})
 	}
 
@@ -560,7 +719,7 @@ func mustCreateCompletedReviewableTwoPartyDeal(t *testing.T, userA uuid.UUID, us
 	itemIDByB := itemIDsByAuthor[userB]
 
 	_ = mustUpdateDealItem(t, userA, dealID, itemIDByA, types.UpdateDealItemRequest{
-		Name: stringPtr(fmt.Sprintf("updated-item-%d", time.Now().UnixNano())),
+		Name: new(fmt.Sprintf("updated-item-%d", time.Now().UnixNano())),
 	})
 
 	_ = mustChangeDealStatus(t, dealID, userA, types.Confirmed)
@@ -609,8 +768,7 @@ func mustCreateReviewedOfferItemContext(t *testing.T) reviewedDealContext {
 	providerID := uuid.New()
 	receiverID := uuid.New()
 	dealID, itemID, otherItemID := mustCreateCompletedReviewableTwoPartyDeal(t, providerID, receiverID)
-	comment := "excellent"
-	review := mustCreateDealItemReview(t, receiverID, dealID, itemID, 5, &comment)
+	review := mustCreateDealItemReview(t, receiverID, dealID, itemID, 5, new("excellent"))
 
 	require.NotNil(t, review.OfferRef)
 

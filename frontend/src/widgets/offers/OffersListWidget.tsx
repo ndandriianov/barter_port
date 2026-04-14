@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import {
   Alert,
   Box,
@@ -15,7 +15,7 @@ import {
 import RefreshIcon from "@mui/icons-material/Refresh";
 import offersApi from "@/features/offers/api/offersApi";
 import usersApi from "@/features/users/api/usersApi.ts";
-import type { Offer, SortType } from "@/features/offers/model/types";
+import type { SortType } from "@/features/offers/model/types";
 import useDraftOfferCounts from "@/features/deals/model/useDraftOfferCounts.ts";
 import OfferCard from "@/widgets/offers/OfferCard";
 
@@ -39,21 +39,11 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
     ...(mode === "mine" ? { my: true } : {}),
   });
 
-  const offers = useMemo(() => {
-    if (!data?.offers) {
-      return [] as Offer[];
-    }
-
-    if (mode === "mine") {
-      return data.offers;
-    }
-
-    if (!currentUser) {
-      return data.offers;
-    }
-
-    return data.offers.filter((offer) => offer.authorId !== currentUser.id);
-  }, [currentUser, data?.offers, mode]);
+  const offers = data?.offers ?? [];
+  const visibleOffers =
+    mode === "mine" || !currentUser
+      ? offers
+      : offers.filter((offer) => offer.authorId !== currentUser.id);
 
   if (isLoading) {
     return (
@@ -95,13 +85,13 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
         </Tooltip>
       </Box>
 
-      {offers.length === 0 ? (
+      {visibleOffers.length === 0 ? (
         <Typography color="text.secondary" textAlign="center" py={6}>
           {mode === "mine" ? "У вас пока нет объявлений" : "Пока нет чужих объявлений"}
         </Typography>
       ) : (
         <Grid container spacing={2}>
-          {offers.map((offer) => (
+          {visibleOffers.map((offer) => (
             <Grid key={offer.id} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
               <OfferCard
                 offer={offer}

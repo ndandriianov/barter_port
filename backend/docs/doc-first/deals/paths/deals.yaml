@@ -7,7 +7,8 @@ deals:
       Получить все сделки.
       
       - Если указать параметр my=true, то будут возвращены только сделки, в которых текущий пользователь является участником.
-      - Если указать параметр open=true, то будут возвращены только открытые сделки
+      - Если указать параметр open=true, то будут возвращены только открытые сделки.
+      - Для каждой сделки также возвращается список `items` с их фотографиями.
     operationId: getDeals
     parameters:
       - name: my
@@ -77,6 +78,9 @@ dealItemById:
       required: true
       content:
         application/json:
+          schema:
+            $ref: '../components/schemas.yaml#/UpdateDealItemRequest'
+        multipart/form-data:
           schema:
             $ref: '../components/schemas.yaml#/UpdateDealItemRequest'
     responses:
@@ -356,6 +360,7 @@ dealItems:
     summary: Добавить позицию в сделку
     description: |
       Пользователь указывает id одного из своих offers, на основании offer формируется item, item добавляется в сделку.
+      Фотографии offer копируются в item, после чего item использует уже собственные фотографии.
 
       Если по сделке уже создана запись в `deal_failures` и она ожидает решения админа,
       добавление новой позиции запрещено.

@@ -7,6 +7,7 @@ import VerifyEmailPage from "@/pages/auth/VerifyEmailPage";
 import AdminPage from "@/pages/admin/AdminPage";
 import ProfilePage from "@/pages/profile/ProfilePage";
 import CreateOfferPage from "@/pages/offers/CreateOfferPage";
+import EditOfferPage from "@/pages/offers/EditOfferPage";
 import OffersListPage from "@/pages/offers/OffersListPage";
 import OfferPage from "@/pages/offers/OfferPage";
 import OfferGroupsListPage from "@/pages/offer-groups/OfferGroupsListPage.tsx";
@@ -21,6 +22,7 @@ import ChatsPage from "@/pages/chats/ChatsPage";
 import ReviewsPage from "@/pages/reviews/ReviewsPage";
 import UserReviewsPage from "@/pages/reviews/UserReviewsPage";
 import OfferReviewsPage from "@/pages/reviews/OfferReviewsPage";
+import UserPage from "@/pages/users/UserPage.tsx";
 
 function AppRouter() {
   return (
@@ -37,6 +39,7 @@ function AppRouter() {
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/offers" element={<OffersListPage />} />
           <Route path="/offers/create" element={<CreateOfferPage />} />
+          <Route path="/offers/:offerId/edit" element={<EditOfferPage />} />
           <Route path="/offers/:offerId" element={<OfferPage />} />
           <Route path="/offers/:offerId/reviews" element={<OfferReviewsPage />} />
           <Route path="/offer-groups" element={<OfferGroupsListPage />} />
@@ -51,6 +54,7 @@ function AppRouter() {
           <Route path="/reviews" element={<ReviewsPage />} />
           <Route path="/reviews/pending" element={<Navigate to="/reviews?tab=available" replace />} />
           <Route path="/reviews/mine" element={<Navigate to="/reviews?tab=mine" replace />} />
+          <Route path="/users/:userId" element={<UserPage />} />
           <Route path="/users/:userId/reviews" element={<UserReviewsPage />} />
           <Route path="*" element={<Navigate to="/profile" replace />} />
         </Route>

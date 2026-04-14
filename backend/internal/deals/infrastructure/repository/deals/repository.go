@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -45,13 +44,14 @@ func (r *Repository) CreateDeal(ctx context.Context, tx pgx.Tx, deal domain.Deal
 	}
 
 	offersQuery := `
-		INSERT INTO items (deal_id, offer_id, author_id, receiver_id, provider_id, name, description, type, quantity) 
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9);`
+		INSERT INTO items (id, deal_id, offer_id, author_id, receiver_id, provider_id, name, description, type, quantity)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10);`
 
 	for _, item := range deal.Items {
 		_, err = tx.Exec(
 			ctx,
 			offersQuery,
+			item.ID,
 			id,
 			item.OfferID,
 			item.AuthorID,
@@ -148,6 +148,20 @@ func (r *Repository) GetDealIDs(ctx context.Context, exec db.DB, userID *uuid.UU
 		return nil, fmt.Errorf("rows: %w", err)
 	}
 
+	dealIDs := make([]uuid.UUID, 0, len(result))
+	for _, deal := range result {
+		dealIDs = append(dealIDs, deal.ID)
+	}
+
+	itemsByDealID, err := r.loadItemsByDealIDs(ctx, exec, dealIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	for i := range result {
+		result[i].Items = itemsByDealID[result[i].ID]
+	}
+
 	return result, nil
 }
 
@@ -177,114 +191,37 @@ func (r *Repository) UpdateDealName(ctx context.Context, tx pgx.Tx, dealID uuid.
 //   - domain.ErrDealNotFound: if no deal with the specified ID exists.
 func (r *Repository) GetDealByID(ctx context.Context, tx pgx.Tx, id uuid.UUID) (domain.Deal, error) {
 	query := `
-		SELECT d.id, d.name, d.description, d.created_at, d.updated_at, d.status,
-		       i.id, i.offer_id, i.author_id, i.provider_id, i.receiver_id,
-		       i.name, i.description, i.type, i.updated_at, i.quantity
+		SELECT d.id, d.name, d.description, d.created_at, d.updated_at, d.status
 		FROM deals d
-		LEFT JOIN items i ON i.deal_id = d.id
 		WHERE d.id = $1`
 
-	rows, err := tx.Query(ctx, query, id)
+	var deal domain.Deal
+	err := tx.QueryRow(ctx, query, id).Scan(
+		&deal.ID,
+		&deal.Name,
+		&deal.Description,
+		&deal.CreatedAt,
+		&deal.UpdatedAt,
+		&deal.Status,
+	)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.Deal{}, domain.ErrDealNotFound
+	}
 	if err != nil {
 		return domain.Deal{}, fmt.Errorf("sql get deal by id: %w", err)
 	}
-	defer rows.Close()
 
-	var deal domain.Deal
-	found := false
-
-	for rows.Next() {
-		var itemID *uuid.UUID
-		var itemOfferID *uuid.UUID
-		var itemAuthorID *uuid.UUID
-		var itemProviderID *uuid.UUID
-		var itemReceiverID *uuid.UUID
-		var itemName *string
-		var itemDescription *string
-		var itemType *string
-		var itemUpdatedAt *time.Time
-		var itemQuantity *int64
-
-		if err = rows.Scan(
-			&deal.ID,
-			&deal.Name,
-			&deal.Description,
-			&deal.CreatedAt,
-			&deal.UpdatedAt,
-			&deal.Status,
-			&itemID,
-			&itemOfferID,
-			&itemAuthorID,
-			&itemProviderID,
-			&itemReceiverID,
-			&itemName,
-			&itemDescription,
-			&itemType,
-			&itemUpdatedAt,
-			&itemQuantity,
-		); err != nil {
-			return domain.Deal{}, fmt.Errorf("scan deal row: %w", err)
-		}
-
-		found = true
-
-		if itemID == nil {
-			continue
-		}
-
-		if itemAuthorID == nil || itemName == nil || itemDescription == nil || itemType == nil {
-			return domain.Deal{}, fmt.Errorf("scan deal item: null required fields")
-		}
-
-		itemTypeValue, err := enums.ItemTypeString(*itemType)
-		if err != nil {
-			return domain.Deal{}, fmt.Errorf("item type: %w", err)
-		}
-
-		deal.Items = append(deal.Items, domain.Item{
-			ID:          *itemID,
-			OfferID:     itemOfferID,
-			AuthorID:    *itemAuthorID,
-			ProviderID:  itemProviderID,
-			ReceiverID:  itemReceiverID,
-			Name:        *itemName,
-			Description: *itemDescription,
-			Type:        itemTypeValue,
-			UpdatedAt:   itemUpdatedAt,
-			Quantity:    int(*itemQuantity),
-		})
-	}
-
-	if err = rows.Err(); err != nil {
-		return domain.Deal{}, fmt.Errorf("rows: %w", err)
-	}
-
-	if !found {
-		return domain.Deal{}, domain.ErrDealNotFound
-	}
-
-	participantsQuery := `
-		SELECT user_id
-		FROM participants
-		where deal_id = $1`
-
-	rows, err = tx.Query(ctx, participantsQuery, id)
+	itemsByDealID, err := r.loadItemsByDealIDs(ctx, tx, []uuid.UUID{id})
 	if err != nil {
-		return domain.Deal{}, fmt.Errorf("sql get participants: %w", err)
+		return domain.Deal{}, err
 	}
-	defer rows.Close()
+	deal.Items = itemsByDealID[id]
 
-	for rows.Next() {
-		var userID uuid.UUID
-		if err = rows.Scan(&userID); err != nil {
-			return domain.Deal{}, fmt.Errorf("scan deal row: %w", err)
-		}
-		deal.Participants = append(deal.Participants, userID)
+	participants, err := r.getParticipants(ctx, tx, id)
+	if err != nil {
+		return domain.Deal{}, err
 	}
-
-	if err = rows.Err(); err != nil {
-		return domain.Deal{}, fmt.Errorf("rows: %w", err)
-	}
+	deal.Participants = participants
 
 	return deal, nil
 }
@@ -303,14 +240,17 @@ func (r *Repository) AddItem(ctx context.Context, exec db.DB, dealID uuid.UUID, 
 	}
 
 	query := `
-		INSERT INTO items (deal_id, offer_id, author_id, provider_id, receiver_id, name, description, type, quantity)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO items (id, deal_id, offer_id, author_id, provider_id, receiver_id, name, description, type, quantity)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		RETURNING id, offer_id, author_id, provider_id, receiver_id,
-		          name, description, type, updated_at, quantity`
+		          name, description, type, updated_at, quantity,
+		          COALESCE((SELECT array_agg(ip.id ORDER BY ip.position) FROM items_photos ip WHERE ip.item_id = items.id), '{}'::uuid[]),
+		          COALESCE((SELECT array_agg(ip.url ORDER BY ip.position) FROM items_photos ip WHERE ip.item_id = items.id), '{}'::text[])`
 
 	itemCreated, err := scanItem(exec.QueryRow(
 		ctx,
 		query,
+		item.ID,
 		dealID,
 		item.OfferID,
 		item.AuthorID,
@@ -326,6 +266,87 @@ func (r *Repository) AddItem(ctx context.Context, exec db.DB, dealID uuid.UUID, 
 	}
 
 	return itemCreated, nil
+}
+
+func (r *Repository) AddItemPhotos(ctx context.Context, exec db.DB, photos []domain.ItemPhoto) error {
+	if len(photos) == 0 {
+		return nil
+	}
+
+	const query = `
+		INSERT INTO items_photos (id, item_id, url, position)
+		VALUES ($1, $2, $3, $4)
+	`
+
+	for _, photo := range photos {
+		if _, err := exec.Exec(ctx, query, photo.ID, photo.ItemID, photo.URL, photo.Position); err != nil {
+			return fmt.Errorf("insert item photo: %w", err)
+		}
+	}
+
+	return nil
+}
+
+func (r *Repository) GetItem(ctx context.Context, exec db.DB, dealID, itemID uuid.UUID) (domain.Item, error) {
+	const query = `
+		SELECT id, offer_id, author_id, provider_id, receiver_id,
+		       name, description, type, updated_at, quantity,
+		       COALESCE((SELECT array_agg(ip.id ORDER BY ip.position) FROM items_photos ip WHERE ip.item_id = items.id), '{}'::uuid[]),
+		       COALESCE((SELECT array_agg(ip.url ORDER BY ip.position) FROM items_photos ip WHERE ip.item_id = items.id), '{}'::text[])
+		FROM items
+		WHERE id = $1 AND deal_id = $2`
+
+	item, err := scanItem(exec.QueryRow(ctx, query, itemID, dealID))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.Item{}, domain.ErrItemNotFound
+	}
+	if err != nil {
+		return domain.Item{}, fmt.Errorf("sql get item: %w", err)
+	}
+
+	return item, nil
+}
+
+func (r *Repository) GetItemPhotos(ctx context.Context, exec db.DB, itemID uuid.UUID) ([]domain.ItemPhoto, error) {
+	const query = `
+		SELECT id, item_id, url, position
+		FROM items_photos
+		WHERE item_id = $1
+		ORDER BY position`
+
+	rows, err := exec.Query(ctx, query, itemID)
+	if err != nil {
+		return nil, fmt.Errorf("sql get item photos: %w", err)
+	}
+	defer rows.Close()
+
+	result := make([]domain.ItemPhoto, 0)
+	for rows.Next() {
+		var photo domain.ItemPhoto
+		if err = rows.Scan(&photo.ID, &photo.ItemID, &photo.URL, &photo.Position); err != nil {
+			return nil, fmt.Errorf("scan item photo: %w", err)
+		}
+		result = append(result, photo)
+	}
+
+	return result, rows.Err()
+}
+
+func (r *Repository) DeleteItemPhotos(ctx context.Context, exec db.DB, itemID uuid.UUID, photoIDs []uuid.UUID) error {
+	if len(photoIDs) == 0 {
+		return nil
+	}
+
+	const query = `
+		DELETE FROM items_photos
+		WHERE item_id = $1
+		  AND id = ANY($2)`
+
+	if _, err := exec.Exec(ctx, query, itemID, photoIDs); err != nil {
+		return fmt.Errorf("delete item photos: %w", err)
+	}
+
+	return nil
 }
 
 // ================================================================================
@@ -407,7 +428,9 @@ func (r *Repository) UpdateItem(
 		  AND deal_id   = $2
 		  AND author_id = $3
 		RETURNING id, offer_id, author_id, provider_id, receiver_id,
-		          name, description, type, updated_at, quantity`
+		          name, description, type, updated_at, quantity,
+		          COALESCE((SELECT array_agg(ip.id ORDER BY ip.position) FROM items_photos ip WHERE ip.item_id = items.id), '{}'::uuid[]),
+		          COALESCE((SELECT array_agg(ip.url ORDER BY ip.position) FROM items_photos ip WHERE ip.item_id = items.id), '{}'::text[])`
 
 	row := exec.QueryRow(ctx, updateQuery, itemID, dealID, userID, patch.Name, patch.Description, patch.Quantity)
 
@@ -451,7 +474,9 @@ func (r *Repository) ClaimItemProvider(ctx context.Context, exec db.DB, dealID, 
 		SET provider_id = $3, updated_at = NOW()
 		WHERE id = $1 AND deal_id = $2 AND provider_id IS NULL
 		RETURNING id, offer_id, author_id, provider_id, receiver_id,
-				  name, description, type, updated_at, quantity`
+				  name, description, type, updated_at, quantity,
+				  COALESCE((SELECT array_agg(ip.id ORDER BY ip.position) FROM items_photos ip WHERE ip.item_id = items.id), '{}'::uuid[]),
+				  COALESCE((SELECT array_agg(ip.url ORDER BY ip.position) FROM items_photos ip WHERE ip.item_id = items.id), '{}'::text[])`
 
 	const check = `SELECT provider_id FROM items WHERE id = $1 AND deal_id = $2`
 
@@ -469,7 +494,9 @@ func (r *Repository) ReleaseItemProvider(ctx context.Context, exec db.DB, dealID
 		SET provider_id = NULL, updated_at = NOW()
 		WHERE id = $1 AND deal_id = $2 AND provider_id = $3
 		RETURNING id, offer_id, author_id, provider_id, receiver_id,
-				  name, description, type, updated_at, quantity`
+				  name, description, type, updated_at, quantity,
+				  COALESCE((SELECT array_agg(ip.id ORDER BY ip.position) FROM items_photos ip WHERE ip.item_id = items.id), '{}'::uuid[]),
+				  COALESCE((SELECT array_agg(ip.url ORDER BY ip.position) FROM items_photos ip WHERE ip.item_id = items.id), '{}'::text[])`
 
 	const check = `SELECT provider_id FROM items WHERE id = $1 AND deal_id = $2`
 
@@ -487,7 +514,9 @@ func (r *Repository) ClaimItemReceiver(ctx context.Context, exec db.DB, dealID, 
 		SET receiver_id = $3, updated_at = NOW()
 		WHERE id = $1 AND deal_id = $2 AND receiver_id IS NULL
 		RETURNING id, offer_id, author_id, provider_id, receiver_id,
-				  name, description, type, updated_at, quantity`
+				  name, description, type, updated_at, quantity,
+				  COALESCE((SELECT array_agg(ip.id ORDER BY ip.position) FROM items_photos ip WHERE ip.item_id = items.id), '{}'::uuid[]),
+				  COALESCE((SELECT array_agg(ip.url ORDER BY ip.position) FROM items_photos ip WHERE ip.item_id = items.id), '{}'::text[])`
 
 	const check = `SELECT receiver_id FROM items WHERE id = $1 AND deal_id = $2`
 
@@ -505,7 +534,9 @@ func (r *Repository) ReleaseItemReceiver(ctx context.Context, exec db.DB, dealID
 		SET receiver_id = NULL, updated_at = NOW()
 		WHERE id = $1 AND deal_id = $2 AND receiver_id = $3
 		RETURNING id, offer_id, author_id, provider_id, receiver_id,
-				  name, description, type, updated_at, quantity`
+				  name, description, type, updated_at, quantity,
+				  COALESCE((SELECT array_agg(ip.id ORDER BY ip.position) FROM items_photos ip WHERE ip.item_id = items.id), '{}'::uuid[]),
+				  COALESCE((SELECT array_agg(ip.url ORDER BY ip.position) FROM items_photos ip WHERE ip.item_id = items.id), '{}'::text[])`
 
 	const check = `SELECT receiver_id FROM items WHERE id = $1 AND deal_id = $2`
 
@@ -659,6 +690,105 @@ func (r *Repository) ensureDealMutable(ctx context.Context, exec db.DB, dealID u
 	}
 }
 
+func (r *Repository) loadItemsByDealIDs(
+	ctx context.Context,
+	exec db.DB,
+	dealIDs []uuid.UUID,
+) (map[uuid.UUID][]domain.Item, error) {
+	result := make(map[uuid.UUID][]domain.Item, len(dealIDs))
+	if len(dealIDs) == 0 {
+		return result, nil
+	}
+
+	const query = `
+		SELECT i.deal_id,
+		       i.id,
+		       i.offer_id,
+		       i.author_id,
+		       i.provider_id,
+		       i.receiver_id,
+		       i.name,
+		       i.description,
+		       i.type,
+		       i.updated_at,
+		       i.quantity,
+		       COALESCE((SELECT array_agg(ip.id ORDER BY ip.position) FROM items_photos ip WHERE ip.item_id = i.id), '{}'::uuid[]) AS photo_ids,
+		       COALESCE((SELECT array_agg(ip.url ORDER BY ip.position) FROM items_photos ip WHERE ip.item_id = i.id), '{}'::text[]) AS photo_urls
+		FROM items i
+		WHERE i.deal_id = ANY($1)
+		ORDER BY i.deal_id, i.id`
+
+	rows, err := exec.Query(ctx, query, dealIDs)
+	if err != nil {
+		return nil, fmt.Errorf("sql get deal items: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var (
+			dealID   uuid.UUID
+			item     domain.Item
+			itemType string
+		)
+		if err = rows.Scan(
+			&dealID,
+			&item.ID,
+			&item.OfferID,
+			&item.AuthorID,
+			&item.ProviderID,
+			&item.ReceiverID,
+			&item.Name,
+			&item.Description,
+			&itemType,
+			&item.UpdatedAt,
+			&item.Quantity,
+			&item.PhotoIDs,
+			&item.PhotoURLs,
+		); err != nil {
+			return nil, fmt.Errorf("scan deal item: %w", err)
+		}
+		item.Type, err = enums.ItemTypeString(itemType)
+		if err != nil {
+			return nil, fmt.Errorf("item type: %w", err)
+		}
+		result[dealID] = append(result[dealID], item)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows deal items: %w", err)
+	}
+
+	return result, nil
+}
+
+func (r *Repository) getParticipants(ctx context.Context, exec db.DB, dealID uuid.UUID) ([]uuid.UUID, error) {
+	const participantsQuery = `
+		SELECT user_id
+		FROM participants
+		WHERE deal_id = $1`
+
+	rows, err := exec.Query(ctx, participantsQuery, dealID)
+	if err != nil {
+		return nil, fmt.Errorf("sql get participants: %w", err)
+	}
+	defer rows.Close()
+
+	participants := make([]uuid.UUID, 0)
+	for rows.Next() {
+		var userID uuid.UUID
+		if err = rows.Scan(&userID); err != nil {
+			return nil, fmt.Errorf("scan participant: %w", err)
+		}
+		participants = append(participants, userID)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, fmt.Errorf("rows participants: %w", err)
+	}
+
+	return participants, nil
+}
+
 // DeleteStatusVotes removes all votes for a deal (called after a status transition).
 func (r *Repository) DeleteStatusVotes(ctx context.Context, tx pgx.Tx, dealID uuid.UUID) error {
 	query := `
@@ -688,6 +818,8 @@ func ScanItem(row interface{ Scan(...any) error }) (domain.Item, error) {
 		&itemType,
 		&item.UpdatedAt,
 		&item.Quantity,
+		&item.PhotoIDs,
+		&item.PhotoURLs,
 	)
 	if err != nil {
 		return domain.Item{}, err
