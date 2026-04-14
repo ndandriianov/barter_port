@@ -59,7 +59,7 @@ func (s *Service) CreateReport(
 	ctx context.Context,
 	reporterID uuid.UUID,
 	offerID uuid.UUID,
-	messageID uuid.UUID,
+	message string,
 ) (created bool, report domain.OfferReport, err error) {
 	err = db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
 		offer, err := s.offersRepo.GetOffer(ctx, tx, offerID)
@@ -94,7 +94,7 @@ func (s *Service) CreateReport(
 			if err = s.reportsRepo.AddReporterMessage(ctx, tx, domain.OfferReportMessage{
 				OfferReportID: newReport.ID,
 				AuthorID:      reporterID,
-				MessageID:     messageID,
+				Message:       message,
 			}); err != nil {
 				return err
 			}
@@ -110,7 +110,7 @@ func (s *Service) CreateReport(
 			if err = s.reportsRepo.AddReporterMessage(ctx, tx, domain.OfferReportMessage{
 				OfferReportID: pendingReport.ID,
 				AuthorID:      reporterID,
-				MessageID:     messageID,
+				Message:       message,
 			}); err != nil {
 				return err
 			}

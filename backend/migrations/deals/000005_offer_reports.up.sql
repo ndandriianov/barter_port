@@ -30,7 +30,7 @@ CREATE TABLE offer_reports_messages
 (
     offer_report_id UUID NOT NULL,
     author_id       UUID NOT NULL,
-    message_id      UUID NOT NULL,
+    message         TEXT NOT NULL,
 
     PRIMARY KEY (offer_report_id, author_id),
     FOREIGN KEY (offer_report_id) REFERENCES offer_reports (id) ON DELETE CASCADE
