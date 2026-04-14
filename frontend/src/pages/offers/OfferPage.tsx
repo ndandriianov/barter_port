@@ -28,6 +28,7 @@ function OfferPage() {
   const { data: reviewsSummary } = reviewsApi.useGetOfferReviewsSummaryQuery(offerId ?? "", {
     skip: !offerId,
   });
+  const isAdmin = meData?.isAdmin === true;
   const isOwnOffer = !!meData && !!offer && offer.authorId === meData.id;
   const { countsByOfferId } = useDraftOfferCounts({ enabled: isOwnOffer });
 
@@ -88,7 +89,7 @@ function OfferPage() {
 
       <OfferCard
         offer={offer}
-        showModerationState={isOwnOffer}
+        showModerationState={isOwnOffer || isAdmin}
         draftCount={isOwnOffer ? (countsByOfferId[offer.id] ?? 0) : 0}
         draftsHref={
           isOwnOffer && (countsByOfferId[offer.id] ?? 0) > 0
@@ -145,10 +146,11 @@ function OfferPage() {
         </Alert>
       )}
 
-      {isOwnOffer && offer.isHidden && (
+      {(isOwnOffer || isAdmin) && offer.isHidden && (
         <Alert severity="error" sx={{ mb: 3 }}>
-          Объявление скрыто модератором. Оно остается в вашем списке, но недоступно для других
-          пользователей.
+          {isOwnOffer
+            ? "Объявление скрыто модератором. Оно остается в вашем списке, но недоступно для других пользователей."
+            : "Объявление скрыто модератором и недоступно обычным пользователям."}
         </Alert>
       )}
 

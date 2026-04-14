@@ -6,6 +6,7 @@ import (
 	"barter-port/internal/deals/domain/enums"
 	"barter-port/internal/deals/domain/htypes"
 	offersrep "barter-port/internal/deals/infrastructure/repository/offers"
+	"barter-port/pkg/authkit"
 	"barter-port/pkg/db"
 	"barter-port/pkg/logger"
 	"errors"
@@ -40,11 +41,26 @@ type Service struct {
 	repo           *offersrep.Repository
 	photoStorage   PhotoStorage
 	usersClient    userspb.UsersServiceClient
+	adminChecker   *authkit.AdminChecker
 	fallbackLogger *slog.Logger
 }
 
-func NewService(dbPool *pgxpool.Pool, offerRepository *offersrep.Repository, usersClient userspb.UsersServiceClient, photoStorage PhotoStorage, fallbackLogger *slog.Logger) *Service {
-	return &Service{db: dbPool, repo: offerRepository, photoStorage: photoStorage, usersClient: usersClient, fallbackLogger: fallbackLogger}
+func NewService(
+	dbPool *pgxpool.Pool,
+	offerRepository *offersrep.Repository,
+	usersClient userspb.UsersServiceClient,
+	photoStorage PhotoStorage,
+	adminChecker *authkit.AdminChecker,
+	fallbackLogger *slog.Logger,
+) *Service {
+	return &Service{
+		db:             dbPool,
+		repo:           offerRepository,
+		photoStorage:   photoStorage,
+		usersClient:    usersClient,
+		adminChecker:   adminChecker,
+		fallbackLogger: fallbackLogger,
+	}
 }
 
 func (s *Service) CreateOffer(
@@ -140,12 +156,21 @@ func (s *Service) GetOffers(
 	cursor *domain.UniversalCursor,
 	limit int,
 	authorID *uuid.UUID,
+	requesterID *uuid.UUID,
 ) ([]domain.Offer, *domain.UniversalCursor, error) {
 
 	log := logger.LogFrom(ctx, s.fallbackLogger)
 
 	var universalCursor *domain.UniversalCursor
 	var offers []domain.Offer
+	isAdmin := false
+	if requesterID != nil {
+		var err error
+		isAdmin, err = s.adminChecker.IsAdmin(ctx, *requesterID)
+		if err != nil {
+			return nil, nil, fmt.Errorf("check admin: %w", err)
+		}
+	}
 
 	switch sortType {
 	case enums.SortTypeByTime:
@@ -159,7 +184,7 @@ func (s *Service) GetOffers(
 			log.Debug("time cursor is not specified, starting from the beginning", slog.Any("error", err))
 		}
 
-		offers, timeCursor, err = s.repo.GetOffersOrderByTime(ctx, timeCursor, limit, authorID)
+		offers, timeCursor, err = s.repo.GetOffersOrderByTimeForRequester(ctx, timeCursor, limit, authorID, requesterID, isAdmin)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -179,7 +204,7 @@ func (s *Service) GetOffers(
 			log.Debug("popularity cursor is not specified, starting from the beginning", slog.Any("error", err))
 		}
 
-		offers, popularityCursor, err = s.repo.GetOffersOrderByPopularity(ctx, popularityCursor, limit, authorID)
+		offers, popularityCursor, err = s.repo.GetOffersOrderByPopularityForRequester(ctx, popularityCursor, limit, authorID, requesterID, isAdmin)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -219,14 +244,25 @@ func (s *Service) GetOffers(
 //
 // Errors:
 //   - domain.ErrOfferNotFound
-func (s *Service) GetOfferByID(ctx context.Context, id uuid.UUID, requesterID uuid.UUID) (*domain.Offer, error) {
+func (s *Service) GetOfferByID(ctx context.Context, id uuid.UUID, requesterID *uuid.UUID) (*domain.Offer, error) {
 	offer, err := s.repo.GetOfferByID(ctx, id)
 	if err != nil {
 		return nil, err
 	}
 
-	if offer.IsHidden && offer.AuthorId != requesterID {
-		return nil, domain.ErrOfferNotFound
+	if offer.IsHidden {
+		if requesterID == nil {
+			return nil, domain.ErrOfferNotFound
+		}
+		if offer.AuthorId != *requesterID {
+			isAdmin, adminErr := s.adminChecker.IsAdmin(ctx, *requesterID)
+			if adminErr != nil {
+				return nil, fmt.Errorf("check admin: %w", adminErr)
+			}
+			if !isAdmin {
+				return nil, domain.ErrOfferNotFound
+			}
+		}
 	}
 
 	response, err := s.usersClient.GetUsersWithInfo(ctx, &userspb.GetUsersWithInfoRequest{Ids: []string{offer.AuthorId.String()}})

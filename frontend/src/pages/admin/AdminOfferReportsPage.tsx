@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { Link as RouterLink } from "react-router-dom";
 import {
   Alert,
@@ -12,10 +13,34 @@ import {
 } from "@mui/material";
 import GavelOutlinedIcon from "@mui/icons-material/GavelOutlined";
 import offersApi from "@/features/offers/api/offersApi.ts";
+import type { OfferReportStatus } from "@/features/offers/model/types.ts";
 import { getStatusCode } from "@/shared/utils/getStatusCode.ts";
 
+type AdminReportsFilter = "all" | OfferReportStatus;
+
+function getReportStatusMeta(status: OfferReportStatus) {
+  if (status === "Pending") {
+    return { label: "На модерации", color: "warning" as const };
+  }
+  if (status === "Accepted") {
+    return { label: "Принята", color: "error" as const };
+  }
+  return { label: "Отклонена", color: "success" as const };
+}
+
+const filterOptions: Array<{ value: AdminReportsFilter; label: string }> = [
+  { value: "all", label: "Все" },
+  { value: "Pending", label: "На модерации" },
+  { value: "Accepted", label: "Принятые" },
+  { value: "Rejected", label: "Отклоненные" },
+];
+
 function AdminOfferReportsPage() {
-  const { data, isLoading, error, refetch, isFetching } = offersApi.useListAdminOfferReportsQuery("Pending");
+  const [filter, setFilter] = useState<AdminReportsFilter>("all");
+
+  const queryStatus = useMemo<OfferReportStatus | void>(() => (filter === "all" ? undefined : filter), [filter]);
+
+  const { data, isLoading, error, refetch, isFetching } = offersApi.useListAdminOfferReportsQuery(queryStatus);
 
   if (isLoading) {
     return (
@@ -43,17 +68,32 @@ function AdminOfferReportsPage() {
             Жалобы на объявления
           </Typography>
           <Typography variant="body1" color="text.secondary" maxWidth={760}>
-            Очередь жалоб, ожидающих решения администратора. На детальной странице доступны
-            материалы жалобы и действия модерации.
+            Здесь можно просматривать все жалобы на объявления или отфильтровать их по статусу.
+            На детальной странице доступны материалы жалобы и действия модерации.
           </Typography>
         </Box>
-        <Button variant="outlined" onClick={() => refetch()} disabled={isFetching}>
-          Обновить
-        </Button>
+        <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" alignItems="center">
+          {filterOptions.map((option) => (
+            <Button
+              key={option.value}
+              variant={filter === option.value ? "contained" : "outlined"}
+              onClick={() => setFilter(option.value)}
+            >
+              {option.label}
+            </Button>
+          ))}
+          <Button variant="outlined" onClick={() => refetch()} disabled={isFetching}>
+            Обновить
+          </Button>
+        </Stack>
       </Box>
 
       {!data || data.length === 0 ? (
-        <Alert severity="success">Активных жалоб на объявления сейчас нет.</Alert>
+        <Alert severity="success">
+          {filter === "all"
+            ? "Жалоб на объявления сейчас нет."
+            : "Жалоб с выбранным статусом сейчас нет."}
+        </Alert>
       ) : (
         <Stack spacing={2}>
           {data.map((report) => (
@@ -76,7 +116,11 @@ function AdminOfferReportsPage() {
                   </Box>
 
                   <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
-                    <Chip icon={<GavelOutlinedIcon />} label="На модерации" color="warning" />
+                    <Chip
+                      icon={<GavelOutlinedIcon />}
+                      label={getReportStatusMeta(report.status).label}
+                      color={getReportStatusMeta(report.status).color}
+                    />
                     <Button component={RouterLink} to={`/admin/offer-reports/${report.id}`} variant="contained">
                       Открыть
                     </Button>
