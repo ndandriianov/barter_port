@@ -179,6 +179,31 @@ func (r *Repository) GetReputationPoints(ctx context.Context, id uuid.UUID) (int
 	return points, nil
 }
 
+// GetReputationEvents returns reputation events of a user ordered from newest to oldest.
+//
+// No domain Errors
+func (r *Repository) GetReputationEvents(ctx context.Context, id uuid.UUID) ([]domain.ReputationEvent, error) {
+	const query = `
+		SELECT id, source_type, source_id, delta, created_at, comment
+		FROM user_reputation_events
+		WHERE user_id = $1
+		ORDER BY created_at DESC, id DESC
+	`
+
+	rows, err := r.db.Query(ctx, query, id)
+	if err != nil {
+		return nil, fmt.Errorf("sql: %w", err)
+	}
+	defer rows.Close()
+
+	events, err := pgx.CollectRows(rows, pgx.RowToStructByName[domain.ReputationEvent])
+	if err != nil {
+		return nil, fmt.Errorf("collect: %w", err)
+	}
+
+	return events, nil
+}
+
 // GetNamesForUserIDs returns a map of user IDs to their corresponding names.
 //
 // No domain Errors
