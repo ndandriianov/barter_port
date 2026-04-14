@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"mime/multipart"
 	"net/http"
 	"testing"
 
@@ -485,6 +486,107 @@ func TestUpdateDealItemAuthorCanEditContent(t *testing.T) {
 	require.Equal(t, newName, item.Name)
 	require.Equal(t, newDescription, item.Description)
 	require.EqualValues(t, newQty, item.Quantity)
+}
+
+func TestUpdateDealItemPhotosKeepsRemainingOrderAndAppendsNewPhotos(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	before := mustGetDealIDs(t, userID, true)
+	beforeSet := make(map[uuid.UUID]struct{}, len(before))
+	for _, id := range before {
+		beforeSet[id] = struct{}{}
+	}
+
+	offer := mustCreateOfferMultipartDetails(t, userID, types.CreateOfferRequest{
+		Name:        "item photo offer",
+		Description: "photos",
+		Type:        types.Good,
+		Action:      types.Give,
+	}, [][]byte{tinyPNG, tinyPNG})
+
+	draftID := mustCreateDraft(t, userID, nil, nil, []types.OfferIDAndQuantity{{OfferID: offer.Id, Quantity: 1}})
+	mustConfirmDraft(t, userID, draftID)
+
+	after := mustGetDealIDs(t, userID, true)
+	dealID := after[0]
+	for _, id := range after {
+		if _, ok := beforeSet[id]; !ok {
+			dealID = id
+			break
+		}
+	}
+
+	deal := mustGetDealByID(t, userID, dealID)
+	require.NotEmpty(t, deal.Items)
+	item := deal.Items[0]
+	require.NotNil(t, item.PhotoIds)
+	require.NotNil(t, item.PhotoUrls)
+	require.Len(t, *item.PhotoIds, 2)
+	require.Len(t, *item.PhotoUrls, 2)
+
+	deletePhotoIDs := []uuid.UUID{(*item.PhotoIds)[0]}
+	updated := mustUpdateDealItemMultipartDetails(t, userID, dealID, item.Id, types.UpdateDealItemRequest{
+		DeletePhotoIds: &deletePhotoIDs,
+	}, [][]byte{tinyPNG})
+
+	require.NotNil(t, updated.PhotoIds)
+	require.NotNil(t, updated.PhotoUrls)
+	require.Len(t, *updated.PhotoIds, 2)
+	require.Len(t, *updated.PhotoUrls, 2)
+	require.Equal(t, (*item.PhotoIds)[1], (*updated.PhotoIds)[0])
+	require.Equal(t, (*item.PhotoUrls)[1], (*updated.PhotoUrls)[0])
+	require.NotEqual(t, (*item.PhotoIds)[0], (*updated.PhotoIds)[1])
+	require.NotEqual(t, (*item.PhotoIds)[1], (*updated.PhotoIds)[1])
+	require.Contains(t, (*updated.PhotoUrls)[1], "/item-"+item.Id.String()+"/photo-2")
+}
+
+func TestUpdateDealItemRejectsUnknownPhotoID(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	before := mustGetDealIDs(t, userID, true)
+	beforeSet := make(map[uuid.UUID]struct{}, len(before))
+	for _, id := range before {
+		beforeSet[id] = struct{}{}
+	}
+
+	offer := mustCreateOfferMultipartDetails(t, userID, types.CreateOfferRequest{
+		Name:        "item photo offer",
+		Description: "photos",
+		Type:        types.Good,
+		Action:      types.Give,
+	}, [][]byte{tinyPNG})
+
+	draftID := mustCreateDraft(t, userID, nil, nil, []types.OfferIDAndQuantity{{OfferID: offer.Id, Quantity: 1}})
+	mustConfirmDraft(t, userID, draftID)
+
+	after := mustGetDealIDs(t, userID, true)
+	dealID := after[0]
+	for _, id := range after {
+		if _, ok := beforeSet[id]; !ok {
+			dealID = id
+			break
+		}
+	}
+
+	deal := mustGetDealByID(t, userID, dealID)
+	require.NotEmpty(t, deal.Items)
+	item := deal.Items[0]
+
+	var payload bytes.Buffer
+	writer := multipart.NewWriter(&payload)
+	require.NoError(t, writer.WriteField("deletePhotoIds", uuid.NewString()))
+	require.NoError(t, writer.Close())
+
+	req := mustUserRequest(t, http.MethodPatch, dealsURL()+"/deals/"+dealID.String()+"/items/"+item.Id.String(), userID, &payload)
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 }
 
 func TestUpdateDealItemNonAuthorCannotEditContent(t *testing.T) {
