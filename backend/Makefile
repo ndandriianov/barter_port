@@ -1,3 +1,29 @@
+# ─── Интеграционные тесты ──────────────────────────────────────
+#
+# test-integration       — стандартный запуск (контейнеры пересоздаются каждый раз)
+# test-integration-reuse — быстрый запуск: контейнеры переиспользуются между прогонами
+#                          (первый запуск медленный, последующие — мгновенные)
+# test-integration-clean — удалить закешированные контейнеры и сеть
+
+test-integration:
+	go test -v -timeout 30m ./integration/...
+
+test-integration-reuse:
+	TESTCONTAINERS_RYUK_DISABLED=true BARTER_PORT_REUSE_CONTAINERS=true \
+		go test -v -timeout 30m ./integration/...
+
+test-integration-clean:
+	docker rm -f \
+		barter-port-integration-postgres \
+		barter-port-integration-kafka \
+		barter-port-integration-smtp \
+		barter-port-integration-seaweed \
+		barter-port-integration-auth \
+		barter-port-integration-deals \
+		barter-port-integration-users \
+		2>/dev/null || true
+	docker network rm barter-port-integration-test 2>/dev/null || true
+
 swagger-auth:
 	bash ./scripts/generate-swagger-auth.sh
 
