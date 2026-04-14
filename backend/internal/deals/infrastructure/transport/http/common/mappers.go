@@ -21,11 +21,16 @@ func MapUUIDs(ids []uuid.UUID) []openapitypes.UUID {
 
 func MapDealIDWithParticipantIDsToDTO(d htypes.DealIDWithParticipantIDs) types.GetDealsResponseItem {
 	participants := MapUUIDs(d.ParticipantIDs)
+	itemsDTO := make([]types.Item, len(d.Items))
+	for i, item := range d.Items {
+		itemsDTO[i] = item.ToDTO()
+	}
 
 	return types.GetDealsResponseItem{
 		Id:           d.ID,
 		Name:         d.Name,
 		Status:       new(MapDealStatusToDTO(d.Status)),
+		Items:        itemsDTO,
 		Participants: participants,
 	}
 }

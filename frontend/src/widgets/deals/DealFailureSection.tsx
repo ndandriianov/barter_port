@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 import {
   Alert,
   Box,
@@ -25,7 +25,83 @@ interface DealFailureSectionProps {
   getUserName: (id: string) => string;
 }
 
+interface FailureVoteControlsProps {
+  deal: Deal;
+  getUserName: (id: string) => string;
+  initialSelectedUserId: string;
+  isFailurePending: boolean;
+  resolutionConfirmed: boolean | undefined;
+  isVoting: boolean;
+  isRevoking: boolean;
+  hasOwnVote: boolean;
+  onVote: (userId: string) => void;
+  onRevoke: () => void;
+}
+
 const votingStatuses = new Set(["Discussion", "Confirmed"]);
+
+function FailureVoteControls({
+  deal,
+  getUserName,
+  initialSelectedUserId,
+  isFailurePending,
+  resolutionConfirmed,
+  isVoting,
+  isRevoking,
+  hasOwnVote,
+  onVote,
+  onRevoke,
+}: FailureVoteControlsProps) {
+  const [selectedUserId, setSelectedUserId] = useState(initialSelectedUserId);
+  const hasFailureRecord = resolutionConfirmed !== undefined || isFailurePending;
+  const canSubmitVote = !hasFailureRecord && Boolean(selectedUserId);
+  const canRevokeVote = !hasFailureRecord && hasOwnVote;
+
+  return (
+    <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ sm: "flex-start" }} mb={2}>
+      <TextField
+        select
+        label="Кого считаете виновным"
+        value={selectedUserId}
+        onChange={(event) => setSelectedUserId(event.target.value)}
+        size="small"
+        fullWidth
+        disabled={isFailurePending || resolutionConfirmed !== undefined || isVoting || isRevoking}
+        helperText={
+          isFailurePending
+            ? "После достижения порога голосование заморожено до решения администратора"
+            : hasOwnVote
+              ? "Вы можете изменить свой голос до достижения порога"
+              : "Можно голосовать и за себя"
+        }
+      >
+        {deal.participants.map((participantId) => (
+          <MenuItem key={participantId} value={participantId}>
+            {getUserName(participantId)}
+          </MenuItem>
+        ))}
+      </TextField>
+
+      <Stack direction="row" spacing={1} flexShrink={0}>
+        <Button
+          variant="contained"
+          color="error"
+          disabled={!canSubmitVote || isVoting}
+          onClick={() => onVote(selectedUserId)}
+        >
+          Проголосовать
+        </Button>
+        <Button
+          variant="outlined"
+          disabled={!canRevokeVote || isRevoking}
+          onClick={onRevoke}
+        >
+          Отозвать
+        </Button>
+      </Stack>
+    </Stack>
+  );
+}
 
 function formatResolutionText(resolution: FailureResolution, getUserName: (id: string) => string): {
   severity: "success" | "info" | "warning" | "error";
@@ -89,16 +165,7 @@ function DealFailureSection({ deal, me, isParticipant, getUserName }: DealFailur
   const [voteForFailure, { isLoading: isVoting, error: voteError }] = dealsApi.useVoteForFailureMutation();
   const [revokeVoteForFailure, { isLoading: isRevoking, error: revokeError }] = dealsApi.useRevokeVoteForFailureMutation();
 
-  const ownVote = useMemo(
-    () => votes.find((vote) => vote.userId === me?.id),
-    [votes, me?.id],
-  );
-
-  const [selectedUserId, setSelectedUserId] = useState("");
-
-  useEffect(() => {
-    setSelectedUserId(ownVote?.vote ?? "");
-  }, [ownVote?.vote]);
+  const ownVote = votes.find((vote) => vote.userId === me?.id);
 
   if (!me || !canAccessFailureData) {
     return null;
@@ -109,8 +176,6 @@ function DealFailureSection({ deal, me, isParticipant, getUserName }: DealFailur
   const hasFailureRecord = hasResolution && !isResolutionMissing;
   const isFailurePending = hasResolution && resolution.confirmed === undefined;
   const canAdminResolveFromMaterials = Boolean(me?.isAdmin && isFailurePending);
-  const canSubmitVote = canVoteForFailure && !hasFailureRecord && Boolean(selectedUserId);
-  const canRevokeVote = canVoteForFailure && !hasFailureRecord && Boolean(ownVote);
 
   const resolutionMeta = resolution ? formatResolutionText(resolution, getUserName) : null;
 
@@ -171,48 +236,19 @@ function DealFailureSection({ deal, me, isParticipant, getUserName }: DealFailur
         )}
 
         {canVoteForFailure && (
-          <Stack direction={{ xs: "column", sm: "row" }} spacing={1.5} alignItems={{ sm: "flex-start" }} mb={2}>
-            <TextField
-              select
-              label="Кого считаете виновным"
-              value={selectedUserId}
-              onChange={(event) => setSelectedUserId(event.target.value)}
-              size="small"
-              fullWidth
-              disabled={isFailurePending || resolution?.confirmed !== undefined || isVoting || isRevoking}
-              helperText={
-                isFailurePending
-                  ? "После достижения порога голосование заморожено до решения администратора"
-                  : ownVote
-                    ? "Вы можете изменить свой голос до достижения порога"
-                    : "Можно голосовать и за себя"
-              }
-            >
-              {deal.participants.map((participantId) => (
-                <MenuItem key={participantId} value={participantId}>
-                  {getUserName(participantId)}
-                </MenuItem>
-              ))}
-            </TextField>
-
-            <Stack direction="row" spacing={1} flexShrink={0}>
-              <Button
-                variant="contained"
-                color="error"
-                disabled={!canSubmitVote || isVoting}
-                onClick={() => void voteForFailure({ dealId: deal.id, body: { userId: selectedUserId } })}
-              >
-                Проголосовать
-              </Button>
-              <Button
-                variant="outlined"
-                disabled={!canRevokeVote || isRevoking}
-                onClick={() => void revokeVoteForFailure(deal.id)}
-              >
-                Отозвать
-              </Button>
-            </Stack>
-          </Stack>
+          <FailureVoteControls
+            key={`${deal.id}:${ownVote?.vote ?? ""}`}
+            deal={deal}
+            getUserName={getUserName}
+            initialSelectedUserId={ownVote?.vote ?? ""}
+            isFailurePending={isFailurePending}
+            resolutionConfirmed={resolution?.confirmed}
+            isVoting={isVoting}
+            isRevoking={isRevoking}
+            hasOwnVote={Boolean(ownVote)}
+            onVote={(userId) => void voteForFailure({ dealId: deal.id, body: { userId } })}
+            onRevoke={() => void revokeVoteForFailure(deal.id)}
+          />
         )}
 
         {voteError && (

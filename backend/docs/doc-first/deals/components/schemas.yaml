@@ -172,6 +172,19 @@ Offer:
       format: date-time
       description: Item creation timestamp
       example: '2026-03-04T12:00:00Z'
+    updatedAt:
+      type: string
+      format: date-time
+      description: Item last update timestamp
+      example: '2026-03-05T12:00:00Z'
+    photoIds:
+      type: array
+      description: |
+        Идентификаторы фотографий объявления в том же порядке, что и `photoUrls`.
+        Используются для удаления отдельных фотографий при редактировании.
+      items:
+        type: string
+        format: uuid
     photoUrls:
       type: array
       description: Публичные URL фотографий объявления
@@ -264,7 +277,7 @@ Deal:
       $ref: '#/DealStatus'
     items:
       type: array
-      description: Список позиций сделки
+      description: Список позиций сделки вместе с фотографиями, принадлежащими самим item
       items:
         $ref: '#/Item'
     participants:
@@ -293,6 +306,23 @@ UpdateDealItemRequest:
       type: integer
       minimum: 1
       description: Новое количество (только для автора)
+    deletePhotoIds:
+      type: array
+      description: |
+        Идентификаторы существующих фотографий позиции, которые нужно удалить.
+        Порядок остальных фотографий сохраняется, новые добавляются в конец.
+      items:
+        type: string
+        format: uuid
+    photos:
+      type: array
+      description: |
+        Новые фотографии позиции сделки.
+        Каждая фотография передается отдельным бинарным файлом в `multipart/form-data`
+        и будет добавлена в конец списка после оставшихся фотографий.
+      items:
+        type: string
+        format: binary
     claimProvider:
       type: boolean
       description: Назначить текущего пользователя поставщиком (только если слот свободен и пользователь не является receiver этой же позиции)
@@ -328,7 +358,9 @@ Item:
     offerId:
       type: string
       format: uuid
-      description: Идентификатор исходного offer, на базе которого создана позиция сделки
+      description: |
+        Идентификатор исходного offer, на базе которого создана позиция сделки.
+        При создании item фотографии offer копируются в item, поэтому дальнейшие изменения фотографий offer на item не влияют.
     providerId:
       type: string
       format: uuid
@@ -354,6 +386,19 @@ Item:
     quantity:
       type: integer
       description: Количество позиций этого типа в сделке
+    photoIds:
+      type: array
+      description: |
+        Идентификаторы фотографий позиции сделки в том же порядке, что и `photoUrls`.
+      items:
+        type: string
+        format: uuid
+    photoUrls:
+      type: array
+      description: Публичные URL фотографий позиции сделки
+      items:
+        type: string
+        format: uri
 
 
 

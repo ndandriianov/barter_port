@@ -148,6 +148,7 @@ GetDealsResponseItem:
   type: object
   required:
     - id
+    - items
     - participants
   properties:
     id:
@@ -159,6 +160,11 @@ GetDealsResponseItem:
       description: Название сделки
     status:
       $ref: 'schemas.yaml#/DealStatus'
+    items:
+      type: array
+      description: Список позиций сделки вместе с фотографиями item
+      items:
+        $ref: 'schemas.yaml#/Item'
     participants:
       type: array
       description: Список ID всех пользователей, участвующих в этой сделке

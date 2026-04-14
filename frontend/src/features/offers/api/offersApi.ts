@@ -1,7 +1,13 @@
 import {createApi} from "@reduxjs/toolkit/query/react";
 import {baseQueryWithReauth} from "@/shared/api/baseApi.ts";
 import {getOffersResponseSchema, offerSchema} from "../model/schemas.ts";
-import type {CreateOfferRequest, GetOffersParams, GetOffersResponse, Offer} from "../model/types.ts";
+import type {
+  CreateOfferRequest,
+  GetOffersParams,
+  GetOffersResponse,
+  Offer,
+  UpdateOfferRequest,
+} from "../model/types.ts";
 
 const offersApi = createApi({
   reducerPath: "offersApi",
@@ -26,6 +32,14 @@ const offersApi = createApi({
       query: (offerId) => `/offers/${offerId}`,
       transformResponse: (response: unknown) => offerSchema.parse(response),
       providesTags: (_result, _error, offerId) => [{type: "Offers", id: offerId}],
+    }),
+
+    viewOfferById: builder.mutation<void, string>({
+      query: (offerId) => ({
+        url: `/offers/${offerId}/view`,
+        method: "POST",
+      }),
+      invalidatesTags: (_result, _error, offerId) => ["Offers", {type: "Offers", id: offerId}],
     }),
 
     createOffer: builder.mutation<void, CreateOfferRequest>({
@@ -55,6 +69,57 @@ const offersApi = createApi({
         };
       },
       invalidatesTags: ["Offers"],
+    }),
+
+    updateOffer: builder.mutation<Offer, { offerId: string; body: UpdateOfferRequest }>({
+      query: ({ offerId, body }) => {
+        const hasPhotoChanges = (body.photos?.length ?? 0) > 0 || (body.deletePhotoIds?.length ?? 0) > 0;
+
+        if (!hasPhotoChanges) {
+          return {
+            url: `/offers/${offerId}`,
+            method: "PATCH",
+            body,
+          };
+        }
+
+        const formData = new FormData();
+
+        if (body.name !== undefined) {
+          formData.append("name", body.name);
+        }
+        if (body.description !== undefined) {
+          formData.append("description", body.description);
+        }
+        if (body.action !== undefined) {
+          formData.append("action", body.action);
+        }
+        if (body.type !== undefined) {
+          formData.append("type", body.type);
+        }
+        for (const photoId of body.deletePhotoIds ?? []) {
+          formData.append("deletePhotoIds", photoId);
+        }
+        for (const photo of body.photos ?? []) {
+          formData.append("photos", photo);
+        }
+
+        return {
+          url: `/offers/${offerId}`,
+          method: "PATCH",
+          body: formData,
+        };
+      },
+      transformResponse: (response: unknown) => offerSchema.parse(response),
+      invalidatesTags: (_result, _error, { offerId }) => ["Offers", {type: "Offers", id: offerId}],
+    }),
+
+    deleteOffer: builder.mutation<void, string>({
+      query: (offerId) => ({
+        url: `/offers/${offerId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (_result, _error, offerId) => ["Offers", {type: "Offers", id: offerId}],
     }),
   }),
 });

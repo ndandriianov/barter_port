@@ -33,3 +33,12 @@ export interface CreateOfferRequest {
   type: OfferType;
   photos?: File[];
 }
+
+export interface UpdateOfferRequest {
+  name?: string;
+  description?: string;
+  action?: OfferAction;
+  type?: OfferType;
+  photos?: File[];
+  deletePhotoIds?: string[];
+}

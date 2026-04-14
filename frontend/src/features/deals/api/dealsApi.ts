@@ -218,11 +218,53 @@ const dealsApi = createApi({
     }),
 
     updateDealItem: builder.mutation<Item, { dealId: string; itemId: string; body: UpdateDealItemRequest }>({
-      query: ({ dealId, itemId, body }) => ({
-        url: `/deals/${dealId}/items/${itemId}`,
-        method: "PATCH",
-        body,
-      }),
+      query: ({ dealId, itemId, body }) => {
+        const hasPhotoChanges = (body.photos?.length ?? 0) > 0 || (body.deletePhotoIds?.length ?? 0) > 0;
+
+        if (!hasPhotoChanges) {
+          return {
+            url: `/deals/${dealId}/items/${itemId}`,
+            method: "PATCH",
+            body,
+          };
+        }
+
+        const formData = new FormData();
+
+        if (body.name !== undefined) {
+          formData.append("name", body.name);
+        }
+        if (body.description !== undefined) {
+          formData.append("description", body.description);
+        }
+        if (body.quantity !== undefined) {
+          formData.append("quantity", String(body.quantity));
+        }
+        if (body.claimProvider !== undefined) {
+          formData.append("claimProvider", String(body.claimProvider));
+        }
+        if (body.releaseProvider !== undefined) {
+          formData.append("releaseProvider", String(body.releaseProvider));
+        }
+        if (body.claimReceiver !== undefined) {
+          formData.append("claimReceiver", String(body.claimReceiver));
+        }
+        if (body.releaseReceiver !== undefined) {
+          formData.append("releaseReceiver", String(body.releaseReceiver));
+        }
+        for (const photoId of body.deletePhotoIds ?? []) {
+          formData.append("deletePhotoIds", photoId);
+        }
+        for (const photo of body.photos ?? []) {
+          formData.append("photos", photo);
+        }
+
+        return {
+          url: `/deals/${dealId}/items/${itemId}`,
+          method: "PATCH",
+          body: formData,
+        };
+      },
       transformResponse: (response: unknown) => itemSchema.parse(response),
       invalidatesTags: (_result, _error, { dealId }) => [{type: "Deals", id: dealId}],
     }),

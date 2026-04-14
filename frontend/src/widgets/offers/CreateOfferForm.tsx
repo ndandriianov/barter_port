@@ -15,26 +15,40 @@ import {
   Typography,
 } from "@mui/material";
 import offersApi from "@/features/offers/api/offersApi";
-import type { OfferAction, OfferType } from "@/features/offers/model/types";
+import type { Offer, OfferAction, OfferType } from "@/features/offers/model/types";
 import { getErrorMessage } from "@/shared/utils/getErrorMessage.ts";
 
 const MAX_PHOTO_COUNT = 10;
 const MAX_PHOTO_SIZE = 5 * 1024 * 1024;
 
-function CreateOfferForm() {
-  const [createOffer, { isLoading, error }] = offersApi.useCreateOfferMutation();
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [action, setAction] = useState<OfferAction>("give");
-  const [type, setType] = useState<OfferType>("good");
+interface CreateOfferFormProps {
+  mode?: "create" | "edit";
+  offer?: Offer;
+}
+
+function CreateOfferForm({ mode = "create", offer }: CreateOfferFormProps) {
+  const [createOffer, createState] = offersApi.useCreateOfferMutation();
+  const [updateOffer, updateState] = offersApi.useUpdateOfferMutation();
+  const isEditMode = mode === "edit";
+  const mutationState = isEditMode ? updateState : createState;
+  const [name, setName] = useState(offer?.name ?? "");
+  const [description, setDescription] = useState(offer?.description ?? "");
+  const [action, setAction] = useState<OfferAction>(offer?.action ?? "give");
+  const [type, setType] = useState<OfferType>(offer?.type ?? "good");
   const [photos, setPhotos] = useState<File[]>([]);
+  const [deletedPhotoIds, setDeletedPhotoIds] = useState<string[]>([]);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const navigate = useNavigate();
+  const existingPhotos = useMemo(
+    () => (offer ? offer.photoUrls.map((url, index) => ({ id: offer.photoIds[index] ?? `${offer.id}-${index}`, url })) : []),
+    [offer],
+  );
   const photoPreviewUrls = useMemo(
     () => photos.map((photo) => ({ file: photo, url: URL.createObjectURL(photo) })),
     [photos],
   );
+  const activeExistingPhotoCount = existingPhotos.filter((photo) => !deletedPhotoIds.includes(photo.id)).length;
 
   useEffect(() => {
     return () => {
@@ -46,6 +60,25 @@ function CreateOfferForm() {
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isEditMode) {
+      if (!offer) {
+        return;
+      }
+      await updateOffer({
+        offerId: offer.id,
+        body: {
+          name,
+          description,
+          action,
+          type,
+          deletePhotoIds: deletedPhotoIds.length > 0 ? deletedPhotoIds : undefined,
+          photos,
+        },
+      }).unwrap();
+      navigate(`/offers/${offer.id}`);
+      return;
+    }
+
     await createOffer({ name, description, action, type, photos }).unwrap();
     navigate("/offers");
   };
@@ -78,7 +111,7 @@ function CreateOfferForm() {
       nextPhotos.push(file);
     }
 
-    if (nextPhotos.length > MAX_PHOTO_COUNT) {
+    if (activeExistingPhotoCount + nextPhotos.length > MAX_PHOTO_COUNT) {
       setPhotoError("Можно загрузить не больше 10 фото.");
       return;
     }
@@ -92,7 +125,18 @@ function CreateOfferForm() {
     setPhotoError(null);
   };
 
-  const errorMessage = getErrorMessage(error) ?? "Ошибка при создании объявления";
+  const handleToggleExistingPhotoDeletion = (photoId: string) => {
+    setDeletedPhotoIds((current) => (
+      current.includes(photoId)
+        ? current.filter((currentId) => currentId !== photoId)
+        : [...current, photoId]
+    ));
+    setPhotoError(null);
+  };
+
+  const errorMessage = getErrorMessage(mutationState.error) ?? (
+    isEditMode ? "Ошибка при обновлении объявления" : "Ошибка при создании объявления"
+  );
 
   return (
     <Box component="form" onSubmit={submit} noValidate display="flex" flexDirection="column" gap={2}>
@@ -149,16 +193,61 @@ function CreateOfferForm() {
 
       <Box>
         <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
-          <Button variant="outlined" onClick={handleSelectPhotos} disabled={isLoading}>
+          <Button variant="outlined" onClick={handleSelectPhotos} disabled={mutationState.isLoading}>
             Добавить фото
           </Button>
           <Typography variant="body2" color="text.secondary">
             До {MAX_PHOTO_COUNT} файлов, до 5 МБ каждый
           </Typography>
+          {isEditMode && (
+            <Typography variant="body2" color="text.secondary">
+              Новые фото будут добавлены в конец списка.
+            </Typography>
+          )}
         </Stack>
 
-        {photoPreviewUrls.length > 0 && (
+        {(existingPhotos.length > 0 || photoPreviewUrls.length > 0) && (
           <Stack direction="row" spacing={1} mt={2} flexWrap="wrap" useFlexGap>
+            {existingPhotos.map((photo) => {
+              const isMarkedForDeletion = deletedPhotoIds.includes(photo.id);
+
+              return (
+                <Box
+                  key={photo.id}
+                  sx={{
+                    width: 120,
+                    border: 1,
+                    borderColor: isMarkedForDeletion ? "error.main" : "divider",
+                    borderRadius: 2,
+                    overflow: "hidden",
+                    bgcolor: "background.paper",
+                    opacity: isMarkedForDeletion ? 0.55 : 1,
+                  }}
+                >
+                  <Box
+                    component="img"
+                    src={photo.url}
+                    alt={name || "offer photo"}
+                    sx={{ width: "100%", height: 96, objectFit: "cover", display: "block" }}
+                  />
+                  <Box p={1}>
+                    <Typography variant="caption" display="block" noWrap>
+                      {isMarkedForDeletion ? "Будет удалено" : "Текущее фото"}
+                    </Typography>
+                    <Button
+                      type="button"
+                      size="small"
+                      color={isMarkedForDeletion ? "inherit" : "error"}
+                      onClick={() => handleToggleExistingPhotoDeletion(photo.id)}
+                      sx={{ mt: 0.5 }}
+                    >
+                      {isMarkedForDeletion ? "Оставить" : "Удалить"}
+                    </Button>
+                  </Box>
+                </Box>
+              );
+            })}
+
             {photoPreviewUrls.map(({ file, url }, index) => (
               <Box
                 key={`${file.name}-${index}`}
@@ -199,10 +288,16 @@ function CreateOfferForm() {
         {photoError && <FormHelperText error>{photoError}</FormHelperText>}
       </Box>
 
-      {error && <Alert severity="error">{errorMessage}</Alert>}
+      {mutationState.error && <Alert severity="error">{errorMessage}</Alert>}
 
-      <Button type="submit" variant="contained" size="large" disabled={isLoading}>
-        {isLoading ? <CircularProgress size={24} color="inherit" /> : "Создать объявление"}
+      <Button type="submit" variant="contained" size="large" disabled={mutationState.isLoading}>
+        {mutationState.isLoading ? (
+          <CircularProgress size={24} color="inherit" />
+        ) : isEditMode ? (
+          "Сохранить изменения"
+        ) : (
+          "Создать объявление"
+        )}
       </Button>
     </Box>
   );

@@ -8,12 +8,14 @@ export const offerSchema = z.object({
   authorId: z.string(),
   authorName: z.string().nullish(),
   name: z.string(),
+  photoIds: z.array(z.string()).nullish().transform((value) => value ?? []),
   photoUrls: z.array(z.string()).nullish().transform((value) => value ?? []),
   description: z.string(),
   action: offerActionSchema,
   type: offerTypeSchema,
   views: z.number(),
   createdAt: z.string(),
+  updatedAt: z.string().nullish(),
 });
 
 export const universalCursorSchema = z.object({
