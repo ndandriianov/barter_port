@@ -124,8 +124,10 @@ func (r *Repository) GetOffersOrderByTime(
 			query = `
 		SELECT id, author_id, name, type, action, description, created_at, updated_at, views,
 		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
-		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
+		       is_hidden, modification_blocked
 		FROM offers
+		WHERE is_hidden = FALSE
 		ORDER BY created_at DESC
 		LIMIT $1
 		`
@@ -134,10 +136,11 @@ func (r *Repository) GetOffersOrderByTime(
 			query = `
 		SELECT id, author_id, name, type, action, description, created_at, updated_at, views,
 		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
-		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
+		       is_hidden, modification_blocked
 		FROM offers
-		WHERE (created_at, id) < ($1, $2)
-		ORDER BY created_at DESC 
+		WHERE is_hidden = FALSE AND (created_at, id) < ($1, $2)
+		ORDER BY created_at DESC
 		LIMIT $3
 		`
 			args = append(args, cursor.CreatedAt, cursor.Id, limit)
@@ -147,9 +150,10 @@ func (r *Repository) GetOffersOrderByTime(
 			query = `
 		SELECT id, author_id, name, type, action, description, created_at, updated_at, views,
 		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
-		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
+		       is_hidden, modification_blocked
 		FROM offers
-		WHERE author_id = $1
+		WHERE is_hidden = FALSE AND author_id = $1
 		ORDER BY created_at DESC
 		LIMIT $2
 		`
@@ -158,9 +162,10 @@ func (r *Repository) GetOffersOrderByTime(
 			query = `
 		SELECT id, author_id, name, type, action, description, created_at, updated_at, views,
 		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
-		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
+		       is_hidden, modification_blocked
 		FROM offers
-		WHERE author_id = $1 AND (created_at, id) < ($2, $3)
+		WHERE is_hidden = FALSE AND author_id = $1 AND (created_at, id) < ($2, $3)
 		ORDER BY created_at DESC
 		LIMIT $4
 		`
@@ -209,8 +214,10 @@ func (r *Repository) GetOffersOrderByPopularity(
 			query = `
 		SELECT id, author_id, name, type, action, description, created_at, updated_at, views,
 		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
-		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
+		       is_hidden, modification_blocked
 		FROM offers
+		WHERE is_hidden = FALSE
 		ORDER BY views DESC, id DESC
 		LIMIT $1
 		`
@@ -219,9 +226,10 @@ func (r *Repository) GetOffersOrderByPopularity(
 			query = `
 		SELECT id, author_id, name, type, action, description, created_at, updated_at, views,
 		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
-		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
+		       is_hidden, modification_blocked
 		FROM offers
-		WHERE (views, id) < ($1, $2) 
+		WHERE is_hidden = FALSE AND (views, id) < ($1, $2)
 		ORDER BY views DESC, id DESC
 		LIMIT $3
 		`
@@ -232,9 +240,10 @@ func (r *Repository) GetOffersOrderByPopularity(
 			query = `
 		SELECT id, author_id, name, type, action, description, created_at, updated_at, views,
 		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
-		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
+		       is_hidden, modification_blocked
 		FROM offers
-		WHERE author_id = $1
+		WHERE is_hidden = FALSE AND author_id = $1
 		ORDER BY views DESC, id DESC
 		LIMIT $2
 		`
@@ -243,9 +252,10 @@ func (r *Repository) GetOffersOrderByPopularity(
 			query = `
 		SELECT id, author_id, name, type, action, description, created_at, updated_at, views,
 		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
-		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
+		       is_hidden, modification_blocked
 		FROM offers
-		WHERE author_id = $1 AND (views, id) < ($2, $3)
+		WHERE is_hidden = FALSE AND author_id = $1 AND (views, id) < ($2, $3)
 		ORDER BY views DESC, id DESC
 		LIMIT $4
 		`
@@ -325,7 +335,9 @@ func (r *Repository) GetOffersByIDs(ctx context.Context, exec db.DB, ids []uuid.
 			o.updated_at,
 			o.views,
 			COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = o.id), '{}'::uuid[]) AS photo_ids,
-			COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = o.id), '{}'::text[]) AS photo_urls
+			COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = o.id), '{}'::text[]) AS photo_urls,
+			o.is_hidden,
+			o.modification_blocked
 		FROM unnest($1::uuid[]) WITH ORDINALITY u(id, ord)
 		JOIN offers o ON o.id = u.id
 		ORDER BY u.ord`
@@ -351,6 +363,8 @@ func (r *Repository) GetOffersByIDs(ctx context.Context, exec db.DB, ids []uuid.
 			&item.Views,
 			&item.PhotoIds,
 			&item.PhotoUrls,
+			&item.IsHidden,
+			&item.ModificationBlocked,
 		); err != nil {
 			return nil, fmt.Errorf("scan offer: %w", err)
 		}
@@ -380,7 +394,8 @@ func (r *Repository) GetOffer(ctx context.Context, exec db.DB, id uuid.UUID) (*d
 	query := `
 		SELECT id, author_id, name, type, action, description, created_at, updated_at, views,
 		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
-		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
+		       is_hidden, modification_blocked
 		FROM offers
 		WHERE id = $1`
 
@@ -397,6 +412,8 @@ func (r *Repository) GetOffer(ctx context.Context, exec db.DB, id uuid.UUID) (*d
 		&offer.Views,
 		&offer.PhotoIds,
 		&offer.PhotoUrls,
+		&offer.IsHidden,
+		&offer.ModificationBlocked,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -459,7 +476,8 @@ func (r *Repository) UpdateOffer(
 		  AND author_id = $2
 		RETURNING id, author_id, name, type, action, description, created_at, updated_at, views,
 		          COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
-		          COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls`
+		          COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
+		          is_hidden, modification_blocked`
 
 	var offer domain.Offer
 	err := exec.QueryRow(ctx, query, offerID, userID, patch.Name, patch.Description, itemType, action).Scan(
@@ -474,6 +492,8 @@ func (r *Repository) UpdateOffer(
 		&offer.Views,
 		&offer.PhotoIds,
 		&offer.PhotoUrls,
+		&offer.IsHidden,
+		&offer.ModificationBlocked,
 	)
 	if err == nil {
 		return offer, nil

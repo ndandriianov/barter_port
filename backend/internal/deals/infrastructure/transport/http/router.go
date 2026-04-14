@@ -6,6 +6,7 @@ import (
 	draftsh "barter-port/internal/deals/infrastructure/transport/http/drafts"
 	failuresh "barter-port/internal/deals/infrastructure/transport/http/failures"
 	joinsh "barter-port/internal/deals/infrastructure/transport/http/joins"
+	offerreports "barter-port/internal/deals/infrastructure/transport/http/offer-reports"
 	offergroupsh "barter-port/internal/deals/infrastructure/transport/http/offergroups"
 	"barter-port/internal/deals/infrastructure/transport/http/offers"
 	reviewsh "barter-port/internal/deals/infrastructure/transport/http/reviews"
@@ -30,6 +31,7 @@ func NewRouter(
 	failuresHandlers *failuresh.Handlers,
 	joinsHandlers *joinsh.Handlers,
 	reviewsHandlers *reviewsh.Handlers,
+	offerReportsHandlers *offerreports.Handlers,
 ) http.Handler {
 	if logg == nil {
 		log.Fatal("logger is required")
@@ -54,6 +56,9 @@ func NewRouter(
 	}
 	if reviewsHandlers == nil {
 		log.Fatal("reviews handlers are required")
+	}
+	if offerReportsHandlers == nil {
+		log.Fatal("offer reports handlers are required")
 	}
 
 	r := chi.NewRouter()
@@ -89,6 +94,13 @@ func NewRouter(
 			r.Delete("/{offerId}", offersHandlers.HandleDeleteOffer)
 			r.Get("/{offerId}/reviews", reviewsHandlers.GetOfferReviews)
 			r.Get("/{offerId}/reviews-summary", reviewsHandlers.GetOfferReviewsSummary)
+			r.Post("/{offerId}/reports", offerReportsHandlers.HandleCreateOfferReport)
+			r.Get("/{offerId}/reports", offerReportsHandlers.HandleGetOfferReports)
+		})
+		r.Route("/admin/offer-reports", func(r chi.Router) {
+			r.Get("/", offerReportsHandlers.HandleListAdminReports)
+			r.Get("/{reportId}", offerReportsHandlers.HandleGetAdminReportDetails)
+			r.Post("/{reportId}/resolution", offerReportsHandlers.HandleResolveReport)
 		})
 		r.Route("/offer-groups", func(r chi.Router) {
 			r.Get("/", offerGroupsHandlers.ListOfferGroups)

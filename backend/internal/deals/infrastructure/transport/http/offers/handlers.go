@@ -203,7 +203,9 @@ func (h *Handlers) HandleGetOfferByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	offer, err := h.offerService.GetOfferByID(r.Context(), id)
+	requesterID, _ := authkit.UserIDFromContext(r.Context())
+
+	offer, err := h.offerService.GetOfferByID(r.Context(), id, requesterID)
 	if err != nil {
 		if errors.Is(err, domain.ErrOfferNotFound) {
 			log.Info("offer not found", slog.String("offerId", id.String()))
@@ -320,6 +322,8 @@ func (h *Handlers) HandleUpdateOffer(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteEmptyError(w, http.StatusNotFound)
 		case errors.Is(err, domain.ErrForbidden):
 			httpx.WriteEmptyError(w, http.StatusForbidden)
+		case errors.Is(err, domain.ErrModificationBlocked):
+			httpx.WriteEmptyError(w, http.StatusConflict)
 		case errors.Is(err, offersapp.ErrOfferPhotoStorageNotConfigured):
 			log.Error("offer photo storage is not configured", slog.Any("error", err))
 			httpx.WriteEmptyError(w, http.StatusInternalServerError)
@@ -448,6 +452,8 @@ func (h *Handlers) HandleDeleteOffer(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteEmptyError(w, http.StatusNotFound)
 		case errors.Is(err, domain.ErrForbidden):
 			httpx.WriteEmptyError(w, http.StatusForbidden)
+		case errors.Is(err, domain.ErrModificationBlocked):
+			httpx.WriteEmptyError(w, http.StatusConflict)
 		default:
 			log.Error("failed to delete offer", slog.Any("error", err))
 			httpx.WriteEmptyError(w, http.StatusInternalServerError)

@@ -1,9 +1,12 @@
 package app
 
 import (
+	reputationP "barter-port/internal/users/application/reputation-processor"
 	userservice "barter-port/internal/users/application/user"
 	"barter-port/internal/users/infrastructure/kafka/consumer"
 	"barter-port/internal/users/infrastructure/kafka/producer"
+	reputationevents "barter-port/internal/users/infrastructure/repository/reputation-events"
+	reputationinbox "barter-port/internal/users/infrastructure/repository/reputation-inbox"
 	ucinbox "barter-port/internal/users/infrastructure/repository/uc-inbox"
 	ucroutbox "barter-port/internal/users/infrastructure/repository/uc-result-outbox"
 	"barter-port/internal/users/infrastructure/repository/user"
@@ -29,18 +32,22 @@ import (
 )
 
 type App struct {
-	log              *slog.Logger
-	db               *pgxpool.Pool
-	authDB           *pgxpool.Pool
-	authGRPCConn     *grpc.ClientConn
-	server           *http.Server
-	grpcServer       *grpc.Server
-	grpcListener     net.Listener
-	inboxRepository  *ucinbox.Repository
-	inboxProcessor   *ucinboxP.Processor
-	ucEventConsumer  *consumer.UserCreationInboxConsumer
-	outboxRepository *ucroutbox.Repository
-	ucrEventProducer *producer.UCResultOutbox
+	log                     *slog.Logger
+	db                      *pgxpool.Pool
+	authDB                  *pgxpool.Pool
+	authGRPCConn            *grpc.ClientConn
+	server                  *http.Server
+	grpcServer              *grpc.Server
+	grpcListener            net.Listener
+	inboxRepository         *ucinbox.Repository
+	inboxProcessor          *ucinboxP.Processor
+	ucEventConsumer         *consumer.UserCreationInboxConsumer
+	outboxRepository        *ucroutbox.Repository
+	ucrEventProducer        *producer.UCResultOutbox
+	reputationInboxRepo     *reputationinbox.Repository
+	reputationEventsRepo    *reputationevents.Repository
+	reputationProcessor     *reputationP.Processor
+	reputationEventConsumer *consumer.ReputationInboxConsumer
 }
 
 func NewApp(cfg bootstrap.Config) (*App, error) {
@@ -61,6 +68,8 @@ func NewApp(cfg bootstrap.Config) (*App, error) {
 	// Repositories
 	app.inboxRepository = ucinbox.NewRepository()
 	app.outboxRepository = ucroutbox.NewRepository()
+	app.reputationInboxRepo = reputationinbox.NewRepository()
+	app.reputationEventsRepo = reputationevents.NewRepository()
 	userRepo := user.NewRepository(app.db)
 	avatarStorage, err := avatarstorage.NewStorage(avatarstorage.Config{
 		Endpoint:        cfg.Storage.Endpoint,
@@ -90,6 +99,15 @@ func NewApp(cfg bootstrap.Config) (*App, error) {
 		cfg.Kafka.PollInterval,
 	)
 
+	app.reputationProcessor = reputationP.NewProcessor(
+		app.reputationInboxRepo,
+		app.reputationEventsRepo,
+		app.db,
+		app.log,
+		cfg.Kafka.BatchSize,
+		cfg.Kafka.PollInterval,
+	)
+
 	err = app.initUCEventConsumer(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize user creation event consumer: %w", err)
@@ -98,6 +116,11 @@ func NewApp(cfg bootstrap.Config) (*App, error) {
 	err = app.initUCREventProducer(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize user creation result event producer: %w", err)
+	}
+
+	err = app.initReputationEventConsumer(cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize reputation event consumer: %w", err)
 	}
 
 	if err = app.initHTTPServer(cfg, userService); err != nil {
@@ -152,6 +175,18 @@ func (app *App) Run() error {
 
 	g.Add(func() error {
 		return app.ucEventConsumer.Run(ctx)
+	}, func(error) {
+		cancel()
+	})
+
+	g.Add(func() error {
+		return app.reputationProcessor.Run(ctx)
+	}, func(error) {
+		cancel()
+	})
+
+	g.Add(func() error {
+		return app.reputationEventConsumer.Run(ctx)
 	}, func(error) {
 		cancel()
 	})

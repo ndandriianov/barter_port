@@ -47,6 +47,8 @@ type Config struct {
 		UserCreationGroup       string        `mapstructure:"user_creation_group"`
 		UserCreationResultTopic string        `mapstructure:"user_creation_result_topic"`
 		UserCreationResultGroup string        `mapstructure:"user_creation_result_group"`
+		OfferReportPenaltyTopic string        `mapstructure:"offer_report_penalty_topic"`
+		OfferReportPenaltyGroup string        `mapstructure:"offer_report_penalty_group"`
 		BatchSize               int           `mapstructure:"batch_size"`
 		PollInterval            time.Duration `mapstructure:"poll_interval"`
 		WriteTimeout            time.Duration `mapstructure:"write_timeout"`

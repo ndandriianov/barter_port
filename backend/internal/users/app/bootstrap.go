@@ -4,6 +4,7 @@ import (
 	authpb "barter-port/contracts/grpc/auth/v1"
 	userspb "barter-port/contracts/grpc/users/v1"
 	authusers "barter-port/contracts/kafka/messages/auth-users"
+	dealsusers "barter-port/contracts/kafka/messages/deals-users"
 	"barter-port/internal/users/application/user"
 	userservice "barter-port/internal/users/application/user"
 	"barter-port/internal/users/infrastructure/kafka/consumer"
@@ -100,6 +101,24 @@ func (app *App) initUCREventProducer(cfg bootstrap.Config) error {
 	)
 
 	app.ucrEventProducer = producer.NewUCResultOutbox(app.db, app.outboxRepository, app.log, kafkaPublisher)
+
+	return nil
+}
+
+func (app *App) initReputationEventConsumer(cfg bootstrap.Config) error {
+	if app.log == nil {
+		return errors.New("log is not initialized")
+	}
+	if app.db == nil {
+		return errors.New("db is not initialized")
+	}
+	if app.reputationInboxRepo == nil {
+		return errors.New("reputationInboxRepo is not initialized")
+	}
+
+	reader := kafkax.NewMessageReader(cfg.Kafka.Brokers, cfg.Kafka.OfferReportPenaltyTopic, cfg.Kafka.OfferReportPenaltyGroup)
+	kafkaConsumer := kafkax.NewInboxConsumer[dealsusers.OfferReportPenaltyMessage](app.log, reader, cfg.Kafka.PollInterval)
+	app.reputationEventConsumer = consumer.NewReputationInboxConsumer(app.db, app.reputationInboxRepo, kafkaConsumer)
 
 	return nil
 }

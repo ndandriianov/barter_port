@@ -6,13 +6,17 @@ import (
 	dealssvc "barter-port/internal/deals/application/deals"
 	failuressvc "barter-port/internal/deals/application/failures"
 	joinssvc "barter-port/internal/deals/application/joins"
+	offerreportssvc "barter-port/internal/deals/application/offer-reports"
 	offergroupssvc "barter-port/internal/deals/application/offergroups"
 	"barter-port/internal/deals/application/offers"
 	reviewssvc "barter-port/internal/deals/application/reviews"
+	penaltyoutbox "barter-port/internal/deals/infrastructure/kafka/producer/penalty-outbox"
 	"barter-port/internal/deals/infrastructure/repository/deals"
 	"barter-port/internal/deals/infrastructure/repository/drafts"
 	failuresrepo "barter-port/internal/deals/infrastructure/repository/failures"
 	"barter-port/internal/deals/infrastructure/repository/joins"
+	offerreportoutboxrepo "barter-port/internal/deals/infrastructure/repository/offer-report-outbox"
+	offerreportsrepo "barter-port/internal/deals/infrastructure/repository/offer-reports"
 	offergroupsrepo "barter-port/internal/deals/infrastructure/repository/offergroups"
 	offersr "barter-port/internal/deals/infrastructure/repository/offers"
 	reviewsrepo "barter-port/internal/deals/infrastructure/repository/reviews"
@@ -24,12 +28,15 @@ import (
 	draftsh "barter-port/internal/deals/infrastructure/transport/http/drafts"
 	failuresh "barter-port/internal/deals/infrastructure/transport/http/failures"
 	joinsh "barter-port/internal/deals/infrastructure/transport/http/joins"
+	offerreportsh "barter-port/internal/deals/infrastructure/transport/http/offer-reports"
 	offergroupsh "barter-port/internal/deals/infrastructure/transport/http/offergroups"
 	offersh "barter-port/internal/deals/infrastructure/transport/http/offers"
 	reviewsh "barter-port/internal/deals/infrastructure/transport/http/reviews"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/bootstrap"
+	"barter-port/pkg/kafkax"
 	"barter-port/pkg/logger"
+	"context"
 	"errors"
 	"log"
 	"log/slog"
@@ -38,6 +45,7 @@ import (
 	"os"
 
 	"github.com/joho/godotenv"
+	"github.com/oklog/run"
 	"google.golang.org/grpc"
 )
 
@@ -113,8 +121,9 @@ func main() {
 	joinsRepo := joins.NewRepository()
 	offerGroupsRepo := offergroupsrepo.NewRepository(db)
 	reviewsRepo := reviewsrepo.NewRepository(dealsRepo)
+	adminChecker := authkit.NewAdminChecker(authClient)
 	dealsService := dealssvc.NewService(db, draftsRepo, dealsRepo, failuresRepo, joinsRepo, offersRepo, itemPhotoStorage).
-		WithAdminChecker(authkit.NewAdminChecker(authClient)).
+		WithAdminChecker(adminChecker).
 		WithLogger(logg)
 	if chatsClient != nil {
 		dealsService = dealsService.WithChatsClient(chatsClient)
@@ -123,6 +132,24 @@ func main() {
 	failuresService := failuressvc.NewService(dealsService, failuresRepo)
 	joinsService := joinssvc.NewService(dealsService)
 	reviewsService := reviewssvc.NewService(dealsService, reviewsRepo)
+
+	// Offer reports
+	offerReportsRepo := offerreportsrepo.NewRepository(db)
+	offerReportOutboxRepo := offerreportoutboxrepo.NewRepository()
+	offerReportsService := offerreportssvc.NewService(db, offersRepo, offerReportsRepo, offerReportOutboxRepo, adminChecker, logg)
+
+	// Penalty outbox Kafka producer
+	kafkaWriter := kafkax.NewWriter(cfg.Kafka.Brokers, cfg.Kafka.OfferReportPenaltyTopic)
+	penaltyPublisher := kafkax.NewOutboxPublisher(
+		kafkaWriter,
+		logg,
+		cfg.Kafka.Brokers,
+		cfg.Kafka.OfferReportPenaltyTopic,
+		cfg.Kafka.BatchSize,
+		cfg.Kafka.PollInterval,
+		cfg.Kafka.WriteTimeout,
+	)
+	penaltyProducer := penaltyoutbox.NewPenaltyOutboxProducer(db, offerReportOutboxRepo, logg, penaltyPublisher)
 
 	validator, err := bootstrap.InitLocalJWTFromConfig(cfg)
 	if err != nil {
@@ -140,13 +167,6 @@ func main() {
 	grpcServer := grpc.NewServer()
 	dealspb.RegisterDealsServiceServer(grpcServer, transportgrpc.NewServer(dealsService))
 
-	go func() {
-		logg.Info("gRPC server listening", slog.String("addr", grpcListenAddr))
-		if err := grpcServer.Serve(listener); err != nil {
-			log.Fatal("gRPC server failed:", err)
-		}
-	}()
-
 	offersHandlers := offersh.NewHandlers(offersService)
 	offerGroupsHandlers := offergroupsh.NewHandlers(logg, offerGroupsService)
 	draftsHandlers := draftsh.NewHandlers(logg, dealsService)
@@ -154,11 +174,43 @@ func main() {
 	failuresHandlers := failuresh.NewHandlers(logg, failuresService)
 	joinsHandlers := joinsh.NewHandlers(logg, joinsService)
 	reviewsHandlers := reviewsh.NewHandlers(logg, reviewsService)
-	router := transporthttp.NewRouter(logg, validator, offersHandlers, offerGroupsHandlers, draftsHandlers, dealsHandlers, failuresHandlers, joinsHandlers, reviewsHandlers)
+	offerReportsHandlers := offerreportsh.NewHandlers(offerReportsService)
+	router := transporthttp.NewRouter(logg, validator, offersHandlers, offerGroupsHandlers, draftsHandlers, dealsHandlers, failuresHandlers, joinsHandlers, reviewsHandlers, offerReportsHandlers)
 
 	port := bootstrap.InitPortStringFromConfig(cfg, 8080)
-	log.Println("backend listening on", port)
-	log.Fatal(http.ListenAndServe(port, router))
+	httpServer := &http.Server{
+		Addr:    port,
+		Handler: router,
+	}
+
+	var g run.Group
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	g.Add(func() error {
+		logg.Info("gRPC server listening", slog.String("addr", grpcListenAddr))
+		return grpcServer.Serve(listener)
+	}, func(error) {
+		grpcServer.GracefulStop()
+	})
+
+	g.Add(func() error {
+		return penaltyProducer.Run(ctx)
+	}, func(error) {
+		cancel()
+		_ = penaltyProducer.Close()
+	})
+
+	g.Add(func() error {
+		log.Println("deals http server listening on", port)
+		return httpServer.ListenAndServe()
+	}, func(error) {
+		_ = httpServer.Close()
+	})
+
+	if err := g.Run(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		log.Fatal("deals service failed:", err)
+	}
 }
 
 func loadConfig() (bootstrap.Config, error) {

@@ -215,13 +215,18 @@ func (s *Service) GetOffers(
 }
 
 // GetOfferByID retrieves a single offer by its ID, including the author name.
+// Returns ErrOfferNotFound if the offer is hidden and the requester is not the author.
 //
 // Errors:
 //   - domain.ErrOfferNotFound
-func (s *Service) GetOfferByID(ctx context.Context, id uuid.UUID) (*domain.Offer, error) {
+func (s *Service) GetOfferByID(ctx context.Context, id uuid.UUID, requesterID uuid.UUID) (*domain.Offer, error) {
 	offer, err := s.repo.GetOfferByID(ctx, id)
 	if err != nil {
 		return nil, err
+	}
+
+	if offer.IsHidden && offer.AuthorId != requesterID {
+		return nil, domain.ErrOfferNotFound
 	}
 
 	response, err := s.usersClient.GetUsersWithInfo(ctx, &userspb.GetUsersWithInfoRequest{Ids: []string{offer.AuthorId.String()}})
@@ -273,6 +278,9 @@ func (s *Service) UpdateOffer(
 		}
 		if currentOffer.AuthorId != userID {
 			return domain.ErrForbidden
+		}
+		if currentOffer.ModificationBlocked {
+			return domain.ErrModificationBlocked
 		}
 
 		currentPhotos, err := s.repo.GetOfferPhotos(ctx, tx, offerID)
@@ -376,7 +384,18 @@ func (s *Service) UpdateOffer(
 // Domain errors:
 //   - domain.ErrOfferNotFound
 //   - domain.ErrForbidden
+//   - domain.ErrModificationBlocked
 func (s *Service) DeleteOffer(ctx context.Context, userID uuid.UUID, offerID uuid.UUID) error {
+	offer, err := s.repo.GetOffer(ctx, s.db, offerID)
+	if err != nil {
+		return err
+	}
+	if offer.AuthorId != userID {
+		return domain.ErrForbidden
+	}
+	if offer.ModificationBlocked {
+		return domain.ErrModificationBlocked
+	}
 	return s.repo.DeleteOffer(ctx, s.db, offerID, userID)
 }
 

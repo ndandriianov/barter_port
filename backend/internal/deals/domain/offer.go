@@ -10,18 +10,20 @@ import (
 )
 
 type Offer struct {
-	ID          uuid.UUID         `db:"id"`
-	AuthorId    uuid.UUID         `db:"author_id"`
-	AuthorName  *string           `db:"-"`
-	Name        string            `db:"name"`
-	PhotoIds    []uuid.UUID       `db:"photo_ids"`
-	PhotoUrls   []string          `db:"photo_urls"`
-	Type        enums.ItemType    `db:"type"`
-	Action      enums.OfferAction `db:"action"`
-	Description string            `db:"description"`
-	CreatedAt   time.Time         `db:"created_at"`
-	UpdatedAt   *time.Time        `db:"updated_at"`
-	Views       int               `db:"views"`
+	ID                  uuid.UUID         `db:"id"`
+	AuthorId            uuid.UUID         `db:"author_id"`
+	AuthorName          *string           `db:"-"`
+	Name                string            `db:"name"`
+	PhotoIds            []uuid.UUID       `db:"photo_ids"`
+	PhotoUrls           []string          `db:"photo_urls"`
+	Type                enums.ItemType    `db:"type"`
+	Action              enums.OfferAction `db:"action"`
+	Description         string            `db:"description"`
+	CreatedAt           time.Time         `db:"created_at"`
+	UpdatedAt           *time.Time        `db:"updated_at"`
+	Views               int               `db:"views"`
+	IsHidden            bool              `db:"is_hidden"`
+	ModificationBlocked bool              `db:"modification_blocked"`
 }
 
 func (i *Offer) ToDto() types.Offer {
