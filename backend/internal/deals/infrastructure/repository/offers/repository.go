@@ -211,7 +211,7 @@ func (r *Repository) GetOffersOrderByPopularity(
 		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
 		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls
 		FROM offers
-		ORDER BY created_at DESC
+		ORDER BY views DESC, id DESC
 		LIMIT $1
 		`
 			args = append(args, limit)
@@ -222,7 +222,7 @@ func (r *Repository) GetOffersOrderByPopularity(
 		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls
 		FROM offers
 		WHERE (views, id) < ($1, $2) 
-		ORDER BY views DESC 
+		ORDER BY views DESC, id DESC
 		LIMIT $3
 		`
 			args = append(args, cursor.Views, cursor.Id, limit)
@@ -235,7 +235,7 @@ func (r *Repository) GetOffersOrderByPopularity(
 		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls
 		FROM offers
 		WHERE author_id = $1
-		ORDER BY created_at DESC
+		ORDER BY views DESC, id DESC
 		LIMIT $2
 		`
 			args = append(args, *authorID, limit)
@@ -246,7 +246,7 @@ func (r *Repository) GetOffersOrderByPopularity(
 		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls
 		FROM offers
 		WHERE author_id = $1 AND (views, id) < ($2, $3)
-		ORDER BY views DESC
+		ORDER BY views DESC, id DESC
 		LIMIT $4
 		`
 			args = append(args, *authorID, cursor.Views, cursor.Id, limit)
@@ -406,6 +406,22 @@ func (r *Repository) GetOffer(ctx context.Context, exec db.DB, id uuid.UUID) (*d
 	}
 
 	return &offer, nil
+}
+
+// ViewOffer increments the offer views counter.
+//
+// Errors:
+//   - domain.ErrOfferNotFound: if no item with the given ID exists.
+func (r *Repository) ViewOffer(ctx context.Context, exec db.DB, id uuid.UUID) error {
+	tag, err := exec.Exec(ctx, `UPDATE offers SET views = views + 1 WHERE id = $1`, id)
+	if err != nil {
+		return fmt.Errorf("sql view offer: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return domain.ErrOfferNotFound
+	}
+
+	return nil
 }
 
 // UpdateOffer applies a partial update to an offer.

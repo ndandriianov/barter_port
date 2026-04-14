@@ -219,6 +219,35 @@ func (h *Handlers) HandleGetOfferByID(w http.ResponseWriter, r *http.Request) {
 }
 
 // ================================================================================
+// VIEW OFFER BY ID
+// ================================================================================
+
+func (h *Handlers) HandleViewOfferByID(w http.ResponseWriter, r *http.Request) {
+	log := logger.LogFrom(r.Context(), slog.Default()).With(slog.String("handler", "ViewOfferByID"))
+	log.Info("handling view offer by id request")
+
+	id, ok := parseOfferID(w, r)
+	if !ok {
+		log.Error("error parsing offer id")
+		return
+	}
+
+	err := h.offerService.ViewOfferByID(r.Context(), id)
+	if err != nil {
+		if errors.Is(err, domain.ErrOfferNotFound) {
+			log.Info("offer not found", slog.String("offerId", id.String()))
+			httpx.WriteEmptyError(w, http.StatusNotFound)
+			return
+		}
+		log.Error("failed to register offer view", slog.Any("error", err))
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
+// ================================================================================
 // UPDATE OFFER
 // ================================================================================
 

@@ -232,6 +232,14 @@ func (s *Service) GetOfferByID(ctx context.Context, id uuid.UUID) (*domain.Offer
 	return offer, nil
 }
 
+// ViewOfferByID increments offer views.
+//
+// Errors:
+//   - domain.ErrOfferNotFound
+func (s *Service) ViewOfferByID(ctx context.Context, id uuid.UUID) error {
+	return s.repo.ViewOffer(ctx, s.db, id)
+}
+
 // UpdateOffer updates an offer. Only the author can update it.
 //
 // Domain errors:
