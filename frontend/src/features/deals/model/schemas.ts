@@ -99,6 +99,8 @@ export const updateDealItemRequestSchema = z.object({
   name: z.string().optional(),
   description: z.string().optional(),
   quantity: z.number().int().min(1).optional(),
+  deletePhotoIds: z.array(z.string()).optional(),
+  photos: z.array(z.custom<File>()).optional(),
   claimProvider: z.boolean().optional(),
   releaseProvider: z.boolean().optional(),
   claimReceiver: z.boolean().optional(),
