@@ -11,6 +11,9 @@ import (
 	"testing"
 	"time"
 
+	dockerfilters "github.com/docker/docker/api/types/filters"
+	dockernetwork "github.com/docker/docker/api/types/network"
+	dockerclient "github.com/docker/docker/client"
 	"github.com/docker/go-connections/nat"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/stretchr/testify/require"
@@ -44,7 +47,49 @@ const (
 
 	testJWTAccessSecret  = "integration-access-secret"
 	testJWTRefreshSecret = "integration-refresh-secret"
+
+	// stableNetworkName — имя Docker-сети, используемой при переиспользовании контейнеров.
+	stableNetworkName = "barter-port-integration-test"
+
+	// reuseEnvVar — переменная окружения для включения режима переиспользования контейнеров.
+	// Установите BARTER_PORT_REUSE_CONTAINERS=true чтобы контейнеры не пересоздавались между запусками.
+	reuseEnvVar = "BARTER_PORT_REUSE_CONTAINERS"
 )
+
+// shouldReuse возвращает true, если включён режим переиспользования контейнеров.
+func shouldReuse() bool {
+	v := os.Getenv(reuseEnvVar)
+	return v == "true" || v == "1"
+}
+
+// ensureStableNetwork создаёт Docker-сеть с фиксированным именем или возвращает имя
+// уже существующей. Используется в режиме reuse.
+func ensureStableNetwork(ctx context.Context) (string, error) {
+	cli, err := dockerclient.NewClientWithOpts(dockerclient.FromEnv, dockerclient.WithAPIVersionNegotiation())
+	if err != nil {
+		return "", fmt.Errorf("docker client: %w", err)
+	}
+	defer cli.Close()
+
+	nets, err := cli.NetworkList(ctx, dockernetwork.ListOptions{
+		Filters: dockerfilters.NewArgs(dockerfilters.Arg("name", stableNetworkName)),
+	})
+	if err != nil {
+		return "", fmt.Errorf("network list: %w", err)
+	}
+	for _, n := range nets {
+		if n.Name == stableNetworkName {
+			return stableNetworkName, nil
+		}
+	}
+
+	if _, err := cli.NetworkCreate(ctx, stableNetworkName, dockernetwork.CreateOptions{
+		Driver: "bridge",
+	}); err != nil {
+		return "", fmt.Errorf("network create: %w", err)
+	}
+	return stableNetworkName, nil
+}
 
 type FixtureOptions struct {
 	NeedPostgres bool
@@ -79,8 +124,12 @@ type Fixture struct {
 var globalFixture *Fixture
 
 // TerminateAll останавливает все контейнеры и удаляет сеть.
-// Используется в TestMain, где нет *testing.T.
+// В режиме reuse (BARTER_PORT_REUSE_CONTAINERS=true) контейнеры не останавливаются.
 func (f *Fixture) TerminateAll(ctx context.Context) error {
+	if shouldReuse() {
+		return nil
+	}
+
 	var errs []error
 	for _, c := range []testcontainers.Container{
 		f.Users, f.Items, f.Auth,
@@ -131,12 +180,12 @@ func NewFixture(t *testing.T, opts FixtureOptions) *Fixture {
 	}
 
 	// Параллельный запуск инфраструктурных контейнеров.
-	setupInfraParallel(ctx, net, opts, f, t)
+	setupInfraParallel(ctx, net.Name, opts, f, t)
 
 	// Сервисные контейнеры запускаются последовательно:
 	// Users зависит от Auth (gRPC), поэтому Auth должен быть готов первым.
 	if opts.NeedAuth {
-		req := buildServiceRequest(net, "auth", string(authHTTPPort))
+		req := buildServiceRequest(net.Name, "auth", string(authHTTPPort))
 		req.Env = serviceEnv()
 		req.Env["CONFIG_SERVICE"] = "/app/config/auth.yaml"
 		req.Env["JWT_REFRESH_SECRET"] = testJWTRefreshSecret
@@ -145,14 +194,14 @@ func NewFixture(t *testing.T, opts FixtureOptions) *Fixture {
 		f.AuthURL = containerBaseURL(ctx, t, f.Auth, authHTTPPort)
 	}
 	if opts.NeedItems {
-		req := buildServiceRequest(net, "items", string(itemsHTTPPort))
+		req := buildServiceRequest(net.Name, "deals", string(itemsHTTPPort))
 		req.Env = serviceEnv()
 		req.Env["CONFIG_SERVICE"] = "/app/config/deals.yaml"
 		f.Items = startContainer(ctx, t, req)
 		f.DealsURL = containerBaseURL(ctx, t, f.Items, itemsHTTPPort)
 	}
 	if opts.NeedUsers {
-		req := buildServiceRequest(net, "users", string(usersHTTPPort))
+		req := buildServiceRequest(net.Name, "users", string(usersHTTPPort))
 		req.Env = serviceEnv()
 		req.Env["CONFIG_SERVICE"] = "/app/config/users.yaml"
 		req.Env["AUTH_GRPC_ADDR"] = "auth:50051"
@@ -170,11 +219,7 @@ func NewFixture(t *testing.T, opts FixtureOptions) *Fixture {
 // newSharedFixture создаёт Fixture без *testing.T — для использования в TestMain.
 // При частичном сбое уже запущенные контейнеры сохраняются в *Fixture,
 // чтобы вызывающий код мог вызвать TerminateAll для очистки.
-func newSharedFixture(
-	ctx context.Context,
-	net *testcontainers.DockerNetwork,
-	opts FixtureOptions,
-) (*Fixture, error) {
+func newSharedFixture(ctx context.Context, opts FixtureOptions) (*Fixture, error) {
 	if opts.NeedAuth {
 		opts.NeedPostgres = true
 		opts.NeedKafka = true
@@ -189,16 +234,35 @@ func newSharedFixture(
 		opts.NeedKafka = true
 	}
 
-	f := &Fixture{Ctx: ctx, Network: net}
+	// Определяем сеть: в режиме reuse используем фиксированное имя,
+	// иначе создаём новую случайную сеть.
+	var netName string
+	f := &Fixture{Ctx: ctx}
+
+	if shouldReuse() {
+		var err error
+		netName, err = ensureStableNetwork(ctx)
+		if err != nil {
+			return f, fmt.Errorf("stable network: %w", err)
+		}
+		// f.Network остаётся nil — сеть не удаляется при TerminateAll
+	} else {
+		net, err := network.New(ctx)
+		if err != nil {
+			return f, fmt.Errorf("create network: %w", err)
+		}
+		f.Network = net
+		netName = net.Name
+	}
 
 	// Параллельный запуск инфраструктуры.
-	if err := setupInfraParallelShared(ctx, net, opts, f); err != nil {
+	if err := setupInfraParallelShared(ctx, netName, opts, f); err != nil {
 		return f, err
 	}
 
 	// Сервисные контейнеры — последовательно.
 	if opts.NeedAuth {
-		c, err := launchAuth(ctx, net)
+		c, err := launchAuth(ctx, netName)
 		f.Auth = c
 		if err != nil {
 			return f, fmt.Errorf("launch auth: %w", err)
@@ -210,7 +274,7 @@ func newSharedFixture(
 		f.AuthURL = url
 	}
 	if opts.NeedItems {
-		c, err := launchDeals(ctx, net)
+		c, err := launchDeals(ctx, netName)
 		f.Items = c
 		if err != nil {
 			return f, fmt.Errorf("launch items: %w", err)
@@ -222,7 +286,7 @@ func newSharedFixture(
 		f.DealsURL = url
 	}
 	if opts.NeedUsers {
-		c, err := launchUsers(ctx, net)
+		c, err := launchUsers(ctx, netName)
 		f.Users = c
 		if err != nil {
 			return f, fmt.Errorf("launch users: %w", err)
@@ -248,16 +312,9 @@ type infraResult struct {
 }
 
 // setupInfraParallel запускает инфраструктурные контейнеры параллельно.
-//
-// Буфер канала равен максимальному числу горутин (4): это гарантирует отсутствие
-// утечек горутин — даже если t.FailNow() прервёт цикл после первой ошибки,
-// оставшиеся горутины смогут отправить результат и завершиться.
-//
-// Регистрация cleanup выполняется ДО вызова require.NoError, чтобы очистка
-// произошла даже при неудачном старте контейнера.
 func setupInfraParallel(
 	ctx context.Context,
-	net *testcontainers.DockerNetwork,
+	netName string,
 	opts FixtureOptions,
 	f *Fixture,
 	t *testing.T,
@@ -270,28 +327,28 @@ func setupInfraParallel(
 	if opts.NeedPostgres {
 		launched++
 		go func() {
-			c, err := launchPostgres(ctx, net)
+			c, err := launchPostgres(ctx, netName)
 			ch <- infraResult{"postgres", c, err}
 		}()
 	}
 	if opts.NeedKafka {
 		launched++
 		go func() {
-			c, err := launchKafka(ctx, net)
+			c, err := launchKafka(ctx, netName)
 			ch <- infraResult{"kafka", c, err}
 		}()
 	}
 	if opts.NeedSMTP {
 		launched++
 		go func() {
-			c, err := launchSMTP(ctx, net)
+			c, err := launchSMTP(ctx, netName)
 			ch <- infraResult{"smtp", c, err}
 		}()
 	}
 	if opts.NeedSeaweed {
 		launched++
 		go func() {
-			c, err := launchSeaweed(ctx, net)
+			c, err := launchSeaweed(ctx, netName)
 			ch <- infraResult{"seaweed", c, err}
 		}()
 	}
@@ -323,10 +380,9 @@ func setupInfraParallel(
 }
 
 // setupInfraParallelShared — вариант для TestMain: без *testing.T, возвращает первую ошибку.
-// Все частично запущенные контейнеры записываются в f, чтобы TerminateAll смог их очистить.
 func setupInfraParallelShared(
 	ctx context.Context,
-	net *testcontainers.DockerNetwork,
+	netName string,
 	opts FixtureOptions,
 	f *Fixture,
 ) error {
@@ -336,28 +392,28 @@ func setupInfraParallelShared(
 	if opts.NeedPostgres {
 		launched++
 		go func() {
-			c, err := launchPostgres(ctx, net)
+			c, err := launchPostgres(ctx, netName)
 			ch <- infraResult{"postgres", c, err}
 		}()
 	}
 	if opts.NeedKafka {
 		launched++
 		go func() {
-			c, err := launchKafka(ctx, net)
+			c, err := launchKafka(ctx, netName)
 			ch <- infraResult{"kafka", c, err}
 		}()
 	}
 	if opts.NeedSMTP {
 		launched++
 		go func() {
-			c, err := launchSMTP(ctx, net)
+			c, err := launchSMTP(ctx, netName)
 			ch <- infraResult{"smtp", c, err}
 		}()
 	}
 	if opts.NeedSeaweed {
 		launched++
 		go func() {
-			c, err := launchSeaweed(ctx, net)
+			c, err := launchSeaweed(ctx, netName)
 			ch <- infraResult{"seaweed", c, err}
 		}()
 	}
@@ -390,14 +446,21 @@ func setupInfraParallelShared(
 // Низкоуровневые функции запуска (без *testing.T)
 // ────────────────────────────────────────────────────────────────
 
-func launchPostgres(ctx context.Context, net *testcontainers.DockerNetwork) (testcontainers.Container, error) {
+func launchPostgres(ctx context.Context, netName string) (testcontainers.Container, error) {
 	projectRoot := mustGetProjectRoot()
+
+	name := ""
+	if shouldReuse() {
+		name = "barter-port-integration-postgres"
+	}
+
 	req := testcontainers.ContainerRequest{
+		Name:         name,
 		Image:        "postgres:16",
 		ExposedPorts: []string{string(postgresPort)},
-		Networks:     []string{net.Name},
+		Networks:     []string{netName},
 		NetworkAliases: map[string][]string{
-			net.Name: {postgresAlias},
+			netName: {postgresAlias},
 		},
 		Env: map[string]string{
 			"POSTGRES_USER":     defaultDBUser,
@@ -418,13 +481,19 @@ func launchPostgres(ctx context.Context, net *testcontainers.DockerNetwork) (tes
 	return launchContainer(ctx, req)
 }
 
-func launchKafka(ctx context.Context, net *testcontainers.DockerNetwork) (testcontainers.Container, error) {
+func launchKafka(ctx context.Context, netName string) (testcontainers.Container, error) {
+	name := ""
+	if shouldReuse() {
+		name = "barter-port-integration-kafka"
+	}
+
 	req := testcontainers.ContainerRequest{
+		Name:         name,
 		Image:        "apache/kafka:4.2.0",
 		ExposedPorts: []string{string(kafkaPort)},
-		Networks:     []string{net.Name},
+		Networks:     []string{netName},
 		NetworkAliases: map[string][]string{
-			net.Name: {kafkaAlias},
+			netName: {kafkaAlias},
 		},
 		Env: map[string]string{
 			"CLUSTER_ID":                                     "MkU3OEVBNTcwNTJENDM2Qk",
@@ -448,13 +517,19 @@ func launchKafka(ctx context.Context, net *testcontainers.DockerNetwork) (testco
 	return launchContainer(ctx, req)
 }
 
-func launchSMTP(ctx context.Context, net *testcontainers.DockerNetwork) (testcontainers.Container, error) {
+func launchSMTP(ctx context.Context, netName string) (testcontainers.Container, error) {
+	name := ""
+	if shouldReuse() {
+		name = "barter-port-integration-smtp"
+	}
+
 	req := testcontainers.ContainerRequest{
+		Name:         name,
 		Image:        "rnwood/smtp4dev:latest",
 		ExposedPorts: []string{string(smtpPort), string(smtpUIPort)},
-		Networks:     []string{net.Name},
+		Networks:     []string{netName},
 		NetworkAliases: map[string][]string{
-			net.Name: {smtpAlias},
+			netName: {smtpAlias},
 		},
 		Env: map[string]string{
 			"ServerOptions__HostName":               smtpAlias,
@@ -469,14 +544,21 @@ func launchSMTP(ctx context.Context, net *testcontainers.DockerNetwork) (testcon
 	return launchContainer(ctx, req)
 }
 
-func launchSeaweed(ctx context.Context, net *testcontainers.DockerNetwork) (testcontainers.Container, error) {
+func launchSeaweed(ctx context.Context, netName string) (testcontainers.Container, error) {
 	projectRoot := mustGetProjectRoot()
+
+	name := ""
+	if shouldReuse() {
+		name = "barter-port-integration-seaweed"
+	}
+
 	req := testcontainers.ContainerRequest{
+		Name:         name,
 		Image:        "chrislusf/seaweedfs:4.06",
 		ExposedPorts: []string{string(seaweedPort)},
-		Networks:     []string{net.Name},
+		Networks:     []string{netName},
 		NetworkAliases: map[string][]string{
-			net.Name: {seaweedAlias},
+			netName: {seaweedAlias},
 		},
 		Env: map[string]string{
 			"S3_ACCESS_KEY_ID":     "barter-port-s3",
@@ -500,8 +582,8 @@ func launchSeaweed(ctx context.Context, net *testcontainers.DockerNetwork) (test
 	return launchContainer(ctx, req)
 }
 
-func launchAuth(ctx context.Context, net *testcontainers.DockerNetwork) (testcontainers.Container, error) {
-	req := buildServiceRequest(net, "auth", string(authHTTPPort))
+func launchAuth(ctx context.Context, netName string) (testcontainers.Container, error) {
+	req := buildServiceRequest(netName, "auth", string(authHTTPPort))
 	req.Env = serviceEnv()
 	req.Env["CONFIG_SERVICE"] = "/app/config/auth.yaml"
 	req.Env["JWT_REFRESH_SECRET"] = testJWTRefreshSecret
@@ -509,15 +591,15 @@ func launchAuth(ctx context.Context, net *testcontainers.DockerNetwork) (testcon
 	return launchContainer(ctx, req)
 }
 
-func launchDeals(ctx context.Context, net *testcontainers.DockerNetwork) (testcontainers.Container, error) {
-	req := buildServiceRequest(net, "deals", string(itemsHTTPPort))
+func launchDeals(ctx context.Context, netName string) (testcontainers.Container, error) {
+	req := buildServiceRequest(netName, "deals", string(itemsHTTPPort))
 	req.Env = serviceEnv()
 	req.Env["CONFIG_SERVICE"] = "/app/config/deals.yaml"
 	return launchContainer(ctx, req)
 }
 
-func launchUsers(ctx context.Context, net *testcontainers.DockerNetwork) (testcontainers.Container, error) {
-	req := buildServiceRequest(net, "users", string(usersHTTPPort))
+func launchUsers(ctx context.Context, netName string) (testcontainers.Container, error) {
+	req := buildServiceRequest(netName, "users", string(usersHTTPPort))
 	req.Env = serviceEnv()
 	req.Env["CONFIG_SERVICE"] = "/app/config/users.yaml"
 	req.Env["AUTH_GRPC_ADDR"] = "auth:50051"
@@ -528,27 +610,41 @@ func launchContainer(ctx context.Context, req testcontainers.ContainerRequest) (
 	return testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: req,
 		Started:          true,
+		Reuse:            shouldReuse(),
 	})
 }
 
-// buildServiceRequest строит ContainerRequest для сервисного контейнера без *testing.T.
-func buildServiceRequest(net *testcontainers.DockerNetwork, service string, exposedPorts ...string) testcontainers.ContainerRequest {
+// buildServiceRequest строит ContainerRequest для сервисного контейнера.
+//
+// Образ собирается с KeepImage: true — это сохраняет Docker build cache между запусками,
+// позволяя избежать полной пересборки если код не изменился.
+func buildServiceRequest(netName string, service string, exposedPorts ...string) testcontainers.ContainerRequest {
 	projectRoot := mustGetProjectRoot()
 	alias := service
+	serviceCopy := service // копия для указателя в BuildArgs
+
+	name := ""
+	if shouldReuse() {
+		name = "barter-port-integration-" + service
+	}
 
 	req := testcontainers.ContainerRequest{
+		Name: name,
 		FromDockerfile: testcontainers.FromDockerfile{
 			Context:       projectRoot,
 			Dockerfile:    "Dockerfile",
 			PrintBuildLog: false,
+			KeepImage:     true,
+			Repo:          "barter-port-integration",
+			Tag:           service,
 			BuildArgs: map[string]*string{
-				"SERVICE": new(service),
+				"SERVICE": &serviceCopy,
 			},
 		},
 		ExposedPorts: exposedPorts,
-		Networks:     []string{net.Name},
+		Networks:     []string{netName},
 		NetworkAliases: map[string][]string{
-			net.Name: {alias},
+			netName: {alias},
 		},
 		Files: []testcontainers.ContainerFile{
 			{
@@ -604,7 +700,7 @@ func SetupNetwork(ctx context.Context, t *testing.T) *testcontainers.DockerNetwo
 func SetupPostgres(ctx context.Context, net *testcontainers.DockerNetwork, t *testing.T) testcontainers.Container {
 	t.Helper()
 
-	c, err := launchPostgres(ctx, net)
+	c, err := launchPostgres(ctx, net.Name)
 	if c != nil {
 		t.Cleanup(func() { require.NoError(t, testcontainers.TerminateContainer(c)) })
 	}
@@ -615,7 +711,7 @@ func SetupPostgres(ctx context.Context, net *testcontainers.DockerNetwork, t *te
 func SetupKafka(ctx context.Context, net *testcontainers.DockerNetwork, t *testing.T) testcontainers.Container {
 	t.Helper()
 
-	c, err := launchKafka(ctx, net)
+	c, err := launchKafka(ctx, net.Name)
 	if c != nil {
 		t.Cleanup(func() { require.NoError(t, testcontainers.TerminateContainer(c)) })
 	}
@@ -626,7 +722,7 @@ func SetupKafka(ctx context.Context, net *testcontainers.DockerNetwork, t *testi
 func SetupSMTP(ctx context.Context, net *testcontainers.DockerNetwork, t *testing.T) testcontainers.Container {
 	t.Helper()
 
-	c, err := launchSMTP(ctx, net)
+	c, err := launchSMTP(ctx, net.Name)
 	if c != nil {
 		t.Cleanup(func() { require.NoError(t, testcontainers.TerminateContainer(c)) })
 	}
@@ -636,7 +732,7 @@ func SetupSMTP(ctx context.Context, net *testcontainers.DockerNetwork, t *testin
 
 func SetupAuth(ctx context.Context, net *testcontainers.DockerNetwork, t *testing.T) testcontainers.Container {
 	t.Helper()
-	req := buildServiceRequest(net, "auth", string(authHTTPPort))
+	req := buildServiceRequest(net.Name, "auth", string(authHTTPPort))
 	req.Env = serviceEnv()
 	req.Env["CONFIG_SERVICE"] = "/app/config/auth.yaml"
 	req.Env["JWT_REFRESH_SECRET"] = testJWTRefreshSecret
@@ -646,7 +742,7 @@ func SetupAuth(ctx context.Context, net *testcontainers.DockerNetwork, t *testin
 
 func SetupDeals(ctx context.Context, net *testcontainers.DockerNetwork, t *testing.T) testcontainers.Container {
 	t.Helper()
-	req := buildServiceRequest(net, "deals", string(itemsHTTPPort))
+	req := buildServiceRequest(net.Name, "deals", string(itemsHTTPPort))
 	req.Env = serviceEnv()
 	req.Env["CONFIG_SERVICE"] = "/app/config/deals.yaml"
 	return startContainer(ctx, t, req)
@@ -654,7 +750,7 @@ func SetupDeals(ctx context.Context, net *testcontainers.DockerNetwork, t *testi
 
 func SetupUsers(ctx context.Context, net *testcontainers.DockerNetwork, t *testing.T) testcontainers.Container {
 	t.Helper()
-	req := buildServiceRequest(net, "users", string(usersHTTPPort))
+	req := buildServiceRequest(net.Name, "users", string(usersHTTPPort))
 	req.Env = serviceEnv()
 	req.Env["CONFIG_SERVICE"] = "/app/config/users.yaml"
 	req.Env["AUTH_GRPC_ADDR"] = "auth:50051"
@@ -671,7 +767,6 @@ func serviceEnv() map[string]string {
 }
 
 // DumpLogsOnFailure регистрирует вывод логов контейнера при падении теста.
-// Используется тестами, работающими с globalFixture (shared-контейнеры).
 func DumpLogsOnFailure(t *testing.T, c testcontainers.Container, name string) {
 	t.Helper()
 	if c == nil {
