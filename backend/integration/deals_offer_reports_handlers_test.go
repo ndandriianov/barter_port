@@ -16,19 +16,19 @@ import (
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-func doCreateOfferReport(t *testing.T, reporterID uuid.UUID, offerID uuid.UUID, messageID uuid.UUID) *http.Response {
+func doCreateOfferReport(t *testing.T, reporterID uuid.UUID, offerID uuid.UUID, message string) *http.Response {
 	t.Helper()
 
-	body := types.CreateOfferReportRequest{MessageId: messageID}
+	body := types.CreateOfferReportRequest{Message: message}
 	req := mustUserRequest(t, http.MethodPost, dealsURL()+"/offers/"+offerID.String()+"/reports", reporterID, mustJSONBody(t, body))
 	req.Header.Set("Content-Type", "application/json")
 	return mustDo(t, req)
 }
 
-func mustCreateOfferReport(t *testing.T, reporterID uuid.UUID, offerID uuid.UUID, messageID uuid.UUID) types.OfferReport {
+func mustCreateOfferReport(t *testing.T, reporterID uuid.UUID, offerID uuid.UUID, message string) types.OfferReport {
 	t.Helper()
 
-	resp := doCreateOfferReport(t, reporterID, offerID, messageID)
+	resp := doCreateOfferReport(t, reporterID, offerID, message)
 	defer func() { _ = resp.Body.Close() }()
 	require.Equal(t, http.StatusCreated, resp.StatusCode)
 
@@ -131,8 +131,7 @@ func TestCreateOfferReportSuccess(t *testing.T) {
 	reporterID := uuid.New()
 	offerID := mustCreateOffer(t, authorID)
 
-	messageID := uuid.New()
-	report := mustCreateOfferReport(t, reporterID, offerID, messageID)
+	report := mustCreateOfferReport(t, reporterID, offerID, "spam offer")
 
 	require.NotEqual(t, uuid.Nil, report.Id)
 	require.Equal(t, offerID, report.OfferId)
@@ -148,7 +147,7 @@ func TestCreateOfferReportOfferBecomesBlocked(t *testing.T) {
 	reporterID := uuid.New()
 	offerID := mustCreateOffer(t, authorID)
 
-	mustCreateOfferReport(t, reporterID, offerID, uuid.New())
+	mustCreateOfferReport(t, reporterID, offerID, "please review")
 
 	// Author cannot update a blocked offer
 	req := mustUserRequest(t, http.MethodPatch, dealsURL()+"/offers/"+offerID.String(), authorID, mustJSONBody(t, types.UpdateOfferRequest{
@@ -169,10 +168,10 @@ func TestCreateOfferReportSecondReporterJoinsExisting(t *testing.T) {
 	reporterB := uuid.New()
 	offerID := mustCreateOffer(t, authorID)
 
-	mustCreateOfferReport(t, reporterA, offerID, uuid.New())
+	mustCreateOfferReport(t, reporterA, offerID, "first complaint")
 
 	// Second reporter — should return 200 (joined existing report)
-	resp := doCreateOfferReport(t, reporterB, offerID, uuid.New())
+	resp := doCreateOfferReport(t, reporterB, offerID, "second complaint")
 	defer func() { _ = resp.Body.Close() }()
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 
@@ -189,10 +188,10 @@ func TestCreateOfferReportSameReporterReturnsDuplicate(t *testing.T) {
 	reporterID := uuid.New()
 	offerID := mustCreateOffer(t, authorID)
 
-	mustCreateOfferReport(t, reporterID, offerID, uuid.New())
+	mustCreateOfferReport(t, reporterID, offerID, "duplicate complaint")
 
 	// Same reporter tries again — should be 409
-	resp := doCreateOfferReport(t, reporterID, offerID, uuid.New())
+	resp := doCreateOfferReport(t, reporterID, offerID, "duplicate complaint again")
 	defer func() { _ = resp.Body.Close() }()
 	require.Equal(t, http.StatusConflict, resp.StatusCode)
 }
@@ -204,7 +203,7 @@ func TestCreateOfferReportSelfReportForbidden(t *testing.T) {
 	authorID := uuid.New()
 	offerID := mustCreateOffer(t, authorID)
 
-	resp := doCreateOfferReport(t, authorID, offerID, uuid.New())
+	resp := doCreateOfferReport(t, authorID, offerID, "self complaint")
 	defer func() { _ = resp.Body.Close() }()
 	require.Equal(t, http.StatusForbidden, resp.StatusCode)
 }
@@ -217,7 +216,7 @@ func TestGetOfferReportsAuthorCanView(t *testing.T) {
 	reporterID := uuid.New()
 	offerID := mustCreateOffer(t, authorID)
 
-	mustCreateOfferReport(t, reporterID, offerID, uuid.New())
+	mustCreateOfferReport(t, reporterID, offerID, "report for author view")
 
 	result := mustGetOfferReports(t, authorID, offerID)
 	require.Equal(t, offerID, result.Offer.Id)
@@ -234,7 +233,7 @@ func TestGetOfferReportsNonAuthorForbidden(t *testing.T) {
 	strangerID := uuid.New()
 	offerID := mustCreateOffer(t, authorID)
 
-	mustCreateOfferReport(t, reporterID, offerID, uuid.New())
+	mustCreateOfferReport(t, reporterID, offerID, "report for forbidden view")
 
 	resp := doGetOfferReports(t, strangerID, offerID)
 	defer func() { _ = resp.Body.Close() }()
@@ -249,7 +248,7 @@ func TestAdminListReports(t *testing.T) {
 	authorID := uuid.New()
 	reporterID := uuid.New()
 	offerID := mustCreateOffer(t, authorID)
-	report := mustCreateOfferReport(t, reporterID, offerID, uuid.New())
+	report := mustCreateOfferReport(t, reporterID, offerID, "admin pending list")
 
 	reports := mustListAdminReports(t, adminToken, new(types.Pending))
 
@@ -271,13 +270,14 @@ func TestAdminGetReportDetails(t *testing.T) {
 	authorID := uuid.New()
 	reporterID := uuid.New()
 	offerID := mustCreateOffer(t, authorID)
-	report := mustCreateOfferReport(t, reporterID, offerID, uuid.New())
+	report := mustCreateOfferReport(t, reporterID, offerID, "admin details")
 
 	details := mustGetAdminReportDetails(t, adminToken, report.Id)
 	require.Equal(t, report.Id, details.Report.Id)
 	require.Equal(t, offerID, details.Offer.Id)
 	require.Len(t, details.Messages, 1)
 	require.Equal(t, reporterID, details.Messages[0].AuthorId)
+	require.Equal(t, "admin details", details.Messages[0].Message)
 }
 
 func TestAdminResolveReportAcceptHidesOffer(t *testing.T) {
@@ -288,7 +288,7 @@ func TestAdminResolveReportAcceptHidesOffer(t *testing.T) {
 	authorID := uuid.New()
 	reporterID := uuid.New()
 	offerID := mustCreateOffer(t, authorID)
-	report := mustCreateOfferReport(t, reporterID, offerID, uuid.New())
+	report := mustCreateOfferReport(t, reporterID, offerID, "accept report")
 
 	resolved := mustResolveReport(t, adminToken, report.Id, true, new("violation confirmed"))
 	require.Equal(t, types.Accepted, resolved.Status)
@@ -314,7 +314,7 @@ func TestAdminResolveReportAcceptRemovedFromPublicList(t *testing.T) {
 	authorID := uuid.New()
 	reporterID := uuid.New()
 	offerID := mustCreateOffer(t, authorID)
-	report := mustCreateOfferReport(t, reporterID, offerID, uuid.New())
+	report := mustCreateOfferReport(t, reporterID, offerID, "remove from list")
 
 	mustResolveReport(t, adminToken, report.Id, true, nil)
 
@@ -334,7 +334,7 @@ func TestAdminResolveReportRejectKeepsOfferVisible(t *testing.T) {
 	authorID := uuid.New()
 	reporterID := uuid.New()
 	offerID := mustCreateOffer(t, authorID)
-	report := mustCreateOfferReport(t, reporterID, offerID, uuid.New())
+	report := mustCreateOfferReport(t, reporterID, offerID, "reject report")
 
 	resolved := mustResolveReport(t, adminToken, report.Id, false, new("no violation"))
 	require.Equal(t, types.Rejected, resolved.Status)
@@ -353,7 +353,7 @@ func TestAdminResolveAlreadyResolvedReturnsConflict(t *testing.T) {
 	authorID := uuid.New()
 	reporterID := uuid.New()
 	offerID := mustCreateOffer(t, authorID)
-	report := mustCreateOfferReport(t, reporterID, offerID, uuid.New())
+	report := mustCreateOfferReport(t, reporterID, offerID, "already resolved")
 
 	mustResolveReport(t, adminToken, report.Id, false, nil)
 
@@ -371,7 +371,7 @@ func TestUpdateBlockedOfferReturnsConflict(t *testing.T) {
 	reporterID := uuid.New()
 	offerID := mustCreateOffer(t, authorID)
 
-	mustCreateOfferReport(t, reporterID, offerID, uuid.New())
+	mustCreateOfferReport(t, reporterID, offerID, "block update")
 
 	req := mustUserRequest(t, http.MethodPatch, dealsURL()+"/offers/"+offerID.String(), authorID, mustJSONBody(t, types.UpdateOfferRequest{
 		Name: new(fmt.Sprintf("updated-%d", time.Now().UnixNano())),
@@ -390,7 +390,7 @@ func TestDeleteBlockedOfferReturnsConflict(t *testing.T) {
 	reporterID := uuid.New()
 	offerID := mustCreateOffer(t, authorID)
 
-	mustCreateOfferReport(t, reporterID, offerID, uuid.New())
+	mustCreateOfferReport(t, reporterID, offerID, "block delete")
 
 	req := mustUserRequest(t, http.MethodDelete, dealsURL()+"/offers/"+offerID.String(), authorID, nil)
 	resp := mustDo(t, req)
@@ -406,7 +406,7 @@ func TestAdminListReportsFilterByStatus(t *testing.T) {
 	authorID := uuid.New()
 	reporterID := uuid.New()
 	offerID := mustCreateOffer(t, authorID)
-	report := mustCreateOfferReport(t, reporterID, offerID, uuid.New())
+	report := mustCreateOfferReport(t, reporterID, offerID, "status filter")
 
 	mustResolveReport(t, adminToken, report.Id, false, nil)
 
@@ -435,7 +435,7 @@ func TestAdminGetReportDetailsNonAdminForbidden(t *testing.T) {
 	authorID := uuid.New()
 	reporterID := uuid.New()
 	offerID := mustCreateOffer(t, authorID)
-	report := mustCreateOfferReport(t, reporterID, offerID, uuid.New())
+	report := mustCreateOfferReport(t, reporterID, offerID, "non-admin details")
 
 	resp := doGetAdminReportDetails(t, mustAccessToken(t, uuid.New()), report.Id)
 	defer func() { _ = resp.Body.Close() }()
