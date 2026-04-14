@@ -5,6 +5,7 @@ Me:
     - email
     - createdAt
     - isAdmin
+    - reputationPoints
   properties:
     id:
       $ref: './properties.yaml#/UserId'
@@ -28,6 +29,8 @@ Me:
       $ref: './properties.yaml#/Bio'
     avatarUrl:
       $ref: './properties.yaml#/AvatarUrl'
+    reputationPoints:
+      $ref: './properties.yaml#/ReputationPoints'
 
 AvatarUploadResponse:
   type: object

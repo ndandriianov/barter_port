@@ -177,6 +177,12 @@ Offer:
       format: date-time
       description: Item last update timestamp
       example: '2026-03-05T12:00:00Z'
+    isHidden:
+      type: boolean
+      description: Признак того, что объявление скрыто модератором.
+    modificationBlocked:
+      type: boolean
+      description: Признак того, что объявление временно заблокировано для редактирования из-за pending-жалобы.
     photoIds:
       type: array
       description: |
@@ -207,6 +213,112 @@ OfferAction:
   enum:
     - give
     - take
+
+
+OfferReportStatus:
+  type: string
+  enum:
+    - Pending
+    - Accepted
+    - Rejected
+
+
+OfferReport:
+  type: object
+  required:
+    - id
+    - offerId
+    - offerAuthorId
+    - status
+    - createdAt
+  properties:
+    id:
+      type: string
+      format: uuid
+    offerId:
+      type: string
+      format: uuid
+    offerAuthorId:
+      type: string
+      format: uuid
+    status:
+      $ref: '#/OfferReportStatus'
+    createdAt:
+      type: string
+      format: date-time
+    reviewedAt:
+      type: string
+      format: date-time
+    reviewedBy:
+      type: string
+      format: uuid
+    resolutionComment:
+      type: string
+    appliedPenaltyDelta:
+      type: integer
+
+
+OfferReportMessage:
+  type: object
+  required:
+    - offerReportId
+    - authorId
+    - messageId
+  properties:
+    offerReportId:
+      type: string
+      format: uuid
+    authorId:
+      type: string
+      format: uuid
+    messageId:
+      type: string
+      format: uuid
+
+
+OfferReportDetails:
+  type: object
+  required:
+    - report
+    - offer
+    - messages
+  properties:
+    report:
+      $ref: '#/OfferReport'
+    offer:
+      $ref: '#/Offer'
+    messages:
+      type: array
+      items:
+        $ref: '#/OfferReportMessage'
+
+
+OfferReportThread:
+  type: object
+  required:
+    - report
+    - messages
+  properties:
+    report:
+      $ref: '#/OfferReport'
+    messages:
+      type: array
+      items:
+        $ref: '#/OfferReportMessage'
+
+
+OfferReportsForOffer:
+  type: object
+  required:
+    - offer
+    - reports
+  properties:
+    offer:
+      $ref: '#/Offer'
+    reports:
+      type: array
+      items:
+        $ref: '#/OfferReportThread'
 
 
 OffersCursor:
