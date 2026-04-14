@@ -51,14 +51,6 @@ func dealsURL() string {
 	return globalFixture.DealsURL
 }
 
-func boolPtr(v bool) *bool {
-	return &v
-}
-
-func intPtr(v int) *int {
-	return &v
-}
-
 func mustJSONBody(t *testing.T, v any) io.Reader {
 	t.Helper()
 
@@ -693,7 +685,7 @@ func mustCreateDiscussionDeal(t *testing.T, userIDs ...uuid.UUID) (uuid.UUID, ma
 	for idx, authorID := range userIDs {
 		receiverID := userIDs[(idx+1)%len(userIDs)]
 		mustUpdateDealItem(t, receiverID, dealID, itemIDsByAuthor[authorID], types.UpdateDealItemRequest{
-			ClaimReceiver: boolPtr(true),
+			ClaimReceiver: new(true),
 		})
 	}
 
@@ -712,7 +704,7 @@ func mustCreateCompletedReviewableTwoPartyDeal(t *testing.T, userA uuid.UUID, us
 	itemIDByB := itemIDsByAuthor[userB]
 
 	_ = mustUpdateDealItem(t, userA, dealID, itemIDByA, types.UpdateDealItemRequest{
-		Name: stringPtr(fmt.Sprintf("updated-item-%d", time.Now().UnixNano())),
+		Name: new(fmt.Sprintf("updated-item-%d", time.Now().UnixNano())),
 	})
 
 	_ = mustChangeDealStatus(t, dealID, userA, types.Confirmed)
@@ -761,8 +753,7 @@ func mustCreateReviewedOfferItemContext(t *testing.T) reviewedDealContext {
 	providerID := uuid.New()
 	receiverID := uuid.New()
 	dealID, itemID, otherItemID := mustCreateCompletedReviewableTwoPartyDeal(t, providerID, receiverID)
-	comment := "excellent"
-	review := mustCreateDealItemReview(t, receiverID, dealID, itemID, 5, &comment)
+	review := mustCreateDealItemReview(t, receiverID, dealID, itemID, 5, new("excellent"))
 
 	require.NotNil(t, review.OfferRef)
 

@@ -542,7 +542,7 @@ func buildServiceRequest(net *testcontainers.DockerNetwork, service string, expo
 			Dockerfile:    "Dockerfile",
 			PrintBuildLog: false,
 			BuildArgs: map[string]*string{
-				"SERVICE": stringPtr(service),
+				"SERVICE": new(service),
 			},
 		},
 		ExposedPorts: exposedPorts,
@@ -765,10 +765,6 @@ func mustGetProjectRoot() string {
 func projectRoot(t *testing.T) string {
 	t.Helper()
 	return mustGetProjectRoot()
-}
-
-func stringPtr(value string) *string {
-	return &value
 }
 
 // ────────────────────────────────────────────────────────────────

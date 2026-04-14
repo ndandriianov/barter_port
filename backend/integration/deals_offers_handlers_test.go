@@ -196,7 +196,7 @@ func TestGetOffersMyTrueReturnsOnlyCurrentUserOffers(t *testing.T) {
 	offerA := mustCreateOffer(t, userA)
 	offerB := mustCreateOffer(t, userB)
 
-	result := mustGetOffers(t, userA, boolPtr(true))
+	result := mustGetOffers(t, userA, new(true))
 	require.NotEmpty(t, result.Offers)
 
 	var foundA, foundB bool
@@ -256,13 +256,11 @@ func TestUpdateOfferSuccess(t *testing.T) {
 
 	newName := "New name"
 	newDescription := "New description"
-	newType := types.Service
-	newAction := types.Take
 	updated := mustUpdateOffer(t, userID, offer.Id, types.UpdateOfferRequest{
 		Name:        &newName,
 		Description: &newDescription,
-		Type:        &newType,
-		Action:      &newAction,
+		Type:        new(types.Service),
+		Action:      new(types.Take),
 	})
 
 	require.Equal(t, offer.Id, updated.Id)
@@ -351,10 +349,8 @@ func TestUpdateOfferForbiddenForNonAuthor(t *testing.T) {
 	authorID := uuid.New()
 	otherUserID := uuid.New()
 	offerID := mustCreateOffer(t, authorID)
-	name := "Forbidden rename"
-
 	req := mustUserRequest(t, http.MethodPatch, dealsURL()+"/offers/"+offerID.String(), otherUserID, mustJSONBody(t, types.UpdateOfferRequest{
-		Name: &name,
+		Name: new("Forbidden rename"),
 	}))
 	req.Header.Set("Content-Type", "application/json")
 
