@@ -13,6 +13,7 @@ import (
 
 type UsersRepository interface {
 	GetUserById(ctx context.Context, id uuid.UUID) (*domain.User, error)
+	GetReputationPoints(ctx context.Context, id uuid.UUID) (int, error)
 	UpdateName(ctx context.Context, id uuid.UUID, name string) error
 	UpdateBio(ctx context.Context, id uuid.UUID, bio *string) error
 	UpdateAvatarURL(ctx context.Context, id uuid.UUID, avatarURL *string) error
@@ -30,13 +31,14 @@ type AvatarStorage interface {
 }
 
 type Me struct {
-	Id        uuid.UUID
-	Name      *string
-	Bio       *string
-	AvatarURL *string
-	Email     string
-	CreatedAt time.Time
-	IsAdmin   bool
+	Id               uuid.UUID
+	Name             *string
+	Bio              *string
+	AvatarURL        *string
+	Email            string
+	CreatedAt        time.Time
+	IsAdmin          bool
+	ReputationPoints int
 }
 
 type Service struct {
@@ -68,19 +70,25 @@ func (s *Service) GetMe(ctx context.Context, id uuid.UUID) (Me, error) {
 		return Me{}, err
 	}
 
+	reputationPoints, err := s.repository.GetReputationPoints(ctx, id)
+	if err != nil {
+		return Me{}, err
+	}
+
 	var createdAt time.Time
 	if ts := authMe.GetCreatedAt(); ts != nil {
 		createdAt = ts.AsTime()
 	}
 
 	return Me{
-		Id:        u.Id,
-		Name:      u.Name,
-		Bio:       u.Bio,
-		AvatarURL: u.AvatarURL,
-		Email:     authMe.GetEmail(),
-		CreatedAt: createdAt,
-		IsAdmin:   authMe.GetIsAdmin(),
+		Id:               u.Id,
+		Name:             u.Name,
+		Bio:              u.Bio,
+		AvatarURL:        u.AvatarURL,
+		Email:            authMe.GetEmail(),
+		CreatedAt:        createdAt,
+		IsAdmin:          authMe.GetIsAdmin(),
+		ReputationPoints: reputationPoints,
 	}, nil
 }
 

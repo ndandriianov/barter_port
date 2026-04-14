@@ -37,4 +37,10 @@ var (
 	ErrReceiverMissing         = errors.New("item has no receiver")
 	ErrProviderMissing         = errors.New("item has no provider")
 	ErrSameProviderAndReceiver = errors.New("provider and receiver are the same user")
+
+	ErrReportNotFound          = errors.New("report not found")
+	ErrAlreadyReviewed         = errors.New("report already reviewed")
+	ErrSelfReport              = errors.New("cannot report own offer")
+	ErrReporterAlreadyAttached = errors.New("reporter already attached to this report")
+	ErrModificationBlocked     = errors.New("offer modification is blocked due to pending report")
 )

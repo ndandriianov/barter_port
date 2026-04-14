@@ -238,13 +238,14 @@ func (h *Handlers) getMe(ctx context.Context, userID uuid.UUID) (types.Me, error
 	}
 
 	return types.Me{
-		Id:        me.Id,
-		Name:      me.Name,
-		Bio:       me.Bio,
-		AvatarUrl: me.AvatarURL,
-		Email:     me.Email, // TODO: конвертировать при отключенном bypass
-		CreatedAt: me.CreatedAt,
-		IsAdmin:   me.IsAdmin,
+		Id:               me.Id,
+		Name:             me.Name,
+		Bio:              me.Bio,
+		AvatarUrl:        me.AvatarURL,
+		Email:            me.Email, // TODO: конвертировать при отключенном bypass
+		CreatedAt:        me.CreatedAt,
+		IsAdmin:          me.IsAdmin,
+		ReputationPoints: me.ReputationPoints,
 	}, nil
 }
 

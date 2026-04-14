@@ -163,6 +163,22 @@ func (r *Repository) ListUsers(ctx context.Context) ([]domain.User, error) {
 	return users, nil
 }
 
+// GetReputationPoints returns the reputation_points of a user.
+//
+// Errors:
+//   - domain.ErrUserNotFound
+func (r *Repository) GetReputationPoints(ctx context.Context, id uuid.UUID) (int, error) {
+	var points int
+	err := r.db.QueryRow(ctx, `SELECT reputation_points FROM users WHERE id = $1`, id).Scan(&points)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return 0, domain.ErrUserNotFound
+		}
+		return 0, err
+	}
+	return points, nil
+}
+
 // GetNamesForUserIDs returns a map of user IDs to their corresponding names.
 //
 // No domain Errors
