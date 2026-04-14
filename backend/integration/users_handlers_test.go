@@ -15,7 +15,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
-	"github.com/testcontainers/testcontainers-go/network"
 )
 
 func TestMain(m *testing.M) {
@@ -25,14 +24,8 @@ func TestMain(m *testing.M) {
 func runTests(m *testing.M) int {
 	ctx := context.Background()
 
-	net, err := network.New(ctx)
-	if err != nil {
-		log.Printf("не удалось создать docker-сеть: %v", err)
-		return 1
-	}
-
 	var setupErr error
-	globalFixture, setupErr = newSharedFixture(ctx, net, FixtureOptions{
+	globalFixture, setupErr = newSharedFixture(ctx, FixtureOptions{
 		NeedAuth:  true,
 		NeedUsers: true,
 		NeedItems: true,
@@ -98,6 +91,100 @@ func TestUsersGetMe(t *testing.T) {
 	require.Nil(t, me.Bio)
 	require.Nil(t, me.AvatarUrl)
 	require.False(t, me.CreatedAt.IsZero())
+}
+
+func TestUsersGetCurrentUserReputationEvents(t *testing.T) {
+	t.Parallel()
+
+	fixture := globalFixture
+
+	registered := registerAuthUser(t, fixture)
+	waitForUsersProjection(t, fixture, registered.UserID)
+
+	usersDB := OpenDatabase(t, fixture, UsersDBName)
+	olderEventID := uuid.New()
+	olderSourceID := uuid.New()
+	olderCreatedAt := time.Now().UTC().Add(-2 * time.Minute)
+	olderComment := "manual adjustment"
+
+	_, err := usersDB.Exec(
+		context.Background(),
+		`INSERT INTO user_reputation_events (id, user_id, source_type, source_id, delta, created_at, comment)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		olderEventID,
+		registered.UserID,
+		"offerreport",
+		olderSourceID,
+		-5,
+		olderCreatedAt,
+		olderComment,
+	)
+	require.NoError(t, err)
+
+	newerEventID := uuid.New()
+	newerSourceID := uuid.New()
+	newerCreatedAt := time.Now().UTC().Add(-1 * time.Minute)
+
+	_, err = usersDB.Exec(
+		context.Background(),
+		`INSERT INTO user_reputation_events (id, user_id, source_type, source_id, delta, created_at, comment)
+		 VALUES ($1, $2, $3, $4, $5, $6, NULL)`,
+		newerEventID,
+		registered.UserID,
+		"offerreport",
+		newerSourceID,
+		10,
+		newerCreatedAt,
+	)
+	require.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodGet, fixture.UsersURL+"/users/reputation-events", nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, registered.UserID))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_ = resp.Body.Close()
+	})
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var events usertypes.GetReputationEventsResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&events))
+	require.Len(t, events, 2)
+
+	require.Equal(t, newerEventID, uuid.UUID(events[0].Id))
+	require.Equal(t, "offerreport", events[0].SourceType)
+	require.Equal(t, newerSourceID, uuid.UUID(events[0].SourceId))
+	require.Equal(t, 10, events[0].Delta)
+	require.True(t, events[0].CreatedAt.Equal(newerCreatedAt))
+	require.Nil(t, events[0].Comment)
+
+	require.Equal(t, olderEventID, uuid.UUID(events[1].Id))
+	require.Equal(t, "offerreport", events[1].SourceType)
+	require.Equal(t, olderSourceID, uuid.UUID(events[1].SourceId))
+	require.Equal(t, -5, events[1].Delta)
+	require.True(t, events[1].CreatedAt.Equal(olderCreatedAt))
+	require.NotNil(t, events[1].Comment)
+	require.Equal(t, olderComment, *events[1].Comment)
+}
+
+func TestUsersGetCurrentUserReputationEventsUnauthorized(t *testing.T) {
+	t.Parallel()
+
+	fixture := globalFixture
+
+	req, err := http.NewRequest(http.MethodGet, fixture.UsersURL+"/users/reputation-events", nil)
+	require.NoError(t, err)
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_ = resp.Body.Close()
+	})
+
+	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 }
 
 func TestUsersUpdateMeAndGetUser(t *testing.T) {

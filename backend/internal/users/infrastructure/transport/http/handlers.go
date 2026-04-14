@@ -95,6 +95,42 @@ func (h *Handlers) HandleGetMe(w http.ResponseWriter, r *http.Request) {
 }
 
 // ================================================================================
+// GetCurrentUserReputationEvents
+// ================================================================================
+
+func (h *Handlers) HandleGetCurrentUserReputationEvents(w http.ResponseWriter, r *http.Request) {
+	log := httplog.LogFrom(r.Context(), slog.Default())
+
+	userID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		log.Warn("failed to get user id from context")
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
+	events, err := h.userService.GetCurrentUserReputationEvents(r.Context(), userID)
+	if err != nil {
+		log.Error("failed to get current user reputation events", slog.String("user_id", userID.String()), slog.String("error", err.Error()))
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		return
+	}
+
+	response := make(types.GetReputationEventsResponse, 0, len(events))
+	for _, event := range events {
+		response = append(response, types.ReputationEvent{
+			Id:         event.Id,
+			SourceType: event.SourceType,
+			SourceId:   event.SourceID,
+			Delta:      event.Delta,
+			CreatedAt:  event.CreatedAt,
+			Comment:    event.Comment,
+		})
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, response)
+}
+
+// ================================================================================
 // UploadMeAvatar
 // ================================================================================
 

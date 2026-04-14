@@ -14,6 +14,7 @@ import (
 type UsersRepository interface {
 	GetUserById(ctx context.Context, id uuid.UUID) (*domain.User, error)
 	GetReputationPoints(ctx context.Context, id uuid.UUID) (int, error)
+	GetReputationEvents(ctx context.Context, id uuid.UUID) ([]domain.ReputationEvent, error)
 	UpdateName(ctx context.Context, id uuid.UUID, name string) error
 	UpdateBio(ctx context.Context, id uuid.UUID, bio *string) error
 	UpdateAvatarURL(ctx context.Context, id uuid.UUID, avatarURL *string) error
@@ -90,6 +91,10 @@ func (s *Service) GetMe(ctx context.Context, id uuid.UUID) (Me, error) {
 		IsAdmin:          authMe.GetIsAdmin(),
 		ReputationPoints: reputationPoints,
 	}, nil
+}
+
+func (s *Service) GetCurrentUserReputationEvents(ctx context.Context, id uuid.UUID) ([]domain.ReputationEvent, error) {
+	return s.repository.GetReputationEvents(ctx, id)
 }
 
 // UpdateName updates users name by id.

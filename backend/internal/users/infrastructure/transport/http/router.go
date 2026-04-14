@@ -46,6 +46,7 @@ func NewRouter(logg *slog.Logger, validator *validators.LocalJWT, h *Handlers) h
 		r.Use(logger.Middleware(logg))
 		r.Route("/users", func(r chi.Router) {
 			r.Get("/me", h.HandleGetMe)
+			r.Get("/reputation-events", h.HandleGetCurrentUserReputationEvents)
 			r.Post("/me/avatar", h.HandleUploadMeAvatar)
 			r.Patch("/me", h.HandleUpdateMe)
 			r.Get("/{id}", h.HandleGetUser)
