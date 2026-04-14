@@ -84,6 +84,7 @@ func NewRouter(
 			r.Post("/", offersHandlers.HandleCreateOffer)
 			r.Get("/", offersHandlers.HandleGetOffers)
 			r.Get("/{offerId}", offersHandlers.HandleGetOfferByID)
+			r.Post("/{offerId}/view", offersHandlers.HandleViewOfferByID)
 			r.Patch("/{offerId}", offersHandlers.HandleUpdateOffer)
 			r.Delete("/{offerId}", offersHandlers.HandleDeleteOffer)
 			r.Get("/{offerId}/reviews", reviewsHandlers.GetOfferReviews)
