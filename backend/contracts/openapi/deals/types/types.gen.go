@@ -79,6 +79,27 @@ func (e OfferAction) Valid() bool {
 	}
 }
 
+// Defines values for OfferReportStatus.
+const (
+	Accepted OfferReportStatus = "Accepted"
+	Pending  OfferReportStatus = "Pending"
+	Rejected OfferReportStatus = "Rejected"
+)
+
+// Valid indicates whether the value is a known member of the OfferReportStatus enum.
+func (e OfferReportStatus) Valid() bool {
+	switch e {
+	case Accepted:
+		return true
+	case Pending:
+		return true
+	case Rejected:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ReviewContextType.
 const (
 	ItemOnly  ReviewContextType = "item-only"
@@ -244,6 +265,13 @@ type CreateOfferGroupRequest struct {
 	// Units Список AND-групп. Для каждой группы при отклике должен быть выбран ровно один `offer`.
 	// Внутри одного `unit` все `offers` должны иметь одинаковый `action`.
 	Units []OfferGroupUnitInput `json:"units"`
+}
+
+// CreateOfferReportRequest defines model for CreateOfferReportRequest.
+type CreateOfferReportRequest struct {
+	// MessageId Идентификатор сообщения, на которое опирается жалоба.
+	// Хранится как внешний UUID без `FOREIGN KEY`, потому что сообщение находится в `chats` сервисе.
+	MessageId openapi_types.UUID `json:"messageId"`
 }
 
 // CreateOfferRequest defines model for CreateOfferRequest.
@@ -507,6 +535,9 @@ type ItemType string
 // ListOfferGroupsResponse defines model for ListOfferGroupsResponse.
 type ListOfferGroupsResponse = []OfferGroup
 
+// ListOfferReportsResponse defines model for ListOfferReportsResponse.
+type ListOfferReportsResponse = []OfferReport
+
 // ListOffersResponse defines model for ListOffersResponse.
 type ListOffersResponse struct {
 	// NextCursor Cursor for fetching the next page; null if there is no next page
@@ -556,6 +587,12 @@ type Offer struct {
 
 	// Id Unique item identifier
 	Id openapi_types.UUID `json:"id"`
+
+	// IsHidden Признак того, что объявление скрыто модератором.
+	IsHidden *bool `json:"isHidden,omitempty"`
+
+	// ModificationBlocked Признак того, что объявление временно заблокировано для редактирования из-за pending-жалобы.
+	ModificationBlocked *bool `json:"modificationBlocked,omitempty"`
 
 	// Name Short item title
 	Name string `json:"name"`
@@ -636,6 +673,48 @@ type OfferRef struct {
 	OfferId openapi_types.UUID `json:"offerId"`
 }
 
+// OfferReport defines model for OfferReport.
+type OfferReport struct {
+	AppliedPenaltyDelta *int                `json:"appliedPenaltyDelta,omitempty"`
+	CreatedAt           time.Time           `json:"createdAt"`
+	Id                  openapi_types.UUID  `json:"id"`
+	OfferAuthorId       openapi_types.UUID  `json:"offerAuthorId"`
+	OfferId             openapi_types.UUID  `json:"offerId"`
+	ResolutionComment   *string             `json:"resolutionComment,omitempty"`
+	ReviewedAt          *time.Time          `json:"reviewedAt,omitempty"`
+	ReviewedBy          *openapi_types.UUID `json:"reviewedBy,omitempty"`
+	Status              OfferReportStatus   `json:"status"`
+}
+
+// OfferReportDetails defines model for OfferReportDetails.
+type OfferReportDetails struct {
+	Messages []OfferReportMessage `json:"messages"`
+	Offer    Offer                `json:"offer"`
+	Report   OfferReport          `json:"report"`
+}
+
+// OfferReportMessage defines model for OfferReportMessage.
+type OfferReportMessage struct {
+	AuthorId      openapi_types.UUID `json:"authorId"`
+	MessageId     openapi_types.UUID `json:"messageId"`
+	OfferReportId openapi_types.UUID `json:"offerReportId"`
+}
+
+// OfferReportStatus defines model for OfferReportStatus.
+type OfferReportStatus string
+
+// OfferReportThread defines model for OfferReportThread.
+type OfferReportThread struct {
+	Messages []OfferReportMessage `json:"messages"`
+	Report   OfferReport          `json:"report"`
+}
+
+// OfferReportsForOffer defines model for OfferReportsForOffer.
+type OfferReportsForOffer struct {
+	Offer   Offer               `json:"offer"`
+	Reports []OfferReportThread `json:"reports"`
+}
+
 // OfferWithInfo defines model for OfferWithInfo.
 type OfferWithInfo struct {
 	// Action Whether the user offers or requests something
@@ -658,6 +737,12 @@ type OfferWithInfo struct {
 
 	// Id Unique item identifier
 	Id openapi_types.UUID `json:"id"`
+
+	// IsHidden Признак того, что объявление скрыто модератором.
+	IsHidden *bool `json:"isHidden,omitempty"`
+
+	// ModificationBlocked Признак того, что объявление временно заблокировано для редактирования из-за pending-жалобы.
+	ModificationBlocked *bool `json:"modificationBlocked,omitempty"`
 
 	// Name Short item title
 	Name string `json:"name"`
@@ -713,6 +798,17 @@ type PendingDealReview struct {
 	// Reason Причина, по которой отзыв недоступен для создания. Заполняется только если `canCreate = false`.
 	// Если `canCreate = true`, поле равно `null`.
 	Reason *ReviewEligibilityReason `json:"reason,omitempty"`
+}
+
+// ResolveOfferReportRequest defines model for ResolveOfferReportRequest.
+type ResolveOfferReportRequest struct {
+	// Accepted Решение администратора по жалобе.
+	// Если `true`, объявление скрывается и автор получает штраф `-10`.
+	// Если `false`, жалоба только помечается как отклоненная.
+	Accepted bool `json:"accepted"`
+
+	// Comment Необязательный комментарий администратора.
+	Comment *string `json:"comment,omitempty"`
 }
 
 // Review defines model for Review.
@@ -923,6 +1019,11 @@ type Limit = int
 // SortType defines model for SortType.
 type SortType string
 
+// ListOfferReportsForAdminParams defines parameters for ListOfferReportsForAdmin.
+type ListOfferReportsForAdminParams struct {
+	Status *OfferReportStatus `form:"status,omitempty" json:"status,omitempty"`
+}
+
 // GetDealsParams defines parameters for GetDeals.
 type GetDealsParams struct {
 	// My False by default. Если true, возвращает только сделки, в которых текущий пользователь является участником
@@ -969,6 +1070,9 @@ type ListOffersParams struct {
 // ListOffersParamsSort defines parameters for ListOffers.
 type ListOffersParamsSort string
 
+// ResolveOfferReportForAdminJSONRequestBody defines body for ResolveOfferReportForAdmin for application/json ContentType.
+type ResolveOfferReportForAdminJSONRequestBody = ResolveOfferReportRequest
+
 // CreateDraftDealJSONRequestBody defines body for CreateDraftDeal for application/json ContentType.
 type CreateDraftDealJSONRequestBody = CreateDraftDealRequest
 
@@ -1010,6 +1114,9 @@ type UpdateOfferByIdJSONRequestBody = UpdateOfferRequest
 
 // UpdateOfferByIdMultipartRequestBody defines body for UpdateOfferById for multipart/form-data ContentType.
 type UpdateOfferByIdMultipartRequestBody = UpdateOfferRequest
+
+// CreateOfferReportJSONRequestBody defines body for CreateOfferReport for application/json ContentType.
+type CreateOfferReportJSONRequestBody = CreateOfferReportRequest
 
 // UpdateReviewJSONRequestBody defines body for UpdateReview for application/json ContentType.
 type UpdateReviewJSONRequestBody = UpdateReviewRequest

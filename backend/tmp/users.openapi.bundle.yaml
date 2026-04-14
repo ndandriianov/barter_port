@@ -14,6 +14,7 @@ paths:
       description: |
         Возвращает информацию о текущем пользователе.
         Обращается к auth сервису для получения email, createdAt и признака admin.
+        Также возвращает текущий рейтинг пользователя (`reputationPoints`).
       operationId: getCurrentUser
       security:
         - bearerAuth: []
@@ -193,6 +194,10 @@ components:
       format: uri
       description: User avatar URL
       example: http://localhost:8333/avatars/user-123/avatar.jpg
+    ReputationPoints:
+      type: integer
+      description: Current user reputation score
+      example: -10
     Me:
       type: object
       required:
@@ -200,6 +205,7 @@ components:
         - email
         - createdAt
         - isAdmin
+        - reputationPoints
       properties:
         id:
           $ref: '#/components/schemas/UserId'
@@ -222,6 +228,8 @@ components:
           $ref: '#/components/schemas/Bio'
         avatarUrl:
           $ref: '#/components/schemas/AvatarUrl'
+        reputationPoints:
+          $ref: '#/components/schemas/ReputationPoints'
     ErrorResponse:
       type: object
       properties:

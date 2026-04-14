@@ -2236,6 +2236,192 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /offers/{offerId}/view:
+    post:
+      tags:
+        - offers
+      summary: Просмотр предложения
+      description: |
+        Увеличивает счетчик просмотров предложения.
+        Вызывается при открытии предложения пользователем.
+        Счетчик просмотров используется для сортировки по популярности.
+      operationId: viewOfferById
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: offerId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: OK
+        '400':
+          description: Invalid offer ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Offer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /offers/{offerId}/reports:
+    get:
+      tags:
+        - offers
+        - offer-reports
+      summary: Get reports for own offer
+      description: |
+        Возвращает жалобы на конкретное объявление вместе со связанными `messageId`.
+
+        Endpoint доступен:
+        - автору объявления;
+        - администратору.
+
+        Обычный пользователь, который не является автором этого `offer`, доступ не получает.
+      operationId: getOfferReportsByOfferId
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: offerId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Reports for offer
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfferReportsForOffer'
+        '400':
+          description: Invalid offer ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Offer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      tags:
+        - offers
+        - offer-reports
+      summary: Report offer
+      description: |
+        Создает жалобу на объявление.
+
+        Правила:
+        - пользователь не может жаловаться на собственное объявление;
+        - если по объявлению уже есть `Pending`-жалоба, новая запись в `offer_reports` не создается;
+        - вместо этого сообщение добавляется в `offer_reports_messages`;
+        - один пользователь может приложить только одно сообщение к одному `Pending`-репорту;
+        - если жалоба уже была рассмотрена, при следующем обращении создается новый `offer_report`.
+      operationId: createOfferReport
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: offerId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOfferReportRequest'
+      responses:
+        '200':
+          description: Message attached to existing pending report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfferReport'
+        '201':
+          description: New report created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfferReport'
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Offer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: User already attached a message to the current pending report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /offers/{offerId}/reviews:
     get:
       tags:
@@ -2338,6 +2524,184 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Offer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /admin/offer-reports:
+    get:
+      tags:
+        - admin
+        - offer-reports
+      summary: List offer reports for moderation
+      description: |
+        Возвращает список жалоб на объявления для администратора.
+
+        По умолчанию рекомендуется запрашивать только `Pending` жалобы.
+      operationId: listOfferReportsForAdmin
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/OfferReportStatus'
+      responses:
+        '200':
+          description: Offer reports page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListOfferReportsResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /admin/offer-reports/{reportId}:
+    get:
+      tags:
+        - admin
+        - offer-reports
+      summary: Get offer report details
+      description: |
+        Возвращает карточку жалобы для администратора:
+        - сам `offer`;
+        - сведения о жалобе;
+        - список связанных `messageId`.
+      operationId: getOfferReportByIdForAdmin
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: reportId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Offer report details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfferReportDetails'
+        '400':
+          description: Invalid report ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Report not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /admin/offer-reports/{reportId}/resolution:
+    post:
+      tags:
+        - admin
+        - offer-reports
+      summary: Resolve offer report
+      description: |
+        Позволяет администратору принять или отклонить жалобу.
+
+        Если жалоба принята:
+        - объявление скрывается;
+        - автор объявления получает штраф `-10`;
+        - событие для штрафа пишется в outbox таблицу.
+
+        Если жалоба отклонена:
+        - объявление остается видимым;
+        - жалоба только помечается как `Rejected`.
+      operationId: resolveOfferReportForAdmin
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: reportId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResolveOfferReportRequest'
+      responses:
+        '200':
+          description: Report resolved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OfferReport'
+        '400':
+          description: Invalid request body
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Admin only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Report not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Report already resolved
           content:
             application/json:
               schema:
@@ -2734,6 +3098,12 @@ components:
           format: date-time
           description: Item last update timestamp
           example: '2026-03-05T12:00:00Z'
+        isHidden:
+          type: boolean
+          description: Признак того, что объявление скрыто модератором.
+        modificationBlocked:
+          type: boolean
+          description: Признак того, что объявление временно заблокировано для редактирования из-за pending-жалобы.
         photoIds:
           type: array
           description: |
@@ -3558,10 +3928,133 @@ components:
           items:
             type: string
             format: binary
+    OfferReportStatus:
+      type: string
+      enum:
+        - Pending
+        - Accepted
+        - Rejected
+    OfferReport:
+      type: object
+      required:
+        - id
+        - offerId
+        - offerAuthorId
+        - status
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+        offerId:
+          type: string
+          format: uuid
+        offerAuthorId:
+          type: string
+          format: uuid
+        status:
+          $ref: '#/components/schemas/OfferReportStatus'
+        createdAt:
+          type: string
+          format: date-time
+        reviewedAt:
+          type: string
+          format: date-time
+        reviewedBy:
+          type: string
+          format: uuid
+        resolutionComment:
+          type: string
+        appliedPenaltyDelta:
+          type: integer
+    OfferReportMessage:
+      type: object
+      required:
+        - offerReportId
+        - authorId
+        - messageId
+      properties:
+        offerReportId:
+          type: string
+          format: uuid
+        authorId:
+          type: string
+          format: uuid
+        messageId:
+          type: string
+          format: uuid
+    OfferReportThread:
+      type: object
+      required:
+        - report
+        - messages
+      properties:
+        report:
+          $ref: '#/components/schemas/OfferReport'
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/OfferReportMessage'
+    OfferReportsForOffer:
+      type: object
+      required:
+        - offer
+        - reports
+      properties:
+        offer:
+          $ref: '#/components/schemas/Offer'
+        reports:
+          type: array
+          items:
+            $ref: '#/components/schemas/OfferReportThread'
+    CreateOfferReportRequest:
+      type: object
+      required:
+        - messageId
+      properties:
+        messageId:
+          type: string
+          format: uuid
+          description: |
+            Идентификатор сообщения, на которое опирается жалоба.
+            Хранится как внешний UUID без `FOREIGN KEY`, потому что сообщение находится в `chats` сервисе.
     GetOfferReviewsResponse:
       type: array
       items:
         $ref: '#/components/schemas/Review'
+    ListOfferReportsResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/OfferReport'
+    OfferReportDetails:
+      type: object
+      required:
+        - report
+        - offer
+        - messages
+      properties:
+        report:
+          $ref: '#/components/schemas/OfferReport'
+        offer:
+          $ref: '#/components/schemas/Offer'
+        messages:
+          type: array
+          items:
+            $ref: '#/components/schemas/OfferReportMessage'
+    ResolveOfferReportRequest:
+      type: object
+      required:
+        - accepted
+      properties:
+        accepted:
+          type: boolean
+          description: |
+            Решение администратора по жалобе.
+            Если `true`, объявление скрывается и автор получает штраф `-10`.
+            Если `false`, жалоба только помечается как отклоненная.
+        comment:
+          type: string
+          description: Необязательный комментарий администратора.
     OfferGroupUnit:
       type: object
       required:
