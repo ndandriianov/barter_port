@@ -6,3 +6,8 @@ GetUserResponse:
 
 UploadAvatarResponse:
   $ref: './schemas.yaml#/AvatarUploadResponse'
+
+GetReputationEventsResponse:
+    type: array
+    items:
+        $ref: './schemas.yaml#/ReputationEvent'
