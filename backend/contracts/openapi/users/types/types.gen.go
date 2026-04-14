@@ -30,6 +30,9 @@ type ErrorResponse struct {
 	Message *string `json:"message,omitempty"`
 }
 
+// GetReputationEventsResponse defines model for GetReputationEventsResponse.
+type GetReputationEventsResponse = []ReputationEvent
+
 // Me defines model for Me.
 type Me struct {
 	// AvatarUrl User avatar URL
@@ -59,6 +62,29 @@ type Me struct {
 
 // Name User name
 type Name = string
+
+// ReputationEvent defines model for ReputationEvent.
+type ReputationEvent struct {
+	// Comment Комментарий к изменению репутации (например, причина изменения)
+	Comment *string `json:"comment,omitempty"`
+
+	// CreatedAt Время изменения репутации
+	CreatedAt time.Time `json:"createdAt"`
+
+	// Delta Изменение репутации (положительное или отрицательное)
+	Delta int `json:"delta"`
+
+	// Id Уникальный идентификатор события репутации
+	Id openapi_types.UUID `json:"id"`
+
+	// SourceId Идентификатор источника изменения репутации:
+	// - для "offerreport" - id жалобы на оффер
+	SourceId openapi_types.UUID `json:"sourceId"`
+
+	// SourceType Источник изменения репутации. Возможные варианты:
+	// - "offerreport"
+	SourceType string `json:"sourceType"`
+}
 
 // ReputationPoints Current user reputation score
 type ReputationPoints = int
