@@ -169,6 +169,37 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /users/reputation-events:
+    get:
+      tags:
+        - users
+      summary: Получить события изменения репутации текущего пользователя
+      description: |
+        Возвращает список событий, связанных с изменением репутации текущего пользователя.
+        Каждое событие содержит информацию о том, что произошло, сколько очков репутации было добавлено или отнято,
+        и когда это произошло.
+      operationId: getCurrentUserReputationEvents
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Список событий изменения репутации
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetReputationEventsResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 components:
   securitySchemes:
     bearerAuth:
@@ -265,6 +296,44 @@ components:
           $ref: '#/components/schemas/Bio'
         avatarUrl:
           $ref: '#/components/schemas/AvatarUrl'
+    ReputationEvent:
+      type: object
+      required:
+        - id
+        - sourceType
+        - sourceId
+        - delta
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор события репутации
+        sourceType:
+          type: string
+          description: |
+            Источник изменения репутации. Возможные варианты: 
+            - "offerreport"
+        sourceId:
+          type: string
+          format: uuid
+          description: |
+            Идентификатор источника изменения репутации:
+            - для "offerreport" - id жалобы на оффер
+        delta:
+          type: integer
+          description: Изменение репутации (положительное или отрицательное)
+        createdAt:
+          type: string
+          format: date-time
+          description: Время изменения репутации
+        comment:
+          type: string
+          description: Комментарий к изменению репутации (например, причина изменения)
+    GetReputationEventsResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/ReputationEvent'
   parameters:
     Id:
       name: id
