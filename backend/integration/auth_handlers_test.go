@@ -376,6 +376,41 @@ func mustLogin(t *testing.T, email, password string) *http.Response {
 	return resp
 }
 
+func mustLoginAccessToken(t *testing.T, email, password string) string {
+	t.Helper()
+
+	resp := mustLogin(t, email, password)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var login loginResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&login))
+	require.NotEmpty(t, login.AccessToken)
+
+	return login.AccessToken
+}
+
+func mustUserIDByCreds(t *testing.T, email, password string) uuid.UUID {
+	t.Helper()
+
+	accessToken := mustLoginAccessToken(t, email, password)
+
+	req, err := http.NewRequest(http.MethodGet, globalFixture.AuthURL+"/auth/me", nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var me authMeResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&me))
+	require.NotEqual(t, uuid.Nil, me.UserID)
+
+	return me.UserID
+}
+
 // clientWithCookieJar возвращает HTTP-клиент с автоматической обработкой cookie.
 func clientWithCookieJar(t *testing.T) *http.Client {
 	t.Helper()
