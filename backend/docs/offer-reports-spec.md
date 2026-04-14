@@ -148,7 +148,10 @@ Payload события:
 
 ### Публичные offers endpoints
 
-- `GET /offers` не должен возвращать скрытые объявления.
+- `GET /offers`:
+  - для обычного пользователя не должен возвращать скрытые объявления;
+  - для автора может возвращать его собственные скрытые объявления;
+  - для администратора может возвращать скрытые объявления.
 - `GET /offers/{offerId}` для скрытого объявления должен возвращать `404`, если запрос не от администратора или не от автора объявления.
 - `GET /offers/{offerId}/reports` должен быть доступен автору объявления и администратору.
 - `PATCH /offers/{offerId}` и `DELETE /offers/{offerId}` должны возвращать `403`, если:
@@ -157,6 +160,7 @@ Payload события:
 
 ### Админские endpoints
 
+- `GET /admin/offer-reports` (без `status` возвращает все статусы)
 - `GET /admin/offer-reports?status=Pending|Accepted|Rejected`
 - `GET /admin/offer-reports/{reportId}`
 - `POST /admin/offer-reports/{reportId}/resolution`

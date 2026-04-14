@@ -7,6 +7,10 @@ offers:
       Returns a paginated list of offers.
       
       - If `my=true`, only offers created by the current user are returned.
+      - Hidden offers are not shown to regular users.
+      - Hidden offers are visible to:
+        - the offer author (including in `my=true` mode);
+        - admin users.
       
       Supported sorting modes:
       - `created_at`: newest offers first
@@ -103,7 +107,12 @@ offerById:
     tags:
       - offers
     summary: Get offer by ID
-    description: Returns a single offer by its ID.
+    description: |
+      Returns a single offer by its ID.
+
+      Visibility rules for hidden offers:
+      - author and admin can access the offer;
+      - other users receive `404 Not Found`.
     operationId: getOfferById
     security:
       - bearerAuth: [ ]
@@ -453,7 +462,12 @@ adminOfferReports:
     description: |
       Возвращает список жалоб на объявления для администратора.
 
-      По умолчанию рекомендуется запрашивать только `Pending` жалобы.
+      Если `status` не передан, возвращаются жалобы всех статусов:
+      - `Pending`
+      - `Accepted`
+      - `Rejected`
+
+      `status` можно использовать как опциональный фильтр.
     operationId: listOfferReportsForAdmin
     security:
       - bearerAuth: [ ]
@@ -461,6 +475,7 @@ adminOfferReports:
       - name: status
         in: query
         required: false
+        description: Optional status filter. If omitted, returns all statuses.
         schema:
           $ref: '../components/schemas.yaml#/OfferReportStatus'
     responses:
