@@ -6,6 +6,11 @@ import { Link as RouterLink } from "react-router-dom";
 import type { Offer, OfferAction, OfferType } from "@/features/offers/model/types";
 import reviewsApi from "@/features/reviews/api/reviewsApi.ts";
 import usersApi from "@/features/users/api/usersApi.ts";
+import offersApi from "@/features/offers/api/offersApi.ts";
+import {
+  getOfferModerationLabel,
+  getOfferModerationState,
+} from "@/features/offers/model/getOfferModerationState.ts";
 import UserAvatarLabel from "@/shared/UserAvatarLabel.tsx";
 
 const actionLabels: Record<OfferAction, string> = {
@@ -37,6 +42,7 @@ interface OfferCardProps {
   offerHref?: string;
   draftsHref?: string;
   onPhotoClick?: (photoUrl: string) => void;
+  showModerationState?: boolean;
 }
 
 function OfferCard({
@@ -46,12 +52,18 @@ function OfferCard({
   offerHref,
   draftsHref,
   onPhotoClick,
+  showModerationState = false,
 }: OfferCardProps) {
   const authorName = offer.authorName?.trim() || "Имя не указано";
   const { data: author } = usersApi.useGetUserByIdQuery(offer.authorId);
   const { data: summary } = reviewsApi.useGetOfferReviewsSummaryQuery(offer.id, {
     skip: !showRating,
   });
+  const { data: offerReports } = offersApi.useGetOfferReportsQuery(offer.id, {
+    skip: !showModerationState,
+  });
+  const moderationState = getOfferModerationState(offer, offerReports);
+  const moderationLabel = getOfferModerationLabel(moderationState);
 
   return (
     <Card variant="outlined" sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
@@ -74,6 +86,14 @@ function OfferCard({
         <Box display="flex" gap={1} mb={1} flexWrap="wrap">
           <Chip label={typeLabels[offer.type]} size="small" variant="outlined" />
           <Chip label={actionLabels[offer.action]} size="small" color={actionColors[offer.action]} />
+          {moderationLabel && (
+            <Chip
+              label={moderationLabel}
+              size="small"
+              color={moderationState === "hidden" ? "error" : moderationState === "pending" ? "warning" : "info"}
+              variant={moderationState === "hidden" ? "filled" : "outlined"}
+            />
+          )}
           {draftCount > 0 && (
             <Chip label={`Черновики: ${draftCount}`} size="small" color="warning" variant="outlined" />
           )}

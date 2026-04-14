@@ -25,6 +25,7 @@ import usersApi from "@/features/users/api/usersApi";
 import FailureModerationQueue from "@/widgets/deals/FailureModerationQueue.tsx";
 
 const quickActions = [
+  { label: "Жалобы на объявления", to: "/admin/offer-reports" },
   { label: "Открыть объявления", to: "/offers" },
   { label: "Открыть сделки", to: "/deals" },
   { label: "Открыть черновики", to: "/deals/drafts" },
@@ -215,6 +216,25 @@ function AdminPage() {
         Страница доступна только пользователям с `isAdmin = true`. Новые admin-эндпоинты можно
         добавлять поверх этой проверки без изменения структуры страницы.
       </Alert>
+
+      <Card variant="outlined" sx={{ borderRadius: 3 }}>
+        <CardContent>
+          <Box display="flex" justifyContent="space-between" alignItems="flex-start" gap={2} flexWrap="wrap">
+            <Box>
+              <Typography variant="h5" fontWeight={700} mb={1}>
+                Жалобы на объявления
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Отдельный раздел для ручной модерации жалоб на объявления, просмотра материалов и
+                принятия решения.
+              </Typography>
+            </Box>
+            <Button component={RouterLink} to="/admin/offer-reports" variant="contained">
+              Открыть раздел
+            </Button>
+          </Box>
+        </CardContent>
+      </Card>
 
       <FailureModerationQueue />
 

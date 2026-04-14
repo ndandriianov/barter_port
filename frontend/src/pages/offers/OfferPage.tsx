@@ -8,12 +8,15 @@ import reviewsApi from "@/features/reviews/api/reviewsApi.ts";
 import OfferCard from "@/widgets/offers/OfferCard";
 import RespondToOfferModal from "@/widgets/offers/RespondToOfferModal";
 import ReviewSummaryCard from "@/widgets/reviews/ReviewSummaryCard.tsx";
+import CreateOfferReportDialog from "@/widgets/offers/CreateOfferReportDialog.tsx";
 
 function OfferPage() {
   const { offerId } = useParams<{ offerId: string }>();
   const navigate = useNavigate();
   const [isRespondModalOpen, setIsRespondModalOpen] = useState(false);
+  const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
   const [openedPhotoUrl, setOpenedPhotoUrl] = useState<string | null>(null);
+  const [reportSuccessMessage, setReportSuccessMessage] = useState<string | null>(null);
   const viewedOfferIdsRef = useRef<Set<string>>(new Set());
   const { data: meData } = usersApi.useGetCurrentUserQuery();
   const [deleteOffer, { isLoading: isDeleting, error: deleteError }] = offersApi.useDeleteOfferMutation();
@@ -85,6 +88,7 @@ function OfferPage() {
 
       <OfferCard
         offer={offer}
+        showModerationState={isOwnOffer}
         draftCount={isOwnOffer ? (countsByOfferId[offer.id] ?? 0) : 0}
         draftsHref={
           isOwnOffer && (countsByOfferId[offer.id] ?? 0) > 0
@@ -135,6 +139,26 @@ function OfferPage() {
         </Alert>
       )}
 
+      {reportSuccessMessage && (
+        <Alert severity="success" sx={{ mb: 3 }} onClose={() => setReportSuccessMessage(null)}>
+          {reportSuccessMessage}
+        </Alert>
+      )}
+
+      {isOwnOffer && offer.isHidden && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          Объявление скрыто модератором. Оно остается в вашем списке, но недоступно для других
+          пользователей.
+        </Alert>
+      )}
+
+      {isOwnOffer && !offer.isHidden && offer.modificationBlocked && (
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          По объявлению идет разбирательство. Пока жалоба на модерации, редактирование и удаление
+          недоступны.
+        </Alert>
+      )}
+
       <Box display="flex" gap={2} flexWrap="wrap">
         {canRespond && (
           <Button variant="contained" onClick={() => setIsRespondModalOpen(true)}>
@@ -142,12 +166,22 @@ function OfferPage() {
           </Button>
         )}
         {isOwnOffer && (
-          <Button component={RouterLink} to={`/offers/${offer.id}/edit`} variant="contained">
+          <Button
+            component={RouterLink}
+            to={`/offers/${offer.id}/edit`}
+            variant="contained"
+            disabled={offer.isHidden || offer.modificationBlocked}
+          >
             Редактировать
           </Button>
         )}
         {isOwnOffer && (
-          <Button variant="outlined" color="error" onClick={handleDelete} disabled={isDeleting}>
+          <Button
+            variant="outlined"
+            color="error"
+            onClick={handleDelete}
+            disabled={isDeleting || offer.isHidden || offer.modificationBlocked}
+          >
             {isDeleting ? "Удаление..." : "Удалить"}
           </Button>
         )}
@@ -157,7 +191,12 @@ function OfferPage() {
         <Button component={RouterLink} to={`/users/${offer.authorId}/reviews`} variant="outlined">
           Отзывы о поставщике
         </Button>
-        <Button variant="outlined" color="error">
+        <Button
+          variant="outlined"
+          color="error"
+          onClick={() => setIsReportDialogOpen(true)}
+          disabled={!canRespond}
+        >
           Пожаловаться
         </Button>
       </Box>
@@ -167,6 +206,15 @@ function OfferPage() {
         isOpen={isRespondModalOpen}
         onClose={() => setIsRespondModalOpen(false)}
       />
+
+      {offerId && (
+        <CreateOfferReportDialog
+          offerId={offerId}
+          open={isReportDialogOpen}
+          onClose={() => setIsReportDialogOpen(false)}
+          onSuccess={() => setReportSuccessMessage("Жалоба отправлена и добавлена в очередь модерации.")}
+        />
+      )}
 
       <Dialog
         open={openedPhotoUrl !== null}

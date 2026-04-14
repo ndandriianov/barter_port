@@ -1,6 +1,19 @@
 import { useMemo, useRef, useState } from "react";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
-import { Alert, Avatar, Box, Button, Card, CardContent, CircularProgress, Divider, Stack, TextField, Typography } from "@mui/material";
+import {
+  Alert,
+  Avatar,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  CircularProgress,
+  Divider,
+  Drawer,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import usersApi from "@/features/users/api/usersApi";
 import { useAppDispatch } from "@/hooks/redux";
@@ -22,6 +35,7 @@ function ProfilePage() {
   const [draftAvatarUrl, setDraftAvatarUrl] = useState<string | null>(null);
   const [draftAvatarFile, setDraftAvatarFile] = useState<File | null>(null);
   const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [isReputationDrawerOpen, setIsReputationDrawerOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const currentName = draftName ?? (data?.name ?? "");
@@ -190,6 +204,14 @@ function ProfilePage() {
                 {new Date(data.createdAt).toLocaleString("ru-RU")}
               </Typography>
             </Box>
+            <Box>
+              <Typography variant="caption" color="text.secondary">
+                Рейтинг
+              </Typography>
+              <Typography variant="h6" fontWeight={700}>
+                {data.reputationPoints}
+              </Typography>
+            </Box>
           </Stack>
 
           <Divider sx={{ mb: 3 }} />
@@ -255,6 +277,12 @@ function ProfilePage() {
             <Button variant="outlined" onClick={() => refetch()} disabled={isSubmitting}>
               Обновить
             </Button>
+            <Button variant="outlined" onClick={() => setIsReputationDrawerOpen(true)}>
+              История рейтинга
+            </Button>
+            <Button component={RouterLink} to="/offer-reports/mine" variant="outlined" color="warning">
+              Жалобы на меня
+            </Button>
           </Box>
 
           <Divider sx={{ my: 3 }} />
@@ -272,6 +300,26 @@ function ProfilePage() {
           </Box>
         </CardContent>
       </Card>
+
+      <Drawer
+        anchor="right"
+        open={isReputationDrawerOpen}
+        onClose={() => setIsReputationDrawerOpen(false)}
+      >
+        <Box sx={{ width: { xs: 320, sm: 420 }, p: 3 }}>
+          <Typography variant="h5" fontWeight={700} mb={1}>
+            История рейтинга
+          </Typography>
+          <Typography variant="body2" color="text.secondary" mb={3}>
+            Текущее значение рейтинга: <strong>{data.reputationPoints}</strong>
+          </Typography>
+
+          <Alert severity="info">
+            История `user_reputation_events` пока не отдается отдельным backend endpoint, поэтому
+            в этом drawer сейчас доступно только текущее значение рейтинга.
+          </Alert>
+        </Box>
+      </Drawer>
     </Box>
   );
 }

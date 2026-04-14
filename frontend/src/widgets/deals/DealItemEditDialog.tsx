@@ -67,19 +67,6 @@ function DealItemEditDialog({ item, dealId, open, onClose }: DealItemEditDialogP
   const activeExistingPhotoCount = existingPhotos.filter((photo) => !deletedPhotoIds.includes(photo.id)).length;
 
   useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    setName(item.name);
-    setDescription(item.description);
-    setQuantity(String(item.quantity));
-    setPhotos([]);
-    setDeletedPhotoIds([]);
-    setPhotoError(null);
-  }, [item, open]);
-
-  useEffect(() => {
     return () => {
       for (const { url } of photoPreviewUrls) {
         URL.revokeObjectURL(url);
@@ -181,8 +168,16 @@ function DealItemEditDialog({ item, dealId, open, onClose }: DealItemEditDialogP
     onClose();
   };
 
+  const dialogKey = `${item.id}-${item.updatedAt ?? item.quantity}-${open ? "open" : "closed"}`;
+
   return (
-    <Dialog open={open} onClose={updateState.isLoading ? undefined : onClose} fullWidth maxWidth="sm">
+    <Dialog
+      key={dialogKey}
+      open={open}
+      onClose={updateState.isLoading ? undefined : onClose}
+      fullWidth
+      maxWidth="sm"
+    >
       <DialogTitle>Редактировать позицию</DialogTitle>
       <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 2 }}>
         <input
