@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import { Alert, Box, Button, CircularProgress, Dialog, DialogContent, Divider, ImageList, ImageListItem, Typography } from "@mui/material";
 import offersApi from "@/features/offers/api/offersApi";
@@ -14,8 +14,10 @@ function OfferPage() {
   const navigate = useNavigate();
   const [isRespondModalOpen, setIsRespondModalOpen] = useState(false);
   const [openedPhotoUrl, setOpenedPhotoUrl] = useState<string | null>(null);
+  const viewedOfferIdsRef = useRef<Set<string>>(new Set());
   const { data: meData } = usersApi.useGetCurrentUserQuery();
   const [deleteOffer, { isLoading: isDeleting, error: deleteError }] = offersApi.useDeleteOfferMutation();
+  const [viewOfferById] = offersApi.useViewOfferByIdMutation();
 
   const { data: offer, isLoading, error } = offersApi.useGetOfferByIdQuery(offerId ?? "", {
     skip: !offerId,
@@ -25,6 +27,17 @@ function OfferPage() {
   });
   const isOwnOffer = !!meData && !!offer && offer.authorId === meData.id;
   const { countsByOfferId } = useDraftOfferCounts({ enabled: isOwnOffer });
+
+  useEffect(() => {
+    if (!offer || !meData || offer.authorId === meData.id || viewedOfferIdsRef.current.has(offer.id)) {
+      return;
+    }
+
+    viewedOfferIdsRef.current.add(offer.id);
+    void viewOfferById(offer.id).unwrap().catch(() => {
+      viewedOfferIdsRef.current.delete(offer.id);
+    });
+  }, [meData, offer, viewOfferById]);
 
   if (!offerId) return <Alert severity="warning">Объявление не найдено</Alert>;
 
