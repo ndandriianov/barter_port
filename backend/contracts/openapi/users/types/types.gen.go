@@ -52,10 +52,16 @@ type Me struct {
 
 	// Name User name
 	Name *Name `json:"name,omitempty"`
+
+	// ReputationPoints Current user reputation score
+	ReputationPoints ReputationPoints `json:"reputationPoints"`
 }
 
 // Name User name
 type Name = string
+
+// ReputationPoints Current user reputation score
+type ReputationPoints = int
 
 // UpdateUserRequest defines model for UpdateUserRequest.
 type UpdateUserRequest struct {
