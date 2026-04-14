@@ -140,6 +140,78 @@ func TestGetOfferByIDUnauthorized(t *testing.T) {
 	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 }
 
+func TestViewOfferByIDSuccess(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	authorID := uuid.New()
+	viewerID := uuid.New()
+	offerID := mustCreateOffer(t, authorID)
+
+	before := mustGetOfferByID(t, viewerID, offerID)
+	require.EqualValues(t, 0, before.Views)
+
+	mustViewOfferByID(t, viewerID, offerID)
+
+	after := mustGetOfferByID(t, viewerID, offerID)
+	require.EqualValues(t, 1, after.Views)
+}
+
+func TestViewOfferByIDAffectsPopularitySorting(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	authorID := uuid.New()
+	viewerID := uuid.New()
+
+	popularOffer := mustCreateOffer(t, authorID)
+	lessPopularOffer := mustCreateOffer(t, authorID)
+
+	mustViewOfferByID(t, viewerID, popularOffer)
+	mustViewOfferByID(t, viewerID, popularOffer)
+	mustViewOfferByID(t, viewerID, lessPopularOffer)
+
+	result := mustGetOffersBySort(t, authorID, "ByPopularity", new(true))
+	require.Len(t, result.Offers, 2)
+	require.Equal(t, popularOffer, result.Offers[0].Id)
+	require.EqualValues(t, 2, result.Offers[0].Views)
+	require.Equal(t, lessPopularOffer, result.Offers[1].Id)
+	require.EqualValues(t, 1, result.Offers[1].Views)
+}
+
+func TestViewOfferByIDNotFound(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	req := mustUserRequest(t, http.MethodPost, dealsURL()+"/offers/"+uuid.NewString()+"/view", userID, nil)
+
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
+
+func TestViewOfferByIDInvalidUUID(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	req := mustUserRequest(t, http.MethodPost, dealsURL()+"/offers/not-a-uuid/view", userID, nil)
+
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestViewOfferByIDUnauthorized(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	resp := mustDo(t, mustRequest(t, http.MethodPost, dealsURL()+"/offers/"+uuid.NewString()+"/view", nil))
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+}
+
 func TestGetOffersUnauthorized(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)

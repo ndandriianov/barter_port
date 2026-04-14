@@ -196,7 +196,13 @@ func mustGetOfferByID(t *testing.T, userID uuid.UUID, offerID uuid.UUID) types.O
 func mustGetOffers(t *testing.T, userID uuid.UUID, my *bool) types.ListOffersResponse {
 	t.Helper()
 
-	url := dealsURL() + "/offers?sort=ByTime&cursor_limit=100"
+	return mustGetOffersBySort(t, userID, "ByTime", my)
+}
+
+func mustGetOffersBySort(t *testing.T, userID uuid.UUID, sort string, my *bool) types.ListOffersResponse {
+	t.Helper()
+
+	url := dealsURL() + "/offers?sort=" + sort + "&cursor_limit=100"
 	if my != nil {
 		url += fmt.Sprintf("&my=%t", *my)
 	}
@@ -210,6 +216,15 @@ func mustGetOffers(t *testing.T, userID uuid.UUID, my *bool) types.ListOffersRes
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
 
 	return result
+}
+
+func mustViewOfferByID(t *testing.T, userID uuid.UUID, offerID uuid.UUID) {
+	t.Helper()
+
+	req := mustUserRequest(t, http.MethodPost, dealsURL()+"/offers/"+offerID.String()+"/view", userID, nil)
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
 }
 
 func mustUpdateOffer(t *testing.T, userID uuid.UUID, offerID uuid.UUID, body types.UpdateOfferRequest) types.Offer {
