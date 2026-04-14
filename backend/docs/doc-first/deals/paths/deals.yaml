@@ -80,6 +80,9 @@ dealItemById:
         application/json:
           schema:
             $ref: '../components/schemas.yaml#/UpdateDealItemRequest'
+        multipart/form-data:
+          schema:
+            $ref: '../components/schemas.yaml#/UpdateDealItemRequest'
     responses:
       '200':
         description: Обновлённая позиция сделки

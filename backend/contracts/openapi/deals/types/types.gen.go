@@ -261,29 +261,6 @@ type CreateOfferRequest struct {
 	Type ItemType `json:"type"`
 }
 
-// UpdateOfferRequest Хотя бы одно поле обязательно.
-// Редактировать объявление может только его автор.
-type UpdateOfferRequest struct {
-	// Action Whether the user offers or requests something
-	Action *OfferAction `json:"action,omitempty"`
-
-	// DeletePhotoIds Идентификаторы существующих фотографий, которые нужно удалить.
-	// Порядок остальных фотографий сохраняется, новые добавляются в конец.
-	DeletePhotoIds *[]openapi_types.UUID `json:"deletePhotoIds,omitempty"`
-
-	Description *string `json:"description,omitempty"`
-
-	Name *string `json:"name,omitempty"`
-
-	// Photos Новые фотографии объявления.
-	// Каждая фотография передается отдельным бинарным файлом в `multipart/form-data`
-	// и будет добавлена в конец списка после оставшихся фотографий.
-	Photos *[]openapi_types.File `json:"photos,omitempty"`
-
-	// Type Type of barter item
-	Type *ItemType `json:"type,omitempty"`
-}
-
 // CreateReviewRequest defines model for CreateReviewRequest.
 type CreateReviewRequest struct {
 	// Comment Текстовый отзыв после завершения сделки.
@@ -304,7 +281,7 @@ type Deal struct {
 	// Id Уникальный идентификатор сделки
 	Id openapi_types.UUID `json:"id"`
 
-	// Items Список позиций сделки
+	// Items Список позиций сделки вместе с фотографиями, принадлежащими самим item
 	Items []Item `json:"items"`
 
 	// Name Название сделки
@@ -498,17 +475,18 @@ type Item struct {
 	// Name Краткое название позиции сделки
 	Name string `json:"name"`
 
-	// OfferId Идентификатор исходного offer, на базе которого создана позиция сделки
+	// OfferId Идентификатор исходного offer, на базе которого создана позиция сделки.
+	// При создании item фотографии offer копируются в item, поэтому дальнейшие изменения фотографий offer на item не влияют.
 	OfferId *openapi_types.UUID `json:"offerId,omitempty"`
-
-	// ProviderId Уникальный идентификатор пользователя, который отдает эту позицию в сделке
-	ProviderId *openapi_types.UUID `json:"providerId,omitempty"`
 
 	// PhotoIds Идентификаторы фотографий позиции сделки в том же порядке, что и `photoUrls`.
 	PhotoIds *[]openapi_types.UUID `json:"photoIds,omitempty"`
 
 	// PhotoUrls Публичные URL фотографий позиции сделки
 	PhotoUrls *[]string `json:"photoUrls,omitempty"`
+
+	// ProviderId Уникальный идентификатор пользователя, который отдает эту позицию в сделке
+	ProviderId *openapi_types.UUID `json:"providerId,omitempty"`
 
 	// Quantity Количество позиций этого типа в сделке
 	Quantity int `json:"quantity"`
@@ -852,11 +830,20 @@ type UpdateDealItemRequest struct {
 	// ClaimReceiver Назначить текущего пользователя получателем (только если слот свободен и пользователь не является provider этой же позиции)
 	ClaimReceiver *bool `json:"claimReceiver,omitempty"`
 
+	// DeletePhotoIds Идентификаторы существующих фотографий позиции, которые нужно удалить.
+	// Порядок остальных фотографий сохраняется, новые добавляются в конец.
+	DeletePhotoIds *[]openapi_types.UUID `json:"deletePhotoIds,omitempty"`
+
 	// Description Новое описание позиции (только для автора)
 	Description *string `json:"description,omitempty"`
 
 	// Name Новое название позиции (только для автора)
 	Name *string `json:"name,omitempty"`
+
+	// Photos Новые фотографии позиции сделки.
+	// Каждая фотография передается отдельным бинарным файлом в `multipart/form-data`
+	// и будет добавлена в конец списка после оставшихся фотографий.
+	Photos *[]openapi_types.File `json:"photos,omitempty"`
 
 	// Quantity Новое количество (только для автора)
 	Quantity *int `json:"quantity,omitempty"`
@@ -872,6 +859,27 @@ type UpdateDealItemRequest struct {
 type UpdateDealRequest struct {
 	// Name Новое название сделки
 	Name string `json:"name"`
+}
+
+// UpdateOfferRequest Хотя бы одно поле обязательно.
+// Редактировать объявление может только его автор.
+type UpdateOfferRequest struct {
+	// Action Whether the user offers or requests something
+	Action *OfferAction `json:"action,omitempty"`
+
+	// DeletePhotoIds Идентификаторы существующих фотографий, которые нужно удалить.
+	// Порядок остальных фотографий сохраняется, новые добавляются в конец.
+	DeletePhotoIds *[]openapi_types.UUID `json:"deletePhotoIds,omitempty"`
+	Description    *string               `json:"description,omitempty"`
+	Name           *string               `json:"name,omitempty"`
+
+	// Photos Новые фотографии объявления.
+	// Каждая фотография передается отдельным бинарным файлом в `multipart/form-data`
+	// и будет добавлена в конец списка после оставшихся фотографий.
+	Photos *[]openapi_types.File `json:"photos,omitempty"`
+
+	// Type Type of barter item
+	Type *ItemType `json:"type,omitempty"`
 }
 
 // UpdateReviewRequest Хотя бы одно поле обязательно.
@@ -979,6 +987,9 @@ type AddDealItemJSONRequestBody = AddDealItemRequest
 // UpdateDealItemJSONRequestBody defines body for UpdateDealItem for application/json ContentType.
 type UpdateDealItemJSONRequestBody = UpdateDealItemRequest
 
+// UpdateDealItemMultipartRequestBody defines body for UpdateDealItem for multipart/form-data ContentType.
+type UpdateDealItemMultipartRequestBody = UpdateDealItemRequest
+
 // CreateDealItemReviewJSONRequestBody defines body for CreateDealItemReview for application/json ContentType.
 type CreateDealItemReviewJSONRequestBody = CreateReviewRequest
 
@@ -994,8 +1005,11 @@ type CreateDraftDealFromOfferGroupJSONRequestBody = CreateOfferGroupDraftRequest
 // CreateOffersMultipartRequestBody defines body for CreateOffers for multipart/form-data ContentType.
 type CreateOffersMultipartRequestBody = CreateOfferRequest
 
-// UpdateOfferJSONRequestBody defines body for UpdateOfferById for application/json ContentType.
-type UpdateOfferJSONRequestBody = UpdateOfferRequest
+// UpdateOfferByIdJSONRequestBody defines body for UpdateOfferById for application/json ContentType.
+type UpdateOfferByIdJSONRequestBody = UpdateOfferRequest
+
+// UpdateOfferByIdMultipartRequestBody defines body for UpdateOfferById for multipart/form-data ContentType.
+type UpdateOfferByIdMultipartRequestBody = UpdateOfferRequest
 
 // UpdateReviewJSONRequestBody defines body for UpdateReview for application/json ContentType.
 type UpdateReviewJSONRequestBody = UpdateReviewRequest
