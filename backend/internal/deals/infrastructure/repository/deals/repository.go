@@ -287,6 +287,68 @@ func (r *Repository) AddItemPhotos(ctx context.Context, exec db.DB, photos []dom
 	return nil
 }
 
+func (r *Repository) GetItem(ctx context.Context, exec db.DB, dealID, itemID uuid.UUID) (domain.Item, error) {
+	const query = `
+		SELECT id, offer_id, author_id, provider_id, receiver_id,
+		       name, description, type, updated_at, quantity,
+		       COALESCE((SELECT array_agg(ip.id ORDER BY ip.position) FROM items_photos ip WHERE ip.item_id = items.id), '{}'::uuid[]),
+		       COALESCE((SELECT array_agg(ip.url ORDER BY ip.position) FROM items_photos ip WHERE ip.item_id = items.id), '{}'::text[])
+		FROM items
+		WHERE id = $1 AND deal_id = $2`
+
+	item, err := scanItem(exec.QueryRow(ctx, query, itemID, dealID))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return domain.Item{}, domain.ErrItemNotFound
+	}
+	if err != nil {
+		return domain.Item{}, fmt.Errorf("sql get item: %w", err)
+	}
+
+	return item, nil
+}
+
+func (r *Repository) GetItemPhotos(ctx context.Context, exec db.DB, itemID uuid.UUID) ([]domain.ItemPhoto, error) {
+	const query = `
+		SELECT id, item_id, url, position
+		FROM items_photos
+		WHERE item_id = $1
+		ORDER BY position`
+
+	rows, err := exec.Query(ctx, query, itemID)
+	if err != nil {
+		return nil, fmt.Errorf("sql get item photos: %w", err)
+	}
+	defer rows.Close()
+
+	result := make([]domain.ItemPhoto, 0)
+	for rows.Next() {
+		var photo domain.ItemPhoto
+		if err = rows.Scan(&photo.ID, &photo.ItemID, &photo.URL, &photo.Position); err != nil {
+			return nil, fmt.Errorf("scan item photo: %w", err)
+		}
+		result = append(result, photo)
+	}
+
+	return result, rows.Err()
+}
+
+func (r *Repository) DeleteItemPhotos(ctx context.Context, exec db.DB, itemID uuid.UUID, photoIDs []uuid.UUID) error {
+	if len(photoIDs) == 0 {
+		return nil
+	}
+
+	const query = `
+		DELETE FROM items_photos
+		WHERE item_id = $1
+		  AND id = ANY($2)`
+
+	if _, err := exec.Exec(ctx, query, itemID, photoIDs); err != nil {
+		return fmt.Errorf("delete item photos: %w", err)
+	}
+
+	return nil
+}
+
 // ================================================================================
 // GET ITEM ROLE IDS
 // ================================================================================

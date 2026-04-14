@@ -33,6 +33,15 @@ func (s *Storage) CopyPhoto(ctx context.Context, sourceURL string, itemID uuid.U
 	return s.ManagedPhotoURL(itemID, index), nil
 }
 
+func (s *Storage) UploadPhoto(ctx context.Context, itemID uuid.UUID, index int, contentType string, content []byte) (string, error) {
+	key := s.objectKey(itemID, index)
+	if err := s.storage.PutObject(ctx, key, contentType, content); err != nil {
+		return "", fmt.Errorf("put item photo object: %w", err)
+	}
+
+	return s.ManagedPhotoURL(itemID, index), nil
+}
+
 func (s *Storage) DeletePhoto(ctx context.Context, itemID uuid.UUID, index int) error {
 	if err := s.storage.DeleteObject(ctx, s.objectKey(itemID, index)); err != nil {
 		return fmt.Errorf("delete item photo object: %w", err)

@@ -10,8 +10,12 @@ import (
 	"barter-port/pkg/httpx"
 	"barter-port/pkg/logger"
 	"errors"
+	"io"
 	"log/slog"
+	"mime/multipart"
 	"net/http"
+	"strconv"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -21,6 +25,11 @@ type Handlers struct {
 	log          *slog.Logger
 	dealsService *dealssvc.Service
 }
+
+const (
+	maxItemPhotoUploadSize = 5 * 1024 * 1024
+	maxItemPhotoCount      = 10
+)
 
 func NewHandlers(log *slog.Logger, dealsService *dealssvc.Service) *Handlers {
 	return &Handlers{
@@ -227,11 +236,13 @@ func (h *Handlers) UpdateDealItem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var req types.UpdateDealItemRequest
-	if err = httpx.DecodeJSON(r, &req); err != nil {
-		log.Error("error decoding request", slog.Any("error", err))
-		httpx.WriteError(w, http.StatusBadRequest, httpx.ErrCannotDecodeRequestBody)
+	req, photos, err := decodeUpdateDealItemRequest(w, r)
+	if err != nil {
+		httpx.WriteErrorStr(w, http.StatusBadRequest, err.Error())
 		return
+	}
+	if r.MultipartForm != nil {
+		defer func() { _ = r.MultipartForm.RemoveAll() }()
 	}
 
 	claimProvider := req.ClaimProvider != nil && *req.ClaimProvider
@@ -240,8 +251,9 @@ func (h *Handlers) UpdateDealItem(w http.ResponseWriter, r *http.Request) {
 	releaseReceiver := req.ReleaseReceiver != nil && *req.ReleaseReceiver
 
 	hasContent := req.Name != nil || req.Description != nil || req.Quantity != nil
+	hasPhotos := (req.DeletePhotoIds != nil && len(*req.DeletePhotoIds) > 0) || len(photos) > 0
 	hasRole := claimProvider || releaseProvider || claimReceiver || releaseReceiver
-	if !hasContent && !hasRole {
+	if !hasContent && !hasRole && !hasPhotos {
 		httpx.WriteEmptyError(w, http.StatusBadRequest)
 		return
 	}
@@ -262,20 +274,31 @@ func (h *Handlers) UpdateDealItem(w http.ResponseWriter, r *http.Request) {
 		ClaimReceiver:   claimReceiver,
 		ReleaseReceiver: releaseReceiver,
 	}
+	if req.DeletePhotoIds != nil {
+		patch.DeletePhotoIds = make([]uuid.UUID, 0, len(*req.DeletePhotoIds))
+		for _, photoID := range *req.DeletePhotoIds {
+			patch.DeletePhotoIds = append(patch.DeletePhotoIds, photoID)
+		}
+	}
 
-	item, err := h.dealsService.UpdateDealItem(r.Context(), userID, dealID, itemID, patch)
+	item, err := h.dealsService.UpdateDealItem(r.Context(), userID, dealID, itemID, patch, photos)
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrDealNotFound), errors.Is(err, domain.ErrItemNotFound):
 			httpx.WriteEmptyError(w, http.StatusNotFound)
 		case errors.Is(err, domain.ErrInvalidDealStatus):
 			httpx.WriteEmptyError(w, http.StatusBadRequest)
+		case errors.Is(err, dealssvc.ErrItemPhotoLimitExceeded), errors.Is(err, dealssvc.ErrItemPhotoNotFound):
+			httpx.WriteErrorStr(w, http.StatusBadRequest, err.Error())
 		case errors.Is(err, domain.ErrForbidden),
 			errors.Is(err, domain.ErrFailureReviewRequired),
 			errors.Is(err, domain.ErrRoleAlreadyTaken),
 			errors.Is(err, domain.ErrNotRoleHolder),
 			errors.Is(err, domain.ErrDuplicateRole):
 			httpx.WriteEmptyError(w, http.StatusForbidden)
+		case errors.Is(err, dealssvc.ErrItemPhotoStorageNotConfigured):
+			log.Error("item photo storage is not configured", slog.Any("error", err))
+			httpx.WriteEmptyError(w, http.StatusInternalServerError)
 		default:
 			log.Error("error updating deal item", slog.Any("error", err))
 			httpx.WriteEmptyError(w, http.StatusInternalServerError)
@@ -284,6 +307,141 @@ func (h *Handlers) UpdateDealItem(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpx.WriteJSON(w, http.StatusOK, item.ToDTO())
+}
+
+func decodeUpdateDealItemRequest(w http.ResponseWriter, r *http.Request) (types.UpdateDealItemRequest, []dealssvc.PhotoUpload, error) {
+	if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
+		return decodeUpdateDealItemMultipartRequest(w, r)
+	}
+
+	var req types.UpdateDealItemRequest
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		return types.UpdateDealItemRequest{}, nil, httpx.ErrCannotDecodeRequestBody
+	}
+
+	return req, nil, nil
+}
+
+func decodeUpdateDealItemMultipartRequest(w http.ResponseWriter, r *http.Request) (types.UpdateDealItemRequest, []dealssvc.PhotoUpload, error) {
+	maxBodySize := int64(maxItemPhotoCount*maxItemPhotoUploadSize + (1 << 20))
+	r.Body = http.MaxBytesReader(w, r.Body, maxBodySize)
+	if err := r.ParseMultipartForm(maxBodySize); err != nil {
+		return types.UpdateDealItemRequest{}, nil, errors.New("invalid item upload")
+	}
+
+	values := r.MultipartForm.Value
+	req := types.UpdateDealItemRequest{}
+
+	if value, ok := firstMultipartValue(values, "name"); ok {
+		req.Name = &value
+	}
+	if value, ok := firstMultipartValue(values, "description"); ok {
+		req.Description = &value
+	}
+	if value, ok := firstMultipartValue(values, "quantity"); ok {
+		quantity, err := strconv.Atoi(value)
+		if err != nil {
+			return types.UpdateDealItemRequest{}, nil, errors.New("invalid quantity")
+		}
+		req.Quantity = &quantity
+	}
+	if value, ok := firstMultipartValue(values, "claimProvider"); ok {
+		parsed, err := strconv.ParseBool(value)
+		if err != nil {
+			return types.UpdateDealItemRequest{}, nil, errors.New("invalid claimProvider")
+		}
+		req.ClaimProvider = &parsed
+	}
+	if value, ok := firstMultipartValue(values, "releaseProvider"); ok {
+		parsed, err := strconv.ParseBool(value)
+		if err != nil {
+			return types.UpdateDealItemRequest{}, nil, errors.New("invalid releaseProvider")
+		}
+		req.ReleaseProvider = &parsed
+	}
+	if value, ok := firstMultipartValue(values, "claimReceiver"); ok {
+		parsed, err := strconv.ParseBool(value)
+		if err != nil {
+			return types.UpdateDealItemRequest{}, nil, errors.New("invalid claimReceiver")
+		}
+		req.ClaimReceiver = &parsed
+	}
+	if value, ok := firstMultipartValue(values, "releaseReceiver"); ok {
+		parsed, err := strconv.ParseBool(value)
+		if err != nil {
+			return types.UpdateDealItemRequest{}, nil, errors.New("invalid releaseReceiver")
+		}
+		req.ReleaseReceiver = &parsed
+	}
+	if rawIDs, ok := values["deletePhotoIds"]; ok {
+		deletePhotoIDs := make([]uuid.UUID, 0, len(rawIDs))
+		for _, rawID := range rawIDs {
+			photoID, err := uuid.Parse(rawID)
+			if err != nil {
+				return types.UpdateDealItemRequest{}, nil, errors.New("invalid deletePhotoIds")
+			}
+			deletePhotoIDs = append(deletePhotoIDs, photoID)
+		}
+		req.DeletePhotoIds = &deletePhotoIDs
+	}
+
+	fileHeaders := r.MultipartForm.File["photos"]
+	if len(fileHeaders) > maxItemPhotoCount {
+		return types.UpdateDealItemRequest{}, nil, errors.New("too many item photos")
+	}
+
+	photos := make([]dealssvc.PhotoUpload, 0, len(fileHeaders))
+	for _, fileHeader := range fileHeaders {
+		file, err := fileHeader.Open()
+		if err != nil {
+			return types.UpdateDealItemRequest{}, nil, errors.New("failed to read item photo")
+		}
+
+		content, contentType, readErr := readItemPhotoUpload(file)
+		closeErr := file.Close()
+		if readErr != nil {
+			return types.UpdateDealItemRequest{}, nil, readErr
+		}
+		if closeErr != nil {
+			return types.UpdateDealItemRequest{}, nil, errors.New("failed to close item photo")
+		}
+
+		photos = append(photos, dealssvc.PhotoUpload{
+			ContentType: contentType,
+			Content:     content,
+		})
+	}
+
+	return req, photos, nil
+}
+
+func readItemPhotoUpload(file multipart.File) ([]byte, string, error) {
+	content, err := io.ReadAll(io.LimitReader(file, maxItemPhotoUploadSize+1))
+	if err != nil {
+		return nil, "", errors.New("failed to read item photo")
+	}
+	if len(content) == 0 {
+		return nil, "", errors.New("item photo is empty")
+	}
+	if len(content) > maxItemPhotoUploadSize {
+		return nil, "", errors.New("item photo exceeds 5 MB")
+	}
+
+	contentType := http.DetectContentType(content)
+	if !strings.HasPrefix(contentType, "image/") {
+		return nil, "", errors.New("item photo must be an image")
+	}
+
+	return content, contentType, nil
+}
+
+func firstMultipartValue(values map[string][]string, key string) (string, bool) {
+	raw, ok := values[key]
+	if !ok || len(raw) == 0 {
+		return "", false
+	}
+
+	return raw[0], true
 }
 
 // ================================================================================

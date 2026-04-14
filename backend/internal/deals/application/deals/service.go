@@ -13,6 +13,7 @@ import (
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/db"
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -24,7 +25,19 @@ import (
 
 type ItemPhotoStorage interface {
 	CopyPhoto(ctx context.Context, sourceURL string, itemID uuid.UUID, index int) (string, error)
+	UploadPhoto(ctx context.Context, itemID uuid.UUID, index int, contentType string, content []byte) (string, error)
 	DeletePhoto(ctx context.Context, itemID uuid.UUID, index int) error
+}
+
+var ErrItemPhotoStorageNotConfigured = errors.New("item photo storage is not configured")
+var ErrItemPhotoLimitExceeded = errors.New("item photo limit exceeded")
+var ErrItemPhotoNotFound = errors.New("item photo not found")
+
+const maxItemPhotoCount = 10
+
+type PhotoUpload struct {
+	ContentType string
+	Content     []byte
 }
 
 type Service struct {
@@ -537,8 +550,20 @@ func (s *Service) UpdateDealItem(
 	dealID uuid.UUID,
 	itemID uuid.UUID,
 	patch htypes.ItemPatch,
+	newPhotos []PhotoUpload,
 ) (domain.Item, error) {
-	var item domain.Item
+	if len(newPhotos) > 0 && s.itemPhotoStorage == nil {
+		return domain.Item{}, ErrItemPhotoStorageNotConfigured
+	}
+
+	hasContent := patch.Name != nil || patch.Description != nil || patch.Quantity != nil
+	hasPhotoOps := len(patch.DeletePhotoIds) > 0 || len(newPhotos) > 0
+
+	var (
+		item              domain.Item
+		deletedPhotos     []domain.ItemPhoto
+		uploadedPositions []int
+	)
 
 	err := db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
 		deal, err := s.dealsRepository.GetDealByID(ctx, tx, dealID)
@@ -554,9 +579,77 @@ func (s *Service) UpdateDealItem(
 			return err
 		}
 
-		hasContent := patch.Name != nil || patch.Description != nil || patch.Quantity != nil
+		currentItem, err := s.dealsRepository.GetItem(ctx, tx, dealID, itemID)
+		if err != nil {
+			return err
+		}
+		if (hasContent || hasPhotoOps) && currentItem.AuthorID != userID {
+			return domain.ErrForbidden
+		}
+
+		if hasPhotoOps {
+			currentPhotos, err := s.dealsRepository.GetItemPhotos(ctx, tx, itemID)
+			if err != nil {
+				return err
+			}
+
+			photosByID := make(map[uuid.UUID]domain.ItemPhoto, len(currentPhotos))
+			for _, photo := range currentPhotos {
+				photosByID[photo.ID] = photo
+			}
+
+			deleteIDs := make([]uuid.UUID, 0, len(patch.DeletePhotoIds))
+			seenDeleteIDs := make(map[uuid.UUID]struct{}, len(patch.DeletePhotoIds))
+			for _, photoID := range patch.DeletePhotoIds {
+				if _, seen := seenDeleteIDs[photoID]; seen {
+					continue
+				}
+				photo, ok := photosByID[photoID]
+				if !ok {
+					return ErrItemPhotoNotFound
+				}
+				seenDeleteIDs[photoID] = struct{}{}
+				deleteIDs = append(deleteIDs, photoID)
+				deletedPhotos = append(deletedPhotos, photo)
+			}
+
+			remainingCount := len(currentPhotos) - len(deleteIDs) + len(newPhotos)
+			if remainingCount > maxItemPhotoCount {
+				return ErrItemPhotoLimitExceeded
+			}
+
+			nextPosition := 0
+			for _, photo := range currentPhotos {
+				if photo.Position >= nextPosition {
+					nextPosition = photo.Position + 1
+				}
+			}
+
+			uploadedPhotos := make([]domain.ItemPhoto, 0, len(newPhotos))
+			for i, photo := range newPhotos {
+				position := nextPosition + i
+				photoURL, uploadErr := s.itemPhotoStorage.UploadPhoto(ctx, itemID, position, photo.ContentType, photo.Content)
+				if uploadErr != nil {
+					return uploadErr
+				}
+				uploadedPositions = append(uploadedPositions, position)
+				uploadedPhotos = append(uploadedPhotos, domain.ItemPhoto{
+					ID:       uuid.New(),
+					ItemID:   itemID,
+					URL:      photoURL,
+					Position: position,
+				})
+			}
+
+			if err = s.dealsRepository.DeleteItemPhotos(ctx, tx, itemID, deleteIDs); err != nil {
+				return err
+			}
+			if err = s.dealsRepository.AddItemPhotos(ctx, tx, uploadedPhotos); err != nil {
+				return err
+			}
+		}
+
 		if hasContent {
-			var err error
 			item, err = s.dealsRepository.UpdateItem(ctx, tx, dealID, itemID, userID, patch)
 			if err != nil {
 				return err
@@ -598,8 +691,14 @@ func (s *Service) UpdateDealItem(
 		}
 
 		if patch.ReleaseReceiver {
-			var err error
 			item, err = s.dealsRepository.ReleaseItemReceiver(ctx, tx, dealID, itemID, userID)
+			if err != nil {
+				return err
+			}
+		}
+
+		if item.ID == uuid.Nil {
+			item, err = s.dealsRepository.GetItem(ctx, tx, dealID, itemID)
 			if err != nil {
 				return err
 			}
@@ -608,10 +707,42 @@ func (s *Service) UpdateDealItem(
 		return nil
 	})
 	if err != nil {
+		s.cleanupUploadedItemPhotos(ctx, itemID, uploadedPositions)
 		return domain.Item{}, err
 	}
 
+	if s.itemPhotoStorage != nil {
+		for _, photo := range deletedPhotos {
+			if err = s.itemPhotoStorage.DeletePhoto(ctx, itemID, photo.Position); err != nil {
+				s.logger.Warn(
+					"failed to delete item photo from storage after update",
+					slog.String("item_id", itemID.String()),
+					slog.String("photo_id", photo.ID.String()),
+					slog.Int("photo_position", photo.Position),
+					slog.Any("error", err),
+				)
+			}
+		}
+	}
+
 	return item, nil
+}
+
+func (s *Service) cleanupUploadedItemPhotos(ctx context.Context, itemID uuid.UUID, positions []int) {
+	if s.itemPhotoStorage == nil || len(positions) == 0 {
+		return
+	}
+
+	for _, position := range positions {
+		if err := s.itemPhotoStorage.DeletePhoto(ctx, itemID, position); err != nil {
+			s.logger.Warn(
+				"failed to cleanup uploaded item photo",
+				slog.String("item_id", itemID.String()),
+				slog.Int("photo_index", position),
+				slog.Any("error", err),
+			)
+		}
+	}
 }
 
 // ================================================================================
