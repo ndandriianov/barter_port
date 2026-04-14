@@ -203,9 +203,13 @@ func (h *Handlers) HandleGetOfferByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	requesterID, _ := authkit.UserIDFromContext(r.Context())
+	requesterID, ok := authkit.UserIDFromContext(r.Context())
+	var requesterIDPtr *uuid.UUID
+	if ok {
+		requesterIDPtr = &requesterID
+	}
 
-	offer, err := h.offerService.GetOfferByID(r.Context(), id, requesterID)
+	offer, err := h.offerService.GetOfferByID(r.Context(), id, requesterIDPtr)
 	if err != nil {
 		if errors.Is(err, domain.ErrOfferNotFound) {
 			log.Info("offer not found", slog.String("offerId", id.String()))
@@ -522,19 +526,24 @@ func (h *Handlers) HandleGetOffers(w http.ResponseWriter, r *http.Request) {
 
 	log.Debug("parsing finished", slog.Any("cursor", cursor), slog.Int("limit", limit), slog.Bool("my", my))
 
+	requesterID, requesterOK := authkit.UserIDFromContext(r.Context())
+	var requesterIDPtr *uuid.UUID
+	if requesterOK {
+		requesterIDPtr = &requesterID
+	}
+
 	var authorID *uuid.UUID
 	if my {
-		userID, ok := authkit.UserIDFromContext(r.Context())
-		if !ok {
+		if !requesterOK {
 			log.Error("failed to get userID from context")
-			httpx.WriteEmptyError(w, http.StatusInternalServerError)
+			httpx.WriteEmptyError(w, http.StatusUnauthorized)
 			return
 		}
-		authorID = &userID
+		authorID = &requesterID
 	}
 
 	// Fetch offers from the service
-	offerList, nextCursor, err := h.offerService.GetOffers(r.Context(), sortType, cursor, limit, authorID)
+	offerList, nextCursor, err := h.offerService.GetOffers(r.Context(), sortType, cursor, limit, authorID, requesterIDPtr)
 	if err != nil {
 		log.Error("failed to get items", slog.Any("error", err))
 		httpx.WriteEmptyError(w, http.StatusInternalServerError)

@@ -96,7 +96,7 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
               <OfferCard
                 offer={offer}
                 showRating
-                showModerationState={mode === "mine"}
+                showModerationState={mode === "mine" || currentUser?.isAdmin === true}
                 draftCount={mode === "mine" ? (countsByOfferId[offer.id] ?? 0) : 0}
                 offerHref={`/offers/${offer.id}`}
                 draftsHref={

@@ -105,23 +105,79 @@ func (r *Repository) DeleteOfferPhotos(ctx context.Context, exec db.DB, offerID 
 // GET OFFERS ORDER BY TIME
 // ================================================================================
 
-// GetOffersOrderByTime retrieves items from the database ordered by creation time.
+// GetOffersOrderByTimeForRequester retrieves items from the database ordered by creation time.
 // It supports cursor-based pagination using a TimeCursor.
 // If the cursor is nil, it retrieves the most recent items.
 // Returns a slice of items, a new TimeCursor for the next page, and an error if the query fails.
-func (r *Repository) GetOffersOrderByTime(
+func (r *Repository) GetOffersOrderByTimeForRequester(
 	ctx context.Context,
 	cursor *domain.TimeCursor,
 	limit int,
 	authorID *uuid.UUID,
+	requesterID *uuid.UUID,
+	isAdmin bool,
 ) ([]domain.Offer, *domain.TimeCursor, error) {
 
 	var query string
 	var args []interface{}
 
-	if authorID == nil {
+	if isAdmin {
+		if authorID == nil {
+			if cursor == nil {
+				query = `
+		SELECT id, author_id, name, type, action, description, created_at, updated_at, views,
+		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
+		       is_hidden, modification_blocked
+		FROM offers
+		ORDER BY created_at DESC
+		LIMIT $1
+		`
+				args = append(args, limit)
+			} else {
+				query = `
+		SELECT id, author_id, name, type, action, description, created_at, updated_at, views,
+		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
+		       is_hidden, modification_blocked
+		FROM offers
+		WHERE (created_at, id) < ($1, $2)
+		ORDER BY created_at DESC
+		LIMIT $3
+		`
+				args = append(args, cursor.CreatedAt, cursor.Id, limit)
+			}
+		} else {
+			if cursor == nil {
+				query = `
+		SELECT id, author_id, name, type, action, description, created_at, updated_at, views,
+		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
+		       is_hidden, modification_blocked
+		FROM offers
+		WHERE author_id = $1
+		ORDER BY created_at DESC
+		LIMIT $2
+		`
+				args = append(args, *authorID, limit)
+			} else {
+				query = `
+		SELECT id, author_id, name, type, action, description, created_at, updated_at, views,
+		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
+		       is_hidden, modification_blocked
+		FROM offers
+		WHERE author_id = $1 AND (created_at, id) < ($2, $3)
+		ORDER BY created_at DESC
+		LIMIT $4
+		`
+				args = append(args, *authorID, cursor.CreatedAt, cursor.Id, limit)
+			}
+		}
+	} else if authorID == nil {
 		if cursor == nil {
-			query = `
+			if requesterID == nil {
+				query = `
 		SELECT id, author_id, name, type, action, description, created_at, updated_at, views,
 		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
 		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
@@ -131,9 +187,23 @@ func (r *Repository) GetOffersOrderByTime(
 		ORDER BY created_at DESC
 		LIMIT $1
 		`
-			args = append(args, limit)
+				args = append(args, limit)
+			} else {
+				query = `
+		SELECT id, author_id, name, type, action, description, created_at, updated_at, views,
+		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
+		       is_hidden, modification_blocked
+		FROM offers
+		WHERE is_hidden = FALSE OR author_id = $1
+		ORDER BY created_at DESC
+		LIMIT $2
+		`
+				args = append(args, *requesterID, limit)
+			}
 		} else {
-			query = `
+			if requesterID == nil {
+				query = `
 		SELECT id, author_id, name, type, action, description, created_at, updated_at, views,
 		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
 		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
@@ -143,7 +213,20 @@ func (r *Repository) GetOffersOrderByTime(
 		ORDER BY created_at DESC
 		LIMIT $3
 		`
-			args = append(args, cursor.CreatedAt, cursor.Id, limit)
+				args = append(args, cursor.CreatedAt, cursor.Id, limit)
+			} else {
+				query = `
+		SELECT id, author_id, name, type, action, description, created_at, updated_at, views,
+		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
+		       is_hidden, modification_blocked
+		FROM offers
+		WHERE (is_hidden = FALSE OR author_id = $1) AND (created_at, id) < ($2, $3)
+		ORDER BY created_at DESC
+		LIMIT $4
+		`
+				args = append(args, *requesterID, cursor.CreatedAt, cursor.Id, limit)
+			}
 		}
 	} else {
 		if cursor == nil {
@@ -153,7 +236,7 @@ func (r *Repository) GetOffersOrderByTime(
 		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
 		       is_hidden, modification_blocked
 		FROM offers
-		WHERE is_hidden = FALSE AND author_id = $1
+		WHERE author_id = $1
 		ORDER BY created_at DESC
 		LIMIT $2
 		`
@@ -165,7 +248,7 @@ func (r *Repository) GetOffersOrderByTime(
 		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
 		       is_hidden, modification_blocked
 		FROM offers
-		WHERE is_hidden = FALSE AND author_id = $1 AND (created_at, id) < ($2, $3)
+		WHERE author_id = $1 AND (created_at, id) < ($2, $3)
 		ORDER BY created_at DESC
 		LIMIT $4
 		`
@@ -205,13 +288,78 @@ func (r *Repository) GetOffersOrderByPopularity(
 	limit int,
 	authorID *uuid.UUID,
 ) ([]domain.Offer, *domain.PopularityCursor, error) {
+	return r.GetOffersOrderByPopularityForRequester(ctx, cursor, limit, authorID, nil, false)
+}
+
+func (r *Repository) GetOffersOrderByPopularityForRequester(
+	ctx context.Context,
+	cursor *domain.PopularityCursor,
+	limit int,
+	authorID *uuid.UUID,
+	requesterID *uuid.UUID,
+	isAdmin bool,
+) ([]domain.Offer, *domain.PopularityCursor, error) {
 
 	var query string
 	var args []interface{}
 
-	if authorID == nil {
+	if isAdmin {
+		if authorID == nil {
+			if cursor == nil {
+				query = `
+		SELECT id, author_id, name, type, action, description, created_at, updated_at, views,
+		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
+		       is_hidden, modification_blocked
+		FROM offers
+		ORDER BY views DESC, id DESC
+		LIMIT $1
+		`
+				args = append(args, limit)
+			} else {
+				query = `
+		SELECT id, author_id, name, type, action, description, created_at, updated_at, views,
+		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
+		       is_hidden, modification_blocked
+		FROM offers
+		WHERE (views, id) < ($1, $2)
+		ORDER BY views DESC, id DESC
+		LIMIT $3
+		`
+				args = append(args, cursor.Views, cursor.Id, limit)
+			}
+		} else {
+			if cursor == nil {
+				query = `
+		SELECT id, author_id, name, type, action, description, created_at, updated_at, views,
+		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
+		       is_hidden, modification_blocked
+		FROM offers
+		WHERE author_id = $1
+		ORDER BY views DESC, id DESC
+		LIMIT $2
+		`
+				args = append(args, *authorID, limit)
+			} else {
+				query = `
+		SELECT id, author_id, name, type, action, description, created_at, updated_at, views,
+		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
+		       is_hidden, modification_blocked
+		FROM offers
+		WHERE author_id = $1 AND (views, id) < ($2, $3)
+		ORDER BY views DESC, id DESC
+		LIMIT $4
+		`
+				args = append(args, *authorID, cursor.Views, cursor.Id, limit)
+			}
+		}
+	} else if authorID == nil {
 		if cursor == nil {
-			query = `
+			if requesterID == nil {
+				query = `
 		SELECT id, author_id, name, type, action, description, created_at, updated_at, views,
 		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
 		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
@@ -221,9 +369,23 @@ func (r *Repository) GetOffersOrderByPopularity(
 		ORDER BY views DESC, id DESC
 		LIMIT $1
 		`
-			args = append(args, limit)
+				args = append(args, limit)
+			} else {
+				query = `
+		SELECT id, author_id, name, type, action, description, created_at, updated_at, views,
+		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
+		       is_hidden, modification_blocked
+		FROM offers
+		WHERE is_hidden = FALSE OR author_id = $1
+		ORDER BY views DESC, id DESC
+		LIMIT $2
+		`
+				args = append(args, *requesterID, limit)
+			}
 		} else {
-			query = `
+			if requesterID == nil {
+				query = `
 		SELECT id, author_id, name, type, action, description, created_at, updated_at, views,
 		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
 		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
@@ -233,7 +395,20 @@ func (r *Repository) GetOffersOrderByPopularity(
 		ORDER BY views DESC, id DESC
 		LIMIT $3
 		`
-			args = append(args, cursor.Views, cursor.Id, limit)
+				args = append(args, cursor.Views, cursor.Id, limit)
+			} else {
+				query = `
+		SELECT id, author_id, name, type, action, description, created_at, updated_at, views,
+		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
+		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
+		       is_hidden, modification_blocked
+		FROM offers
+		WHERE (is_hidden = FALSE OR author_id = $1) AND (views, id) < ($2, $3)
+		ORDER BY views DESC, id DESC
+		LIMIT $4
+		`
+				args = append(args, *requesterID, cursor.Views, cursor.Id, limit)
+			}
 		}
 	} else {
 		if cursor == nil {
@@ -243,7 +418,7 @@ func (r *Repository) GetOffersOrderByPopularity(
 		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
 		       is_hidden, modification_blocked
 		FROM offers
-		WHERE is_hidden = FALSE AND author_id = $1
+		WHERE author_id = $1
 		ORDER BY views DESC, id DESC
 		LIMIT $2
 		`
@@ -255,7 +430,7 @@ func (r *Repository) GetOffersOrderByPopularity(
 		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
 		       is_hidden, modification_blocked
 		FROM offers
-		WHERE is_hidden = FALSE AND author_id = $1 AND (views, id) < ($2, $3)
+		WHERE author_id = $1 AND (views, id) < ($2, $3)
 		ORDER BY views DESC, id DESC
 		LIMIT $4
 		`

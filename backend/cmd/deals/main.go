@@ -113,7 +113,8 @@ func main() {
 		defer chatsConn.Close()
 	}
 
-	offersService := offers.NewService(db, offersRepo, usersClient, offerPhotoStorage, logg)
+	adminChecker := authkit.NewAdminChecker(authClient)
+	offersService := offers.NewService(db, offersRepo, usersClient, offerPhotoStorage, adminChecker, logg)
 
 	draftsRepo := drafts.NewRepository()
 	dealsRepo := deals.NewRepository()
@@ -121,7 +122,6 @@ func main() {
 	joinsRepo := joins.NewRepository()
 	offerGroupsRepo := offergroupsrepo.NewRepository(db)
 	reviewsRepo := reviewsrepo.NewRepository(dealsRepo)
-	adminChecker := authkit.NewAdminChecker(authClient)
 	dealsService := dealssvc.NewService(db, draftsRepo, dealsRepo, failuresRepo, joinsRepo, offersRepo, itemPhotoStorage).
 		WithAdminChecker(adminChecker).
 		WithLogger(logg)
