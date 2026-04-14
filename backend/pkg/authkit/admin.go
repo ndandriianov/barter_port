@@ -6,6 +6,8 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 type AdminChecker struct {
@@ -24,6 +26,9 @@ func (c *AdminChecker) IsAdmin(ctx context.Context, userID uuid.UUID) (bool, err
 
 	resp, err := c.authClient.GetMe(ctx, &authpb.GetMeRequest{Id: userID.String()})
 	if err != nil {
+		if status.Code(err) == codes.NotFound {
+			return false, nil
+		}
 		return false, fmt.Errorf("auth grpc get me: %w", err)
 	}
 
