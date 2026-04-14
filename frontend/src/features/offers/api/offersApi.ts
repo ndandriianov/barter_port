@@ -34,6 +34,14 @@ const offersApi = createApi({
       providesTags: (_result, _error, offerId) => [{type: "Offers", id: offerId}],
     }),
 
+    viewOfferById: builder.mutation<void, string>({
+      query: (offerId) => ({
+        url: `/offers/${offerId}/view`,
+        method: "POST",
+      }),
+      invalidatesTags: (_result, _error, offerId) => ["Offers", {type: "Offers", id: offerId}],
+    }),
+
     createOffer: builder.mutation<void, CreateOfferRequest>({
       query: ({ photos = [], ...body }) => {
         if (photos.length === 0) {
