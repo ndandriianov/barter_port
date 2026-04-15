@@ -1,4 +1,5 @@
 import { useMemo, useRef, useState } from "react";
+import { skipToken } from "@reduxjs/toolkit/query";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
 import {
   Alert,
@@ -36,6 +37,14 @@ function ProfilePage() {
   const [draftAvatarFile, setDraftAvatarFile] = useState<File | null>(null);
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [isReputationDrawerOpen, setIsReputationDrawerOpen] = useState(false);
+  const {
+    data: reputationEvents,
+    isFetching: isReputationEventsLoading,
+    error: reputationEventsError,
+    refetch: refetchReputationEvents,
+  } = usersApi.useGetCurrentUserReputationEventsQuery(
+    isReputationDrawerOpen ? undefined : skipToken,
+  );
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const currentName = draftName ?? (data?.name ?? "");
@@ -58,6 +67,15 @@ function ProfilePage() {
   const avatarPreviewUrl = normalizedAvatarUrl || undefined;
   const hasAvatarPreview = Boolean(avatarPreviewUrl);
   const isSubmitting = isSaving || isUploadingAvatar;
+
+  const formatReputationDelta = (delta: number) => (delta > 0 ? `+${delta}` : `${delta}`);
+
+  const formatSourceType = (sourceType: string) => {
+    if (sourceType === "offerreport") {
+      return "Жалоба на оффер";
+    }
+    return sourceType;
+  };
 
   const handleLogout = async () => {
     await dispatch(performLogout());
@@ -314,10 +332,55 @@ function ProfilePage() {
             Текущее значение рейтинга: <strong>{data.reputationPoints}</strong>
           </Typography>
 
-          <Alert severity="info">
-            История `user_reputation_events` пока не отдается отдельным backend endpoint, поэтому
-            в этом drawer сейчас доступно только текущее значение рейтинга.
-          </Alert>
+          {isReputationEventsLoading && (
+            <Box display="flex" justifyContent="center" py={3}>
+              <CircularProgress size={28} />
+            </Box>
+          )}
+
+          {!isReputationEventsLoading && reputationEventsError && (
+            <Alert
+              severity="error"
+              action={
+                <Button color="inherit" size="small" onClick={() => refetchReputationEvents()}>
+                  Повторить
+                </Button>
+              }
+            >
+              Не удалось загрузить историю рейтинга.
+            </Alert>
+          )}
+
+          {!isReputationEventsLoading && !reputationEventsError && (!reputationEvents || reputationEvents.length === 0) && (
+            <Alert severity="info">История изменения рейтинга пока пуста.</Alert>
+          )}
+
+          {!isReputationEventsLoading && !reputationEventsError && reputationEvents && reputationEvents.length > 0 && (
+            <Stack spacing={1.5}>
+              {reputationEvents.map((event) => (
+                <Card key={event.id} variant="outlined">
+                  <CardContent sx={{ p: 2, "&:last-child": { pb: 2 } }}>
+                    <Stack spacing={0.5}>
+                      <Typography variant="body2" color="text.secondary">
+                        {new Date(event.createdAt).toLocaleString("ru-RU")}
+                      </Typography>
+                      <Typography variant="subtitle2" fontWeight={700}>
+                        {formatSourceType(event.sourceType)}
+                      </Typography>
+                      <Typography
+                        variant="h6"
+                        color={event.delta >= 0 ? "success.main" : "error.main"}
+                        fontWeight={700}
+                      >
+                        {formatReputationDelta(event.delta)}
+                      </Typography>
+                      {event.comment && <Typography variant="body2">{event.comment}</Typography>}
+                    </Stack>
+                  </CardContent>
+                </Card>
+              ))}
+            </Stack>
+          )}
         </Box>
       </Drawer>
     </Box>

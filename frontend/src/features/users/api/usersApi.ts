@@ -1,8 +1,14 @@
 import {createApi} from "@reduxjs/toolkit/query/react";
 import {baseQueryWithReauth} from "@/shared/api/baseApi.ts";
-import {meSchema, userAvatarUploadSchema, userSchema} from "@/features/users/model/schemas.ts";
+import {
+  meSchema,
+  reputationEventsResponseSchema,
+  userAvatarUploadSchema,
+  userSchema,
+} from "@/features/users/model/schemas.ts";
 import type {
   Me,
+  ReputationEvent,
   UpdateCurrentUserRequest,
   UploadCurrentUserAvatarResponse,
   User
@@ -16,6 +22,12 @@ const usersApi = createApi({
     getCurrentUser: builder.query<Me, void>({
       query: () => "/users/me",
       transformResponse: (response: unknown) => meSchema.parse(response),
+      providesTags: ["CurrentUser"],
+    }),
+
+    getCurrentUserReputationEvents: builder.query<ReputationEvent[], void>({
+      query: () => "/users/reputation-events",
+      transformResponse: (response: unknown) => reputationEventsResponseSchema.parse(response),
       providesTags: ["CurrentUser"],
     }),
 
