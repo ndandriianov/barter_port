@@ -29,6 +29,7 @@ func runTests(m *testing.M) int {
 		NeedAuth:  true,
 		NeedUsers: true,
 		NeedItems: true,
+		NeedChats: true,
 	})
 	if setupErr != nil {
 		log.Printf("не удалось поднять fixture: %v", setupErr)

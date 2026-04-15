@@ -37,6 +37,7 @@ const (
 	authHTTPPort  nat.Port = "8080/tcp"
 	itemsHTTPPort nat.Port = "8080/tcp"
 	usersHTTPPort nat.Port = "8080/tcp"
+	chatsHTTPPort nat.Port = "8080/tcp"
 
 	PostgresDBName = "postgres"
 	AuthDBName     = "auth_db"
@@ -100,6 +101,7 @@ type FixtureOptions struct {
 	NeedAuth  bool
 	NeedItems bool
 	NeedUsers bool
+	NeedChats bool
 }
 
 type Fixture struct {
@@ -114,10 +116,12 @@ type Fixture struct {
 	Auth  testcontainers.Container
 	Items testcontainers.Container
 	Users testcontainers.Container
+	Chats testcontainers.Container
 
 	AuthURL  string
 	DealsURL string
 	UsersURL string
+	ChatsURL string
 }
 
 // globalFixture — единый стек контейнеров, разделяемый всеми тестами пакета.
@@ -132,7 +136,7 @@ func (f *Fixture) TerminateAll(ctx context.Context) error {
 
 	var errs []error
 	for _, c := range []testcontainers.Container{
-		f.Users, f.Items, f.Auth,
+		f.Chats, f.Users, f.Items, f.Auth,
 		f.Seaweed, f.SMTP, f.Kafka, f.Postgres,
 	} {
 		if c != nil {
@@ -178,6 +182,12 @@ func NewFixture(t *testing.T, opts FixtureOptions) *Fixture {
 		opts.NeedPostgres = true
 		opts.NeedKafka = true
 	}
+	if opts.NeedChats {
+		opts.NeedPostgres = true
+		opts.NeedAuth = true
+		opts.NeedItems = true
+		opts.NeedUsers = true
+	}
 
 	// Параллельный запуск инфраструктурных контейнеров.
 	setupInfraParallel(ctx, net.Name, opts, f, t)
@@ -208,6 +218,13 @@ func NewFixture(t *testing.T, opts FixtureOptions) *Fixture {
 		f.Users = startContainer(ctx, t, req)
 		f.UsersURL = containerBaseURL(ctx, t, f.Users, usersHTTPPort)
 	}
+	if opts.NeedChats {
+		req := buildServiceRequest(net.Name, "chats", string(chatsHTTPPort))
+		req.Env = serviceEnv()
+		req.Env["CONFIG_SERVICE"] = "/app/config/chats.yaml"
+		f.Chats = startContainer(ctx, t, req)
+		f.ChatsURL = containerBaseURL(ctx, t, f.Chats, chatsHTTPPort)
+	}
 
 	return f
 }
@@ -232,6 +249,12 @@ func newSharedFixture(ctx context.Context, opts FixtureOptions) (*Fixture, error
 	if opts.NeedUsers {
 		opts.NeedPostgres = true
 		opts.NeedKafka = true
+	}
+	if opts.NeedChats {
+		opts.NeedPostgres = true
+		opts.NeedAuth = true
+		opts.NeedItems = true
+		opts.NeedUsers = true
 	}
 
 	// Определяем сеть: в режиме reuse используем фиксированное имя,
@@ -296,6 +319,18 @@ func newSharedFixture(ctx context.Context, opts FixtureOptions) (*Fixture, error
 			return f, fmt.Errorf("users base url: %w", err)
 		}
 		f.UsersURL = url
+	}
+	if opts.NeedChats {
+		c, err := launchChats(ctx, netName)
+		f.Chats = c
+		if err != nil {
+			return f, fmt.Errorf("launch chats: %w", err)
+		}
+		url, err := getContainerBaseURL(ctx, c, chatsHTTPPort)
+		if err != nil {
+			return f, fmt.Errorf("chats base url: %w", err)
+		}
+		f.ChatsURL = url
 	}
 
 	return f, nil
@@ -606,6 +641,13 @@ func launchUsers(ctx context.Context, netName string) (testcontainers.Container,
 	return launchContainer(ctx, req)
 }
 
+func launchChats(ctx context.Context, netName string) (testcontainers.Container, error) {
+	req := buildServiceRequest(netName, "chats", string(chatsHTTPPort))
+	req.Env = serviceEnv()
+	req.Env["CONFIG_SERVICE"] = "/app/config/chats.yaml"
+	return launchContainer(ctx, req)
+}
+
 func launchContainer(ctx context.Context, req testcontainers.ContainerRequest) (testcontainers.Container, error) {
 	return testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: req,
@@ -670,6 +712,11 @@ func buildServiceRequest(netName string, service string, exposedPorts ...string)
 			{
 				HostFilePath:      filepath.Join(projectRoot, "config", "users.yaml"),
 				ContainerFilePath: "/app/config/users.yaml",
+				FileMode:          0o644,
+			},
+			{
+				HostFilePath:      filepath.Join(projectRoot, "config", "chats.yaml"),
+				ContainerFilePath: "/app/config/chats.yaml",
 				FileMode:          0o644,
 			},
 		},
@@ -754,6 +801,14 @@ func SetupUsers(ctx context.Context, net *testcontainers.DockerNetwork, t *testi
 	req.Env = serviceEnv()
 	req.Env["CONFIG_SERVICE"] = "/app/config/users.yaml"
 	req.Env["AUTH_GRPC_ADDR"] = "auth:50051"
+	return startContainer(ctx, t, req)
+}
+
+func SetupChats(ctx context.Context, net *testcontainers.DockerNetwork, t *testing.T) testcontainers.Container {
+	t.Helper()
+	req := buildServiceRequest(net.Name, "chats", string(chatsHTTPPort))
+	req.Env = serviceEnv()
+	req.Env["CONFIG_SERVICE"] = "/app/config/chats.yaml"
 	return startContainer(ctx, t, req)
 }
 
