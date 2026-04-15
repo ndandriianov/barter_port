@@ -49,8 +49,26 @@ func (h *Handlers) CreateChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	checkResp, err := h.usersClient.CheckSubscription(r.Context(), &userspb.CheckSubscriptionRequest{
+		RequesterUserId: userID.String(),
+		TargetUserId:    req.ParticipantId.String(),
+	})
+	if err != nil {
+		log.Error("error checking subscription in users service", slog.Any("error", err))
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		return
+	}
+	if !checkResp.GetIsSubscribed() {
+		httpx.WriteEmptyError(w, http.StatusForbidden)
+		return
+	}
+
 	chat, err := h.chatsService.CreateChat(r.Context(), nil, []uuid.UUID{userID, req.ParticipantId})
 	if err != nil {
+		if errors.Is(err, domain.ErrChatAlreadyExists) {
+			httpx.WriteEmptyError(w, http.StatusConflict)
+			return
+		}
 		log.Error("error creating chat", slog.Any("error", err))
 		httpx.WriteEmptyError(w, http.StatusInternalServerError)
 		return

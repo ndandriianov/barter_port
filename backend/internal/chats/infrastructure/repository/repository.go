@@ -46,6 +46,25 @@ func (r *Repository) CreateChat(ctx context.Context, dealID *uuid.UUID, particip
 			dealID,
 		).Scan(&chat.ID, &chat.DealID, &chat.CreatedAt, &chat.UpdatedAt)
 	} else {
+		if len(participantIDs) == 2 {
+			var existingID uuid.UUID
+			err = tx.QueryRow(ctx, `
+				SELECT c.id
+				FROM chats c
+				JOIN chat_participants cp ON cp.chat_id = c.id
+				WHERE c.deal_id IS NULL
+				GROUP BY c.id
+				HAVING COUNT(*) = 2
+				   AND COUNT(*) FILTER (WHERE cp.user_id = $1 OR cp.user_id = $2) = 2
+			`, participantIDs[0], participantIDs[1]).Scan(&existingID)
+			if err == nil {
+				return nil, domain.ErrChatAlreadyExists
+			}
+			if !errors.Is(err, pgx.ErrNoRows) {
+				return nil, fmt.Errorf("check existing direct chat: %w", err)
+			}
+		}
+
 		err = tx.QueryRow(ctx,
 			`INSERT INTO chats DEFAULT VALUES RETURNING id, deal_id, created_at, updated_at`,
 		).Scan(&chat.ID, &chat.DealID, &chat.CreatedAt, &chat.UpdatedAt)
