@@ -7,6 +7,13 @@ option go_package = "barterport/internal/contracts/grpc/users/v1;userspb";
 service UsersService {
     rpc GetUsersWithInfo (GetUsersWithInfoRequest) returns (GetUsersWithInfoResponse);
     rpc ListUsers (ListUsersRequest) returns (ListUsersResponse);
+
+    // Если target подписан на requester, то is_subscribed = true.
+    //
+    // Если при этом requester не подписан на target,
+    // то данная команда подписывает requester на target и has_created_subscription = true.
+    // Если же requester уже был подписан на target, то has_created_subscription = false.
+    rpc CheckSubscription (CheckSubscriptionRequest) returns (CheckSubscriptionResponse);
 }
 
 // GetUsersWithInfo
@@ -28,4 +35,15 @@ message ListUsersRequest {}
 
 message ListUsersResponse {
     repeated UserInfo users = 1;
+}
+
+// Check for bidirectional subscription
+message CheckSubscriptionRequest {
+    string requester_user_id = 1;
+    string target_user_id = 2;
+}
+
+message CheckSubscriptionResponse {
+    bool is_subscribed = 1;
+    bool has_created_subscription = 2;
 }

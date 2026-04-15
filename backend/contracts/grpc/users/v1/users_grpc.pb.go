@@ -19,8 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	UsersService_GetUsersWithInfo_FullMethodName = "/barterport.users.v1.UsersService/GetUsersWithInfo"
-	UsersService_ListUsers_FullMethodName        = "/barterport.users.v1.UsersService/ListUsers"
+	UsersService_GetUsersWithInfo_FullMethodName  = "/barterport.users.v1.UsersService/GetUsersWithInfo"
+	UsersService_ListUsers_FullMethodName         = "/barterport.users.v1.UsersService/ListUsers"
+	UsersService_CheckSubscription_FullMethodName = "/barterport.users.v1.UsersService/CheckSubscription"
 )
 
 // UsersServiceClient is the client API for UsersService service.
@@ -29,6 +30,12 @@ const (
 type UsersServiceClient interface {
 	GetUsersWithInfo(ctx context.Context, in *GetUsersWithInfoRequest, opts ...grpc.CallOption) (*GetUsersWithInfoResponse, error)
 	ListUsers(ctx context.Context, in *ListUsersRequest, opts ...grpc.CallOption) (*ListUsersResponse, error)
+	// Если target подписан на requester, то is_subscribed = true.
+	//
+	// Если при этом requester не подписан на target,
+	// то данная команда подписывает requester на target и has_created_subscription = true.
+	// Если же requester уже был подписан на target, то has_created_subscription = false.
+	CheckSubscription(ctx context.Context, in *CheckSubscriptionRequest, opts ...grpc.CallOption) (*CheckSubscriptionResponse, error)
 }
 
 type usersServiceClient struct {
@@ -59,12 +66,28 @@ func (c *usersServiceClient) ListUsers(ctx context.Context, in *ListUsersRequest
 	return out, nil
 }
 
+func (c *usersServiceClient) CheckSubscription(ctx context.Context, in *CheckSubscriptionRequest, opts ...grpc.CallOption) (*CheckSubscriptionResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(CheckSubscriptionResponse)
+	err := c.cc.Invoke(ctx, UsersService_CheckSubscription_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // UsersServiceServer is the server API for UsersService service.
 // All implementations must embed UnimplementedUsersServiceServer
 // for forward compatibility.
 type UsersServiceServer interface {
 	GetUsersWithInfo(context.Context, *GetUsersWithInfoRequest) (*GetUsersWithInfoResponse, error)
 	ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error)
+	// Если target подписан на requester, то is_subscribed = true.
+	//
+	// Если при этом requester не подписан на target,
+	// то данная команда подписывает requester на target и has_created_subscription = true.
+	// Если же requester уже был подписан на target, то has_created_subscription = false.
+	CheckSubscription(context.Context, *CheckSubscriptionRequest) (*CheckSubscriptionResponse, error)
 	mustEmbedUnimplementedUsersServiceServer()
 }
 
@@ -80,6 +103,9 @@ func (UnimplementedUsersServiceServer) GetUsersWithInfo(context.Context, *GetUse
 }
 func (UnimplementedUsersServiceServer) ListUsers(context.Context, *ListUsersRequest) (*ListUsersResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListUsers not implemented")
+}
+func (UnimplementedUsersServiceServer) CheckSubscription(context.Context, *CheckSubscriptionRequest) (*CheckSubscriptionResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method CheckSubscription not implemented")
 }
 func (UnimplementedUsersServiceServer) mustEmbedUnimplementedUsersServiceServer() {}
 func (UnimplementedUsersServiceServer) testEmbeddedByValue()                      {}
@@ -138,6 +164,24 @@ func _UsersService_ListUsers_Handler(srv interface{}, ctx context.Context, dec f
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UsersService_CheckSubscription_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CheckSubscriptionRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UsersServiceServer).CheckSubscription(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UsersService_CheckSubscription_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UsersServiceServer).CheckSubscription(ctx, req.(*CheckSubscriptionRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // UsersService_ServiceDesc is the grpc.ServiceDesc for UsersService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -152,6 +196,10 @@ var UsersService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListUsers",
 			Handler:    _UsersService_ListUsers_Handler,
+		},
+		{
+			MethodName: "CheckSubscription",
+			Handler:    _UsersService_CheckSubscription_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
