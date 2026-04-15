@@ -20,6 +20,11 @@ type UsersRepository interface {
 	UpdateAvatarURL(ctx context.Context, id uuid.UUID, avatarURL *string) error
 	GetNamesForUserIDs(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]*string, error)
 	ListUsers(ctx context.Context) ([]domain.User, error)
+	Subscribe(ctx context.Context, subscriberID, targetUserID uuid.UUID) error
+	Unsubscribe(ctx context.Context, subscriberID, targetUserID uuid.UUID) error
+	IsSubscribed(ctx context.Context, subscriberID, targetUserID uuid.UUID) (bool, error)
+	GetSubscriptions(ctx context.Context, userID uuid.UUID) ([]domain.User, error)
+	GetSubscribers(ctx context.Context, userID uuid.UUID) ([]domain.User, error)
 }
 
 var ErrAuthClientNotConfigured = errors.New("auth grpc client is not configured")
@@ -184,6 +189,53 @@ func normalizeOptionalString(value *string) *string {
 	return value
 }
 
+// Subscribe subscribes subscriberID to targetUserID.
+//
+// Errors:
+//   - domain.ErrUserNotFound: target user does not exist.
+//   - domain.ErrAlreadySubscribed: already subscribed.
+//   - errors.New("cannot subscribe to yourself"): subscriberID == targetUserID.
+func (s *Service) Subscribe(ctx context.Context, subscriberID, targetUserID uuid.UUID) error {
+	if subscriberID == targetUserID {
+		return errors.New("cannot subscribe to yourself")
+	}
+	return s.repository.Subscribe(ctx, subscriberID, targetUserID)
+}
+
+// Unsubscribe removes the subscription of subscriberID from targetUserID.
+//
+// Errors:
+//   - domain.ErrNotSubscribed: not subscribed.
+//   - errors.New("cannot unsubscribe from yourself"): subscriberID == targetUserID.
+func (s *Service) Unsubscribe(ctx context.Context, subscriberID, targetUserID uuid.UUID) error {
+	if subscriberID == targetUserID {
+		return errors.New("cannot unsubscribe from yourself")
+	}
+	return s.repository.Unsubscribe(ctx, subscriberID, targetUserID)
+}
+
+// GetSubscriptions returns users that userID is subscribed to.
+//
+// No domain Errors
+func (s *Service) GetSubscriptions(ctx context.Context, userID uuid.UUID) ([]domain.User, error) {
+	users, err := s.repository.GetSubscriptions(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("repository.GetSubscriptions: %w", err)
+	}
+	return users, nil
+}
+
+// GetSubscribers returns users subscribed to userID.
+//
+// No domain Errors
+func (s *Service) GetSubscribers(ctx context.Context, userID uuid.UUID) ([]domain.User, error) {
+	users, err := s.repository.GetSubscribers(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("repository.GetSubscribers: %w", err)
+	}
+	return users, nil
+}
+
 // CheckSubscription проверяет, подписан ли target на requester,
 //   - если нет, то isTargetSubscribed будет false, функия завершится
 //   - если да, то isTargetSubscribed будет true
@@ -196,6 +248,18 @@ func (s *Service) CheckSubscription(ctx context.Context, requester, target uuid.
 	hasCreatedSubscription bool,
 	err error,
 ) {
-	// TODO: implement me
-	panic("not implemented")
+	isTargetSubscribed, err = s.repository.IsSubscribed(ctx, target, requester)
+	if err != nil || !isTargetSubscribed {
+		return isTargetSubscribed, false, err
+	}
+
+	// target is subscribed to requester — try to subscribe requester to target
+	err = s.repository.Subscribe(ctx, requester, target)
+	if err != nil {
+		if errors.Is(err, domain.ErrAlreadySubscribed) {
+			return true, false, nil
+		}
+		return false, false, err
+	}
+	return true, true, nil
 }

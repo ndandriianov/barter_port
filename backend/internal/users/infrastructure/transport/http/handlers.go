@@ -247,6 +247,138 @@ func (h *Handlers) HandleUpdateMe(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, me)
 }
 
+// ================================================================================
+// Subscriptions
+// ================================================================================
+
+func (h *Handlers) HandleSubscribe(w http.ResponseWriter, r *http.Request) {
+	log := httplog.LogFrom(r.Context(), slog.Default())
+
+	userID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		log.Warn("failed to get user id from context")
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
+	var req types.SubscribeToUserJSONRequestBody
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		log.Warn("failed to decode subscribe request", slog.Any("error", err))
+		httpx.WriteError(w, http.StatusBadRequest, httpx.ErrCannotDecodeRequestBody)
+		return
+	}
+
+	err := h.userService.Subscribe(r.Context(), userID, req.TargetUserId)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrUserNotFound):
+			httpx.WriteEmptyError(w, http.StatusNotFound)
+		case errors.Is(err, domain.ErrAlreadySubscribed):
+			httpx.WriteEmptyError(w, http.StatusConflict)
+		default:
+			log.Error("failed to subscribe", slog.String("user_id", userID.String()), slog.Any("error", err))
+			httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusCreated)
+}
+
+func (h *Handlers) HandleUnsubscribe(w http.ResponseWriter, r *http.Request) {
+	log := httplog.LogFrom(r.Context(), slog.Default())
+
+	userID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		log.Warn("failed to get user id from context")
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
+	var req types.UnsubscribeFromUserJSONRequestBody
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		log.Warn("failed to decode unsubscribe request", slog.Any("error", err))
+		httpx.WriteError(w, http.StatusBadRequest, httpx.ErrCannotDecodeRequestBody)
+		return
+	}
+
+	err := h.userService.Unsubscribe(r.Context(), userID, req.TargetUserId)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrUserNotFound):
+			httpx.WriteEmptyError(w, http.StatusNotFound)
+		case errors.Is(err, domain.ErrNotSubscribed):
+			httpx.WriteEmptyError(w, http.StatusConflict)
+		default:
+			log.Error("failed to unsubscribe", slog.String("user_id", userID.String()), slog.Any("error", err))
+			httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handlers) HandleGetSubscriptions(w http.ResponseWriter, r *http.Request) {
+	log := httplog.LogFrom(r.Context(), slog.Default())
+
+	userID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		log.Warn("failed to get user id from context")
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
+	users, err := h.userService.GetSubscriptions(r.Context(), userID)
+	if err != nil {
+		log.Error("failed to get subscriptions", slog.String("user_id", userID.String()), slog.Any("error", err))
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		return
+	}
+
+	response := make(types.GetSubscriptionsResponse, 0, len(users))
+	for _, u := range users {
+		response = append(response, types.User{
+			Id:        u.Id,
+			Name:      u.Name,
+			Bio:       u.Bio,
+			AvatarUrl: u.AvatarURL,
+		})
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, response)
+}
+
+func (h *Handlers) HandleGetSubscribers(w http.ResponseWriter, r *http.Request) {
+	log := httplog.LogFrom(r.Context(), slog.Default())
+
+	userID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		log.Warn("failed to get user id from context")
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
+	users, err := h.userService.GetSubscribers(r.Context(), userID)
+	if err != nil {
+		log.Error("failed to get subscribers", slog.String("user_id", userID.String()), slog.Any("error", err))
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		return
+	}
+
+	response := make(types.GetSubscriptionsResponse, 0, len(users))
+	for _, u := range users {
+		response = append(response, types.User{
+			Id:        u.Id,
+			Name:      u.Name,
+			Bio:       u.Bio,
+			AvatarUrl: u.AvatarURL,
+		})
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, response)
+}
+
 type avatarUploadResponse struct {
 	AvatarURL string `json:"avatarUrl"`
 }

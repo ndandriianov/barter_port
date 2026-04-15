@@ -8,7 +8,9 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"golang.org/x/net/context"
 )
@@ -202,6 +204,120 @@ func (r *Repository) GetReputationEvents(ctx context.Context, id uuid.UUID) ([]d
 	}
 
 	return events, nil
+}
+
+// Subscribe subscribes subscriberID to targetUserID.
+//
+// Errors:
+//   - domain.ErrAlreadySubscribed: Occurs if the subscription already exists.
+//   - domain.ErrUserNotFound: Occurs if targetUserID does not exist.
+func (r *Repository) Subscribe(ctx context.Context, subscriberID, targetUserID uuid.UUID) error {
+	query := `
+		INSERT INTO subscriptions (subscriber_id, target_user_id)
+		VALUES ($1, $2)
+	`
+
+	_, err := r.db.Exec(ctx, query, subscriberID, targetUserID)
+	if err != nil {
+		if repox.IsUniqueViolation(err) {
+			return domain.ErrAlreadySubscribed
+		}
+		if isForeignKeyViolation(err) {
+			return domain.ErrUserNotFound
+		}
+		return err
+	}
+	return nil
+}
+
+// Unsubscribe removes the subscription of subscriberID from targetUserID.
+//
+// Errors:
+//   - domain.ErrNotSubscribed: Occurs if the subscription does not exist.
+func (r *Repository) Unsubscribe(ctx context.Context, subscriberID, targetUserID uuid.UUID) error {
+	query := `
+		DELETE FROM subscriptions
+		WHERE subscriber_id = $1 AND target_user_id = $2
+	`
+
+	tag, err := r.db.Exec(ctx, query, subscriberID, targetUserID)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return domain.ErrNotSubscribed
+	}
+	return nil
+}
+
+// IsSubscribed returns true if subscriberID is subscribed to targetUserID.
+//
+// No domain Errors
+func (r *Repository) IsSubscribed(ctx context.Context, subscriberID, targetUserID uuid.UUID) (bool, error) {
+	var exists bool
+	err := r.db.QueryRow(ctx,
+		`SELECT EXISTS (SELECT 1 FROM subscriptions WHERE subscriber_id = $1 AND target_user_id = $2)`,
+		subscriberID, targetUserID,
+	).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
+}
+
+// GetSubscriptions returns the list of users that userID is subscribed to.
+//
+// No domain Errors
+func (r *Repository) GetSubscriptions(ctx context.Context, userID uuid.UUID) ([]domain.User, error) {
+	query := `
+		SELECT u.id, u.name, u.bio, u.avatar_url
+		FROM subscriptions s
+		JOIN users u ON u.id = s.target_user_id
+		WHERE s.subscriber_id = $1
+		ORDER BY u.id
+	`
+
+	rows, err := r.db.Query(ctx, query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("sql: %w", err)
+	}
+	defer rows.Close()
+
+	users, err := pgx.CollectRows(rows, pgx.RowToStructByName[domain.User])
+	if err != nil {
+		return nil, fmt.Errorf("collect: %w", err)
+	}
+	return users, nil
+}
+
+// GetSubscribers returns the list of users subscribed to userID.
+//
+// No domain Errors
+func (r *Repository) GetSubscribers(ctx context.Context, userID uuid.UUID) ([]domain.User, error) {
+	query := `
+		SELECT u.id, u.name, u.bio, u.avatar_url
+		FROM subscriptions s
+		JOIN users u ON u.id = s.subscriber_id
+		WHERE s.target_user_id = $1
+		ORDER BY u.id
+	`
+
+	rows, err := r.db.Query(ctx, query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("sql: %w", err)
+	}
+	defer rows.Close()
+
+	users, err := pgx.CollectRows(rows, pgx.RowToStructByName[domain.User])
+	if err != nil {
+		return nil, fmt.Errorf("collect: %w", err)
+	}
+	return users, nil
+}
+
+func isForeignKeyViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == pgerrcode.ForeignKeyViolation
 }
 
 // GetNamesForUserIDs returns a map of user IDs to their corresponding names.
