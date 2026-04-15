@@ -402,6 +402,23 @@ func (c *seedClient) createDealItemReview(ctx context.Context, token string, dea
 	return c.doJSON(ctx, http.MethodPost, path, token, req, nil, http.StatusCreated)
 }
 
+func (c *seedClient) subscribeToUser(ctx context.Context, token string, targetUserID uuid.UUID) error {
+	return c.doJSON(ctx, http.MethodPost, "/users/subscriptions", token, usertypes.SubscribeRequest{
+		TargetUserId: targetUserID,
+	}, nil, http.StatusCreated, http.StatusConflict)
+}
+
+func (c *seedClient) ensureMutualSubscription(ctx context.Context, userA *seededUser, userB *seededUser) error {
+	if err := c.subscribeToUser(ctx, userA.Token, userB.UserID); err != nil {
+		return fmt.Errorf("subscribe %s -> %s: %w", userA.Key, userB.Key, err)
+	}
+	if err := c.subscribeToUser(ctx, userB.Token, userA.UserID); err != nil {
+		return fmt.Errorf("subscribe %s -> %s: %w", userB.Key, userA.Key, err)
+	}
+
+	return nil
+}
+
 func (c *seedClient) createDirectChat(ctx context.Context, token string, participantID uuid.UUID) (uuid.UUID, error) {
 	var body chattypes.Chat
 	if err := c.doJSON(ctx, http.MethodPost, "/chats", token, chattypes.CreateChatRequest{

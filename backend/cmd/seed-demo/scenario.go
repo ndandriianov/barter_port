@@ -238,6 +238,10 @@ func runSeed(ctx context.Context, client *seedClient, cfg seedConfig) (*seedSumm
 		return nil, fmt.Errorf("create reviews: %w", err)
 	}
 
+	if err := client.ensureMutualSubscription(ctx, alice, bob); err != nil {
+		return nil, fmt.Errorf("ensure mutual subscription for direct chat: %w", err)
+	}
+
 	directChatID, err := client.createDirectChat(ctx, alice.Token, bob.UserID)
 	if err != nil {
 		return nil, fmt.Errorf("create direct chat: %w", err)
