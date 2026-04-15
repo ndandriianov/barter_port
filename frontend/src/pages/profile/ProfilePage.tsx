@@ -71,8 +71,8 @@ function ProfilePage() {
   const formatReputationDelta = (delta: number) => (delta > 0 ? `+${delta}` : `${delta}`);
 
   const formatSourceType = (sourceType: string) => {
-    if (sourceType === "offerreport") {
-      return "Жалоба на оффер";
+    if (sourceType === "offer_report" || sourceType === "offerreport") {
+      return "жалоба на предложение";
     }
     return sourceType;
   };
