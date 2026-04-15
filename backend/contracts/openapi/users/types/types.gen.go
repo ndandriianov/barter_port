@@ -89,6 +89,12 @@ type ReputationEvent struct {
 // ReputationPoints Current user reputation score
 type ReputationPoints = int
 
+// SubscribeRequest defines model for SubscribeRequest.
+type SubscribeRequest struct {
+	// TargetUserId Идентификатор пользователя, на которого нужно подписаться
+	TargetUserId openapi_types.UUID `json:"targetUserId"`
+}
+
 // UpdateUserRequest defines model for UpdateUserRequest.
 type UpdateUserRequest struct {
 	// AvatarUrl User avatar URL
@@ -119,6 +125,9 @@ type User struct {
 // UserId User ID
 type UserId = openapi_types.UUID
 
+// GetSubscriptionsResponse defines model for getSubscriptionsResponse.
+type GetSubscriptionsResponse = []User
+
 // Id defines model for Id.
 type Id = openapi_types.UUID
 
@@ -132,3 +141,9 @@ type UpdateCurrentUserJSONRequestBody = UpdateUserRequest
 
 // UploadCurrentUserAvatarMultipartRequestBody defines body for UploadCurrentUserAvatar for multipart/form-data ContentType.
 type UploadCurrentUserAvatarMultipartRequestBody UploadCurrentUserAvatarMultipartBody
+
+// UnsubscribeFromUserJSONRequestBody defines body for UnsubscribeFromUser for application/json ContentType.
+type UnsubscribeFromUserJSONRequestBody = SubscribeRequest
+
+// SubscribeToUserJSONRequestBody defines body for SubscribeToUser for application/json ContentType.
+type SubscribeToUserJSONRequestBody = SubscribeRequest
