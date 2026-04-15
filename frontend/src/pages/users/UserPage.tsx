@@ -1,3 +1,4 @@
+import { useMemo, useState } from "react";
 import { Link as RouterLink, Navigate, useNavigate, useParams } from "react-router-dom";
 import {
   Alert,
@@ -8,6 +9,7 @@ import {
   CardContent,
   CircularProgress,
   Divider,
+  Snackbar,
   Stack,
   Typography,
 } from "@mui/material";
@@ -21,12 +23,42 @@ function UserPage() {
   const { data: user, isLoading: isUserLoading, error } = usersApi.useGetUserByIdQuery(userId ?? "", {
     skip: !userId,
   });
+  const { data: subscriptions, isLoading: isSubscriptionsLoading } = usersApi.useGetSubscriptionsQuery();
+  const [subscribeToUser, { isLoading: isSubscribing }] = usersApi.useSubscribeToUserMutation();
+  const [unsubscribeFromUser, { isLoading: isUnsubscribing }] = usersApi.useUnsubscribeFromUserMutation();
+  const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
+
+  const isSubscribed = useMemo(() => {
+    if (!subscriptions || !userId) {
+      return false;
+    }
+    return subscriptions.some((sub) => sub.id === userId);
+  }, [subscriptions, userId]);
+
+  const handleSubscribe = async () => {
+    if (!userId) {
+      return;
+    }
+    try {
+      if (isSubscribed) {
+        await unsubscribeFromUser({ targetUserId: userId }).unwrap();
+        setSnackbarMessage("Вы успешно отписались от пользователя");
+      } else {
+        await subscribeToUser({ targetUserId: userId }).unwrap();
+        setSnackbarMessage("Вы успешно подписались на пользователя");
+      }
+    } catch {
+      setSnackbarMessage(isSubscribed 
+        ? "Не удалось отписаться от пользователя" 
+        : "Не удалось подписаться на пользователя");
+    }
+  };
 
   if (!userId) {
     return <Alert severity="warning">Пользователь не найден</Alert>;
   }
 
-  if (isCurrentUserLoading || isUserLoading) {
+  if (isCurrentUserLoading || isUserLoading || isSubscriptionsLoading) {
     return (
       <Box display="flex" justifyContent="center" py={6}>
         <CircularProgress />
@@ -98,12 +130,26 @@ function UserPage() {
           <Divider sx={{ my: 3 }} />
 
           <Box display="flex" gap={2} flexWrap="wrap">
+            <Button
+              variant={isSubscribed ? "outlined" : "contained"}
+              onClick={handleSubscribe}
+              disabled={isSubscribing || isUnsubscribing}
+            >
+              {isSubscribed ? "Отписаться" : "Подписаться"}
+            </Button>
             <Button component={RouterLink} to={`/users/${user.id}/reviews`} variant="outlined">
               Отзывы о пользователе
             </Button>
           </Box>
         </CardContent>
       </Card>
+
+      <Snackbar
+        open={snackbarMessage !== null}
+        autoHideDuration={3000}
+        onClose={() => setSnackbarMessage(null)}
+        message={snackbarMessage}
+      />
     </Box>
   );
 }

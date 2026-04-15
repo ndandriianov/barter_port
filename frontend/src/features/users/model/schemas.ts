@@ -29,3 +29,9 @@ export const reputationEventSchema = z.object({
 
 export const reputationEventsResponseSchema = z.array(reputationEventSchema);
 
+export const subscribeRequestSchema = z.object({
+  targetUserId: z.string().uuid(),
+});
+
+export const subscriptionsResponseSchema = z.array(userSchema);
+

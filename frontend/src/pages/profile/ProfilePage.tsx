@@ -9,8 +9,15 @@ import {
   Card,
   CardContent,
   CircularProgress,
+  Dialog,
+  DialogContent,
+  DialogTitle,
   Divider,
   Drawer,
+  List,
+  ListItem,
+  ListItemAvatar,
+  ListItemText,
   Stack,
   TextField,
   Typography,
@@ -20,6 +27,7 @@ import usersApi from "@/features/users/api/usersApi";
 import { useAppDispatch } from "@/hooks/redux";
 import { performLogout } from "@/features/auth/model/logoutThunk";
 import { imageToAvatarDataUrl } from "@/shared/utils/imageToAvatarDataUrl.ts";
+import type { User } from "@/features/users/model/types.ts";
 
 const MAX_AVATAR_FILE_SIZE = 5 * 1024 * 1024;
 
@@ -37,6 +45,8 @@ function ProfilePage() {
   const [draftAvatarFile, setDraftAvatarFile] = useState<File | null>(null);
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [isReputationDrawerOpen, setIsReputationDrawerOpen] = useState(false);
+  const [subscriptionsDialogOpen, setSubscriptionsDialogOpen] = useState(false);
+  const [subscribersDialogOpen, setSubscribersDialogOpen] = useState(false);
   const {
     data: reputationEvents,
     isFetching: isReputationEventsLoading,
@@ -45,6 +55,18 @@ function ProfilePage() {
   } = usersApi.useGetCurrentUserReputationEventsQuery(
     isReputationDrawerOpen ? undefined : skipToken,
   );
+  const {
+    data: subscriptions,
+    isFetching: isSubscriptionsLoading,
+  } = usersApi.useGetSubscriptionsQuery(undefined, {
+    skip: !subscriptionsDialogOpen,
+  });
+  const {
+    data: subscribers,
+    isFetching: isSubscribersLoading,
+  } = usersApi.useGetSubscribersQuery(undefined, {
+    skip: !subscribersDialogOpen,
+  });
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const currentName = draftName ?? (data?.name ?? "");
@@ -153,6 +175,41 @@ function ProfilePage() {
     setDraftAvatarFile(null);
     setAvatarError(null);
   };
+
+  const handleOpenSubscriptionsDialog = () => {
+    setSubscriptionsDialogOpen(true);
+  };
+
+  const handleOpenSubscribersDialog = () => {
+    setSubscribersDialogOpen(true);
+  };
+
+  const handleCloseSubscriptionsDialog = () => {
+    setSubscriptionsDialogOpen(false);
+  };
+
+  const handleCloseSubscribersDialog = () => {
+    setSubscribersDialogOpen(false);
+  };
+
+  const renderUserListItem = (user: User) => (
+    <ListItem
+      key={user.id}
+      component={RouterLink}
+      to={`/users/${user.id}`}
+      sx={{ textDecoration: "none", color: "inherit" }}
+    >
+      <ListItemAvatar>
+        <Avatar src={user.avatarUrl?.trim() || undefined} sx={{ width: 40, height: 40 }}>
+          {!user.avatarUrl?.trim() && <PersonOutlineIcon fontSize="small" />}
+        </Avatar>
+      </ListItemAvatar>
+      <ListItemText
+        primary={user.name?.trim() || "Имя не указано"}
+        secondary={`ID: ${user.id}`}
+      />
+    </ListItem>
+  );
 
   if (isLoading) {
     return (
@@ -301,6 +358,12 @@ function ProfilePage() {
             <Button component={RouterLink} to="/offer-reports/mine" variant="outlined" color="warning">
               Жалобы на меня
             </Button>
+            <Button variant="outlined" onClick={handleOpenSubscriptionsDialog}>
+              Мои подписки
+            </Button>
+            <Button variant="outlined" onClick={handleOpenSubscribersDialog}>
+              Мои подписчики
+            </Button>
           </Box>
 
           <Divider sx={{ my: 3 }} />
@@ -383,6 +446,50 @@ function ProfilePage() {
           )}
         </Box>
       </Drawer>
+
+      <Dialog
+        open={subscriptionsDialogOpen}
+        onClose={handleCloseSubscriptionsDialog}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Мои подписки</DialogTitle>
+        <DialogContent>
+          {isSubscriptionsLoading ? (
+            <Box display="flex" justifyContent="center" py={3}>
+              <CircularProgress size={28} />
+            </Box>
+          ) : !subscriptions || subscriptions.length === 0 ? (
+            <Alert severity="info">Вы пока ни на кого не подписаны.</Alert>
+          ) : (
+            <List>
+              {subscriptions.map((user) => renderUserListItem(user))}
+            </List>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={subscribersDialogOpen}
+        onClose={handleCloseSubscribersDialog}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Мои подписчики</DialogTitle>
+        <DialogContent>
+          {isSubscribersLoading ? (
+            <Box display="flex" justifyContent="center" py={3}>
+              <CircularProgress size={28} />
+            </Box>
+          ) : !subscribers || subscribers.length === 0 ? (
+            <Alert severity="info">У вас пока нет подписчиков.</Alert>
+          ) : (
+            <List>
+              {subscribers.map((user) => renderUserListItem(user))}
+            </List>
+          )}
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }
