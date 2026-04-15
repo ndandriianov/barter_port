@@ -8,6 +8,10 @@ servers:
   - url: 'http://localhost:80'
 
 paths:
+  /users/subscriptions:
+    $ref: './paths/subscriptions.yaml#/subscription'
+  /users/subscribers:
+    $ref: './paths/subscriptions.yaml#/subscribers'
   /users/me:
     get:
       tags:

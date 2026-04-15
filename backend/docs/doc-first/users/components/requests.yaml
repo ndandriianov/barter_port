@@ -7,3 +7,14 @@ UpdateUserRequest:
       $ref: './properties.yaml#/Bio'
     avatarUrl:
       $ref: './properties.yaml#/AvatarUrl'
+
+
+SubscribeRequest:
+  type: object
+  required:
+    - targetUserId
+  properties:
+    targetUserId:
+      type: string
+      format: uuid
+      description: Идентификатор пользователя, на которого нужно подписаться

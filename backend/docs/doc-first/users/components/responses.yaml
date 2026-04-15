@@ -11,3 +11,9 @@ GetReputationEventsResponse:
     type: array
     items:
         $ref: './schemas.yaml#/ReputationEvent'
+
+
+getSubscriptionsResponse:
+  type: array
+  items:
+    $ref: './schemas.yaml#/User'
