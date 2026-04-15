@@ -197,7 +197,7 @@ func normalizeOptionalString(value *string) *string {
 //   - errors.New("cannot subscribe to yourself"): subscriberID == targetUserID.
 func (s *Service) Subscribe(ctx context.Context, subscriberID, targetUserID uuid.UUID) error {
 	if subscriberID == targetUserID {
-		return errors.New("cannot subscribe to yourself")
+		return domain.ErrCannotSubscribeToYourself
 	}
 	return s.repository.Subscribe(ctx, subscriberID, targetUserID)
 }
@@ -206,10 +206,10 @@ func (s *Service) Subscribe(ctx context.Context, subscriberID, targetUserID uuid
 //
 // Errors:
 //   - domain.ErrNotSubscribed: not subscribed.
-//   - errors.New("cannot unsubscribe from yourself"): subscriberID == targetUserID.
+//   - domain.ErrCannotSubscribeToYourself: subscriberID == targetUserID.
 func (s *Service) Unsubscribe(ctx context.Context, subscriberID, targetUserID uuid.UUID) error {
 	if subscriberID == targetUserID {
-		return errors.New("cannot unsubscribe from yourself")
+		return domain.ErrCannotSubscribeToYourself
 	}
 	return s.repository.Unsubscribe(ctx, subscriberID, targetUserID)
 }

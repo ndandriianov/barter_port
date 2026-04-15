@@ -341,6 +341,448 @@ func TestUsersGetUserNotFound(t *testing.T) {
 }
 
 // ────────────────────────────────────────────────────────────────
+// Тесты подписок
+// ────────────────────────────────────────────────────────────────
+
+func TestSubscribeToUser(t *testing.T) {
+	t.Parallel()
+
+	fixture := globalFixture
+
+	subscriber := registerAuthUser(t, fixture)
+	target := registerAuthUser(t, fixture)
+	waitForUsersProjection(t, fixture, subscriber.UserID)
+	waitForUsersProjection(t, fixture, target.UserID)
+
+	body, err := json.Marshal(map[string]string{"targetUserId": target.UserID.String()})
+	require.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodPost, fixture.UsersURL+"/users/subscriptions", bytes.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, subscriber.UserID))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = resp.Body.Close() })
+
+	require.Equal(t, http.StatusCreated, resp.StatusCode)
+}
+
+func TestSubscribeToUserAlreadySubscribed(t *testing.T) {
+	t.Parallel()
+
+	fixture := globalFixture
+
+	subscriber := registerAuthUser(t, fixture)
+	target := registerAuthUser(t, fixture)
+	waitForUsersProjection(t, fixture, subscriber.UserID)
+	waitForUsersProjection(t, fixture, target.UserID)
+
+	body, err := json.Marshal(map[string]string{"targetUserId": target.UserID.String()})
+	require.NoError(t, err)
+
+	doSubscribe := func() *http.Response {
+		req, err := http.NewRequest(http.MethodPost, fixture.UsersURL+"/users/subscriptions", bytes.NewReader(body))
+		require.NoError(t, err)
+		req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, subscriber.UserID))
+		req.Header.Set("Content-Type", "application/json")
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		return resp
+	}
+
+	first := doSubscribe()
+	t.Cleanup(func() { _ = first.Body.Close() })
+	require.Equal(t, http.StatusCreated, first.StatusCode)
+
+	second := doSubscribe()
+	t.Cleanup(func() { _ = second.Body.Close() })
+	require.Equal(t, http.StatusConflict, second.StatusCode)
+}
+
+func TestSubscribeToUserNotFound(t *testing.T) {
+	t.Parallel()
+
+	fixture := globalFixture
+
+	subscriber := registerAuthUser(t, fixture)
+	waitForUsersProjection(t, fixture, subscriber.UserID)
+
+	body, err := json.Marshal(map[string]string{"targetUserId": uuid.NewString()})
+	require.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodPost, fixture.UsersURL+"/users/subscriptions", bytes.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, subscriber.UserID))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = resp.Body.Close() })
+
+	require.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
+
+func TestSubscribeToYourself(t *testing.T) {
+	t.Parallel()
+
+	fixture := globalFixture
+
+	user := registerAuthUser(t, fixture)
+	waitForUsersProjection(t, fixture, user.UserID)
+
+	body, err := json.Marshal(map[string]string{"targetUserId": user.UserID.String()})
+	require.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodPost, fixture.UsersURL+"/users/subscriptions", bytes.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, user.UserID))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = resp.Body.Close() })
+
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestSubscribeUnauthorized(t *testing.T) {
+	t.Parallel()
+
+	fixture := globalFixture
+
+	body, err := json.Marshal(map[string]string{"targetUserId": uuid.NewString()})
+	require.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodPost, fixture.UsersURL+"/users/subscriptions", bytes.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = resp.Body.Close() })
+
+	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+}
+
+func TestUnsubscribeFromUser(t *testing.T) {
+	t.Parallel()
+
+	fixture := globalFixture
+
+	subscriber := registerAuthUser(t, fixture)
+	target := registerAuthUser(t, fixture)
+	waitForUsersProjection(t, fixture, subscriber.UserID)
+	waitForUsersProjection(t, fixture, target.UserID)
+
+	body, err := json.Marshal(map[string]string{"targetUserId": target.UserID.String()})
+	require.NoError(t, err)
+
+	// подписываемся
+	subReq, err := http.NewRequest(http.MethodPost, fixture.UsersURL+"/users/subscriptions", bytes.NewReader(body))
+	require.NoError(t, err)
+	subReq.Header.Set("Authorization", "Bearer "+mustAccessToken(t, subscriber.UserID))
+	subReq.Header.Set("Content-Type", "application/json")
+	subResp, err := http.DefaultClient.Do(subReq)
+	require.NoError(t, err)
+	_ = subResp.Body.Close()
+	require.Equal(t, http.StatusCreated, subResp.StatusCode)
+
+	// отписываемся
+	unsubReq, err := http.NewRequest(http.MethodDelete, fixture.UsersURL+"/users/subscriptions", bytes.NewReader(body))
+	require.NoError(t, err)
+	unsubReq.Header.Set("Authorization", "Bearer "+mustAccessToken(t, subscriber.UserID))
+	unsubReq.Header.Set("Content-Type", "application/json")
+	unsubResp, err := http.DefaultClient.Do(unsubReq)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = unsubResp.Body.Close() })
+
+	require.Equal(t, http.StatusNoContent, unsubResp.StatusCode)
+}
+
+func TestUnsubscribeNotSubscribed(t *testing.T) {
+	t.Parallel()
+
+	fixture := globalFixture
+
+	subscriber := registerAuthUser(t, fixture)
+	target := registerAuthUser(t, fixture)
+	waitForUsersProjection(t, fixture, subscriber.UserID)
+	waitForUsersProjection(t, fixture, target.UserID)
+
+	body, err := json.Marshal(map[string]string{"targetUserId": target.UserID.String()})
+	require.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodDelete, fixture.UsersURL+"/users/subscriptions", bytes.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, subscriber.UserID))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = resp.Body.Close() })
+
+	require.Equal(t, http.StatusConflict, resp.StatusCode)
+}
+
+func TestUnsubscribeUnauthorized(t *testing.T) {
+	t.Parallel()
+
+	fixture := globalFixture
+
+	body, err := json.Marshal(map[string]string{"targetUserId": uuid.NewString()})
+	require.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodDelete, fixture.UsersURL+"/users/subscriptions", bytes.NewReader(body))
+	require.NoError(t, err)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = resp.Body.Close() })
+
+	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+}
+
+func TestGetSubscriptionsEmpty(t *testing.T) {
+	t.Parallel()
+
+	fixture := globalFixture
+
+	user := registerAuthUser(t, fixture)
+	waitForUsersProjection(t, fixture, user.UserID)
+
+	req, err := http.NewRequest(http.MethodGet, fixture.UsersURL+"/users/subscriptions", nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, user.UserID))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = resp.Body.Close() })
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var subs usertypes.GetSubscriptionsResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&subs))
+	require.Empty(t, subs)
+}
+
+func TestGetSubscriptions(t *testing.T) {
+	t.Parallel()
+
+	fixture := globalFixture
+
+	subscriber := registerAuthUser(t, fixture)
+	target := registerAuthUser(t, fixture)
+	waitForUsersProjection(t, fixture, subscriber.UserID)
+	waitForUsersProjection(t, fixture, target.UserID)
+
+	// подписываемся
+	body, err := json.Marshal(map[string]string{"targetUserId": target.UserID.String()})
+	require.NoError(t, err)
+	subReq, err := http.NewRequest(http.MethodPost, fixture.UsersURL+"/users/subscriptions", bytes.NewReader(body))
+	require.NoError(t, err)
+	subReq.Header.Set("Authorization", "Bearer "+mustAccessToken(t, subscriber.UserID))
+	subReq.Header.Set("Content-Type", "application/json")
+	subResp, err := http.DefaultClient.Do(subReq)
+	require.NoError(t, err)
+	_ = subResp.Body.Close()
+	require.Equal(t, http.StatusCreated, subResp.StatusCode)
+
+	// получаем подписки
+	req, err := http.NewRequest(http.MethodGet, fixture.UsersURL+"/users/subscriptions", nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, subscriber.UserID))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = resp.Body.Close() })
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var subs usertypes.GetSubscriptionsResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&subs))
+	require.Len(t, subs, 1)
+	require.Equal(t, target.UserID, uuid.UUID(subs[0].Id))
+}
+
+func TestGetSubscriptionsUnauthorized(t *testing.T) {
+	t.Parallel()
+
+	fixture := globalFixture
+
+	req, err := http.NewRequest(http.MethodGet, fixture.UsersURL+"/users/subscriptions", nil)
+	require.NoError(t, err)
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = resp.Body.Close() })
+
+	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+}
+
+func TestGetSubscribersEmpty(t *testing.T) {
+	t.Parallel()
+
+	fixture := globalFixture
+
+	user := registerAuthUser(t, fixture)
+	waitForUsersProjection(t, fixture, user.UserID)
+
+	req, err := http.NewRequest(http.MethodGet, fixture.UsersURL+"/users/subscribers", nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, user.UserID))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = resp.Body.Close() })
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var subscribers usertypes.GetSubscriptionsResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&subscribers))
+	require.Empty(t, subscribers)
+}
+
+func TestGetSubscribers(t *testing.T) {
+	t.Parallel()
+
+	fixture := globalFixture
+
+	subscriber := registerAuthUser(t, fixture)
+	target := registerAuthUser(t, fixture)
+	waitForUsersProjection(t, fixture, subscriber.UserID)
+	waitForUsersProjection(t, fixture, target.UserID)
+
+	// subscriber подписывается на target
+	body, err := json.Marshal(map[string]string{"targetUserId": target.UserID.String()})
+	require.NoError(t, err)
+	subReq, err := http.NewRequest(http.MethodPost, fixture.UsersURL+"/users/subscriptions", bytes.NewReader(body))
+	require.NoError(t, err)
+	subReq.Header.Set("Authorization", "Bearer "+mustAccessToken(t, subscriber.UserID))
+	subReq.Header.Set("Content-Type", "application/json")
+	subResp, err := http.DefaultClient.Do(subReq)
+	require.NoError(t, err)
+	_ = subResp.Body.Close()
+	require.Equal(t, http.StatusCreated, subResp.StatusCode)
+
+	// target видит subscriber в своих подписчиках
+	req, err := http.NewRequest(http.MethodGet, fixture.UsersURL+"/users/subscribers", nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, target.UserID))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = resp.Body.Close() })
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var subscribers usertypes.GetSubscriptionsResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&subscribers))
+	require.Len(t, subscribers, 1)
+	require.Equal(t, subscriber.UserID, uuid.UUID(subscribers[0].Id))
+}
+
+func TestGetSubscribersUnauthorized(t *testing.T) {
+	t.Parallel()
+
+	fixture := globalFixture
+
+	req, err := http.NewRequest(http.MethodGet, fixture.UsersURL+"/users/subscribers", nil)
+	require.NoError(t, err)
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = resp.Body.Close() })
+
+	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+}
+
+func TestSubscribeUnsubscribeAndVerifyLists(t *testing.T) {
+	t.Parallel()
+
+	fixture := globalFixture
+
+	subscriber := registerAuthUser(t, fixture)
+	target := registerAuthUser(t, fixture)
+	waitForUsersProjection(t, fixture, subscriber.UserID)
+	waitForUsersProjection(t, fixture, target.UserID)
+
+	body, err := json.Marshal(map[string]string{"targetUserId": target.UserID.String()})
+	require.NoError(t, err)
+
+	subscriberToken := mustAccessToken(t, subscriber.UserID)
+	targetToken := mustAccessToken(t, target.UserID)
+
+	// подписываемся
+	subReq, err := http.NewRequest(http.MethodPost, fixture.UsersURL+"/users/subscriptions", bytes.NewReader(body))
+	require.NoError(t, err)
+	subReq.Header.Set("Authorization", "Bearer "+subscriberToken)
+	subReq.Header.Set("Content-Type", "application/json")
+	subResp, err := http.DefaultClient.Do(subReq)
+	require.NoError(t, err)
+	_ = subResp.Body.Close()
+	require.Equal(t, http.StatusCreated, subResp.StatusCode)
+
+	// подписки subscriber содержат target
+	getSubsReq, err := http.NewRequest(http.MethodGet, fixture.UsersURL+"/users/subscriptions", nil)
+	require.NoError(t, err)
+	getSubsReq.Header.Set("Authorization", "Bearer "+subscriberToken)
+	getSubsResp, err := http.DefaultClient.Do(getSubsReq)
+	require.NoError(t, err)
+	var subs usertypes.GetSubscriptionsResponse
+	require.NoError(t, json.NewDecoder(getSubsResp.Body).Decode(&subs))
+	_ = getSubsResp.Body.Close()
+	require.Len(t, subs, 1)
+	require.Equal(t, target.UserID, uuid.UUID(subs[0].Id))
+
+	// подписчики target содержат subscriber
+	getFollowersReq, err := http.NewRequest(http.MethodGet, fixture.UsersURL+"/users/subscribers", nil)
+	require.NoError(t, err)
+	getFollowersReq.Header.Set("Authorization", "Bearer "+targetToken)
+	getFollowersResp, err := http.DefaultClient.Do(getFollowersReq)
+	require.NoError(t, err)
+	var followers usertypes.GetSubscriptionsResponse
+	require.NoError(t, json.NewDecoder(getFollowersResp.Body).Decode(&followers))
+	_ = getFollowersResp.Body.Close()
+	require.Len(t, followers, 1)
+	require.Equal(t, subscriber.UserID, uuid.UUID(followers[0].Id))
+
+	// отписываемся
+	unsubReq, err := http.NewRequest(http.MethodDelete, fixture.UsersURL+"/users/subscriptions", bytes.NewReader(body))
+	require.NoError(t, err)
+	unsubReq.Header.Set("Authorization", "Bearer "+subscriberToken)
+	unsubReq.Header.Set("Content-Type", "application/json")
+	unsubResp, err := http.DefaultClient.Do(unsubReq)
+	require.NoError(t, err)
+	_ = unsubResp.Body.Close()
+	require.Equal(t, http.StatusNoContent, unsubResp.StatusCode)
+
+	// подписки subscriber теперь пусты
+	getSubsAfterReq, err := http.NewRequest(http.MethodGet, fixture.UsersURL+"/users/subscriptions", nil)
+	require.NoError(t, err)
+	getSubsAfterReq.Header.Set("Authorization", "Bearer "+subscriberToken)
+	getSubsAfterResp, err := http.DefaultClient.Do(getSubsAfterReq)
+	require.NoError(t, err)
+	var subsAfter usertypes.GetSubscriptionsResponse
+	require.NoError(t, json.NewDecoder(getSubsAfterResp.Body).Decode(&subsAfter))
+	_ = getSubsAfterResp.Body.Close()
+	require.Empty(t, subsAfter)
+
+	// подписчики target тоже пусты
+	getFollowersAfterReq, err := http.NewRequest(http.MethodGet, fixture.UsersURL+"/users/subscribers", nil)
+	require.NoError(t, err)
+	getFollowersAfterReq.Header.Set("Authorization", "Bearer "+targetToken)
+	getFollowersAfterResp, err := http.DefaultClient.Do(getFollowersAfterReq)
+	require.NoError(t, err)
+	var followersAfter usertypes.GetSubscriptionsResponse
+	require.NoError(t, json.NewDecoder(getFollowersAfterResp.Body).Decode(&followersAfter))
+	_ = getFollowersAfterResp.Body.Close()
+	require.Empty(t, followersAfter)
+}
+
+// ────────────────────────────────────────────────────────────────
 // Вспомогательные функции
 // ────────────────────────────────────────────────────────────────
 

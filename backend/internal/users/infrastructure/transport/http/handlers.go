@@ -275,6 +275,8 @@ func (h *Handlers) HandleSubscribe(w http.ResponseWriter, r *http.Request) {
 			httpx.WriteEmptyError(w, http.StatusNotFound)
 		case errors.Is(err, domain.ErrAlreadySubscribed):
 			httpx.WriteEmptyError(w, http.StatusConflict)
+		case errors.Is(err, domain.ErrCannotSubscribeToYourself):
+			httpx.WriteErrorStr(w, http.StatusBadRequest, err.Error())
 		default:
 			log.Error("failed to subscribe", slog.String("user_id", userID.String()), slog.Any("error", err))
 			httpx.WriteEmptyError(w, http.StatusInternalServerError)
