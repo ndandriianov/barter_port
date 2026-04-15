@@ -183,3 +183,19 @@ func normalizeOptionalString(value *string) *string {
 	}
 	return value
 }
+
+// CheckSubscription проверяет, подписан ли target на requester,
+//   - если нет, то isTargetSubscribed будет false, функия завершится
+//   - если да, то isTargetSubscribed будет true
+//
+// Функция также проверяет, подписан ли requester на target
+//   - если да, то hasCreatedSubscription будет false
+//   - если нет, то hasCreatedSubscription будет true, так как функция подпишет requester на target
+func (s *Service) CheckSubscription(ctx context.Context, requester, target uuid.UUID) (
+	isTargetSubscribed bool,
+	hasCreatedSubscription bool,
+	err error,
+) {
+	// TODO: implement me
+	panic("not implemented")
+}

@@ -18,7 +18,7 @@ func NewServer(usersService *user.Service) *Server {
 	return &Server{usersService: usersService}
 }
 
-func (s Server) ListUsers(ctx context.Context, _ *userspb.ListUsersRequest) (*userspb.ListUsersResponse, error) {
+func (s *Server) ListUsers(ctx context.Context, _ *userspb.ListUsersRequest) (*userspb.ListUsersResponse, error) {
 	users, err := s.usersService.ListUsers(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list users: %w", err)
@@ -39,7 +39,7 @@ func (s Server) ListUsers(ctx context.Context, _ *userspb.ListUsersRequest) (*us
 	return &userspb.ListUsersResponse{Users: info}, nil
 }
 
-func (s Server) GetUsersWithInfo(ctx context.Context, request *userspb.GetUsersWithInfoRequest) (*userspb.GetUsersWithInfoResponse, error) {
+func (s *Server) GetUsersWithInfo(ctx context.Context, request *userspb.GetUsersWithInfoRequest) (*userspb.GetUsersWithInfoResponse, error) {
 	ids := make([]uuid.UUID, len(request.Ids))
 	for i, id := range request.Ids {
 		parsedId, err := uuid.Parse(id)
@@ -66,4 +66,26 @@ func (s Server) GetUsersWithInfo(ctx context.Context, request *userspb.GetUsersW
 	}
 
 	return &userspb.GetUsersWithInfoResponse{Users: info}, nil
+}
+
+func (s *Server) CheckSubscription(ctx context.Context, request *userspb.CheckSubscriptionRequest) (*userspb.CheckSubscriptionResponse, error) {
+	requesterUserId, err := uuid.Parse(request.RequesterUserId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse user id %s: %w", request.RequesterUserId, err)
+	}
+
+	targetUserId, err := uuid.Parse(request.TargetUserId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse user id %s: %w", request.TargetUserId, err)
+	}
+
+	isTargetSubscribed, hasCreatedSubscription, err := s.usersService.CheckSubscription(ctx, requesterUserId, targetUserId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check subscription: %w", err)
+	}
+
+	return &userspb.CheckSubscriptionResponse{
+		IsSubscribed:           isTargetSubscribed,
+		HasCreatedSubscription: hasCreatedSubscription,
+	}, nil
 }
