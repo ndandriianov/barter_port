@@ -31,7 +31,13 @@ chats:
     tags:
       - Chats
     summary: Создать direct chat
-    description: Создаёт чат между текущим пользователем и пользователем из `participant_id`.
+    description: |
+      Создаёт чат между текущим пользователем и пользователем из `participant_id`.
+      
+      Возможно только при условии взаимной подписки между пользователями (каждый подписан на другого)
+      и отсутствии существующего чата между ними.
+      
+      Проверь условия взаимной подписки выполняется через gRPC запрос в сервис users.
     operationId: createChat
     security:
       - bearerAuth: [ ]
@@ -56,6 +62,18 @@ chats:
               $ref: '../components/responses.yaml#/ErrorResponse'
       '401':
         description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: Forbidden. Невыполнение условий взаимной подписки
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '409':
+        description: Конфликт. Чат между пользователями уже существует
         content:
           application/json:
             schema:
