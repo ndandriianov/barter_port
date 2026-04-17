@@ -137,14 +137,14 @@ subscription:
 
 
 
-subscribers:
+mySubscribers:
   get:
     tags:
       - Subscriptions
-    summary: Получить список подписчиков
+    summary: Получить список своих подписчиков
     description: |
       Позволяет получить список пользователей, которые подписаны на текущего пользователя.
-    operationId: getSubscribers
+    operationId: getMySubscribers
     security:
       - bearerAuth: [ ]
     responses:
@@ -158,6 +158,53 @@ subscribers:
                 $ref: '../components/responses.yaml#/getSubscriptionsResponse'
       '401':
         description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/errors.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/errors.yaml#/ErrorResponse'
+
+
+
+subscribersById:
+  get:
+    tags:
+      - Subscriptions
+    summary: Получить список подписчиков пользователя
+    description: |
+      Позволяет получить список пользователей, которые подписаны на другого пользователя.
+    operationId: getSubscribersByUserId
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: integer
+          format: int64
+    responses:
+      '200':
+        description: Список подписчиков
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '../components/responses.yaml#/getSubscriptionsResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/errors.yaml#/ErrorResponse'
+      '404':
+        description: Пользователь не найден
         content:
           application/json:
             schema:

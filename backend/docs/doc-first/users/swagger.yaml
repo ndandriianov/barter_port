@@ -11,7 +11,9 @@ paths:
   /users/subscriptions:
     $ref: './paths/subscriptions.yaml#/subscription'
   /users/subscribers:
-    $ref: './paths/subscriptions.yaml#/subscribers'
+    $ref: './paths/subscriptions.yaml#/mySubscribers'
+  /users/subscribers/{id}:
+    $ref: './paths/subscriptions.yaml#/subscribersById'
   /users/me:
     get:
       tags:
