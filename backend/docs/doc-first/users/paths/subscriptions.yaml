@@ -186,11 +186,58 @@ subscribersById:
         in: path
         required: true
         schema:
-          type: integer
-          format: int64
+          type: string
+          format: uuid
     responses:
       '200':
         description: Список подписчиков
+        content:
+          application/json:
+            schema:
+              type: array
+              items:
+                $ref: '../components/responses.yaml#/getSubscriptionsResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/errors.yaml#/ErrorResponse'
+      '404':
+        description: Пользователь не найден
+        content:
+          application/json:
+            schema:
+              $ref: '../components/errors.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/errors.yaml#/ErrorResponse'
+
+
+
+subscriptionsById:
+  get:
+    tags:
+      - Subscriptions
+    summary: Получить список подписок пользователя
+    description: |
+      Позволяет получить список пользователей, на которых подписан другой пользователь.
+    operationId: getSubscriptionsByUserId
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - name: userId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: Список подписок
         content:
           application/json:
             schema:
