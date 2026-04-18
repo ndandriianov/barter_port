@@ -783,6 +783,200 @@ func TestSubscribeUnsubscribeAndVerifyLists(t *testing.T) {
 	require.Empty(t, followersAfter)
 }
 
+func TestGetSubscriptionsByUserID(t *testing.T) {
+	t.Parallel()
+
+	fixture := globalFixture
+
+	viewer := registerAuthUser(t, fixture)
+	subscriber := registerAuthUser(t, fixture)
+	targetOne := registerAuthUser(t, fixture)
+	targetTwo := registerAuthUser(t, fixture)
+	waitForUsersProjection(t, fixture, viewer.UserID)
+	waitForUsersProjection(t, fixture, subscriber.UserID)
+	waitForUsersProjection(t, fixture, targetOne.UserID)
+	waitForUsersProjection(t, fixture, targetTwo.UserID)
+
+	subscribeRespOne := subscribeUser(t, fixture, subscriber.UserID, targetOne.UserID)
+	t.Cleanup(func() { _ = subscribeRespOne.Body.Close() })
+	require.Equal(t, http.StatusCreated, subscribeRespOne.StatusCode)
+
+	subscribeRespTwo := subscribeUser(t, fixture, subscriber.UserID, targetTwo.UserID)
+	t.Cleanup(func() { _ = subscribeRespTwo.Body.Close() })
+	require.Equal(t, http.StatusCreated, subscribeRespTwo.StatusCode)
+
+	req, err := http.NewRequest(http.MethodGet, fixture.UsersURL+"/users/subscriptions/"+subscriber.UserID.String(), nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, viewer.UserID))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = resp.Body.Close() })
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var subscriptions usertypes.GetSubscriptionsResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&subscriptions))
+	require.Len(t, subscriptions, 2)
+	require.True(t, hasUser(subscriptions, targetOne.UserID))
+	require.True(t, hasUser(subscriptions, targetTwo.UserID))
+}
+
+func TestGetSubscriptionsByUserIDNotFound(t *testing.T) {
+	t.Parallel()
+
+	fixture := globalFixture
+
+	viewer := registerAuthUser(t, fixture)
+	waitForUsersProjection(t, fixture, viewer.UserID)
+
+	req, err := http.NewRequest(http.MethodGet, fixture.UsersURL+"/users/subscriptions/"+uuid.NewString(), nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, viewer.UserID))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = resp.Body.Close() })
+
+	require.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
+
+func TestGetSubscriptionsByUserIDInvalidID(t *testing.T) {
+	t.Parallel()
+
+	fixture := globalFixture
+
+	viewer := registerAuthUser(t, fixture)
+	waitForUsersProjection(t, fixture, viewer.UserID)
+
+	req, err := http.NewRequest(http.MethodGet, fixture.UsersURL+"/users/subscriptions/not-a-uuid", nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, viewer.UserID))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = resp.Body.Close() })
+
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	var apiErr usertypes.ErrorResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&apiErr))
+	require.NotNil(t, apiErr.Message)
+	require.Equal(t, "invalid user id", *apiErr.Message)
+}
+
+func TestGetSubscriptionsByUserIDUnauthorized(t *testing.T) {
+	t.Parallel()
+
+	fixture := globalFixture
+
+	req, err := http.NewRequest(http.MethodGet, fixture.UsersURL+"/users/subscriptions/"+uuid.NewString(), nil)
+	require.NoError(t, err)
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = resp.Body.Close() })
+
+	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+}
+
+func TestGetSubscribersByUserID(t *testing.T) {
+	t.Parallel()
+
+	fixture := globalFixture
+
+	viewer := registerAuthUser(t, fixture)
+	target := registerAuthUser(t, fixture)
+	subscriberOne := registerAuthUser(t, fixture)
+	subscriberTwo := registerAuthUser(t, fixture)
+	waitForUsersProjection(t, fixture, viewer.UserID)
+	waitForUsersProjection(t, fixture, target.UserID)
+	waitForUsersProjection(t, fixture, subscriberOne.UserID)
+	waitForUsersProjection(t, fixture, subscriberTwo.UserID)
+
+	subscribeRespOne := subscribeUser(t, fixture, subscriberOne.UserID, target.UserID)
+	t.Cleanup(func() { _ = subscribeRespOne.Body.Close() })
+	require.Equal(t, http.StatusCreated, subscribeRespOne.StatusCode)
+
+	subscribeRespTwo := subscribeUser(t, fixture, subscriberTwo.UserID, target.UserID)
+	t.Cleanup(func() { _ = subscribeRespTwo.Body.Close() })
+	require.Equal(t, http.StatusCreated, subscribeRespTwo.StatusCode)
+
+	req, err := http.NewRequest(http.MethodGet, fixture.UsersURL+"/users/subscribers/"+target.UserID.String(), nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, viewer.UserID))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = resp.Body.Close() })
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var subscribers usertypes.GetSubscriptionsResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&subscribers))
+	require.Len(t, subscribers, 2)
+	require.True(t, hasUser(subscribers, subscriberOne.UserID))
+	require.True(t, hasUser(subscribers, subscriberTwo.UserID))
+}
+
+func TestGetSubscribersByUserIDNotFound(t *testing.T) {
+	t.Parallel()
+
+	fixture := globalFixture
+
+	viewer := registerAuthUser(t, fixture)
+	waitForUsersProjection(t, fixture, viewer.UserID)
+
+	req, err := http.NewRequest(http.MethodGet, fixture.UsersURL+"/users/subscribers/"+uuid.NewString(), nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, viewer.UserID))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = resp.Body.Close() })
+
+	require.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
+
+func TestGetSubscribersByUserIDInvalidID(t *testing.T) {
+	t.Parallel()
+
+	fixture := globalFixture
+
+	viewer := registerAuthUser(t, fixture)
+	waitForUsersProjection(t, fixture, viewer.UserID)
+
+	req, err := http.NewRequest(http.MethodGet, fixture.UsersURL+"/users/subscribers/not-a-uuid", nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, viewer.UserID))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = resp.Body.Close() })
+
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	var apiErr usertypes.ErrorResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&apiErr))
+	require.NotNil(t, apiErr.Message)
+	require.Equal(t, "invalid user id", *apiErr.Message)
+}
+
+func TestGetSubscribersByUserIDUnauthorized(t *testing.T) {
+	t.Parallel()
+
+	fixture := globalFixture
+
+	req, err := http.NewRequest(http.MethodGet, fixture.UsersURL+"/users/subscribers/"+uuid.NewString(), nil)
+	require.NoError(t, err)
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = resp.Body.Close() })
+
+	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+}
+
 // ────────────────────────────────────────────────────────────────
 // Вспомогательные функции
 // ────────────────────────────────────────────────────────────────
