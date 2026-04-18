@@ -71,6 +71,12 @@ const usersApi = createApi({
       providesTags: ["Subscriptions"],
     }),
 
+    getSubscribersByUserId: builder.query<SubscriptionsResponse, string>({
+      query: (id) => `/users/subscribers/${id}`,
+      transformResponse: (response: unknown) => subscriptionsResponseSchema.parse(response),
+      providesTags: (_result, _error, id) => [{type: "Subscriptions", id: `subscribers:${id}`}],
+    }),
+
     subscribeToUser: builder.mutation<void, SubscribeRequest>({
       query: (body) => ({
         url: "/users/subscriptions",

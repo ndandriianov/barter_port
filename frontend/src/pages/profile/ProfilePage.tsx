@@ -64,9 +64,8 @@ function ProfilePage() {
   const {
     data: subscribers,
     isFetching: isSubscribersLoading,
-  } = usersApi.useGetSubscribersQuery(undefined, {
-    skip: !subscribersDialogOpen,
-  });
+    error: subscribersError,
+  } = usersApi.useGetSubscribersQuery();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const currentName = draftName ?? (data?.name ?? "");
@@ -192,11 +191,17 @@ function ProfilePage() {
     setSubscribersDialogOpen(false);
   };
 
+  const handleCloseUserDialogs = () => {
+    handleCloseSubscriptionsDialog();
+    handleCloseSubscribersDialog();
+  };
+
   const renderUserListItem = (user: User) => (
     <ListItem
       key={user.id}
       component={RouterLink}
       to={`/users/${user.id}`}
+      onClick={handleCloseUserDialogs}
       sx={{ textDecoration: "none", color: "inherit" }}
     >
       <ListItemAvatar>
@@ -222,6 +227,8 @@ function ProfilePage() {
   if (!data) {
     return <Alert severity="warning">Вы не авторизованы</Alert>;
   }
+
+  const subscribersCount = subscribers?.length ?? 0;
 
   return (
     <Box maxWidth={560} mx="auto">
@@ -286,6 +293,18 @@ function ProfilePage() {
               <Typography variant="h6" fontWeight={700}>
                 {data.reputationPoints}
               </Typography>
+            </Box>
+            <Box>
+              <Typography variant="caption" color="text.secondary">
+                Подписчики
+              </Typography>
+              <Button
+                variant="text"
+                onClick={handleOpenSubscribersDialog}
+                sx={{ display: "block", px: 0, minWidth: 0, fontWeight: 700 }}
+              >
+                {isSubscribersLoading ? "Загрузка..." : subscribersCount}
+              </Button>
             </Box>
           </Stack>
 
@@ -481,6 +500,8 @@ function ProfilePage() {
             <Box display="flex" justifyContent="center" py={3}>
               <CircularProgress size={28} />
             </Box>
+          ) : subscribersError ? (
+            <Alert severity="error">Не удалось загрузить список подписчиков.</Alert>
           ) : !subscribers || subscribers.length === 0 ? (
             <Alert severity="info">У вас пока нет подписчиков.</Alert>
           ) : (

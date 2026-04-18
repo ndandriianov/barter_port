@@ -8,13 +8,21 @@ import {
   Card,
   CardContent,
   CircularProgress,
+  Dialog,
+  DialogContent,
+  DialogTitle,
   Divider,
+  List,
+  ListItem,
+  ListItemAvatar,
+  ListItemText,
   Snackbar,
   Stack,
   Typography,
 } from "@mui/material";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import usersApi from "@/features/users/api/usersApi.ts";
+import type { User } from "@/features/users/model/types.ts";
 
 function UserPage() {
   const { userId } = useParams<{ userId: string }>();
@@ -24,9 +32,17 @@ function UserPage() {
     skip: !userId,
   });
   const { data: subscriptions, isLoading: isSubscriptionsLoading } = usersApi.useGetSubscriptionsQuery();
+  const {
+    data: subscribers,
+    isFetching: isSubscribersLoading,
+    error: subscribersError,
+  } = usersApi.useGetSubscribersByUserIdQuery(userId ?? "", {
+    skip: !userId,
+  });
   const [subscribeToUser, { isLoading: isSubscribing }] = usersApi.useSubscribeToUserMutation();
   const [unsubscribeFromUser, { isLoading: isUnsubscribing }] = usersApi.useUnsubscribeFromUserMutation();
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
+  const [subscribersDialogOpen, setSubscribersDialogOpen] = useState(false);
 
   const isSubscribed = useMemo(() => {
     if (!subscriptions || !userId) {
@@ -77,6 +93,27 @@ function UserPage() {
   const displayName = user.name?.trim() || "Имя не указано";
   const bio = user.bio?.trim();
   const avatarUrl = user.avatarUrl?.trim() || "";
+  const subscribersCount = subscribers?.length ?? 0;
+
+  const renderUserListItem = (listUser: User) => (
+    <ListItem
+      key={listUser.id}
+      component={RouterLink}
+      to={`/users/${listUser.id}`}
+      onClick={() => setSubscribersDialogOpen(false)}
+      sx={{ textDecoration: "none", color: "inherit" }}
+    >
+      <ListItemAvatar>
+        <Avatar src={listUser.avatarUrl?.trim() || undefined} sx={{ width: 40, height: 40 }}>
+          {!listUser.avatarUrl?.trim() && <PersonOutlineIcon fontSize="small" />}
+        </Avatar>
+      </ListItemAvatar>
+      <ListItemText
+        primary={listUser.name?.trim() || "Имя не указано"}
+        secondary={`ID: ${listUser.id}`}
+      />
+    </ListItem>
+  );
 
   return (
     <Box maxWidth={560} mx="auto">
@@ -113,6 +150,14 @@ function UserPage() {
               <Typography variant="body2" fontFamily="monospace" fontWeight={500}>
                 {user.id}
               </Typography>
+              <Button
+                variant="text"
+                size="small"
+                onClick={() => setSubscribersDialogOpen(true)}
+                sx={{ mt: 1, px: 0, minWidth: 0, fontWeight: 600 }}
+              >
+                {isSubscribersLoading ? "Подписчики..." : `Подписчики: ${subscribersCount}`}
+              </Button>
             </Box>
           </Box>
 
@@ -150,6 +195,30 @@ function UserPage() {
         onClose={() => setSnackbarMessage(null)}
         message={snackbarMessage}
       />
+
+      <Dialog
+        open={subscribersDialogOpen}
+        onClose={() => setSubscribersDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Подписчики пользователя</DialogTitle>
+        <DialogContent>
+          {isSubscribersLoading ? (
+            <Box display="flex" justifyContent="center" py={3}>
+              <CircularProgress size={28} />
+            </Box>
+          ) : subscribersError ? (
+            <Alert severity="error">Не удалось загрузить список подписчиков.</Alert>
+          ) : !subscribers || subscribers.length === 0 ? (
+            <Alert severity="info">У пользователя пока нет подписчиков.</Alert>
+          ) : (
+            <List>
+              {subscribers.map((subscriber) => renderUserListItem(subscriber))}
+            </List>
+          )}
+        </DialogContent>
+      </Dialog>
     </Box>
   );
 }
