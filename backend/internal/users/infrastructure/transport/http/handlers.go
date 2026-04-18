@@ -338,17 +338,45 @@ func (h *Handlers) HandleGetSubscriptions(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	response := make(types.GetSubscriptionsResponse, 0, len(users))
-	for _, u := range users {
-		response = append(response, types.User{
-			Id:        u.Id,
-			Name:      u.Name,
-			Bio:       u.Bio,
-			AvatarUrl: u.AvatarURL,
-		})
+	httpx.WriteJSON(w, http.StatusOK, makeUsersResponse(users))
+}
+
+func (h *Handlers) HandleGetSubscriptionsByID(w http.ResponseWriter, r *http.Request) {
+	log := httplog.LogFrom(r.Context(), slog.Default())
+
+	if _, ok := authkit.UserIDFromContext(r.Context()); !ok {
+		log.Warn("failed to get user id from context")
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
 	}
 
-	httpx.WriteJSON(w, http.StatusOK, response)
+	targetUserID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		log.Warn("invalid target user id", slog.Any("error", err))
+		httpx.WriteErrorStr(w, http.StatusBadRequest, "invalid user id")
+		return
+	}
+
+	if _, err = h.userService.GetUser(r.Context(), targetUserID); err != nil {
+		if errors.Is(err, domain.ErrUserNotFound) {
+			log.Info("target user not found", slog.String("target_user_id", targetUserID.String()))
+			httpx.WriteEmptyError(w, http.StatusNotFound)
+			return
+		}
+
+		log.Error("failed to get target user", slog.String("target_user_id", targetUserID.String()), slog.String("error", err.Error()))
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		return
+	}
+
+	users, err := h.userService.GetSubscriptions(r.Context(), targetUserID)
+	if err != nil {
+		log.Error("failed to get target user subscriptions", slog.String("target_user_id", targetUserID.String()), slog.Any("error", err))
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		return
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, makeUsersResponse(users))
 }
 
 func (h *Handlers) HandleGetSubscribers(w http.ResponseWriter, r *http.Request) {
@@ -368,17 +396,45 @@ func (h *Handlers) HandleGetSubscribers(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	response := make(types.GetSubscriptionsResponse, 0, len(users))
-	for _, u := range users {
-		response = append(response, types.User{
-			Id:        u.Id,
-			Name:      u.Name,
-			Bio:       u.Bio,
-			AvatarUrl: u.AvatarURL,
-		})
+	httpx.WriteJSON(w, http.StatusOK, makeUsersResponse(users))
+}
+
+func (h *Handlers) HandleGetSubscribersByID(w http.ResponseWriter, r *http.Request) {
+	log := httplog.LogFrom(r.Context(), slog.Default())
+
+	if _, ok := authkit.UserIDFromContext(r.Context()); !ok {
+		log.Warn("failed to get user id from context")
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
 	}
 
-	httpx.WriteJSON(w, http.StatusOK, response)
+	targetUserID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		log.Warn("invalid target user id", slog.Any("error", err))
+		httpx.WriteErrorStr(w, http.StatusBadRequest, "invalid user id")
+		return
+	}
+
+	if _, err = h.userService.GetUser(r.Context(), targetUserID); err != nil {
+		if errors.Is(err, domain.ErrUserNotFound) {
+			log.Info("target user not found", slog.String("target_user_id", targetUserID.String()))
+			httpx.WriteEmptyError(w, http.StatusNotFound)
+			return
+		}
+
+		log.Error("failed to get target user", slog.String("target_user_id", targetUserID.String()), slog.String("error", err.Error()))
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		return
+	}
+
+	users, err := h.userService.GetSubscribers(r.Context(), targetUserID)
+	if err != nil {
+		log.Error("failed to get target user subscribers", slog.String("target_user_id", targetUserID.String()), slog.Any("error", err))
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		return
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, makeUsersResponse(users))
 }
 
 type avatarUploadResponse struct {
@@ -437,4 +493,18 @@ func readAvatarUpload(file multipart.File) ([]byte, string, error) {
 	}
 
 	return content, contentType, nil
+}
+
+func makeUsersResponse(users []domain.User) types.GetSubscriptionsResponse {
+	response := make(types.GetSubscriptionsResponse, 0, len(users))
+	for _, u := range users {
+		response = append(response, types.User{
+			Id:        u.Id,
+			Name:      u.Name,
+			Bio:       u.Bio,
+			AvatarUrl: u.AvatarURL,
+		})
+	}
+
+	return response
 }
