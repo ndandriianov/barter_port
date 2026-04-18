@@ -33,6 +33,13 @@ function UserPage() {
   });
   const { data: subscriptions, isLoading: isSubscriptionsLoading } = usersApi.useGetSubscriptionsQuery();
   const {
+    data: userSubscriptions,
+    isFetching: isUserSubscriptionsLoading,
+    error: userSubscriptionsError,
+  } = usersApi.useGetSubscriptionsByUserIdQuery(userId ?? "", {
+    skip: !userId,
+  });
+  const {
     data: subscribers,
     isFetching: isSubscribersLoading,
     error: subscribersError,
@@ -42,6 +49,7 @@ function UserPage() {
   const [subscribeToUser, { isLoading: isSubscribing }] = usersApi.useSubscribeToUserMutation();
   const [unsubscribeFromUser, { isLoading: isUnsubscribing }] = usersApi.useUnsubscribeFromUserMutation();
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
+  const [subscriptionsDialogOpen, setSubscriptionsDialogOpen] = useState(false);
   const [subscribersDialogOpen, setSubscribersDialogOpen] = useState(false);
 
   const isSubscribed = useMemo(() => {
@@ -93,6 +101,7 @@ function UserPage() {
   const displayName = user.name?.trim() || "Имя не указано";
   const bio = user.bio?.trim();
   const avatarUrl = user.avatarUrl?.trim() || "";
+  const subscriptionsCount = userSubscriptions?.length ?? 0;
   const subscribersCount = subscribers?.length ?? 0;
 
   const renderUserListItem = (listUser: User) => (
@@ -100,7 +109,10 @@ function UserPage() {
       key={listUser.id}
       component={RouterLink}
       to={`/users/${listUser.id}`}
-      onClick={() => setSubscribersDialogOpen(false)}
+      onClick={() => {
+        setSubscriptionsDialogOpen(false);
+        setSubscribersDialogOpen(false);
+      }}
       sx={{ textDecoration: "none", color: "inherit" }}
     >
       <ListItemAvatar>
@@ -153,8 +165,16 @@ function UserPage() {
               <Button
                 variant="text"
                 size="small"
+                onClick={() => setSubscriptionsDialogOpen(true)}
+                sx={{ mt: 1, px: 0, minWidth: 0, fontWeight: 600, display: "block" }}
+              >
+                {isUserSubscriptionsLoading ? "Подписки..." : `Подписки: ${subscriptionsCount}`}
+              </Button>
+              <Button
+                variant="text"
+                size="small"
                 onClick={() => setSubscribersDialogOpen(true)}
-                sx={{ mt: 1, px: 0, minWidth: 0, fontWeight: 600 }}
+                sx={{ px: 0, minWidth: 0, fontWeight: 600, display: "block" }}
               >
                 {isSubscribersLoading ? "Подписчики..." : `Подписчики: ${subscribersCount}`}
               </Button>
@@ -195,6 +215,30 @@ function UserPage() {
         onClose={() => setSnackbarMessage(null)}
         message={snackbarMessage}
       />
+
+      <Dialog
+        open={subscriptionsDialogOpen}
+        onClose={() => setSubscriptionsDialogOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Подписки пользователя</DialogTitle>
+        <DialogContent>
+          {isUserSubscriptionsLoading ? (
+            <Box display="flex" justifyContent="center" py={3}>
+              <CircularProgress size={28} />
+            </Box>
+          ) : userSubscriptionsError ? (
+            <Alert severity="error">Не удалось загрузить список подписок.</Alert>
+          ) : !userSubscriptions || userSubscriptions.length === 0 ? (
+            <Alert severity="info">Пользователь пока ни на кого не подписан.</Alert>
+          ) : (
+            <List>
+              {userSubscriptions.map((subscription) => renderUserListItem(subscription))}
+            </List>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={subscribersDialogOpen}

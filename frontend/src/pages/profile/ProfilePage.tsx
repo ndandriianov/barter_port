@@ -58,9 +58,8 @@ function ProfilePage() {
   const {
     data: subscriptions,
     isFetching: isSubscriptionsLoading,
-  } = usersApi.useGetSubscriptionsQuery(undefined, {
-    skip: !subscriptionsDialogOpen,
-  });
+    error: subscriptionsError,
+  } = usersApi.useGetSubscriptionsQuery();
   const {
     data: subscribers,
     isFetching: isSubscribersLoading,
@@ -228,6 +227,7 @@ function ProfilePage() {
     return <Alert severity="warning">Вы не авторизованы</Alert>;
   }
 
+  const subscriptionsCount = subscriptions?.length ?? 0;
   const subscribersCount = subscribers?.length ?? 0;
 
   return (
@@ -293,6 +293,18 @@ function ProfilePage() {
               <Typography variant="h6" fontWeight={700}>
                 {data.reputationPoints}
               </Typography>
+            </Box>
+            <Box>
+              <Typography variant="caption" color="text.secondary">
+                Подписки
+              </Typography>
+              <Button
+                variant="text"
+                onClick={handleOpenSubscriptionsDialog}
+                sx={{ display: "block", px: 0, minWidth: 0, fontWeight: 700 }}
+              >
+                {isSubscriptionsLoading ? "Загрузка..." : subscriptionsCount}
+              </Button>
             </Box>
             <Box>
               <Typography variant="caption" color="text.secondary">
@@ -478,6 +490,8 @@ function ProfilePage() {
             <Box display="flex" justifyContent="center" py={3}>
               <CircularProgress size={28} />
             </Box>
+          ) : subscriptionsError ? (
+            <Alert severity="error">Не удалось загрузить список подписок.</Alert>
           ) : !subscriptions || subscriptions.length === 0 ? (
             <Alert severity="info">Вы пока ни на кого не подписаны.</Alert>
           ) : (
