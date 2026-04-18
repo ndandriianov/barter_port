@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import type { FetchBaseQueryError } from "@reduxjs/toolkit/query";
 import type { SerializedError } from "@reduxjs/toolkit";
 import chatsApi from "@/features/chats/api/chatsApi.ts";
@@ -38,11 +38,22 @@ function getCreateChatErrorMessage(
 
 function NewChatModal({ onClose, onCreated }: Props) {
   const { data: users = [], isLoading } = chatsApi.useListUsersQuery();
+  const { data: chats = [] } = chatsApi.useListChatsQuery();
   const [createChat, { isLoading: isCreating, error, reset }] = chatsApi.useCreateChatMutation();
   const [selected, setSelected] = useState<string>("");
+  const existingDirectChat = useMemo(
+    () => chats.find((chat) => !chat.deal_id && chat.participants.includes(selected)),
+    [chats, selected],
+  );
 
   async function handleCreate() {
     if (!selected) return;
+
+    if (existingDirectChat) {
+      reset();
+      onCreated(existingDirectChat.id);
+      return;
+    }
 
     try {
       const chat = await createChat({ participant_id: selected }).unwrap();
@@ -94,6 +105,21 @@ function NewChatModal({ onClose, onCreated }: Props) {
           </div>
         )}
 
+        {existingDirectChat && (
+          <div
+            style={{
+              marginBottom: 16,
+              padding: "10px 12px",
+              borderRadius: 4,
+              border: "1px solid #b6d4fe",
+              background: "#cfe2ff",
+              color: "#084298",
+            }}
+          >
+            Чат с этим пользователем уже существует. Будет открыт существующий чат.
+          </div>
+        )}
+
         <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
           <button
             onClick={() => {
@@ -109,7 +135,7 @@ function NewChatModal({ onClose, onCreated }: Props) {
             disabled={!selected || isCreating}
             style={{ padding: "8px 16px", borderRadius: 4, border: "none", cursor: "pointer", background: "#1976d2", color: "#fff" }}
           >
-            {isCreating ? "Создание..." : "Создать"}
+            {isCreating ? "Создание..." : existingDirectChat ? "Открыть чат" : "Создать"}
           </button>
         </div>
       </div>
