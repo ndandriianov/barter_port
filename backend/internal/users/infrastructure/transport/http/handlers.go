@@ -157,7 +157,12 @@ func (h *Handlers) HandleUploadMeAvatar(w http.ResponseWriter, r *http.Request) 
 		httpx.WriteErrorStr(w, http.StatusBadRequest, "avatar file is required")
 		return
 	}
-	defer file.Close()
+	defer func(file multipart.File) {
+		err := file.Close()
+		if err != nil {
+			log.Warn("failed to close avatar file", slog.Any("error", err))
+		}
+	}(file)
 
 	content, contentType, err := readAvatarUpload(file)
 	if err != nil {
