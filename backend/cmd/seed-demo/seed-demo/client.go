@@ -1,4 +1,4 @@
-package main
+package seed_demo
 
 import (
 	chattypes "barter-port/contracts/openapi/chats/types"
@@ -17,7 +17,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func (c *seedClient) register(ctx context.Context, email, password string) (registerResponse, error) {
+func (c *SeedClient) register(ctx context.Context, email, password string) (registerResponse, error) {
 	var respBody registerResponse
 	if err := c.doJSON(ctx, http.MethodPost, "/auth/register", "", registerRequest{
 		Email:    email,
@@ -29,7 +29,7 @@ func (c *seedClient) register(ctx context.Context, email, password string) (regi
 	return respBody, nil
 }
 
-func (c *seedClient) ensureUser(ctx context.Context, email, password string) (registerResponse, string, error) {
+func (c *SeedClient) ensureUser(ctx context.Context, email, password string) (registerResponse, string, error) {
 	registered, err := c.register(ctx, email, password)
 	if err == nil {
 		if err := c.waitForAuthProvisioning(ctx, registered.UserID); err != nil {
@@ -67,12 +67,12 @@ func (c *seedClient) ensureUser(ctx context.Context, email, password string) (re
 	}
 
 	return registerResponse{
-		UserID: uuid.UUID(me.Id),
+		UserID: me.Id,
 		Email:  me.Email,
 	}, token, nil
 }
 
-func (c *seedClient) waitForAuthProvisioning(ctx context.Context, userID uuid.UUID) error {
+func (c *SeedClient) waitForAuthProvisioning(ctx context.Context, userID uuid.UUID) error {
 	return c.poll(ctx, func(ctx context.Context) (bool, error) {
 		resp, err := c.do(ctx, http.MethodGet, "/auth/status/"+userID.String(), "", nil)
 		if err != nil {
@@ -103,7 +103,7 @@ func (c *seedClient) waitForAuthProvisioning(ctx context.Context, userID uuid.UU
 	})
 }
 
-func (c *seedClient) login(ctx context.Context, email, password string) (string, error) {
+func (c *SeedClient) login(ctx context.Context, email, password string) (string, error) {
 	var body loginResponse
 	if err := c.doJSON(ctx, http.MethodPost, "/auth/login", "", registerRequest{
 		Email:    email,
@@ -119,7 +119,7 @@ func (c *seedClient) login(ctx context.Context, email, password string) (string,
 	return body.AccessToken, nil
 }
 
-func (c *seedClient) waitForUsersProjection(ctx context.Context, token string) error {
+func (c *SeedClient) waitForUsersProjection(ctx context.Context, token string) error {
 	return c.poll(ctx, func(ctx context.Context) (bool, error) {
 		resp, err := c.do(ctx, http.MethodGet, "/users/me", token, nil)
 		if err != nil {
@@ -138,7 +138,7 @@ func (c *seedClient) waitForUsersProjection(ctx context.Context, token string) e
 	})
 }
 
-func (c *seedClient) updateMe(ctx context.Context, token string, req usertypes.UpdateUserRequest) (usertypes.Me, error) {
+func (c *SeedClient) updateMe(ctx context.Context, token string, req usertypes.UpdateUserRequest) (usertypes.Me, error) {
 	var body usertypes.Me
 	if err := c.doJSON(ctx, http.MethodPatch, "/users/me", token, req, &body, http.StatusOK); err != nil {
 		return usertypes.Me{}, err
@@ -147,7 +147,7 @@ func (c *seedClient) updateMe(ctx context.Context, token string, req usertypes.U
 	return body, nil
 }
 
-func (c *seedClient) getMe(ctx context.Context, token string) (usertypes.Me, error) {
+func (c *SeedClient) getMe(ctx context.Context, token string) (usertypes.Me, error) {
 	var body usertypes.Me
 	if err := c.doJSON(ctx, http.MethodGet, "/users/me", token, nil, &body, http.StatusOK); err != nil {
 		return usertypes.Me{}, err
@@ -156,7 +156,7 @@ func (c *seedClient) getMe(ctx context.Context, token string) (usertypes.Me, err
 	return body, nil
 }
 
-func (c *seedClient) createOffers(ctx context.Context, user *seededUser, specs []offerSpec) (map[string]uuid.UUID, error) {
+func (c *SeedClient) createOffers(ctx context.Context, user *seededUser, specs []offerSpec) (map[string]uuid.UUID, error) {
 	result := make(map[string]uuid.UUID, len(specs))
 	for _, spec := range specs {
 		var offer dealtypes.Offer
@@ -169,13 +169,13 @@ func (c *seedClient) createOffers(ctx context.Context, user *seededUser, specs [
 			return nil, fmt.Errorf("create offer %s for %s: %w", spec.Key, user.Key, err)
 		}
 
-		result[spec.Key] = uuid.UUID(offer.Id)
+		result[spec.Key] = offer.Id
 	}
 
 	return result, nil
 }
 
-func (c *seedClient) createOfferGroup(ctx context.Context, token string, req offerGroupRequest) (uuid.UUID, error) {
+func (c *SeedClient) createOfferGroup(ctx context.Context, token string, req offerGroupRequest) (uuid.UUID, error) {
 	var body offerGroupResponse
 	if err := c.doJSON(ctx, http.MethodPost, "/offer-groups", token, req, &body, http.StatusCreated); err != nil {
 		return uuid.Nil, err
@@ -184,17 +184,17 @@ func (c *seedClient) createOfferGroup(ctx context.Context, token string, req off
 	return body.ID, nil
 }
 
-func (c *seedClient) createDraftFromOfferGroup(ctx context.Context, token string, offerGroupID uuid.UUID, req offerGroupDraftRequest) (uuid.UUID, error) {
+func (c *SeedClient) createDraftFromOfferGroup(ctx context.Context, token string, offerGroupID uuid.UUID, req offerGroupDraftRequest) (uuid.UUID, error) {
 	var body dealtypes.CreateDraftDealResponse
 	path := fmt.Sprintf("/offer-groups/%s/drafts", offerGroupID)
 	if err := c.doJSON(ctx, http.MethodPost, path, token, req, &body, http.StatusCreated); err != nil {
 		return uuid.Nil, err
 	}
 
-	return uuid.UUID(body.Id), nil
+	return body.Id, nil
 }
 
-func (c *seedClient) listMyDeals(ctx context.Context, token string) (dealtypes.GetDealsResponse, error) {
+func (c *SeedClient) listMyDeals(ctx context.Context, token string) (dealtypes.GetDealsResponse, error) {
 	var deals dealtypes.GetDealsResponse
 	if err := c.doJSON(ctx, http.MethodGet, "/deals?my=true", token, nil, &deals, http.StatusOK); err != nil {
 		return nil, err
@@ -203,20 +203,20 @@ func (c *seedClient) listMyDeals(ctx context.Context, token string) (dealtypes.G
 	return deals, nil
 }
 
-func (c *seedClient) createDraft(ctx context.Context, token string, req dealtypes.CreateDraftDealRequest) (uuid.UUID, error) {
+func (c *SeedClient) createDraft(ctx context.Context, token string, req dealtypes.CreateDraftDealRequest) (uuid.UUID, error) {
 	var body dealtypes.CreateDraftDealResponse
 	if err := c.doJSON(ctx, http.MethodPost, "/deals/drafts", token, req, &body, http.StatusCreated); err != nil {
 		return uuid.Nil, err
 	}
 
-	return uuid.UUID(body.Id), nil
+	return body.Id, nil
 }
 
-func (c *seedClient) confirmDraft(ctx context.Context, token string, draftID uuid.UUID) error {
+func (c *SeedClient) confirmDraft(ctx context.Context, token string, draftID uuid.UUID) error {
 	return c.doJSON(ctx, http.MethodPatch, "/deals/drafts/"+draftID.String(), token, nil, nil, http.StatusOK)
 }
 
-func (c *seedClient) createTwoPartyDeal(
+func (c *SeedClient) createTwoPartyDeal(
 	ctx context.Context,
 	userA *seededUser,
 	userB *seededUser,
@@ -252,10 +252,10 @@ func (c *seedClient) createTwoPartyDeal(
 	return c.waitForNewDeal(ctx, userA.Token, before)
 }
 
-func (c *seedClient) waitForNewDeal(ctx context.Context, token string, before dealtypes.GetDealsResponse) (uuid.UUID, error) {
+func (c *SeedClient) waitForNewDeal(ctx context.Context, token string, before dealtypes.GetDealsResponse) (uuid.UUID, error) {
 	beforeSet := make(map[uuid.UUID]struct{}, len(before))
 	for _, deal := range before {
-		beforeSet[uuid.UUID(deal.Id)] = struct{}{}
+		beforeSet[deal.Id] = struct{}{}
 	}
 
 	var created uuid.UUID
@@ -266,7 +266,7 @@ func (c *seedClient) waitForNewDeal(ctx context.Context, token string, before de
 		}
 
 		for _, deal := range after {
-			id := uuid.UUID(deal.Id)
+			id := deal.Id
 			if _, ok := beforeSet[id]; !ok {
 				created = id
 				return true, nil
@@ -282,7 +282,7 @@ func (c *seedClient) waitForNewDeal(ctx context.Context, token string, before de
 	return created, nil
 }
 
-func (c *seedClient) getDealByID(ctx context.Context, token string, dealID uuid.UUID) (dealtypes.Deal, error) {
+func (c *SeedClient) getDealByID(ctx context.Context, token string, dealID uuid.UUID) (dealtypes.Deal, error) {
 	var body dealtypes.Deal
 	if err := c.doJSON(ctx, http.MethodGet, "/deals/"+dealID.String(), token, nil, &body, http.StatusOK); err != nil {
 		return dealtypes.Deal{}, err
@@ -291,18 +291,18 @@ func (c *seedClient) getDealByID(ctx context.Context, token string, dealID uuid.
 	return body, nil
 }
 
-func (c *seedClient) updateDealItem(ctx context.Context, token string, dealID uuid.UUID, itemID uuid.UUID, req dealtypes.UpdateDealItemRequest) error {
+func (c *SeedClient) updateDealItem(ctx context.Context, token string, dealID uuid.UUID, itemID uuid.UUID, req dealtypes.UpdateDealItemRequest) error {
 	path := fmt.Sprintf("/deals/%s/items/%s", dealID, itemID)
 	return c.doJSON(ctx, http.MethodPatch, path, token, req, nil, http.StatusOK)
 }
 
-func (c *seedClient) changeDealStatus(ctx context.Context, token string, dealID uuid.UUID, status dealtypes.DealStatus) error {
+func (c *SeedClient) changeDealStatus(ctx context.Context, token string, dealID uuid.UUID, status dealtypes.DealStatus) error {
 	return c.doJSON(ctx, http.MethodPatch, "/deals/"+dealID.String()+"/status", token, dealtypes.ChangeDealStatusRequest{
 		ExpectedStatus: status,
 	}, nil, http.StatusOK)
 }
 
-func (c *seedClient) promoteDealToDiscussion(ctx context.Context, dealID uuid.UUID, userA *seededUser, userB *seededUser) (dealtypes.Deal, error) {
+func (c *SeedClient) promoteDealToDiscussion(ctx context.Context, dealID uuid.UUID, userA *seededUser, userB *seededUser) (dealtypes.Deal, error) {
 	deal, err := c.getDealByID(ctx, userA.Token, dealID)
 	if err != nil {
 		return dealtypes.Deal{}, err
@@ -310,7 +310,7 @@ func (c *seedClient) promoteDealToDiscussion(ctx context.Context, dealID uuid.UU
 
 	itemByAuthor := make(map[uuid.UUID]uuid.UUID, len(deal.Items))
 	for _, item := range deal.Items {
-		itemByAuthor[uuid.UUID(item.AuthorId)] = uuid.UUID(item.Id)
+		itemByAuthor[item.AuthorId] = item.Id
 	}
 
 	itemA, ok := itemByAuthor[userA.UserID]
@@ -344,7 +344,7 @@ func (c *seedClient) promoteDealToDiscussion(ctx context.Context, dealID uuid.UU
 	return c.getDealByID(ctx, userA.Token, dealID)
 }
 
-func (c *seedClient) completeTwoPartyDeal(ctx context.Context, dealID uuid.UUID, userA *seededUser, userB *seededUser) error {
+func (c *SeedClient) completeTwoPartyDeal(ctx context.Context, dealID uuid.UUID, userA *seededUser, userB *seededUser) error {
 	for _, step := range []struct {
 		token  string
 		status dealtypes.DealStatus
@@ -363,10 +363,10 @@ func (c *seedClient) completeTwoPartyDeal(ctx context.Context, dealID uuid.UUID,
 	return nil
 }
 
-func (c *seedClient) createMutualReviews(ctx context.Context, dealID uuid.UUID, deal dealtypes.Deal, userA *seededUser, userB *seededUser) error {
+func (c *SeedClient) createMutualReviews(ctx context.Context, dealID uuid.UUID, deal dealtypes.Deal, userA *seededUser, userB *seededUser) error {
 	itemByAuthor := make(map[uuid.UUID]uuid.UUID, len(deal.Items))
 	for _, item := range deal.Items {
-		itemByAuthor[uuid.UUID(item.AuthorId)] = uuid.UUID(item.Id)
+		itemByAuthor[item.AuthorId] = item.Id
 	}
 
 	itemA, ok := itemByAuthor[userA.UserID]
@@ -378,18 +378,16 @@ func (c *seedClient) createMutualReviews(ctx context.Context, dealID uuid.UUID, 
 		return fmt.Errorf("completed deal %s does not contain item for %s", dealID, userB.Key)
 	}
 
-	commentA := "Все прошло четко: договорились быстро и получили именно то, что ожидали."
 	if err := c.createDealItemReview(ctx, userB.Token, dealID, itemA, dealtypes.CreateReviewRequest{
 		Rating:  5,
-		Comment: &commentA,
+		Comment: new("Все прошло четко: договорились быстро и получили именно то, что ожидали."),
 	}); err != nil {
 		return fmt.Errorf("review for %s item: %w", userA.Key, err)
 	}
 
-	commentB := "Хорошая коммуникация и удобная передача вещи."
 	if err := c.createDealItemReview(ctx, userA.Token, dealID, itemB, dealtypes.CreateReviewRequest{
 		Rating:  5,
-		Comment: &commentB,
+		Comment: new("Хорошая коммуникация и удобная передача вещи."),
 	}); err != nil {
 		return fmt.Errorf("review for %s item: %w", userB.Key, err)
 	}
@@ -397,18 +395,18 @@ func (c *seedClient) createMutualReviews(ctx context.Context, dealID uuid.UUID, 
 	return nil
 }
 
-func (c *seedClient) createDealItemReview(ctx context.Context, token string, dealID uuid.UUID, itemID uuid.UUID, req dealtypes.CreateReviewRequest) error {
+func (c *SeedClient) createDealItemReview(ctx context.Context, token string, dealID uuid.UUID, itemID uuid.UUID, req dealtypes.CreateReviewRequest) error {
 	path := fmt.Sprintf("/deals/%s/items/%s/reviews", dealID, itemID)
 	return c.doJSON(ctx, http.MethodPost, path, token, req, nil, http.StatusCreated)
 }
 
-func (c *seedClient) subscribeToUser(ctx context.Context, token string, targetUserID uuid.UUID) error {
+func (c *SeedClient) subscribeToUser(ctx context.Context, token string, targetUserID uuid.UUID) error {
 	return c.doJSON(ctx, http.MethodPost, "/users/subscriptions", token, usertypes.SubscribeRequest{
 		TargetUserId: targetUserID,
 	}, nil, http.StatusCreated, http.StatusConflict)
 }
 
-func (c *seedClient) ensureMutualSubscription(ctx context.Context, userA *seededUser, userB *seededUser) error {
+func (c *SeedClient) ensureMutualSubscription(ctx context.Context, userA *seededUser, userB *seededUser) error {
 	if err := c.subscribeToUser(ctx, userA.Token, userB.UserID); err != nil {
 		return fmt.Errorf("subscribe %s -> %s: %w", userA.Key, userB.Key, err)
 	}
@@ -419,7 +417,7 @@ func (c *seedClient) ensureMutualSubscription(ctx context.Context, userA *seeded
 	return nil
 }
 
-func (c *seedClient) createDirectChat(ctx context.Context, token string, participantID uuid.UUID) (uuid.UUID, error) {
+func (c *SeedClient) createDirectChat(ctx context.Context, token string, participantID uuid.UUID) (uuid.UUID, error) {
 	var body chattypes.Chat
 	if err := c.doJSON(ctx, http.MethodPost, "/chats", token, chattypes.CreateChatRequest{
 		ParticipantId: participantID,
@@ -427,10 +425,10 @@ func (c *seedClient) createDirectChat(ctx context.Context, token string, partici
 		return uuid.Nil, err
 	}
 
-	return uuid.UUID(body.Id), nil
+	return body.Id, nil
 }
 
-func (c *seedClient) waitForDealChat(ctx context.Context, token string, dealID uuid.UUID) (uuid.UUID, error) {
+func (c *SeedClient) waitForDealChat(ctx context.Context, token string, dealID uuid.UUID) (uuid.UUID, error) {
 	var chatID uuid.UUID
 	err := c.poll(ctx, func(ctx context.Context) (bool, error) {
 		resp, err := c.do(ctx, http.MethodGet, "/chats/deals/"+dealID.String(), token, nil)
@@ -451,7 +449,7 @@ func (c *seedClient) waitForDealChat(ctx context.Context, token string, dealID u
 			return false, fmt.Errorf("decode deal chat: %w", err)
 		}
 
-		chatID = uuid.UUID(body.Id)
+		chatID = body.Id
 		return true, nil
 	})
 	if err != nil {
@@ -461,7 +459,7 @@ func (c *seedClient) waitForDealChat(ctx context.Context, token string, dealID u
 	return chatID, nil
 }
 
-func (c *seedClient) sendChatMessages(ctx context.Context, chatID uuid.UUID, messages []chatMessage) error {
+func (c *SeedClient) sendChatMessages(ctx context.Context, chatID uuid.UUID, messages []chatMessage) error {
 	for _, message := range messages {
 		path := fmt.Sprintf("/chats/%s/messages", chatID)
 		if err := c.doJSON(ctx, http.MethodPost, path, message.Token, chattypes.SendMessageRequest{
@@ -474,8 +472,8 @@ func (c *seedClient) sendChatMessages(ctx context.Context, chatID uuid.UUID, mes
 	return nil
 }
 
-func (c *seedClient) poll(ctx context.Context, fn func(context.Context) (bool, error)) error {
-	ticker := time.NewTicker(c.pollInterval)
+func (c *SeedClient) poll(ctx context.Context, fn func(context.Context) (bool, error)) error {
+	ticker := time.NewTicker(c.PollInterval)
 	defer ticker.Stop()
 
 	for {
@@ -495,7 +493,7 @@ func (c *seedClient) poll(ctx context.Context, fn func(context.Context) (bool, e
 	}
 }
 
-func (c *seedClient) doJSON(
+func (c *SeedClient) doJSON(
 	ctx context.Context,
 	method string,
 	path string,
@@ -525,7 +523,7 @@ func (c *seedClient) doJSON(
 	return nil
 }
 
-func (c *seedClient) do(ctx context.Context, method string, path string, token string, reqBody any) (*http.Response, error) {
+func (c *SeedClient) do(ctx context.Context, method string, path string, token string, reqBody any) (*http.Response, error) {
 	var body io.Reader
 	if reqBody != nil {
 		data, err := json.Marshal(reqBody)
@@ -535,7 +533,7 @@ func (c *seedClient) do(ctx context.Context, method string, path string, token s
 		body = bytes.NewReader(data)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, body)
+	req, err := http.NewRequestWithContext(ctx, method, c.BaseURL+path, body)
 	if err != nil {
 		return nil, fmt.Errorf("build request %s %s: %w", method, path, err)
 	}
@@ -547,7 +545,7 @@ func (c *seedClient) do(ctx context.Context, method string, path string, token s
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
 
-	resp, err := c.httpClient.Do(req)
+	resp, err := c.HttpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("perform request %s %s: %w", method, path, err)
 	}

@@ -1,4 +1,4 @@
-package main
+package seed_demo
 
 import (
 	dealtypes "barter-port/contracts/openapi/deals/types"
@@ -8,10 +8,10 @@ import (
 	"github.com/google/uuid"
 )
 
-type seedClient struct {
-	baseURL      string
-	httpClient   *http.Client
-	pollInterval time.Duration
+type SeedClient struct {
+	BaseURL      string
+	HttpClient   *http.Client
+	PollInterval time.Duration
 }
 
 type authStatusResponse struct {
@@ -76,7 +76,7 @@ type offerSpec struct {
 	Action      dealtypes.OfferAction
 }
 
-type seedSummary struct {
+type SeedSummary struct {
 	Users             []seededUserSummary `json:"users"`
 	OfferGroupID      uuid.UUID           `json:"offerGroupId"`
 	OfferGroupDraftID uuid.UUID           `json:"offerGroupDraftId"`

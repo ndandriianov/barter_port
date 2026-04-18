@@ -1,6 +1,7 @@
 package main
 
 import (
+	"barter-port/cmd/seed-demo/seed-demo"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -15,7 +16,7 @@ import (
 func main() {
 	_ = godotenv.Load()
 
-	cfg, err := parseConfig()
+	cfg, err := seed_demo.ParseConfig()
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -23,15 +24,15 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.Timeout)
 	defer cancel()
 
-	client := &seedClient{
-		baseURL: strings.TrimRight(cfg.BaseURL, "/"),
-		httpClient: &http.Client{
+	client := &seed_demo.SeedClient{
+		BaseURL: strings.TrimRight(cfg.BaseURL, "/"),
+		HttpClient: &http.Client{
 			Timeout: 15 * time.Second,
 		},
-		pollInterval: cfg.PollInterval,
+		PollInterval: cfg.PollInterval,
 	}
 
-	summary, err := runSeed(ctx, client, cfg)
+	summary, err := seed_demo.RunSeed(ctx, client, cfg)
 	if err != nil {
 		log.Fatal(err)
 	}

@@ -1,4 +1,4 @@
-package main
+package seed_demo
 
 import (
 	"errors"
@@ -16,7 +16,7 @@ const (
 	defaultPollInterval  = 500 * time.Millisecond
 )
 
-type seedConfig struct {
+type SeedConfig struct {
 	BaseURL       string
 	Password      string
 	AvatarBaseURL string
@@ -24,7 +24,7 @@ type seedConfig struct {
 	PollInterval  time.Duration
 }
 
-func parseConfig() (seedConfig, error) {
+func ParseConfig() (SeedConfig, error) {
 	fs := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 
 	baseURL := fs.String("base-url", firstNonEmpty(os.Getenv("SEED_BASE_URL"), defaultBaseURL), "HTTP base URL for the app gateway")
@@ -34,14 +34,14 @@ func parseConfig() (seedConfig, error) {
 	pollInterval := fs.Duration("poll-interval", durationFromEnv("SEED_POLL_INTERVAL", defaultPollInterval), "Polling interval for async readiness checks")
 
 	if err := fs.Parse(os.Args[1:]); err != nil {
-		return seedConfig{}, err
+		return SeedConfig{}, err
 	}
 
 	if strings.TrimSpace(*baseURL) == "" {
-		return seedConfig{}, errors.New("base URL must not be empty")
+		return SeedConfig{}, errors.New("base URL must not be empty")
 	}
 
-	return seedConfig{
+	return SeedConfig{
 		BaseURL:       *baseURL,
 		Password:      *password,
 		AvatarBaseURL: strings.TrimRight(*avatarBaseURL, "/"),

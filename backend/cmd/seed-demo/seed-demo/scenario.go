@@ -1,4 +1,4 @@
-package main
+package seed_demo
 
 import (
 	dealtypes "barter-port/contracts/openapi/deals/types"
@@ -9,7 +9,7 @@ import (
 	"github.com/google/uuid"
 )
 
-func runSeed(ctx context.Context, client *seedClient, cfg seedConfig) (*seedSummary, error) {
+func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSummary, error) {
 	users := []seededUser{
 		{
 			Key:      "alice",
@@ -266,7 +266,7 @@ func runSeed(ctx context.Context, client *seedClient, cfg seedConfig) (*seedSumm
 		return nil, fmt.Errorf("send deal chat messages: %w", err)
 	}
 
-	summary := &seedSummary{
+	summary := &SeedSummary{
 		OfferGroupID:      offerGroupID,
 		OfferGroupDraftID: offerGroupDraftID,
 		DiscussionDealID:  discussionDealID,
