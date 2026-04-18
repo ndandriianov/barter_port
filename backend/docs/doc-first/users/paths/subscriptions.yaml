@@ -182,7 +182,7 @@ subscribersById:
     security:
       - bearerAuth: [ ]
     parameters:
-      - name: userId
+      - name: id
         in: path
         required: true
         schema:
@@ -229,7 +229,7 @@ subscriptionsById:
     security:
       - bearerAuth: [ ]
     parameters:
-      - name: userId
+      - name: id
         in: path
         required: true
         schema:

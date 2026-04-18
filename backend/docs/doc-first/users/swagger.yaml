@@ -10,6 +10,8 @@ servers:
 paths:
   /users/subscriptions:
     $ref: './paths/subscriptions.yaml#/subscription'
+  /users/subscriptions/{id}:
+    $ref: './paths/subscriptions.yaml#/subscriptionsById'
   /users/subscribers:
     $ref: './paths/subscriptions.yaml#/mySubscribers'
   /users/subscribers/{id}:
