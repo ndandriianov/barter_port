@@ -7,6 +7,7 @@ option go_package = "barterport/internal/contracts/grpc/users/v1;userspb";
 service UsersService {
     rpc GetUsersWithInfo (GetUsersWithInfoRequest) returns (GetUsersWithInfoResponse);
     rpc ListUsers (ListUsersRequest) returns (ListUsersResponse);
+    rpc ListUsersForChatCreation (ListUsersForChatCreationRequest) returns (ListUsersForChatCreationResponse);
 
     // Если target подписан на requester, то is_subscribed = true.
     //
@@ -34,6 +35,15 @@ message GetUsersWithInfoResponse {
 message ListUsersRequest {}
 
 message ListUsersResponse {
+    repeated UserInfo users = 1;
+}
+
+// ListUsersForChatCreation
+message ListUsersForChatCreationRequest {
+    string requester_user_id = 1;
+}
+
+message ListUsersForChatCreationResponse {
     repeated UserInfo users = 1;
 }
 

@@ -250,12 +250,15 @@ type userResp struct {
 func (h *Handlers) ListUsers(w http.ResponseWriter, r *http.Request) {
 	log := h.log.With(slog.String("handler", "ListUsers"))
 
-	if _, ok := authkit.UserIDFromContext(r.Context()); !ok {
+	id, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
 		httpx.WriteEmptyError(w, http.StatusUnauthorized)
 		return
 	}
 
-	res, err := h.usersClient.ListUsers(r.Context(), &userspb.ListUsersRequest{})
+	req := userspb.ListUsersForChatCreationRequest{RequesterUserId: id.String()}
+
+	res, err := h.usersClient.ListUsersForChatCreation(r.Context(), &req)
 	if err != nil {
 		log.Error("error listing users from users service", slog.Any("error", err))
 		httpx.WriteEmptyError(w, http.StatusInternalServerError)

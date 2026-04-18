@@ -263,3 +263,28 @@ func (s *Service) CheckSubscription(ctx context.Context, requester, target uuid.
 	}
 	return true, true, nil
 }
+
+// CanCreateChat checks if a chat can be created between requester and target.
+func (s *Service) CanCreateChat(ctx context.Context, requester, target uuid.UUID) (bool, error) {
+	if requester == target {
+		return false, nil
+	}
+
+	isRequesterSubscribed, err := s.repository.IsSubscribed(ctx, requester, target)
+	if err != nil {
+		return false, fmt.Errorf("(requester) repository.IsSubscribed: %w", err)
+	}
+	if !isRequesterSubscribed {
+		return false, nil
+	}
+
+	isTargetSubscribed, err := s.repository.IsSubscribed(ctx, target, requester)
+	if err != nil {
+		return false, fmt.Errorf("(target) repository.IsSubscribed: %w", err)
+	}
+	if !isTargetSubscribed {
+		return false, nil
+	}
+
+	return true, nil
+}
