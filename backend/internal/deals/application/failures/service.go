@@ -243,7 +243,7 @@ func (s *Service) ModeratorResolutionForFailure(
 			SourceType: dealsusers.DealFailureResponsibleMessageType,
 			SourceID:   dealID,
 			UserID:     *failureUserID,
-			Delta:      *punishmentPoints,
+			Delta:      -*punishmentPoints,
 			CreatedAt:  now,
 			Comment:    comment,
 		}
