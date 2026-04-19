@@ -14,6 +14,7 @@ import (
 	"barter-port/pkg/bootstrap"
 	"barter-port/pkg/db"
 	"barter-port/pkg/kafkax"
+	"context"
 	"errors"
 	"fmt"
 	"net"
@@ -114,6 +115,19 @@ func (app *App) initReputationEventConsumer(cfg bootstrap.Config) error {
 	}
 	if app.reputationInboxRepo == nil {
 		return errors.New("reputationInboxRepo is not initialized")
+	}
+	if cfg.Kafka.OfferReportPenaltyTopic == "" {
+		return errors.New("offer report penalty topic is not configured")
+	}
+	if cfg.Kafka.OfferReportPenaltyGroup == "" {
+		return errors.New("offer report penalty group is not configured")
+	}
+
+	topicInitCtx, cancelTopicInit := context.WithTimeout(context.Background(), cfg.Kafka.WriteTimeout)
+	defer cancelTopicInit()
+
+	if err := kafkax.EnsureTopic(topicInitCtx, cfg.Kafka.Brokers, cfg.Kafka.OfferReportPenaltyTopic, 1, 1); err != nil {
+		return fmt.Errorf("failed to ensure offer report penalty topic: %w", err)
 	}
 
 	reader := kafkax.NewMessageReader(cfg.Kafka.Brokers, cfg.Kafka.OfferReportPenaltyTopic, cfg.Kafka.OfferReportPenaltyGroup)
