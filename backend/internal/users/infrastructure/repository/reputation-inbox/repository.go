@@ -58,9 +58,14 @@ func (r *Repository) WriteReputationInboxMessage(ctx context.Context, exec db.DB
 // ReadMessagesForUpdate retrieves a batch of inbox messages for processing.
 func (r *Repository) ReadMessagesForUpdate(ctx context.Context, exec db.DB, limit int) ([]InboxMessage, error) {
 	const query = `
-		SELECT id, source_type, source_id, user_id, delta, created_at, comment
-		FROM user_reputation_inbox
-		ORDER BY created_at, id
+		SELECT i.id, i.source_type, i.source_id, i.user_id, i.delta, i.created_at, i.comment
+		FROM user_reputation_inbox i
+		WHERE EXISTS (
+			SELECT 1
+			FROM users u
+			WHERE u.id = i.user_id
+		)
+		ORDER BY i.created_at, i.id
 		LIMIT $1
 		FOR UPDATE SKIP LOCKED`
 
