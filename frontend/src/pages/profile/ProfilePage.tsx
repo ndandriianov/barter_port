@@ -386,6 +386,9 @@ function ProfilePage() {
             <Button variant="outlined" onClick={() => setIsReputationDrawerOpen(true)}>
               История рейтинга
             </Button>
+            <Button component={RouterLink} to="/statistics" variant="outlined">
+              Моя статистика
+            </Button>
             <Button component={RouterLink} to="/offer-reports/mine" variant="outlined" color="warning">
               Жалобы на меня
             </Button>

@@ -1,0 +1,186 @@
+import {
+  Alert,
+  Box,
+  Button,
+  Card,
+  CardContent,
+  CircularProgress,
+  Divider,
+  Grid,
+  Typography,
+} from "@mui/material";
+import statisticsApi from "@/features/statistics/api/statisticsApi";
+
+function StatCard({
+  label,
+  value,
+  color,
+}: {
+  label: string;
+  value: string | number;
+  color?: string;
+}) {
+  return (
+    <Box>
+      <Typography variant="caption" color="text.secondary" display="block">
+        {label}
+      </Typography>
+      <Typography variant="h4" fontWeight={700} color={color}>
+        {value}
+      </Typography>
+    </Box>
+  );
+}
+
+function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <Card variant="outlined">
+      <CardContent>
+        <Typography variant="h6" fontWeight={700} mb={2}>
+          {title}
+        </Typography>
+        <Divider sx={{ mb: 2 }} />
+        {children}
+      </CardContent>
+    </Card>
+  );
+}
+
+function StatisticsPage() {
+  const { data, isLoading, error, refetch, isFetching } =
+    statisticsApi.useGetMyStatisticsQuery();
+
+  if (isLoading) {
+    return (
+      <Box display="flex" justifyContent="center" py={8}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  if (error) {
+    return (
+      <Alert
+        severity="error"
+        action={
+          <Button color="inherit" size="small" onClick={() => refetch()}>
+            Повторить
+          </Button>
+        }
+      >
+        Не удалось загрузить статистику.
+      </Alert>
+    );
+  }
+
+  if (!data) return null;
+
+  const avgRating =
+    data.reviews.averageRatingReceived !== null
+      ? data.reviews.averageRatingReceived.toFixed(2)
+      : "—";
+
+  return (
+    <Box maxWidth={900} mx="auto">
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={3}>
+        <Typography variant="h4" fontWeight={700}>
+          Моя статистика
+        </Typography>
+        <Button variant="outlined" onClick={() => refetch()} disabled={isFetching}>
+          Обновить
+        </Button>
+      </Box>
+
+      <Grid container spacing={3}>
+        {/* Deals */}
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <SectionCard title="Сделки">
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 4 }}>
+                <StatCard
+                  label="Завершено"
+                  value={data.deals.completed}
+                  color="success.main"
+                />
+              </Grid>
+              <Grid size={{ xs: 4 }}>
+                <StatCard label="Провалено" value={data.deals.failed} color="error.main" />
+              </Grid>
+              <Grid size={{ xs: 4 }}>
+                <StatCard label="Активных" value={data.deals.active} color="info.main" />
+              </Grid>
+            </Grid>
+          </SectionCard>
+        </Grid>
+
+        {/* Offers */}
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <SectionCard title="Объявления">
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 6 }}>
+                <StatCard label="Всего" value={data.offers.total} />
+              </Grid>
+              <Grid size={{ xs: 6 }}>
+                <StatCard label="Просмотров" value={data.offers.totalViews} />
+              </Grid>
+            </Grid>
+          </SectionCard>
+        </Grid>
+
+        {/* Reviews */}
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <SectionCard title="Отзывы">
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 4 }}>
+                <StatCard label="Написано" value={data.reviews.written} />
+              </Grid>
+              <Grid size={{ xs: 4 }}>
+                <StatCard label="Получено" value={data.reviews.received} />
+              </Grid>
+              <Grid size={{ xs: 4 }}>
+                <StatCard label="Средний рейтинг" value={avgRating} color="warning.main" />
+              </Grid>
+            </Grid>
+          </SectionCard>
+        </Grid>
+
+        {/* Reports */}
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <SectionCard title="Жалобы">
+            <Grid container spacing={2}>
+              <Grid size={{ xs: 6 }}>
+                <StatCard label="Подано мной" value={data.reports.filedByMe} />
+              </Grid>
+              <Grid size={{ xs: 6 }}>
+                <StatCard
+                  label="На мои объявления"
+                  value={data.reports.onMyOffers.total}
+                  color={data.reports.onMyOffers.total > 0 ? "warning.main" : undefined}
+                />
+              </Grid>
+              <Grid size={{ xs: 4 }}>
+                <StatCard
+                  label="На модерации"
+                  value={data.reports.onMyOffers.pending}
+                  color={data.reports.onMyOffers.pending > 0 ? "warning.main" : undefined}
+                />
+              </Grid>
+              <Grid size={{ xs: 4 }}>
+                <StatCard
+                  label="Принято"
+                  value={data.reports.onMyOffers.accepted}
+                  color={data.reports.onMyOffers.accepted > 0 ? "error.main" : undefined}
+                />
+              </Grid>
+              <Grid size={{ xs: 4 }}>
+                <StatCard label="Отклонено" value={data.reports.onMyOffers.rejected} />
+              </Grid>
+            </Grid>
+          </SectionCard>
+        </Grid>
+      </Grid>
+    </Box>
+  );
+}
+
+export default StatisticsPage;

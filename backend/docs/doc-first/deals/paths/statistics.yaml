@@ -1,0 +1,33 @@
+myStatistics:
+  get:
+    tags:
+      - statistics
+    summary: Получить мою статистику
+    description: |
+      Возвращает агрегированную статистику текущего пользователя:
+      - сделки по статусам (завершённые, проваленные, активные)
+      - объявления: количество и суммарные просмотры
+      - отзывы: написанные, полученные, средний рейтинг
+      - жалобы: поданные мной и на мои объявления (с разбивкой по статусам)
+    operationId: getMyStatistics
+    security:
+      - bearerAuth: []
+    responses:
+      '200':
+        description: Статистика текущего пользователя
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/MyStatisticsResponse'
+      '401':
+        description: Не авторизован
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Внутренняя ошибка сервера
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
