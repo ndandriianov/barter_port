@@ -260,7 +260,7 @@ func (s *Service) ResolveReport(
 
 			outboxMsg := dealsusers.ReputationMessage{
 				ID:         uuid.New(),
-				SourceType: dealsusers.DealFailureResponsibleMessageType, // TODO: надо исправить, перепутал
+				SourceType: dealsusers.OfferReportPenaltyMessageType,
 				SourceID:   report.OfferID,
 				UserID:     report.OfferAuthorID,
 				Delta:      penaltyDelta,
