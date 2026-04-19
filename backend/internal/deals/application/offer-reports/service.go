@@ -258,15 +258,16 @@ func (s *Service) ResolveReport(
 				return fmt.Errorf("hide offer: %w", err)
 			}
 
-			outboxMsg := dealsusers.OfferReportPenaltyMessage{
+			outboxMsg := dealsusers.PenaltyMessage{
 				ID:         uuid.New(),
-				ReportID:   reportID,
-				OfferID:    report.OfferID,
+				SourceType: dealsusers.DealFailureResponsibleMessageType, // TODO: надо исправить, перепутал
+				SourceID:   report.OfferID,
 				UserID:     report.OfferAuthorID,
 				Delta:      penaltyDelta,
-				ReviewedBy: adminID,
 				CreatedAt:  now,
+				Comment:    report.ResolutionComment,
 			}
+
 			if err = s.outboxRepo.WriteOutboxMessage(ctx, tx, outboxMsg); err != nil {
 				return fmt.Errorf("write outbox message: %w", err)
 			}

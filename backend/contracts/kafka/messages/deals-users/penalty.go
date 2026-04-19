@@ -6,7 +6,8 @@ import (
 	"github.com/google/uuid"
 )
 
-const offerReportPenaltyMessageType = "deals.offer_report.penalty"
+const OfferReportPenaltyMessageType = "deals.offer_report.penalty"
+const DealFailureResponsibleMessageType = "deals.deal_failure.responsible"
 
 // OfferReportPenaltyMessage is the Kafka message sent from the deals service
 // to the users service when an offer report is accepted (penalty applied).
@@ -29,5 +30,27 @@ func (m OfferReportPenaltyMessage) GetCreatedAt() time.Time {
 }
 
 func (m OfferReportPenaltyMessage) GetMessageType() string {
-	return offerReportPenaltyMessageType
+	return OfferReportPenaltyMessageType
+}
+
+type PenaltyMessage struct {
+	ID         uuid.UUID `db:"id"`
+	SourceType string    `db:"source_type"`
+	SourceID   uuid.UUID `db:"source_id"`
+	UserID     uuid.UUID `db:"user_id"`
+	Delta      int       `db:"delta"`
+	CreatedAt  time.Time `db:"created_at"`
+	Comment    *string   `db:"comment"`
+}
+
+func (m PenaltyMessage) GetKey() string {
+	return m.SourceID.String()
+}
+
+func (m PenaltyMessage) GetCreatedAt() time.Time {
+	return m.CreatedAt
+}
+
+func (m PenaltyMessage) GetMessageType() string {
+	return m.SourceType
 }

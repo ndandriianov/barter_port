@@ -17,23 +17,23 @@ func NewRepository() *Repository {
 }
 
 // WriteOutboxMessage writes a penalty event to the outbox table.
-func (r *Repository) WriteOutboxMessage(ctx context.Context, exec db.DB, msg dealsusers.OfferReportPenaltyMessage) error {
+func (r *Repository) WriteOutboxMessage(ctx context.Context, exec db.DB, msg dealsusers.PenaltyMessage) error {
 	const query = `
-		INSERT INTO offer_report_penalty_outbox (id, report_id, offer_id, user_id, delta, reviewed_by, created_at)
+		INSERT INTO reputation_events_outbox (id, source_type, source_id, user_id, delta, created_at, comment)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)`
 
 	_, err := exec.Exec(ctx, query,
-		msg.ID, msg.ReportID, msg.OfferID, msg.UserID, msg.Delta, msg.ReviewedBy, msg.CreatedAt,
+		msg.ID, msg.SourceType, msg.SourceID, msg.UserID, msg.Delta, msg.CreatedAt, msg.Comment,
 	)
 	return err
 }
 
 // ReadOutboxMessagesForUpdate retrieves a batch of penalty events for publishing.
 // Rows are locked with FOR UPDATE SKIP LOCKED.
-func (r *Repository) ReadOutboxMessagesForUpdate(ctx context.Context, exec db.DB, limit int) ([]dealsusers.OfferReportPenaltyMessage, error) {
+func (r *Repository) ReadOutboxMessagesForUpdate(ctx context.Context, exec db.DB, limit int) ([]dealsusers.PenaltyMessage, error) {
 	const query = `
-		SELECT id, report_id, offer_id, user_id, delta, reviewed_by, created_at
-		FROM offer_report_penalty_outbox
+		SELECT id, source_type, source_id, user_id, delta, created_at, comment
+		FROM reputation_events_outbox
 		ORDER BY created_at, id
 		LIMIT $1
 		FOR UPDATE SKIP LOCKED`
@@ -44,13 +44,13 @@ func (r *Repository) ReadOutboxMessagesForUpdate(ctx context.Context, exec db.DB
 	}
 	defer rows.Close()
 
-	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (dealsusers.OfferReportPenaltyMessage, error) {
-		return pgx.RowToStructByName[dealsusers.OfferReportPenaltyMessage](row)
+	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (dealsusers.PenaltyMessage, error) {
+		return pgx.RowToStructByName[dealsusers.PenaltyMessage](row)
 	})
 }
 
 // DeleteOutboxMessage removes a penalty event from the outbox.
 func (r *Repository) DeleteOutboxMessage(ctx context.Context, exec db.DB, id uuid.UUID) error {
-	_, err := exec.Exec(ctx, `DELETE FROM offer_report_penalty_outbox WHERE id = $1`, id)
+	_, err := exec.Exec(ctx, `DELETE FROM reputation_events_outbox WHERE id = $1`, id)
 	return err
 }
