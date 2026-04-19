@@ -19,6 +19,21 @@ test-integration-moderator-resolution-debug:
 		-run '^TestModeratorResolutionForFailureSuccessAndReadableByParticipant$$' \
 		-count=1 -parallel 1
 
+test-integration-admin-resolve-report:
+	go test -v -timeout 30m ./integration/... \
+		-run '^TestAdminResolveReportAcceptHidesOffer$$' \
+		-count=1
+
+test-integration-moderator-resolution:
+	go test -v -timeout 30m ./integration/... \
+		-run '^TestModeratorResolutionForFailureSuccessAndReadableByParticipant$$' \
+		-count=1
+
+test-integration-reputation-flakes:
+	go test -v -timeout 30m ./integration/... \
+		-run '^(TestAdminResolveReportAcceptHidesOffer|TestModeratorResolutionForFailureSuccessAndReadableByParticipant)$$' \
+		-count=1
+
 test-integration-db-info:
 	@port=$${BARTER_PORT_TEST_POSTGRES_HOST_PORT:-15432}; \
 	echo "Host: 127.0.0.1"; \

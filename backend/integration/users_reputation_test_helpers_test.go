@@ -160,3 +160,37 @@ func mustFindReputationEvent(
 	require.FailNowf(t, "reputation event not found", "source_type=%s source_id=%s", sourceType, sourceID)
 	return usertypes.ReputationEvent{}
 }
+
+func waitForCurrentUserReputationAPIEvent(
+	t *testing.T,
+	fixture *Fixture,
+	userID uuid.UUID,
+	sourceType string,
+	sourceID uuid.UUID,
+) usertypes.ReputationEvent {
+	t.Helper()
+
+	deadline := time.Now().Add(integrationAsyncWaitTimeout)
+	var lastEvents usertypes.GetReputationEventsResponse
+
+	for time.Now().Before(deadline) {
+		lastEvents = mustGetCurrentUserReputationEvents(t, fixture, userID)
+		for _, event := range lastEvents {
+			if event.SourceType == sourceType && uuid.UUID(event.SourceId) == sourceID {
+				return event
+			}
+		}
+
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	t.Logf(
+		"reputation event not found via users API; user_id=%s source_type=%s source_id=%s events_count=%d",
+		userID,
+		sourceType,
+		sourceID,
+		len(lastEvents),
+	)
+	require.FailNowf(t, "reputation event not found via users API", "source_type=%s source_id=%s", sourceType, sourceID)
+	return usertypes.ReputationEvent{}
+}
