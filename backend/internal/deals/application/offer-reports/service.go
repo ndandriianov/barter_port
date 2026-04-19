@@ -258,7 +258,7 @@ func (s *Service) ResolveReport(
 				return fmt.Errorf("hide offer: %w", err)
 			}
 
-			outboxMsg := dealsusers.PenaltyMessage{
+			outboxMsg := dealsusers.ReputationMessage{
 				ID:         uuid.New(),
 				SourceType: dealsusers.DealFailureResponsibleMessageType, // TODO: надо исправить, перепутал
 				SourceID:   report.OfferID,

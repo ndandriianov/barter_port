@@ -117,7 +117,7 @@ func (app *App) initReputationEventConsumer(cfg bootstrap.Config) error {
 	}
 
 	reader := kafkax.NewMessageReader(cfg.Kafka.Brokers, cfg.Kafka.OfferReportPenaltyTopic, cfg.Kafka.OfferReportPenaltyGroup)
-	kafkaConsumer := kafkax.NewInboxConsumer[dealsusers.PenaltyMessage](app.log, reader, cfg.Kafka.PollInterval)
+	kafkaConsumer := kafkax.NewInboxConsumer[dealsusers.ReputationMessage](app.log, reader, cfg.Kafka.PollInterval)
 	app.reputationEventConsumer = consumer.NewReputationInboxConsumer(app.db, app.reputationInboxRepo, kafkaConsumer)
 
 	return nil

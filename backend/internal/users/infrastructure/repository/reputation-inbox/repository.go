@@ -36,7 +36,7 @@ func NewRepository() *Repository {
 //
 // Domain errors:
 //   - ErrReputationEventAlreadyExists
-func (r *Repository) WriteReputationInboxMessage(ctx context.Context, exec db.DB, msg dealsusers.PenaltyMessage) error {
+func (r *Repository) WriteReputationInboxMessage(ctx context.Context, exec db.DB, msg dealsusers.ReputationMessage) error {
 	const query = `
 		INSERT INTO user_reputation_inbox (id, source_type, source_id, user_id, delta, created_at, comment)
 		VALUES ($1, $2, $3, $4, $5, $6, NULL)

@@ -17,7 +17,7 @@ func NewRepository() *Repository {
 }
 
 // WriteOutboxMessage writes a penalty event to the outbox table.
-func (r *Repository) WriteOutboxMessage(ctx context.Context, exec db.DB, msg dealsusers.PenaltyMessage) error {
+func (r *Repository) WriteOutboxMessage(ctx context.Context, exec db.DB, msg dealsusers.ReputationMessage) error {
 	const query = `
 		INSERT INTO reputation_events_outbox (id, source_type, source_id, user_id, delta, created_at, comment)
 		VALUES ($1, $2, $3, $4, $5, $6, $7)`
@@ -30,7 +30,7 @@ func (r *Repository) WriteOutboxMessage(ctx context.Context, exec db.DB, msg dea
 
 // ReadOutboxMessagesForUpdate retrieves a batch of penalty events for publishing.
 // Rows are locked with FOR UPDATE SKIP LOCKED.
-func (r *Repository) ReadOutboxMessagesForUpdate(ctx context.Context, exec db.DB, limit int) ([]dealsusers.PenaltyMessage, error) {
+func (r *Repository) ReadOutboxMessagesForUpdate(ctx context.Context, exec db.DB, limit int) ([]dealsusers.ReputationMessage, error) {
 	const query = `
 		SELECT id, source_type, source_id, user_id, delta, created_at, comment
 		FROM reputation_events_outbox
@@ -44,8 +44,8 @@ func (r *Repository) ReadOutboxMessagesForUpdate(ctx context.Context, exec db.DB
 	}
 	defer rows.Close()
 
-	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (dealsusers.PenaltyMessage, error) {
-		return pgx.RowToStructByName[dealsusers.PenaltyMessage](row)
+	return pgx.CollectRows(rows, func(row pgx.CollectableRow) (dealsusers.ReputationMessage, error) {
+		return pgx.RowToStructByName[dealsusers.ReputationMessage](row)
 	})
 }
 
