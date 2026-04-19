@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"barter-port/contracts/openapi/deals/types"
 	statssvc "barter-port/internal/deals/application/statistics"
 	statsrepo "barter-port/internal/deals/infrastructure/repository/statistics"
 	"barter-port/pkg/authkit"
@@ -39,64 +40,24 @@ func (h *Handlers) HandleGetMyStatistics(w http.ResponseWriter, r *http.Request)
 	httpx.WriteJSON(w, http.StatusOK, toResponse(result))
 }
 
-// ================================================================================
-// Response types
-// ================================================================================
-
-type response struct {
-	Deals   dealStats   `json:"deals"`
-	Offers  offerStats  `json:"offers"`
-	Reviews reviewStats `json:"reviews"`
-	Reports reportStats `json:"reports"`
-}
-
-type dealStats struct {
-	Completed int `json:"completed"`
-	Failed    int `json:"failed"`
-	Active    int `json:"active"`
-}
-
-type offerStats struct {
-	Total      int   `json:"total"`
-	TotalViews int64 `json:"totalViews"`
-}
-
-type reviewStats struct {
-	Written               int      `json:"written"`
-	Received              int      `json:"received"`
-	AverageRatingReceived *float64 `json:"averageRatingReceived"`
-}
-
-type reportOnMyOffersStats struct {
-	Total    int `json:"total"`
-	Pending  int `json:"pending"`
-	Accepted int `json:"accepted"`
-	Rejected int `json:"rejected"`
-}
-
-type reportStats struct {
-	OnMyOffers reportOnMyOffersStats `json:"onMyOffers"`
-	FiledByMe  int                   `json:"filedByMe"`
-}
-
-func toResponse(r *statsrepo.Result) response {
-	return response{
-		Deals: dealStats{
+func toResponse(r *statsrepo.Result) types.MyStatistics {
+	return types.MyStatistics{
+		Deals: types.MyDealStats{
 			Completed: r.DealsCompleted,
 			Failed:    r.DealsFailed,
 			Active:    r.DealsActive,
 		},
-		Offers: offerStats{
+		Offers: types.MyOfferStats{
 			Total:      r.OffersTotal,
 			TotalViews: r.OffersTotalViews,
 		},
-		Reviews: reviewStats{
+		Reviews: types.MyReviewStats{
 			Written:               r.ReviewsWritten,
 			Received:              r.ReviewsReceived,
 			AverageRatingReceived: r.ReviewsAverageRatingReceived,
 		},
-		Reports: reportStats{
-			OnMyOffers: reportOnMyOffersStats{
+		Reports: types.MyReportStats{
+			OnMyOffers: types.MyReportOnMyOffersStats{
 				Total:    r.ReportsOnMyOffersTotal,
 				Pending:  r.ReportsOnMyOffersPending,
 				Accepted: r.ReportsOnMyOffersAccepted,
