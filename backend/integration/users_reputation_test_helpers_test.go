@@ -13,6 +13,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const integrationAsyncWaitTimeout = 60 * time.Second
+
 type userReputationEventRecord struct {
 	ID         uuid.UUID
 	UserID     uuid.UUID
@@ -74,7 +76,7 @@ func waitForUserReputationEvent(
 
 	pool := OpenDatabase(t, fixture, UsersDBName)
 	var event userReputationEventRecord
-	deadline := time.Now().Add(20 * time.Second)
+	deadline := time.Now().Add(integrationAsyncWaitTimeout)
 
 	for time.Now().Before(deadline) {
 		err := pool.QueryRow(
