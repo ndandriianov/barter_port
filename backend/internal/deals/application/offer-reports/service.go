@@ -265,7 +265,7 @@ func (s *Service) ResolveReport(
 				UserID:     report.OfferAuthorID,
 				Delta:      penaltyDelta,
 				CreatedAt:  now,
-				Comment:    report.ResolutionComment,
+				Comment:    comment,
 			}
 
 			if err = s.outboxRepo.WriteOutboxMessage(ctx, tx, outboxMsg); err != nil {

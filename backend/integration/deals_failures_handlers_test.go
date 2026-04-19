@@ -1,6 +1,7 @@
 package integration
 
 import (
+	dealsusers "barter-port/contracts/kafka/messages/deals-users"
 	"barter-port/contracts/openapi/deals/types"
 	"encoding/json"
 	"net/http"
@@ -115,20 +116,26 @@ func TestGetFailureMaterialsAdminSuccess(t *testing.T) {
 func TestModeratorResolutionForFailureSuccessAndReadableByParticipant(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)
+	dumpUsersLogs(t)
 
-	userA := uuid.New()
-	userB := uuid.New()
-	dealID, _ := mustCreateDiscussionDeal(t, userA, userB)
-	mustVoteForFailure(t, userA, dealID, userB)
+	fixture := globalFixture
+	userA := registerAuthUser(t, fixture)
+	userB := registerAuthUser(t, fixture)
+	waitForUsersProjection(t, fixture, userA.UserID)
+	waitForUsersProjection(t, fixture, userB.UserID)
+
+	reportComment := "confirmed by admin"
+	dealID, _ := mustCreateDiscussionDeal(t, userA.UserID, userB.UserID)
+	mustVoteForFailure(t, userA.UserID, dealID, userB.UserID)
 
 	points := 3
 	adminToken := mustAdminAccessToken(t)
 
 	resolveReq := mustBearerRequest(t, http.MethodPost, dealsURL()+"/deals/failures/"+dealID.String()+"/moderator-resolution", adminToken, mustJSONBody(t, types.ModeratorResolutionForFailureRequest{
 		Confirmed:        true,
-		UserId:           &userB,
+		UserId:           &userB.UserID,
 		PunishmentPoints: &points,
-		Comment:          new("confirmed by admin"),
+		Comment:          &reportComment,
 	}))
 	resolveReq.Header.Set("Content-Type", "application/json")
 
@@ -141,11 +148,11 @@ func TestModeratorResolutionForFailureSuccessAndReadableByParticipant(t *testing
 	require.NotNil(t, resolution.Confirmed)
 	require.True(t, *resolution.Confirmed)
 	require.NotNil(t, resolution.UserId)
-	require.Equal(t, userB, *resolution.UserId)
+	require.Equal(t, userB.UserID, *resolution.UserId)
 	require.NotNil(t, resolution.PunishmentPoints)
 	require.Equal(t, points, *resolution.PunishmentPoints)
 
-	getReq := mustUserRequest(t, http.MethodGet, dealsURL()+"/deals/failures/"+dealID.String()+"/moderator-resolution", userA, nil)
+	getReq := mustUserRequest(t, http.MethodGet, dealsURL()+"/deals/failures/"+dealID.String()+"/moderator-resolution", userA.UserID, nil)
 	getResp := mustDo(t, getReq)
 	defer func() { _ = getResp.Body.Close() }()
 	require.Equal(t, http.StatusOK, getResp.StatusCode)
@@ -155,8 +162,24 @@ func TestModeratorResolutionForFailureSuccessAndReadableByParticipant(t *testing
 	require.NotNil(t, fetched.Confirmed)
 	require.True(t, *fetched.Confirmed)
 	require.NotNil(t, fetched.UserId)
-	require.Equal(t, userB, *fetched.UserId)
+	require.Equal(t, userB.UserID, *fetched.UserId)
 
-	deal := mustGetDealByID(t, userA, dealID)
+	deal := mustGetDealByID(t, userA.UserID, dealID)
 	require.Equal(t, types.Failed, deal.Status)
+
+	event := waitForUserReputationEvent(t, fixture, userB.UserID, dealsusers.DealFailureResponsibleMessageType, dealID)
+	require.Equal(t, userB.UserID, event.UserID)
+	require.Equal(t, -points, event.Delta)
+	require.NotNil(t, event.Comment)
+	require.Equal(t, reportComment, *event.Comment)
+
+	me := mustGetCurrentUser(t, fixture, userB.UserID)
+	require.Equal(t, -points, me.ReputationPoints)
+
+	events := mustGetCurrentUserReputationEvents(t, fixture, userB.UserID)
+	apiEvent := mustFindReputationEvent(t, events, dealsusers.DealFailureResponsibleMessageType, dealID)
+	require.Equal(t, event.ID, uuid.UUID(apiEvent.Id))
+	require.Equal(t, -points, apiEvent.Delta)
+	require.NotNil(t, apiEvent.Comment)
+	require.Equal(t, reportComment, *apiEvent.Comment)
 }
