@@ -139,6 +139,13 @@ func main() {
 	offerReportsService := offerreportssvc.NewService(db, offersRepo, offerReportsRepo, offerReportOutboxRepo, adminChecker, logg)
 
 	// Penalty outbox Kafka producer
+	topicInitCtx, cancelTopicInit := context.WithTimeout(context.Background(), cfg.Kafka.WriteTimeout)
+	defer cancelTopicInit()
+
+	if err = kafkax.EnsureTopic(topicInitCtx, cfg.Kafka.Brokers, cfg.Kafka.OfferReportPenaltyTopic, 1, 1); err != nil {
+		log.Fatal("failed to ensure offer report penalty topic:", err)
+	}
+
 	kafkaWriter := kafkax.NewWriter(cfg.Kafka.Brokers, cfg.Kafka.OfferReportPenaltyTopic)
 	penaltyPublisher := kafkax.NewOutboxPublisher(
 		kafkaWriter,

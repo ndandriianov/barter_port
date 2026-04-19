@@ -2,7 +2,6 @@ package reputation_inbox
 
 import (
 	dealsusers "barter-port/contracts/kafka/messages/deals-users"
-	"barter-port/internal/users/domain/enums"
 	"barter-port/pkg/db"
 	"barter-port/pkg/repox"
 	"errors"
@@ -37,13 +36,13 @@ func NewRepository() *Repository {
 //
 // Domain errors:
 //   - ErrReputationEventAlreadyExists
-func (r *Repository) WriteReputationInboxMessage(ctx context.Context, exec db.DB, msg dealsusers.OfferReportPenaltyMessage) error {
+func (r *Repository) WriteReputationInboxMessage(ctx context.Context, exec db.DB, msg dealsusers.ReputationMessage) error {
 	const query = `
 		INSERT INTO user_reputation_inbox (id, source_type, source_id, user_id, delta, created_at, comment)
-		VALUES ($1, $2, $3, $4, $5, $6, NULL)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		ON CONFLICT (source_type, source_id) DO NOTHING`
 
-	tag, err := exec.Exec(ctx, query, uuid.New(), enums.SourceTypeOfferReport, msg.ReportID, msg.UserID, msg.Delta, msg.CreatedAt)
+	tag, err := exec.Exec(ctx, query, uuid.New(), msg.SourceType, msg.SourceID, msg.UserID, msg.Delta, msg.CreatedAt, msg.Comment)
 	if err != nil {
 		if repox.IsUniqueViolation(err) {
 			return ErrReputationEventAlreadyExists
@@ -59,9 +58,14 @@ func (r *Repository) WriteReputationInboxMessage(ctx context.Context, exec db.DB
 // ReadMessagesForUpdate retrieves a batch of inbox messages for processing.
 func (r *Repository) ReadMessagesForUpdate(ctx context.Context, exec db.DB, limit int) ([]InboxMessage, error) {
 	const query = `
-		SELECT id, source_type, source_id, user_id, delta, created_at, comment
-		FROM user_reputation_inbox
-		ORDER BY created_at, id
+		SELECT i.id, i.source_type, i.source_id, i.user_id, i.delta, i.created_at, i.comment
+		FROM user_reputation_inbox i
+		WHERE EXISTS (
+			SELECT 1
+			FROM users u
+			WHERE u.id = i.user_id
+		)
+		ORDER BY i.created_at, i.id
 		LIMIT $1
 		FOR UPDATE SKIP LOCKED`
 

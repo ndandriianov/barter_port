@@ -1,6 +1,7 @@
 package integration
 
 import (
+	dealsusers "barter-port/contracts/kafka/messages/deals-users"
 	"barter-port/contracts/openapi/deals/types"
 	"encoding/json"
 	"fmt"
@@ -286,27 +287,48 @@ func TestAdminGetReportDetails(t *testing.T) {
 func TestAdminResolveReportAcceptHidesOffer(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)
+	dumpUsersLogs(t)
 
+	fixture := globalFixture
 	adminToken := mustAdminAccessToken(t)
-	authorID := uuid.New()
-	reporterID := uuid.New()
-	offerID := mustCreateOffer(t, authorID)
-	report := mustCreateOfferReport(t, reporterID, offerID, "accept report")
+	author := registerAuthUser(t, fixture)
+	reporter := registerAuthUser(t, fixture)
+	waitForUsersProjection(t, fixture, author.UserID)
+	waitForUsersProjection(t, fixture, reporter.UserID)
 
-	resolved := mustResolveReport(t, adminToken, report.Id, true, new("violation confirmed"))
+	offerID := mustCreateOffer(t, author.UserID)
+	report := mustCreateOfferReport(t, reporter.UserID, offerID, "accept report")
+	resolutionComment := "violation confirmed"
+
+	resolved := mustResolveReport(t, adminToken, report.Id, true, &resolutionComment)
 	require.Equal(t, types.Accepted, resolved.Status)
 	require.NotNil(t, resolved.ResolutionComment)
-	require.Equal(t, "violation confirmed", *resolved.ResolutionComment)
+	require.Equal(t, resolutionComment, *resolved.ResolutionComment)
 
 	// Stranger cannot see hidden offer
-	req := mustUserRequest(t, http.MethodGet, dealsURL()+"/offers/"+offerID.String(), reporterID, nil)
+	req := mustUserRequest(t, http.MethodGet, dealsURL()+"/offers/"+offerID.String(), reporter.UserID, nil)
 	resp := mustDo(t, req)
 	defer func() { _ = resp.Body.Close() }()
 	require.Equal(t, http.StatusNotFound, resp.StatusCode)
 
 	// Author still can see their own hidden offer
-	offerForAuthor := mustGetOfferByID(t, authorID, offerID)
+	offerForAuthor := mustGetOfferByID(t, author.UserID, offerID)
 	require.Equal(t, offerID, offerForAuthor.Id)
+
+	event := waitForUserReputationEvent(t, fixture, author.UserID, dealsusers.OfferReportPenaltyMessageType, offerID)
+	require.Equal(t, author.UserID, event.UserID)
+	require.Equal(t, -10, event.Delta)
+	require.NotNil(t, event.Comment)
+	require.Equal(t, resolutionComment, *event.Comment)
+
+	me := mustGetCurrentUser(t, fixture, author.UserID)
+	require.Equal(t, -10, me.ReputationPoints)
+
+	apiEvent := waitForCurrentUserReputationAPIEvent(t, fixture, author.UserID, dealsusers.OfferReportPenaltyMessageType, offerID)
+	require.Equal(t, event.ID, uuid.UUID(apiEvent.Id))
+	require.Equal(t, -10, apiEvent.Delta)
+	require.NotNil(t, apiEvent.Comment)
+	require.Equal(t, resolutionComment, *apiEvent.Comment)
 }
 
 func TestAdminResolveReportAcceptRemovedFromPublicList(t *testing.T) {

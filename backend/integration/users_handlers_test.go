@@ -1022,7 +1022,7 @@ func waitForUsersProjection(t *testing.T, fixture *Fixture, userID uuid.UUID) {
 			return false
 		}
 		return count == 1
-	}, 20*time.Second, 50*time.Millisecond)
+	}, integrationAsyncWaitTimeout, 50*time.Millisecond)
 }
 
 func mustAccessToken(t *testing.T, userID uuid.UUID) string {

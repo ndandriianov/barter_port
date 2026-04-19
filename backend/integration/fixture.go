@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	dockercontainer "github.com/docker/docker/api/types/container"
 	dockerfilters "github.com/docker/docker/api/types/filters"
 	dockernetwork "github.com/docker/docker/api/types/network"
 	dockerclient "github.com/docker/docker/client"
@@ -55,12 +56,24 @@ const (
 	// reuseEnvVar — переменная окружения для включения режима переиспользования контейнеров.
 	// Установите BARTER_PORT_REUSE_CONTAINERS=true чтобы контейнеры не пересоздавались между запусками.
 	reuseEnvVar = "BARTER_PORT_REUSE_CONTAINERS"
+
+	// reusePostgresHostPortEnvVar — порт на хосте для тестового Postgres в debug/reuse-режиме.
+	// По умолчанию используем 15432, чтобы не конфликтовать с локальным Postgres на 5432.
+	reusePostgresHostPortEnvVar  = "BARTER_PORT_TEST_POSTGRES_HOST_PORT"
+	defaultReusePostgresHostPort = "15432"
 )
 
 // shouldReuse возвращает true, если включён режим переиспользования контейнеров.
 func shouldReuse() bool {
 	v := os.Getenv(reuseEnvVar)
 	return v == "true" || v == "1"
+}
+
+func reusePostgresHostPort() string {
+	if v := os.Getenv(reusePostgresHostPortEnvVar); v != "" {
+		return v
+	}
+	return defaultReusePostgresHostPort
 }
 
 // ensureStableNetwork создаёт Docker-сеть с фиксированным именем или возвращает имя
@@ -513,6 +526,18 @@ func launchPostgres(ctx context.Context, netName string) (testcontainers.Contain
 			WithOccurrence(2).
 			WithStartupTimeout(2 * time.Minute),
 	}
+	if shouldReuse() {
+		hostPort := reusePostgresHostPort()
+		req.HostConfigModifier = func(hc *dockercontainer.HostConfig) {
+			if hc.PortBindings == nil {
+				hc.PortBindings = nat.PortMap{}
+			}
+			hc.PortBindings[postgresPort] = []nat.PortBinding{{
+				HostIP:   "127.0.0.1",
+				HostPort: hostPort,
+			}}
+		}
+	}
 	return launchContainer(ctx, req)
 }
 
@@ -700,6 +725,11 @@ func buildServiceRequest(netName string, service string, exposedPorts ...string)
 				FileMode:          0o644,
 			},
 			{
+				HostFilePath:      filepath.Join(projectRoot, "config", "integration.yaml"),
+				ContainerFilePath: "/app/config/integration.yaml",
+				FileMode:          0o644,
+			},
+			{
 				HostFilePath:      filepath.Join(projectRoot, "config", "auth.yaml"),
 				ContainerFilePath: "/app/config/auth.yaml",
 				FileMode:          0o644,
@@ -814,7 +844,7 @@ func SetupChats(ctx context.Context, net *testcontainers.DockerNetwork, t *testi
 
 func serviceEnv() map[string]string {
 	return map[string]string{
-		"APP_ENV":           "docker",
+		"APP_ENV":           "integration",
 		"CONFIG_COMMON":     "/app/config/common.yaml",
 		"DB_PASSWORD":       defaultDBPassword,
 		"JWT_ACCESS_SECRET": testJWTAccessSecret,

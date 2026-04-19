@@ -2,15 +2,18 @@ package failures
 
 import (
 	chatspb "barter-port/contracts/grpc/chats/v1"
+	dealsusers "barter-port/contracts/kafka/messages/deals-users"
 	appdeals "barter-port/internal/deals/application/deals"
 	"barter-port/internal/deals/domain"
 	"barter-port/internal/deals/domain/enums"
 	"barter-port/internal/deals/domain/htypes"
 	failuresrepo "barter-port/internal/deals/infrastructure/repository/failures"
+	outbox "barter-port/internal/deals/infrastructure/repository/offer-report-outbox"
 	"barter-port/pkg/db"
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -21,6 +24,7 @@ import (
 type Service struct {
 	*appdeals.Service
 	repository *failuresrepo.Repository
+	outbox     *outbox.Repository
 }
 
 func NewService(base *appdeals.Service, repository *failuresrepo.Repository) *Service {
@@ -191,9 +195,11 @@ func (s *Service) ModeratorResolutionForFailure(
 	if !confirmed && (failureUserID != nil || punishmentPoints != nil) {
 		return htypes.FailureRecord{}, domain.ErrInvalidFailureDecision
 	}
-	if punishmentPoints != nil && *punishmentPoints < 0 {
+	if confirmed && (punishmentPoints == nil || *punishmentPoints < 0 || failureUserID == nil) {
 		return htypes.FailureRecord{}, domain.ErrInvalidFailureDecision
 	}
+
+	now := time.Now()
 
 	var record htypes.FailureRecord
 	err = db.RunInTx(ctx, s.DB(), func(ctx context.Context, tx pgx.Tx) error {
@@ -230,6 +236,21 @@ func (s *Service) ModeratorResolutionForFailure(
 			} else {
 				targetStatus = enums.DealStatusCancelled
 			}
+		}
+
+		outboxMsg := dealsusers.ReputationMessage{
+			ID:         uuid.New(),
+			SourceType: dealsusers.DealFailureResponsibleMessageType,
+			SourceID:   dealID,
+			UserID:     *failureUserID,
+			Delta:      -*punishmentPoints,
+			CreatedAt:  now,
+			Comment:    comment,
+		}
+
+		err = s.outbox.WriteOutboxMessage(ctx, tx, outboxMsg)
+		if err != nil {
+			return err
 		}
 
 		if err = s.DealsRepository().UpdateDealStatus(ctx, tx, dealID, targetStatus); err != nil {

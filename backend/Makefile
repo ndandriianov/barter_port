@@ -12,6 +12,39 @@ test-integration-reuse:
 	TESTCONTAINERS_RYUK_DISABLED=true BARTER_PORT_REUSE_CONTAINERS=true \
 		go test -v -timeout 30m ./integration/...
 
+test-integration-moderator-resolution-debug:
+	TESTCONTAINERS_RYUK_DISABLED=true BARTER_PORT_REUSE_CONTAINERS=true \
+	BARTER_PORT_TEST_POSTGRES_HOST_PORT=$${BARTER_PORT_TEST_POSTGRES_HOST_PORT:-15432} \
+		go test -v -timeout 30m ./integration/... \
+		-run '^TestModeratorResolutionForFailureSuccessAndReadableByParticipant$$' \
+		-count=1 -parallel 1
+
+test-integration-admin-resolve-report:
+	go test -v -timeout 30m ./integration/... \
+		-run '^TestAdminResolveReportAcceptHidesOffer$$' \
+		-count=1
+
+test-integration-moderator-resolution:
+	go test -v -timeout 30m ./integration/... \
+		-run '^TestModeratorResolutionForFailureSuccessAndReadableByParticipant$$' \
+		-count=1
+
+test-integration-reputation-flakes:
+	go test -v -timeout 30m ./integration/... \
+		-run '^(TestAdminResolveReportAcceptHidesOffer|TestModeratorResolutionForFailureSuccessAndReadableByParticipant)$$' \
+		-count=1
+
+test-integration-db-info:
+	@port=$${BARTER_PORT_TEST_POSTGRES_HOST_PORT:-15432}; \
+	echo "Host: 127.0.0.1"; \
+	echo "Port: $$port"; \
+	echo "User: postgres"; \
+	echo "Password: postgres"; \
+	echo "Databases: deals_db, users_db, auth_db, chats_db"; \
+	echo ""; \
+	echo "Primary DSN:"; \
+	echo "postgres://postgres:postgres@127.0.0.1:$$port/deals_db?sslmode=disable"
+
 test-integration-clean:
 	docker rm -f \
 		barter-port-integration-postgres \

@@ -15,17 +15,17 @@ import (
 type ReputationInboxConsumer struct {
 	db        *pgxpool.Pool
 	inboxRepo reputationInboxWriter
-	consumer  *kafkax.InboxConsumer[dealsusers.OfferReportPenaltyMessage]
+	consumer  *kafkax.InboxConsumer[dealsusers.ReputationMessage]
 }
 
 type reputationInboxWriter interface {
-	WriteReputationInboxMessage(context.Context, db.DB, dealsusers.OfferReportPenaltyMessage) error
+	WriteReputationInboxMessage(context.Context, db.DB, dealsusers.ReputationMessage) error
 }
 
 func NewReputationInboxConsumer(
 	db *pgxpool.Pool,
 	inboxRepo reputationInboxWriter,
-	consumer *kafkax.InboxConsumer[dealsusers.OfferReportPenaltyMessage],
+	consumer *kafkax.InboxConsumer[dealsusers.ReputationMessage],
 ) *ReputationInboxConsumer {
 	return &ReputationInboxConsumer{
 		db:        db,
@@ -38,7 +38,7 @@ func (c *ReputationInboxConsumer) Run(ctx context.Context) error {
 	return c.consumer.Run(ctx, c.consumeMessage)
 }
 
-func (c *ReputationInboxConsumer) consumeMessage(ctx context.Context, message dealsusers.OfferReportPenaltyMessage) error {
+func (c *ReputationInboxConsumer) consumeMessage(ctx context.Context, message dealsusers.ReputationMessage) error {
 	err := c.inboxRepo.WriteReputationInboxMessage(ctx, c.db, message)
 	if err != nil {
 		if errors.Is(err, reputation_inbox.ErrReputationEventAlreadyExists) {
