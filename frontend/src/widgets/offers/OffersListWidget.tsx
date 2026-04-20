@@ -15,12 +15,18 @@ import {
 import RefreshIcon from "@mui/icons-material/Refresh";
 import offersApi from "@/features/offers/api/offersApi";
 import usersApi from "@/features/users/api/usersApi.ts";
-import type { GetOffersParams, Offer, SortType, UniversalCursor } from "@/features/offers/model/types";
+import type {
+  GetOffersParams,
+  GetSubscribedOffersParams,
+  Offer,
+  SortType,
+  UniversalCursor,
+} from "@/features/offers/model/types";
 import useDraftOfferCounts from "@/features/deals/model/useDraftOfferCounts.ts";
 import OfferCard from "@/widgets/offers/OfferCard";
 
 interface OffersListWidgetProps {
-  mode: "mine" | "others";
+  mode: "mine" | "others" | "subscriptions";
 }
 
 const PAGE_SIZE = 8;
@@ -63,6 +69,32 @@ const buildOffersParams = (
   return params;
 };
 
+const buildSubscribedOffersParams = (
+  sortType: SortType,
+  cursor: UniversalCursor | null,
+): GetSubscribedOffersParams => {
+  const params: GetSubscribedOffersParams = {
+    sort: sortType,
+    cursor_limit: PAGE_SIZE,
+  };
+
+  if (!cursor) {
+    return params;
+  }
+
+  params.cursor_id = cursor.id;
+
+  if (sortType === "ByTime" && cursor.createdAt) {
+    params.cursor_created_at = cursor.createdAt;
+  }
+
+  if (sortType === "ByPopularity" && typeof cursor.views === "number") {
+    params.cursor_views = cursor.views;
+  }
+
+  return params;
+};
+
 function OffersListWidget({ mode }: OffersListWidgetProps) {
   const [sortType, setSortType] = useState<SortType>("ByTime");
   const [offers, setOffers] = useState<Offer[]>([]);
@@ -72,12 +104,14 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
   const [initialError, setInitialError] = useState<string | null>(null);
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
   const isMyOffers = mode === "mine";
+  const isSubscribedOffers = mode === "subscriptions";
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const nextCursorRef = useRef<UniversalCursor | null>(null);
   const isInitialLoadingRef = useRef(true);
   const isLoadingMoreRef = useRef(false);
   const feedKeyRef = useRef("");
   const [triggerGetOffers] = offersApi.useLazyGetOffersQuery();
+  const [triggerGetSubscribedOffers] = offersApi.useLazyGetSubscribedOffersQuery();
   const { data: currentUser } = usersApi.useGetCurrentUserQuery();
   const { countsByOfferId } = useDraftOfferCounts({ enabled: isMyOffers });
   const feedKey = `${mode}:${sortType}`;
@@ -109,7 +143,9 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
     }
 
     try {
-      const response = await triggerGetOffers(buildOffersParams(sortType, isMyOffers, cursor)).unwrap();
+      const response = isSubscribedOffers
+        ? await triggerGetSubscribedOffers(buildSubscribedOffersParams(sortType, cursor)).unwrap()
+        : await triggerGetOffers(buildOffersParams(sortType, isMyOffers, cursor)).unwrap();
 
       if (feedKeyRef.current !== requestFeedKey) {
         return;
@@ -124,12 +160,20 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
       }
 
       if (replace) {
-        setInitialError("Не удалось загрузить список объявлений");
+        setInitialError(
+          isSubscribedOffers
+            ? "Не удалось загрузить объявления от подписок"
+            : "Не удалось загрузить список объявлений",
+        );
         setOffers([]);
         setNextCursor(null);
         nextCursorRef.current = null;
       } else {
-        setLoadMoreError("Не удалось загрузить следующие объявления");
+        setLoadMoreError(
+          isSubscribedOffers
+            ? "Не удалось загрузить следующие объявления от подписок"
+            : "Не удалось загрузить следующие объявления",
+        );
       }
     } finally {
       if (replace) {
@@ -220,7 +264,11 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
 
       {offers.length === 0 ? (
         <Typography color="text.secondary" textAlign="center" py={6}>
-          {isMyOffers ? "У вас пока нет объявлений" : "Пока нет объявлений"}
+          {isMyOffers
+            ? "У вас пока нет объявлений"
+            : isSubscribedOffers
+              ? "Пока нет объявлений от ваших подписок"
+              : "Пока нет объявлений"}
         </Typography>
       ) : (
         <>

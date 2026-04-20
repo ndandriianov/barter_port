@@ -29,14 +29,19 @@ export type ListOfferReportsResponse = z.Infer<typeof listOfferReportsResponseSc
 
 export type SortType = "ByTime" | "ByPopularity";
 
-export interface GetOffersParams {
+export interface OffersListParams {
   sort: SortType;
-  my?: boolean;
   cursor_created_at?: string;
   cursor_views?: number;
   cursor_id?: string;
   cursor_limit?: number;
 }
+
+export interface GetOffersParams extends OffersListParams {
+  my?: boolean;
+}
+
+export type GetSubscribedOffersParams = OffersListParams;
 
 export type GetOffersResponse = z.Infer<typeof getOffersResponseSchema>;
 
