@@ -26,6 +26,7 @@ import ReviewsPage from "@/pages/reviews/ReviewsPage";
 import UserReviewsPage from "@/pages/reviews/UserReviewsPage";
 import OfferReviewsPage from "@/pages/reviews/OfferReviewsPage";
 import UserPage from "@/pages/users/UserPage.tsx";
+import StatisticsPage from "@/pages/statistics/StatisticsPage.tsx";
 
 function AppRouter() {
   return (
@@ -62,6 +63,7 @@ function AppRouter() {
           <Route path="/reviews/mine" element={<Navigate to="/reviews?tab=mine" replace />} />
           <Route path="/users/:userId" element={<UserPage />} />
           <Route path="/users/:userId/reviews" element={<UserReviewsPage />} />
+          <Route path="/statistics" element={<StatisticsPage />} />
           <Route path="*" element={<Navigate to="/profile" replace />} />
         </Route>
       </Routes>

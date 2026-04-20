@@ -776,6 +776,121 @@ PendingDealReview:
 
 
 
+MyStatistics:
+  type: object
+  required:
+    - deals
+    - offers
+    - reviews
+    - reports
+  properties:
+    deals:
+      $ref: '#/MyDealStats'
+    offers:
+      $ref: '#/MyOfferStats'
+    reviews:
+      $ref: '#/MyReviewStats'
+    reports:
+      $ref: '#/MyReportStats'
+
+MyDealStats:
+  type: object
+  required:
+    - completed
+    - failed
+    - active
+  properties:
+    completed:
+      type: integer
+      minimum: 0
+      description: Количество завершённых сделок (status = Completed)
+    failed:
+      type: integer
+      minimum: 0
+      description: Количество проваленных сделок (status = Failed)
+    active:
+      type: integer
+      minimum: 0
+      description: Количество активных сделок (LookingForParticipants, Discussion, Confirmed)
+
+MyOfferStats:
+  type: object
+  required:
+    - total
+    - totalViews
+  properties:
+    total:
+      type: integer
+      minimum: 0
+      description: Общее количество выложенных объявлений
+    totalViews:
+      type: integer
+      format: int64
+      minimum: 0
+      description: Суммарное количество просмотров всех объявлений
+
+MyReviewStats:
+  type: object
+  required:
+    - written
+    - received
+  properties:
+    written:
+      type: integer
+      minimum: 0
+      description: Количество написанных отзывов (author_id = me)
+    received:
+      type: integer
+      minimum: 0
+      description: Количество полученных отзывов (provider_id = me)
+    averageRatingReceived:
+      type: number
+      format: double
+      nullable: true
+      minimum: 1
+      maximum: 5
+      description: Средний рейтинг как провайдер. null если отзывов нет.
+
+MyReportStats:
+  type: object
+  required:
+    - onMyOffers
+    - filedByMe
+  properties:
+    onMyOffers:
+      $ref: '#/MyReportOnMyOffersStats'
+    filedByMe:
+      type: integer
+      minimum: 0
+      description: Количество жалоб, поданных мной на чужие объявления
+
+MyReportOnMyOffersStats:
+  type: object
+  required:
+    - total
+    - pending
+    - accepted
+    - rejected
+  properties:
+    total:
+      type: integer
+      minimum: 0
+      description: Всего жалоб на мои объявления
+    pending:
+      type: integer
+      minimum: 0
+      description: Жалобы на модерации
+    accepted:
+      type: integer
+      minimum: 0
+      description: Принятые жалобы (штраф был применён)
+    rejected:
+      type: integer
+      minimum: 0
+      description: Отклонённые жалобы
+
+
+
 DealStatus:
   type: string
   description: Статус сделки

@@ -363,38 +363,6 @@ func (c *SeedClient) completeTwoPartyDeal(ctx context.Context, dealID uuid.UUID,
 	return nil
 }
 
-func (c *SeedClient) createMutualReviews(ctx context.Context, dealID uuid.UUID, deal dealtypes.Deal, userA *seededUser, userB *seededUser) error {
-	itemByAuthor := make(map[uuid.UUID]uuid.UUID, len(deal.Items))
-	for _, item := range deal.Items {
-		itemByAuthor[item.AuthorId] = item.Id
-	}
-
-	itemA, ok := itemByAuthor[userA.UserID]
-	if !ok {
-		return fmt.Errorf("completed deal %s does not contain item for %s", dealID, userA.Key)
-	}
-	itemB, ok := itemByAuthor[userB.UserID]
-	if !ok {
-		return fmt.Errorf("completed deal %s does not contain item for %s", dealID, userB.Key)
-	}
-
-	if err := c.createDealItemReview(ctx, userB.Token, dealID, itemA, dealtypes.CreateReviewRequest{
-		Rating:  5,
-		Comment: new("Все прошло четко: договорились быстро и получили именно то, что ожидали."),
-	}); err != nil {
-		return fmt.Errorf("review for %s item: %w", userA.Key, err)
-	}
-
-	if err := c.createDealItemReview(ctx, userA.Token, dealID, itemB, dealtypes.CreateReviewRequest{
-		Rating:  5,
-		Comment: new("Хорошая коммуникация и удобная передача вещи."),
-	}); err != nil {
-		return fmt.Errorf("review for %s item: %w", userB.Key, err)
-	}
-
-	return nil
-}
-
 func (c *SeedClient) createDealItemReview(ctx context.Context, token string, dealID uuid.UUID, itemID uuid.UUID, req dealtypes.CreateReviewRequest) error {
 	path := fmt.Sprintf("/deals/%s/items/%s/reviews", dealID, itemID)
 	return c.doJSON(ctx, http.MethodPost, path, token, req, nil, http.StatusCreated)
@@ -470,6 +438,102 @@ func (c *SeedClient) sendChatMessages(ctx context.Context, chatID uuid.UUID, mes
 	}
 
 	return nil
+}
+
+func (c *SeedClient) createLookingDeal(ctx context.Context, user *seededUser, offerID uuid.UUID, name, description string) (uuid.UUID, error) {
+	before, err := c.listMyDeals(ctx, user.Token)
+	if err != nil {
+		return uuid.Nil, fmt.Errorf("list deals before looking draft: %w", err)
+	}
+
+	draftID, err := c.createDraft(ctx, user.Token, dealtypes.CreateDraftDealRequest{
+		Name:        &name,
+		Description: &description,
+		Offers:      []dealtypes.OfferIDAndQuantity{{OfferID: offerID, Quantity: 1}},
+	})
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	if err := c.confirmDraft(ctx, user.Token, draftID); err != nil {
+		return uuid.Nil, fmt.Errorf("confirm looking draft: %w", err)
+	}
+
+	return c.waitForNewDeal(ctx, user.Token, before)
+}
+
+func (c *SeedClient) createAndCancelDeal(ctx context.Context, userA, userB *seededUser, offerA, offerB uuid.UUID, name, description string) (uuid.UUID, error) {
+	dealID, err := c.createTwoPartyDeal(ctx, userA, userB, offerA, offerB, name, description)
+	if err != nil {
+		return uuid.Nil, err
+	}
+
+	if err := c.changeDealStatus(ctx, userA.Token, dealID, dealtypes.Cancelled); err != nil {
+		return uuid.Nil, fmt.Errorf("cancel deal by %s: %w", userA.Key, err)
+	}
+	// second vote may fail if already cancelled — tolerate it
+	_ = c.changeDealStatus(ctx, userB.Token, dealID, dealtypes.Cancelled)
+
+	return dealID, nil
+}
+
+func (c *SeedClient) createOfferReport(ctx context.Context, token string, offerID uuid.UUID, message string) (dealtypes.OfferReport, error) {
+	var body dealtypes.OfferReport
+	path := fmt.Sprintf("/offers/%s/reports", offerID)
+	if err := c.doJSON(ctx, http.MethodPost, path, token, dealtypes.CreateOfferReportRequest{
+		Message: message,
+	}, &body, http.StatusCreated, http.StatusOK); err != nil {
+		return dealtypes.OfferReport{}, err
+	}
+
+	return body, nil
+}
+
+func (c *SeedClient) resolveOfferReport(ctx context.Context, adminToken string, reportID uuid.UUID, accepted bool, comment *string) (dealtypes.OfferReport, error) {
+	var body dealtypes.OfferReport
+	path := fmt.Sprintf("/admin/offer-reports/%s/resolution", reportID)
+	if err := c.doJSON(ctx, http.MethodPost, path, adminToken, dealtypes.ResolveOfferReportRequest{
+		Accepted: accepted,
+		Comment:  comment,
+	}, &body, http.StatusOK, http.StatusConflict); err != nil {
+		return dealtypes.OfferReport{}, err
+	}
+
+	return body, nil
+}
+
+func (c *SeedClient) voteForFailure(ctx context.Context, token string, dealID uuid.UUID, accusedUserID uuid.UUID) error {
+	path := fmt.Sprintf("/deals/failures/%s/votes", dealID)
+	err := c.doJSON(ctx, http.MethodPost, path, token, dealtypes.VoteForFailureRequest{
+		UserId: accusedUserID,
+	}, nil, http.StatusNoContent, http.StatusForbidden)
+	return err
+}
+
+func (c *SeedClient) moderatorResolutionForFailure(ctx context.Context, adminToken string, dealID uuid.UUID, req dealtypes.ModeratorResolutionForFailureRequest) error {
+	path := fmt.Sprintf("/deals/failures/%s/moderator-resolution", dealID)
+	return c.doJSON(ctx, http.MethodPost, path, adminToken, req, nil, http.StatusOK, http.StatusConflict)
+}
+
+func (c *SeedClient) requestJoinDeal(ctx context.Context, token string, dealID uuid.UUID) error {
+	path := fmt.Sprintf("/deals/%s/joins", dealID)
+	return c.doJSON(ctx, http.MethodPost, path, token, nil, nil, http.StatusNoContent, http.StatusForbidden, http.StatusNotFound)
+}
+
+func (c *SeedClient) processJoinRequest(ctx context.Context, token string, dealID uuid.UUID, applicantUserID uuid.UUID, accept bool) error {
+	path := fmt.Sprintf("/deals/%s/joins/%s?accept=%v", dealID, applicantUserID, accept)
+	resp, err := c.do(ctx, http.MethodPost, path, token, nil)
+	if err != nil {
+		return err
+	}
+	defer closeBody(resp.Body)
+
+	switch resp.StatusCode {
+	case http.StatusNoContent, http.StatusForbidden, http.StatusNotFound:
+		return nil
+	default:
+		return responseError(resp, http.StatusNoContent)
+	}
 }
 
 func (c *SeedClient) poll(ctx context.Context, fn func(context.Context) (bool, error)) error {

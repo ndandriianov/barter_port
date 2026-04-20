@@ -14,6 +14,8 @@ const (
 	defaultAvatarBaseURL = "http://localhost:8333/avatars"
 	defaultTimeout       = 2 * time.Minute
 	defaultPollInterval  = 500 * time.Millisecond
+	defaultAdminEmail    = "admin@barterport.com"
+	defaultAdminPassword = "admin"
 )
 
 type SeedConfig struct {
@@ -22,6 +24,8 @@ type SeedConfig struct {
 	AvatarBaseURL string
 	Timeout       time.Duration
 	PollInterval  time.Duration
+	AdminEmail    string
+	AdminPassword string
 }
 
 func ParseConfig() (SeedConfig, error) {
@@ -32,6 +36,8 @@ func ParseConfig() (SeedConfig, error) {
 	avatarBaseURL := fs.String("avatar-base-url", firstNonEmpty(os.Getenv("SEED_AVATAR_BASE_URL"), defaultAvatarBaseURL), "Base URL for demo avatars")
 	timeout := fs.Duration("timeout", durationFromEnv("SEED_TIMEOUT", defaultTimeout), "Overall seed timeout")
 	pollInterval := fs.Duration("poll-interval", durationFromEnv("SEED_POLL_INTERVAL", defaultPollInterval), "Polling interval for async readiness checks")
+	adminEmail := fs.String("admin-email", firstNonEmpty(os.Getenv("SEED_ADMIN_EMAIL"), defaultAdminEmail), "Admin account email for moderation endpoints")
+	adminPassword := fs.String("admin-password", firstNonEmpty(os.Getenv("SEED_ADMIN_PASSWORD"), defaultAdminPassword), "Admin account password")
 
 	if err := fs.Parse(os.Args[1:]); err != nil {
 		return SeedConfig{}, err
@@ -47,5 +53,7 @@ func ParseConfig() (SeedConfig, error) {
 		AvatarBaseURL: strings.TrimRight(*avatarBaseURL, "/"),
 		Timeout:       *timeout,
 		PollInterval:  *pollInterval,
+		AdminEmail:    *adminEmail,
+		AdminPassword: *adminPassword,
 	}, nil
 }

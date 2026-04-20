@@ -70,6 +70,8 @@ paths:
     $ref: './paths/offers.yaml#/adminOfferReportById'
   /admin/offer-reports/{reportId}/resolution:
     $ref: './paths/offers.yaml#/adminOfferReportResolution'
+  /me/statistics:
+    $ref: './paths/statistics.yaml#/myStatistics'
   /offer-groups:
     $ref: './paths/offer-groups.yaml#/offerGroups'
   /offer-groups/{offerGroupId}:

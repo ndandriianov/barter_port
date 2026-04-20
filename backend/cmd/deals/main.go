@@ -10,6 +10,7 @@ import (
 	offergroupssvc "barter-port/internal/deals/application/offergroups"
 	"barter-port/internal/deals/application/offers"
 	reviewssvc "barter-port/internal/deals/application/reviews"
+	statisticssvc "barter-port/internal/deals/application/statistics"
 	penaltyoutbox "barter-port/internal/deals/infrastructure/kafka/producer/penalty-outbox"
 	"barter-port/internal/deals/infrastructure/repository/deals"
 	"barter-port/internal/deals/infrastructure/repository/drafts"
@@ -20,6 +21,7 @@ import (
 	offergroupsrepo "barter-port/internal/deals/infrastructure/repository/offergroups"
 	offersr "barter-port/internal/deals/infrastructure/repository/offers"
 	reviewsrepo "barter-port/internal/deals/infrastructure/repository/reviews"
+	statsrepo "barter-port/internal/deals/infrastructure/repository/statistics"
 	itemphotostorage "barter-port/internal/deals/infrastructure/storage/itemphoto"
 	offerphotostorage "barter-port/internal/deals/infrastructure/storage/offerphoto"
 	transportgrpc "barter-port/internal/deals/infrastructure/transport/grpc"
@@ -32,6 +34,7 @@ import (
 	offergroupsh "barter-port/internal/deals/infrastructure/transport/http/offergroups"
 	offersh "barter-port/internal/deals/infrastructure/transport/http/offers"
 	reviewsh "barter-port/internal/deals/infrastructure/transport/http/reviews"
+	statisticsh "barter-port/internal/deals/infrastructure/transport/http/statistics"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/bootstrap"
 	"barter-port/pkg/kafkax"
@@ -174,6 +177,9 @@ func main() {
 	grpcServer := grpc.NewServer()
 	dealspb.RegisterDealsServiceServer(grpcServer, transportgrpc.NewServer(dealsService))
 
+	statisticsRepository := statsrepo.NewRepository(db)
+	statisticsService := statisticssvc.NewService(statisticsRepository)
+
 	offersHandlers := offersh.NewHandlers(offersService)
 	offerGroupsHandlers := offergroupsh.NewHandlers(logg, offerGroupsService)
 	draftsHandlers := draftsh.NewHandlers(logg, dealsService)
@@ -182,7 +188,8 @@ func main() {
 	joinsHandlers := joinsh.NewHandlers(logg, joinsService)
 	reviewsHandlers := reviewsh.NewHandlers(logg, reviewsService)
 	offerReportsHandlers := offerreportsh.NewHandlers(offerReportsService)
-	router := transporthttp.NewRouter(logg, validator, offersHandlers, offerGroupsHandlers, draftsHandlers, dealsHandlers, failuresHandlers, joinsHandlers, reviewsHandlers, offerReportsHandlers)
+	statisticsHandlers := statisticsh.NewHandlers(logg, statisticsService)
+	router := transporthttp.NewRouter(logg, validator, offersHandlers, offerGroupsHandlers, draftsHandlers, dealsHandlers, failuresHandlers, joinsHandlers, reviewsHandlers, offerReportsHandlers, statisticsHandlers)
 
 	port := bootstrap.InitPortStringFromConfig(cfg, 8080)
 	httpServer := &http.Server{

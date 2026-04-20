@@ -10,6 +10,7 @@ import (
 	offergroupsh "barter-port/internal/deals/infrastructure/transport/http/offergroups"
 	"barter-port/internal/deals/infrastructure/transport/http/offers"
 	reviewsh "barter-port/internal/deals/infrastructure/transport/http/reviews"
+	statisticsh "barter-port/internal/deals/infrastructure/transport/http/statistics"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/authkit/validators"
 	"barter-port/pkg/logger"
@@ -32,6 +33,7 @@ func NewRouter(
 	joinsHandlers *joinsh.Handlers,
 	reviewsHandlers *reviewsh.Handlers,
 	offerReportsHandlers *offerreports.Handlers,
+	statisticsHandlers *statisticsh.Handlers,
 ) http.Handler {
 	if logg == nil {
 		log.Fatal("logger is required")
@@ -60,6 +62,9 @@ func NewRouter(
 	if offerReportsHandlers == nil {
 		log.Fatal("offer reports handlers are required")
 	}
+	if statisticsHandlers == nil {
+		log.Fatal("statistics handlers are required")
+	}
 
 	r := chi.NewRouter()
 
@@ -85,6 +90,7 @@ func NewRouter(
 	r.Group(func(r chi.Router) {
 		r.Use(authkit.Middleware(logg, validator, nil))
 		r.Use(logger.Middleware(logg))
+		r.Get("/me/statistics", statisticsHandlers.HandleGetMyStatistics)
 		r.Route("/offers", func(r chi.Router) {
 			r.Post("/", offersHandlers.HandleCreateOffer)
 			r.Get("/", offersHandlers.HandleGetOffers)

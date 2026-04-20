@@ -567,6 +567,69 @@ type ModeratorResolutionForFailureRequest struct {
 	UserId *openapi_types.UUID `json:"userId,omitempty"`
 }
 
+// MyDealStats defines model for MyDealStats.
+type MyDealStats struct {
+	// Active Количество активных сделок (LookingForParticipants, Discussion, Confirmed)
+	Active int `json:"active"`
+
+	// Completed Количество завершённых сделок (status = Completed)
+	Completed int `json:"completed"`
+
+	// Failed Количество проваленных сделок (status = Failed)
+	Failed int `json:"failed"`
+}
+
+// MyOfferStats defines model for MyOfferStats.
+type MyOfferStats struct {
+	// Total Общее количество выложенных объявлений
+	Total int `json:"total"`
+
+	// TotalViews Суммарное количество просмотров всех объявлений
+	TotalViews int64 `json:"totalViews"`
+}
+
+// MyReportOnMyOffersStats defines model for MyReportOnMyOffersStats.
+type MyReportOnMyOffersStats struct {
+	// Accepted Принятые жалобы (штраф был применён)
+	Accepted int `json:"accepted"`
+
+	// Pending Жалобы на модерации
+	Pending int `json:"pending"`
+
+	// Rejected Отклонённые жалобы
+	Rejected int `json:"rejected"`
+
+	// Total Всего жалоб на мои объявления
+	Total int `json:"total"`
+}
+
+// MyReportStats defines model for MyReportStats.
+type MyReportStats struct {
+	// FiledByMe Количество жалоб, поданных мной на чужие объявления
+	FiledByMe  int                     `json:"filedByMe"`
+	OnMyOffers MyReportOnMyOffersStats `json:"onMyOffers"`
+}
+
+// MyReviewStats defines model for MyReviewStats.
+type MyReviewStats struct {
+	// AverageRatingReceived Средний рейтинг как провайдер. null если отзывов нет.
+	AverageRatingReceived *float64 `json:"averageRatingReceived,omitempty"`
+
+	// Received Количество полученных отзывов (provider_id = me)
+	Received int `json:"received"`
+
+	// Written Количество написанных отзывов (author_id = me)
+	Written int `json:"written"`
+}
+
+// MyStatistics defines model for MyStatistics.
+type MyStatistics struct {
+	Deals   MyDealStats   `json:"deals"`
+	Offers  MyOfferStats  `json:"offers"`
+	Reports MyReportStats `json:"reports"`
+	Reviews MyReviewStats `json:"reviews"`
+}
+
 // Offer defines model for Offer.
 type Offer struct {
 	// Action Whether the user offers or requests something

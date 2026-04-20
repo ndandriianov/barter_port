@@ -2727,6 +2727,39 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /me/statistics:
+    get:
+      tags:
+        - statistics
+      summary: Получить мою статистику
+      description: |
+        Возвращает агрегированную статистику текущего пользователя:
+        - сделки по статусам (завершённые, проваленные, активные)
+        - объявления: количество и суммарные просмотры
+        - отзывы: написанные, полученные, средний рейтинг
+        - жалобы: поданные мной и на мои объявления (с разбивкой по статусам)
+      operationId: getMyStatistics
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Статистика текущего пользователя
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MyStatistics'
+        '401':
+          description: Не авторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /offer-groups:
     get:
       tags:
@@ -4068,6 +4101,113 @@ components:
         comment:
           type: string
           description: Необязательный комментарий администратора.
+    MyDealStats:
+      type: object
+      required:
+        - completed
+        - failed
+        - active
+      properties:
+        completed:
+          type: integer
+          minimum: 0
+          description: Количество завершённых сделок (status = Completed)
+        failed:
+          type: integer
+          minimum: 0
+          description: Количество проваленных сделок (status = Failed)
+        active:
+          type: integer
+          minimum: 0
+          description: Количество активных сделок (LookingForParticipants, Discussion, Confirmed)
+    MyOfferStats:
+      type: object
+      required:
+        - total
+        - totalViews
+      properties:
+        total:
+          type: integer
+          minimum: 0
+          description: Общее количество выложенных объявлений
+        totalViews:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Суммарное количество просмотров всех объявлений
+    MyReviewStats:
+      type: object
+      required:
+        - written
+        - received
+      properties:
+        written:
+          type: integer
+          minimum: 0
+          description: Количество написанных отзывов (author_id = me)
+        received:
+          type: integer
+          minimum: 0
+          description: Количество полученных отзывов (provider_id = me)
+        averageRatingReceived:
+          type: number
+          format: double
+          nullable: true
+          minimum: 1
+          maximum: 5
+          description: Средний рейтинг как провайдер. null если отзывов нет.
+    MyReportOnMyOffersStats:
+      type: object
+      required:
+        - total
+        - pending
+        - accepted
+        - rejected
+      properties:
+        total:
+          type: integer
+          minimum: 0
+          description: Всего жалоб на мои объявления
+        pending:
+          type: integer
+          minimum: 0
+          description: Жалобы на модерации
+        accepted:
+          type: integer
+          minimum: 0
+          description: Принятые жалобы (штраф был применён)
+        rejected:
+          type: integer
+          minimum: 0
+          description: Отклонённые жалобы
+    MyReportStats:
+      type: object
+      required:
+        - onMyOffers
+        - filedByMe
+      properties:
+        onMyOffers:
+          $ref: '#/components/schemas/MyReportOnMyOffersStats'
+        filedByMe:
+          type: integer
+          minimum: 0
+          description: Количество жалоб, поданных мной на чужие объявления
+    MyStatistics:
+      type: object
+      required:
+        - deals
+        - offers
+        - reviews
+        - reports
+      properties:
+        deals:
+          $ref: '#/components/schemas/MyDealStats'
+        offers:
+          $ref: '#/components/schemas/MyOfferStats'
+        reviews:
+          $ref: '#/components/schemas/MyReviewStats'
+        reports:
+          $ref: '#/components/schemas/MyReportStats'
     OfferGroupUnit:
       type: object
       required:
