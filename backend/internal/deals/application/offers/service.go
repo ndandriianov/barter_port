@@ -224,6 +224,94 @@ func (s *Service) GetOffers(
 	}
 }
 
+func (s *Service) GetSubscribedOffers(
+	ctx context.Context,
+	requesterID uuid.UUID,
+	sortType enums.SortType,
+	cursor *domain.UniversalCursor,
+	limit int,
+) ([]domain.Offer, *domain.UniversalCursor, error) {
+	isAdmin, err := s.adminChecker.IsAdmin(ctx, requesterID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("check admin: %w", err)
+	}
+
+	subscriptionsResponse, err := s.usersClient.ListSubscriptions(ctx, &userspb.ListSubscriptionsRequest{
+		UserId: requesterID.String(),
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("list subscriptions: %w", err)
+	}
+
+	authorIDs := make([]uuid.UUID, 0, len(subscriptionsResponse.Subscriptions))
+	for _, subscription := range subscriptionsResponse.Subscriptions {
+		if subscription == nil {
+			continue
+		}
+
+		authorID, parseErr := uuid.Parse(subscription.Id)
+		if parseErr != nil {
+			return nil, nil, fmt.Errorf("parse subscription id %q: %w", subscription.Id, parseErr)
+		}
+		authorIDs = append(authorIDs, authorID)
+	}
+
+	if len(authorIDs) == 0 {
+		return []domain.Offer{}, nil, nil
+	}
+
+	switch sortType {
+	case enums.SortTypeByTime:
+		timeCursor, err := getTimeCursor(cursor)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		offers, newTimeCursor, err := s.getSubscribedOffersByTime(ctx, timeCursor, limit, authorIDs, isAdmin)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		var newUniversalCursor *domain.UniversalCursor
+		if newTimeCursor != nil {
+			newUniversalCursor = newTimeCursor.ToUniversalCursor()
+		}
+
+		offers, err = s.addAuthorNameToOffers(ctx, offers)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return offers, newUniversalCursor, nil
+
+	case enums.SortTypeByPopularity:
+		popularityCursor, err := getPopularityCursor(cursor)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		offers, newPopularityCursor, err := s.getSubscribedOffersByPopularity(ctx, popularityCursor, limit, authorIDs, isAdmin)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		var newUniversalCursor *domain.UniversalCursor
+		if newPopularityCursor != nil {
+			newUniversalCursor = newPopularityCursor.ToUniversalCursor()
+		}
+
+		offers, err = s.addAuthorNameToOffers(ctx, offers)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return offers, newUniversalCursor, nil
+
+	default:
+		return nil, nil, fmt.Errorf("invalid sort type: %v", sortType)
+	}
+}
+
 func getTimeCursor(cursor *domain.UniversalCursor) (*domain.TimeCursor, error) {
 	if cursor == nil {
 		return nil, nil
@@ -255,6 +343,20 @@ func (s *Service) getOffersByTime(
 			return s.repo.GetOffersOrderByTimeNoCursor(ctx, limit, isAdmin)
 		}
 	}
+}
+
+func (s *Service) getSubscribedOffersByTime(
+	ctx context.Context,
+	cursor *domain.TimeCursor,
+	limit int,
+	authorIDs []uuid.UUID,
+	isAdmin bool,
+) ([]domain.Offer, *domain.TimeCursor, error) {
+	if cursor != nil {
+		return s.repo.GetSubscribedOffersOrderByTime(ctx, limit, *cursor, authorIDs, isAdmin)
+	}
+
+	return s.repo.GetSubscribedOffersOrderByTimeNoCursor(ctx, limit, authorIDs, isAdmin)
 }
 
 func getPopularityCursor(cursor *domain.UniversalCursor) (*domain.PopularityCursor, error) {
@@ -290,7 +392,25 @@ func (s *Service) getOffersByPopularity(
 	}
 }
 
+func (s *Service) getSubscribedOffersByPopularity(
+	ctx context.Context,
+	cursor *domain.PopularityCursor,
+	limit int,
+	authorIDs []uuid.UUID,
+	isAdmin bool,
+) ([]domain.Offer, *domain.PopularityCursor, error) {
+	if cursor != nil {
+		return s.repo.GetSubscribedOffersOrderByPopularity(ctx, limit, *cursor, authorIDs, isAdmin)
+	}
+
+	return s.repo.GetSubscribedOffersOrderByPopularityNoCursor(ctx, limit, authorIDs, isAdmin)
+}
+
 func (s *Service) addAuthorNameToOffers(ctx context.Context, offers []domain.Offer) ([]domain.Offer, error) {
+	if len(offers) == 0 {
+		return offers, nil
+	}
+
 	ids := make([]string, len(offers))
 	for i, o := range offers {
 		ids[i] = o.AuthorId.String()

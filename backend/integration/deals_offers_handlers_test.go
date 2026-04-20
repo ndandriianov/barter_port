@@ -314,6 +314,82 @@ func TestGetOffersResponseIsJSON(t *testing.T) {
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&decoded))
 }
 
+func TestGetSubscribedOffersUnauthorized(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	resp := mustDo(t, mustRequest(t, http.MethodGet, dealsURL()+"/offers/subscriptions?sort=ByTime", nil))
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+}
+
+func TestGetSubscribedOffersInvalidSortReturnsBadRequest(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	user := mustRegisterDealsUser(t)
+	req := mustUserRequest(t, http.MethodGet, dealsURL()+"/offers/subscriptions?sort=wrong", user.UserID, nil)
+
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestGetSubscribedOffersReturnsOnlySubscribedAuthorsOffers(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	subscriber := mustRegisterDealsUser(t)
+	subscribedAuthor := mustRegisterDealsUser(t)
+	otherAuthor := mustRegisterDealsUser(t)
+
+	subscribedOffer := mustCreateOffer(t, subscribedAuthor.UserID)
+	otherOffer := mustCreateOffer(t, otherAuthor.UserID)
+
+	mustSubscribeToUser(t, subscriber.UserID, subscribedAuthor.UserID)
+
+	result := mustGetSubscribedOffers(t, subscriber.UserID)
+	require.NotEmpty(t, result.Offers)
+
+	var foundSubscribed, foundOther bool
+	for _, offer := range result.Offers {
+		if offer.Id == subscribedOffer {
+			foundSubscribed = true
+		}
+		if offer.Id == otherOffer {
+			foundOther = true
+		}
+		require.Equal(t, subscribedAuthor.UserID, offer.AuthorId)
+	}
+
+	require.True(t, foundSubscribed)
+	require.False(t, foundOther)
+}
+
+func TestGetSubscribedOffersByPopularityReturnsMostViewedFirst(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	subscriber := mustRegisterDealsUser(t)
+	author := mustRegisterDealsUser(t)
+
+	popularOffer := mustCreateOffer(t, author.UserID)
+	lessPopularOffer := mustCreateOffer(t, author.UserID)
+
+	mustSubscribeToUser(t, subscriber.UserID, author.UserID)
+
+	mustViewOfferByID(t, subscriber.UserID, popularOffer)
+	mustViewOfferByID(t, subscriber.UserID, popularOffer)
+	mustViewOfferByID(t, subscriber.UserID, lessPopularOffer)
+
+	result := mustGetSubscribedOffersBySort(t, subscriber.UserID, "ByPopularity")
+	require.Len(t, result.Offers, 2)
+	require.Equal(t, popularOffer, result.Offers[0].Id)
+	require.EqualValues(t, 2, result.Offers[0].Views)
+	require.Equal(t, lessPopularOffer, result.Offers[1].Id)
+	require.EqualValues(t, 1, result.Offers[1].Views)
+}
+
 func TestUpdateOfferSuccess(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)
@@ -524,4 +600,13 @@ func TestDeleteOfferKeepsExistingDealItems(t *testing.T) {
 	}
 	require.NotNil(t, itemAfterDelete)
 	require.Nil(t, itemAfterDelete.OfferId)
+}
+
+func mustRegisterDealsUser(t *testing.T) registerResponse {
+	t.Helper()
+
+	user := registerAuthUser(t, globalFixture)
+	waitForUsersProjection(t, globalFixture, user.UserID)
+
+	return user
 }

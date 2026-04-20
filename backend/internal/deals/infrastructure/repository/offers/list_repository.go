@@ -127,6 +127,44 @@ func (r *Repository) GetMyOffersOrderByTimeNoCursor(
 	return offersAndTimeCursor(repox.FetchStructs[domain.Offer](ctx, r.db, query, userID, limit))
 }
 
+// subscribed
+
+func (r *Repository) GetSubscribedOffersOrderByTime(
+	ctx context.Context,
+	limit int,
+	cursor domain.TimeCursor,
+	authorIDs []uuid.UUID,
+	isAdmin bool,
+) ([]domain.Offer, *domain.TimeCursor, error) {
+	query := `
+		SELECT ` + rowsToSelect + `
+		FROM offers
+		WHERE (created_at, id) < ($2, $3)
+			AND author_id = ANY($4)
+			AND (is_hidden = FALSE OR $5)
+		ORDER BY created_at DESC
+		LIMIT $1`
+
+	return offersAndTimeCursor(repox.FetchStructs[domain.Offer](ctx, r.db, query, limit, cursor.CreatedAt, cursor.Id, authorIDs, isAdmin))
+}
+
+func (r *Repository) GetSubscribedOffersOrderByTimeNoCursor(
+	ctx context.Context,
+	limit int,
+	authorIDs []uuid.UUID,
+	isAdmin bool,
+) ([]domain.Offer, *domain.TimeCursor, error) {
+	query := `
+		SELECT ` + rowsToSelect + `
+		FROM offers
+		WHERE author_id = ANY($2)
+			AND (is_hidden = FALSE OR $3)
+		ORDER BY created_at DESC
+		LIMIT $1`
+
+	return offersAndTimeCursor(repox.FetchStructs[domain.Offer](ctx, r.db, query, limit, authorIDs, isAdmin))
+}
+
 // ================================================================================
 // ПО ПОПУЛЯРНОСТИ
 // ================================================================================
@@ -194,4 +232,42 @@ func (r *Repository) GetMyOffersOrderByPopularityNoCursor(
 		LIMIT $1`
 
 	return offersAndPopularityCursor(repox.FetchStructs[domain.Offer](ctx, r.db, query, limit, userID))
+}
+
+// subscribed
+
+func (r *Repository) GetSubscribedOffersOrderByPopularity(
+	ctx context.Context,
+	limit int,
+	cursor domain.PopularityCursor,
+	authorIDs []uuid.UUID,
+	isAdmin bool,
+) ([]domain.Offer, *domain.PopularityCursor, error) {
+	query := `
+		SELECT ` + rowsToSelect + `
+		FROM offers
+		WHERE (views, id) < ($2, $3)
+			AND author_id = ANY($4)
+			AND (is_hidden = FALSE OR $5)
+		ORDER BY views DESC
+		LIMIT $1`
+
+	return offersAndPopularityCursor(repox.FetchStructs[domain.Offer](ctx, r.db, query, limit, cursor.Views, cursor.Id, authorIDs, isAdmin))
+}
+
+func (r *Repository) GetSubscribedOffersOrderByPopularityNoCursor(
+	ctx context.Context,
+	limit int,
+	authorIDs []uuid.UUID,
+	isAdmin bool,
+) ([]domain.Offer, *domain.PopularityCursor, error) {
+	query := `
+		SELECT ` + rowsToSelect + `
+		FROM offers
+		WHERE author_id = ANY($2)
+			AND (is_hidden = FALSE OR $3)
+		ORDER BY views DESC
+		LIMIT $1`
+
+	return offersAndPopularityCursor(repox.FetchStructs[domain.Offer](ctx, r.db, query, limit, authorIDs, isAdmin))
 }

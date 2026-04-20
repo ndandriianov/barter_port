@@ -475,7 +475,67 @@ func (h *Handlers) HandleDeleteOffer(w http.ResponseWriter, r *http.Request) {
 func (h *Handlers) HandleGetOffers(w http.ResponseWriter, r *http.Request) {
 	log := logger.LogFrom(r.Context(), slog.Default())
 
-	// Parse query parameters
+	sortType, cursor, limit, my, ok := parseGetOffersRequest(w, r, log)
+	if !ok {
+		return
+	}
+
+	requesterID, requesterOK := authkit.UserIDFromContext(r.Context())
+	var requesterIDPtr *uuid.UUID
+	if requesterOK {
+		requesterIDPtr = &requesterID
+	}
+
+	var authorID *uuid.UUID
+	if my {
+		if !requesterOK {
+			log.Error("failed to get userID from context")
+			httpx.WriteEmptyError(w, http.StatusUnauthorized)
+			return
+		}
+		authorID = &requesterID
+	}
+
+	offerList, nextCursor, err := h.offerService.GetOffers(r.Context(), sortType, cursor, limit, authorID, requesterIDPtr)
+	if err != nil {
+		log.Error("failed to get items", slog.Any("error", err))
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		return
+	}
+
+	writeListOffersResponse(w, offerList, nextCursor)
+}
+
+func (h *Handlers) HandleGetSubscribedOffers(w http.ResponseWriter, r *http.Request) {
+	log := logger.LogFrom(r.Context(), slog.Default())
+
+	sortType, cursor, limit, _, ok := parseGetOffersRequest(w, r, log)
+	if !ok {
+		return
+	}
+
+	requesterID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		log.Error("failed to get userID from context")
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
+	offerList, nextCursor, err := h.offerService.GetSubscribedOffers(r.Context(), requesterID, sortType, cursor, limit)
+	if err != nil {
+		log.Error("failed to get subscribed offers", slog.Any("error", err))
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		return
+	}
+
+	writeListOffersResponse(w, offerList, nextCursor)
+}
+
+func parseGetOffersRequest(
+	w http.ResponseWriter,
+	r *http.Request,
+	log *slog.Logger,
+) (enums.SortType, *domain.UniversalCursor, int, bool, bool) {
 	sortTypeStr := r.URL.Query().Get("sort")
 	myStr := r.URL.Query().Get("my")
 	createdAtStr := r.URL.Query().Get("cursor_created_at")
@@ -489,7 +549,7 @@ func (h *Handlers) HandleGetOffers(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Error("invalid my filter", slog.String("my", myStr), slog.Any("error", err))
 			httpx.WriteErrorStr(w, http.StatusBadRequest, "invalid my filter")
-			return
+			return "", nil, 0, false, false
 		}
 		my = parsedMy
 	}
@@ -509,7 +569,7 @@ func (h *Handlers) HandleGetOffers(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Error("invalid sort type", slog.Any("error", err))
 		httpx.WriteErrorStr(w, http.StatusBadRequest, "invalid sort type")
-		return
+		return "", nil, 0, false, false
 	}
 
 	cursor, err := domain.NewUniversalCursor(createdAtStr, viewsStr, idStr)
@@ -526,30 +586,10 @@ func (h *Handlers) HandleGetOffers(w http.ResponseWriter, r *http.Request) {
 
 	log.Debug("parsing finished", slog.Any("cursor", cursor), slog.Int("limit", limit), slog.Bool("my", my))
 
-	requesterID, requesterOK := authkit.UserIDFromContext(r.Context())
-	var requesterIDPtr *uuid.UUID
-	if requesterOK {
-		requesterIDPtr = &requesterID
-	}
+	return sortType, cursor, limit, my, true
+}
 
-	var authorID *uuid.UUID
-	if my {
-		if !requesterOK {
-			log.Error("failed to get userID from context")
-			httpx.WriteEmptyError(w, http.StatusUnauthorized)
-			return
-		}
-		authorID = &requesterID
-	}
-
-	// Fetch offers from the service
-	offerList, nextCursor, err := h.offerService.GetOffers(r.Context(), sortType, cursor, limit, authorID, requesterIDPtr)
-	if err != nil {
-		log.Error("failed to get items", slog.Any("error", err))
-		httpx.WriteEmptyError(w, http.StatusInternalServerError)
-		return
-	}
-
+func writeListOffersResponse(w http.ResponseWriter, offerList []domain.Offer, nextCursor *domain.UniversalCursor) {
 	respOffers := make([]types.Offer, len(offerList))
 	for i, offer := range offerList {
 		respOffers[i] = offer.ToDto()

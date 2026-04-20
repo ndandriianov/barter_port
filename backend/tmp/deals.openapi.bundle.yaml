@@ -1994,23 +1994,23 @@ paths:
     get:
       tags:
         - offers
-      summary: List offers
+      summary: Список объявлений
       description: |
-        Returns a paginated list of offers.
+        Возвращает список объявлений с пагинацией.
 
-        - If `my=true`, only offers created by the current user are returned.
-        - Hidden offers are not shown to regular users.
-        - Hidden offers are visible to:
-          - the offer author (including in `my=true` mode);
-          - admin users.
+        - Если `my=true`, возвращаются только объявления, созданные текущим пользователем.
+        - Скрытые объявления не показываются обычным пользователям.
+        - Скрытые объявления видны:
+          - автору объявления (в режиме `my=true`);
+          - администраторам.
 
-        Supported sorting modes:
-        - `created_at`: newest offers first
-        - `popularity`: most viewed offers first
+        Поддерживаемые режимы сортировки:
+        - `created_at`: сначала новые объявления
+        - `popularity`: сначала самые просматриваемые объявления
 
-        Cursor fields depend on the selected sorting mode:
-        - for `created_at`: use `cursor_created_at` + `cursor_id`
-        - for `popularity`: use `cursor_views` + `cursor_id`
+        Поля курсора зависят от выбранного режима сортировки:
+        - для `created_at`: используйте `cursor_created_at` + `cursor_id`
+        - для `popularity`: используйте `cursor_views` + `cursor_id`
       operationId: listOffers
       security:
         - bearerAuth: []
@@ -2018,7 +2018,11 @@ paths:
         - name: my
           in: query
           required: false
-          description: False by default. If true, returns only offers created by the current user.
+          description: |
+            По умолчанию `false`. Если `true`, возвращаются только объявления, созданные текущим пользователем,
+            включая скрытые.
+
+            Если `false`, возвращаются все объявления, видимые текущему пользователю.
           schema:
             type: boolean
         - $ref: '#/components/parameters/SortType'
@@ -2028,13 +2032,13 @@ paths:
         - $ref: '#/components/parameters/Limit'
       responses:
         '200':
-          description: Offers page
+          description: Список объявлений и (опционально) курсор
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/ListOffersResponse'
         '400':
-          description: Invalid query parameters
+          description: Некорректные параметры запроса
           content:
             application/json:
               schema:
@@ -2054,8 +2058,8 @@ paths:
     post:
       tags:
         - offers
-      summary: Create offer
-      description: Creates a new barter offer
+      summary: Создать объявление
+      description: Создаёт новое объявление для бартера
       operationId: createOffers
       security:
         - bearerAuth: []
@@ -2067,13 +2071,57 @@ paths:
               $ref: '#/components/schemas/CreateOfferRequest'
       responses:
         '201':
-          description: Offers created
+          description: Объявление создано
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Offer'
         '400':
-          description: Invalid request body
+          description: Некорректное тело запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /offers/subscriptions:
+    get:
+      tags:
+        - offers
+        - subscriptions
+      summary: Список объявлений от подписок
+      description: |
+        Возвращает список объявлений с пагинацией, на которые подписан текущий пользователь.
+
+        Список сортируется по времени последнего обновления объявления.
+      operationId: listSubscribedOffers
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/SortType'
+        - $ref: '#/components/parameters/CursorCreatedAt'
+        - $ref: '#/components/parameters/CursorViews'
+        - $ref: '#/components/parameters/CursorId'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Страница подписанных объявлений
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListOffersResponse'
+        '400':
+          description: Некорректные параметры запроса
           content:
             application/json:
               schema:
@@ -2094,13 +2142,13 @@ paths:
     get:
       tags:
         - offers
-      summary: Get offer by ID
+      summary: Получить объявление по ID
       description: |
-        Returns a single offer by its ID.
+        Возвращает одно объявление по его ID.
 
-        Visibility rules for hidden offers:
-        - author and admin can access the offer;
-        - other users receive `404 Not Found`.
+        Правила видимости для скрытых (hidden) объявлений:
+        - автор и администратор могут получить объявление;
+        - остальные пользователи получают `404 Not Found`.
       operationId: getOfferById
       security:
         - bearerAuth: []
@@ -2145,8 +2193,8 @@ paths:
     patch:
       tags:
         - offers
-      summary: Update offer
-      description: Updates an existing offer. Only the author can edit it.
+      summary: Обновить объявление
+      description: Обновляет существующее объявление. Редактировать может только автор.
       operationId: updateOfferById
       security:
         - bearerAuth: []
@@ -2168,13 +2216,13 @@ paths:
               $ref: '#/components/schemas/UpdateOfferRequest'
       responses:
         '200':
-          description: Updated offer
+          description: Объявление обновлено
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/Offer'
         '400':
-          description: Invalid request body
+          description: Некорректное тело запроса
           content:
             application/json:
               schema:
@@ -2186,7 +2234,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '403':
-          description: Forbidden
+          description: Доступ запрещён
           content:
             application/json:
               schema:
@@ -2206,8 +2254,8 @@ paths:
     delete:
       tags:
         - offers
-      summary: Delete offer
-      description: Deletes an existing offer. Only the author can delete it.
+      summary: Удалить объявление
+      description: Удаляет существующее объявление. Удалить может только автор.
       operationId: deleteOfferById
       security:
         - bearerAuth: []
@@ -2228,7 +2276,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '403':
-          description: Forbidden
+          description: Доступ запрещён
           content:
             application/json:
               schema:
@@ -2296,7 +2344,7 @@ paths:
       tags:
         - offers
         - offer-reports
-      summary: Get reports for own offer
+      summary: Получить жалобы по своему объявлению
       description: |
         Возвращает жалобы на конкретное объявление вместе со связанными `messageId`.
 
@@ -2317,7 +2365,7 @@ paths:
             format: uuid
       responses:
         '200':
-          description: Reports for offer
+          description: Жалобы по объявлению
           content:
             application/json:
               schema:
@@ -2335,7 +2383,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '403':
-          description: Forbidden
+          description: Доступ запрещён
           content:
             application/json:
               schema:
@@ -2356,7 +2404,7 @@ paths:
       tags:
         - offers
         - offer-reports
-      summary: Report offer
+      summary: Пожаловаться на объявление
       description: |
         Создает жалобу на объявление.
 
@@ -2384,19 +2432,19 @@ paths:
               $ref: '#/components/schemas/CreateOfferReportRequest'
       responses:
         '200':
-          description: Message attached to existing pending report
+          description: Сообщение добавлено к существующей `Pending`-жалобе
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/OfferReport'
         '201':
-          description: New report created
+          description: Создана новая жалоба
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/OfferReport'
         '400':
-          description: Invalid request body
+          description: Некорректное тело запроса
           content:
             application/json:
               schema:
@@ -2408,7 +2456,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '403':
-          description: Forbidden
+          description: Доступ запрещён
           content:
             application/json:
               schema:
@@ -2420,7 +2468,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
         '409':
-          description: User already attached a message to the current pending report
+          description: Пользователь уже добавил сообщение к текущей `Pending`-жалобе
           content:
             application/json:
               schema:
@@ -2548,7 +2596,7 @@ paths:
       tags:
         - admin
         - offer-reports
-      summary: List offer reports for moderation
+      summary: Список жалоб на объявления для модерации
       description: |
         Возвращает список жалоб на объявления для администратора.
 
@@ -2565,12 +2613,12 @@ paths:
         - name: status
           in: query
           required: false
-          description: Optional status filter. If omitted, returns all statuses.
+          description: Необязательный фильтр по статусу. Если не указан, возвращаются все статусы.
           schema:
             $ref: '#/components/schemas/OfferReportStatus'
       responses:
         '200':
-          description: Offer reports page
+          description: Список  жалоб на объявления
           content:
             application/json:
               schema:
@@ -2598,7 +2646,7 @@ paths:
       tags:
         - admin
         - offer-reports
-      summary: Get offer report details
+      summary: Получить детали жалобы на объявление
       description: |
         Возвращает карточку жалобы для администратора:
         - сам `offer`;
@@ -2616,7 +2664,7 @@ paths:
             format: uuid
       responses:
         '200':
-          description: Offer report details
+          description: Детали жалобы на объявление
           content:
             application/json:
               schema:
@@ -2692,7 +2740,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/OfferReport'
         '400':
-          description: Invalid request body
+          description: Некорректное тело запроса
           content:
             application/json:
               schema:
@@ -3055,10 +3103,10 @@ components:
         offerID:
           type: string
           format: uuid
-          description: The ID of the offer to include in the draft deal
+          description: ID объявления, которое нужно включить в черновую сделку
         quantity:
           type: integer
-          description: The quantity of the offer to include in the draft deal
+          description: Количество единиц объявления для включения в черновую сделку
     CreateDraftDealRequest:
       type: object
       properties:
@@ -3082,7 +3130,7 @@ components:
         id:
           type: string
           format: uuid
-          description: The unique identifier of the created draft deal
+          description: Уникальный идентификатор созданной черновой сделки
     ItemType:
       type: string
       description: Type of barter item
@@ -3110,22 +3158,22 @@ components:
         id:
           type: string
           format: uuid
-          description: Unique item identifier
+          description: Уникальный идентификатор объявления
         authorId:
           type: string
           format: uuid
-          description: Unique identifier of the user who created the item
+          description: Уникальный идентификатор пользователя, который создал объявление
         authorName:
           type: string
-          description: Name of the user who created the item
+          description: Имя пользователя, который создал объявление
         name:
           type: string
-          description: Short item title
-          example: Bicycle repair
+          description: Краткий заголовок объявления
+          example: Ремонт велосипеда
         description:
           type: string
-          description: Detailed item description
-          example: I can help fix city bikes and replace brake pads
+          description: Подробное описание объявления
+          example: Могу помочь с ремонтом городских велосипедов и заменой тормозных колодок
         type:
           $ref: '#/components/schemas/ItemType'
         action:
@@ -3134,17 +3182,17 @@ components:
           type: integer
           format: int64
           minimum: 0
-          description: Number of item views
+          description: Количество просмотров объявления
           example: 120
         createdAt:
           type: string
           format: date-time
-          description: Item creation timestamp
+          description: Временная метка создания объявления
           example: '2026-03-04T12:00:00Z'
         updatedAt:
           type: string
           format: date-time
-          description: Item last update timestamp
+          description: Временная метка последнего обновления объявления
           example: '2026-03-05T12:00:00Z'
         isHidden:
           type: boolean
@@ -3175,10 +3223,10 @@ components:
       properties:
         quantity:
           type: integer
-          description: The quantity of the offer to include in the draft deal
+          description: Количество единиц объявления для включения в черновую сделку
         confirmed:
           type: boolean
-          description: Whether the offer has been confirmed for the draft deal.
+          description: Подтверждено ли объявление для черновой сделки.
     OfferWithInfo:
       allOf:
         - $ref: '#/components/schemas/Offer'
@@ -3194,28 +3242,28 @@ components:
         id:
           type: string
           format: uuid
-          description: The unique identifier of the draft deal
+          description: Уникальный идентификатор черновой сделки
         authorId:
           type: string
           format: uuid
-          description: The unique identifier of the user who created the draft deal
+          description: Уникальный идентификатор пользователя, который создал черновую сделку
         name:
           type: string
-          description: The name of the draft deal
+          description: Название черновой сделки
         description:
           type: string
-          description: A detailed description of the draft deal
+          description: Подробное описание черновой сделки
         createdAt:
           type: string
           format: date-time
-          description: The timestamp when the draft deal was created
+          description: Временная метка создания черновой сделки
         updatedAt:
           type: string
           format: date-time
-          description: The timestamp when the draft deal was last updated
+          description: Временная метка последнего обновления черновой сделки
         offers:
           type: array
-          description: A list of offers included in the draft deal
+          description: Список объявлений, включённых в черновую сделку
           items:
             $ref: '#/components/schemas/OfferWithInfo'
     UserConfirm:
@@ -3887,7 +3935,7 @@ components:
             Комментарий админа, объясняющий его решение. Может быть пустым
     OffersCursor:
       type: object
-      description: Cursor for stable pagination
+      description: Курсор для стабильной пагинации
       required:
         - id
       properties:
@@ -3910,14 +3958,14 @@ components:
       properties:
         offers:
           type: array
-          description: List of offers
+          description: Список объявлений
           items:
             $ref: '#/components/schemas/Offer'
         nextCursor:
           nullable: true
           allOf:
             - $ref: '#/components/schemas/OffersCursor'
-          description: Cursor for fetching the next page; null if there is no next page
+          description: Курсор для получения следующей страницы; `null`, если следующей страницы нет
     CreateOfferRequest:
       type: object
       required:
@@ -3928,10 +3976,10 @@ components:
       properties:
         name:
           type: string
-          example: Bicycle repair
+          example: Ремонт велосипеда
         description:
           type: string
-          example: I can help fix city bikes and replace brake pads
+          example: Могу помочь с ремонтом городских велосипедов и заменой тормозных колодок
         type:
           $ref: '#/components/schemas/ItemType'
         action:
@@ -3953,10 +4001,10 @@ components:
       properties:
         name:
           type: string
-          example: Bicycle repair
+          example: Ремонт велосипеда
         description:
           type: string
-          example: I can help fix city bikes and replace brake pads
+          example: Могу помочь с ремонтом городских велосипедов и заменой тормозных колодок
         type:
           $ref: '#/components/schemas/ItemType'
         action:
@@ -4329,7 +4377,7 @@ components:
       name: sort
       in: query
       required: true
-      description: Sorting mode for items list
+      description: Режим сортировки списка объявлений
       schema:
         type: string
         enum:
@@ -4340,8 +4388,8 @@ components:
       in: query
       required: false
       description: |
-        Cursor creation timestamp in RFC3339 format.
-        Used together with `cursor_id` when `sort=created_at`.
+        Временная метка создания курсора в формате RFC3339.
+        Используется вместе с `cursor_id`, когда `sort=created_at`.
       schema:
         type: string
         format: date-time
@@ -4350,8 +4398,8 @@ components:
       in: query
       required: false
       description: |
-        Cursor views count.
-        Used together with `cursor_id` when `sort=popularity`.
+        Количество просмотров в курсоре.
+        Используется вместе с `cursor_id`, когда `sort=popularity`.
       schema:
         type: integer
         format: int64
@@ -4361,7 +4409,7 @@ components:
       in: query
       required: false
       description: |
-        Cursor item ID used as a tie-breaker for stable pagination.
+        ID объявления в курсоре, используемый как дополнительный критерий для стабильной пагинации.
       schema:
         type: string
         format: uuid
@@ -4369,7 +4417,7 @@ components:
       name: cursor_limit
       in: query
       required: false
-      description: Maximum number of items to return
+      description: Максимальное количество объявлений в ответе
       schema:
         type: integer
         minimum: 1

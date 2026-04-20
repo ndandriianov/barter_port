@@ -187,6 +187,24 @@ func (e ListOffersParamsSort) Valid() bool {
 	}
 }
 
+// Defines values for ListSubscribedOffersParamsSort.
+const (
+	ByPopularity ListSubscribedOffersParamsSort = "ByPopularity"
+	ByTime       ListSubscribedOffersParamsSort = "ByTime"
+)
+
+// Valid indicates whether the value is a known member of the ListSubscribedOffersParamsSort enum.
+func (e ListSubscribedOffersParamsSort) Valid() bool {
+	switch e {
+	case ByPopularity:
+		return true
+	case ByTime:
+		return true
+	default:
+		return false
+	}
+}
+
 // AddDealItemRequest defines model for AddDealItemRequest.
 type AddDealItemRequest struct {
 	// OfferId ID предложения, которое пользователь хочет добавить в сделку.
@@ -222,7 +240,7 @@ type CreateDraftDealRequest struct {
 
 // CreateDraftDealResponse defines model for CreateDraftDealResponse.
 type CreateDraftDealResponse struct {
-	// Id The unique identifier of the created draft deal
+	// Id Уникальный идентификатор созданной черновой сделки
 	Id openapi_types.UUID `json:"id"`
 }
 
@@ -358,25 +376,25 @@ type DealStatus string
 
 // Draft defines model for Draft.
 type Draft struct {
-	// AuthorId The unique identifier of the user who created the draft deal
+	// AuthorId Уникальный идентификатор пользователя, который создал черновую сделку
 	AuthorId openapi_types.UUID `json:"authorId"`
 
-	// CreatedAt The timestamp when the draft deal was created
+	// CreatedAt Временная метка создания черновой сделки
 	CreatedAt time.Time `json:"createdAt"`
 
-	// Description A detailed description of the draft deal
+	// Description Подробное описание черновой сделки
 	Description *string `json:"description,omitempty"`
 
-	// Id The unique identifier of the draft deal
+	// Id Уникальный идентификатор черновой сделки
 	Id openapi_types.UUID `json:"id"`
 
-	// Name The name of the draft deal
+	// Name Название черновой сделки
 	Name *string `json:"name,omitempty"`
 
-	// Offers A list of offers included in the draft deal
+	// Offers Список объявлений, включённых в черновую сделку
 	Offers []OfferWithInfo `json:"offers"`
 
-	// UpdatedAt The timestamp when the draft deal was last updated
+	// UpdatedAt Временная метка последнего обновления черновой сделки
 	UpdatedAt *time.Time `json:"updatedAt,omitempty"`
 }
 
@@ -539,10 +557,10 @@ type ListOfferReportsResponse = []OfferReport
 
 // ListOffersResponse defines model for ListOffersResponse.
 type ListOffersResponse struct {
-	// NextCursor Cursor for fetching the next page; null if there is no next page
+	// NextCursor Курсор для получения следующей страницы; `null`, если следующей страницы нет
 	NextCursor *OffersCursor `json:"nextCursor,omitempty"`
 
-	// Offers List of offers
+	// Offers Список объявлений
 	Offers []Offer `json:"offers"`
 }
 
@@ -635,19 +653,19 @@ type Offer struct {
 	// Action Whether the user offers or requests something
 	Action OfferAction `json:"action"`
 
-	// AuthorId Unique identifier of the user who created the item
+	// AuthorId Уникальный идентификатор пользователя, который создал объявление
 	AuthorId openapi_types.UUID `json:"authorId"`
 
-	// AuthorName Name of the user who created the item
+	// AuthorName Имя пользователя, который создал объявление
 	AuthorName *string `json:"authorName,omitempty"`
 
-	// CreatedAt Item creation timestamp
+	// CreatedAt Временная метка создания объявления
 	CreatedAt time.Time `json:"createdAt"`
 
-	// Description Detailed item description
+	// Description Подробное описание объявления
 	Description string `json:"description"`
 
-	// Id Unique item identifier
+	// Id Уникальный идентификатор объявления
 	Id openapi_types.UUID `json:"id"`
 
 	// IsHidden Признак того, что объявление скрыто модератором.
@@ -657,7 +675,7 @@ type Offer struct {
 	// ModificationBlocked Признак того, что объявление временно заблокировано для редактирования из-за pending-жалобы.
 	ModificationBlocked *bool `json:"modificationBlocked,omitempty"`
 
-	// Name Short item title
+	// Name Краткий заголовок объявления
 	Name string `json:"name"`
 
 	// PhotoIds Идентификаторы фотографий объявления в том же порядке, что и `photoUrls`.
@@ -670,10 +688,10 @@ type Offer struct {
 	// Type Type of barter item
 	Type ItemType `json:"type"`
 
-	// UpdatedAt Item last update timestamp
+	// UpdatedAt Временная метка последнего обновления объявления
 	UpdatedAt *time.Time `json:"updatedAt,omitempty"`
 
-	// Views Number of item views
+	// Views Количество просмотров объявления
 	Views int64 `json:"views"`
 }
 
@@ -714,19 +732,19 @@ type OfferGroupUnitInput struct {
 
 // OfferIDAndQuantity defines model for OfferIDAndQuantity.
 type OfferIDAndQuantity struct {
-	// OfferID The ID of the offer to include in the draft deal
+	// OfferID ID объявления, которое нужно включить в черновую сделку
 	OfferID openapi_types.UUID `json:"offerID"`
 
-	// Quantity The quantity of the offer to include in the draft deal
+	// Quantity Количество единиц объявления для включения в черновую сделку
 	Quantity int `json:"quantity"`
 }
 
 // OfferInfo defines model for OfferInfo.
 type OfferInfo struct {
-	// Confirmed Whether the offer has been confirmed for the draft deal.
+	// Confirmed Подтверждено ли объявление для черновой сделки.
 	Confirmed *bool `json:"confirmed,omitempty"`
 
-	// Quantity The quantity of the offer to include in the draft deal
+	// Quantity Количество единиц объявления для включения в черновую сделку
 	Quantity int `json:"quantity"`
 }
 
@@ -783,22 +801,22 @@ type OfferWithInfo struct {
 	// Action Whether the user offers or requests something
 	Action OfferAction `json:"action"`
 
-	// AuthorId Unique identifier of the user who created the item
+	// AuthorId Уникальный идентификатор пользователя, который создал объявление
 	AuthorId openapi_types.UUID `json:"authorId"`
 
-	// AuthorName Name of the user who created the item
+	// AuthorName Имя пользователя, который создал объявление
 	AuthorName *string `json:"authorName,omitempty"`
 
-	// Confirmed Whether the offer has been confirmed for the draft deal.
+	// Confirmed Подтверждено ли объявление для черновой сделки.
 	Confirmed *bool `json:"confirmed,omitempty"`
 
-	// CreatedAt Item creation timestamp
+	// CreatedAt Временная метка создания объявления
 	CreatedAt time.Time `json:"createdAt"`
 
-	// Description Detailed item description
+	// Description Подробное описание объявления
 	Description string `json:"description"`
 
-	// Id Unique item identifier
+	// Id Уникальный идентификатор объявления
 	Id openapi_types.UUID `json:"id"`
 
 	// IsHidden Признак того, что объявление скрыто модератором.
@@ -808,7 +826,7 @@ type OfferWithInfo struct {
 	// ModificationBlocked Признак того, что объявление временно заблокировано для редактирования из-за pending-жалобы.
 	ModificationBlocked *bool `json:"modificationBlocked,omitempty"`
 
-	// Name Short item title
+	// Name Краткий заголовок объявления
 	Name string `json:"name"`
 
 	// PhotoIds Идентификаторы фотографий объявления в том же порядке, что и `photoUrls`.
@@ -818,20 +836,20 @@ type OfferWithInfo struct {
 	// PhotoUrls Публичные URL фотографий объявления
 	PhotoUrls *[]string `json:"photoUrls,omitempty"`
 
-	// Quantity The quantity of the offer to include in the draft deal
+	// Quantity Количество единиц объявления для включения в черновую сделку
 	Quantity int `json:"quantity"`
 
 	// Type Type of barter item
 	Type ItemType `json:"type"`
 
-	// UpdatedAt Item last update timestamp
+	// UpdatedAt Временная метка последнего обновления объявления
 	UpdatedAt *time.Time `json:"updatedAt,omitempty"`
 
-	// Views Number of item views
+	// Views Количество просмотров объявления
 	Views int64 `json:"views"`
 }
 
-// OffersCursor Cursor for stable pagination
+// OffersCursor Курсор для стабильной пагинации
 type OffersCursor struct {
 	CreatedAt *time.Time         `json:"createdAt,omitempty"`
 	Id        openapi_types.UUID `json:"id"`
@@ -1085,7 +1103,7 @@ type SortType string
 
 // ListOfferReportsForAdminParams defines parameters for ListOfferReportsForAdmin.
 type ListOfferReportsForAdminParams struct {
-	// Status Optional status filter. If omitted, returns all statuses.
+	// Status Необязательный фильтр по статусу. Если не указан, возвращаются все статусы.
 	Status *OfferReportStatus `form:"status,omitempty" json:"status,omitempty"`
 }
 
@@ -1111,29 +1129,55 @@ type ProcessJoinRequestParams struct {
 
 // ListOffersParams defines parameters for ListOffers.
 type ListOffersParams struct {
-	// My False by default. If true, returns only offers created by the current user.
+	// My По умолчанию `false`. Если `true`, возвращаются только объявления, созданные текущим пользователем,
+	// включая скрытые.
+	//
+	// Если `false`, возвращаются все объявления, видимые текущему пользователю.
 	My *bool `form:"my,omitempty" json:"my,omitempty"`
 
-	// Sort Sorting mode for items list
+	// Sort Режим сортировки списка объявлений
 	Sort ListOffersParamsSort `form:"sort" json:"sort"`
 
-	// CursorCreatedAt Cursor creation timestamp in RFC3339 format.
-	// Used together with `cursor_id` when `sort=created_at`.
+	// CursorCreatedAt Временная метка создания курсора в формате RFC3339.
+	// Используется вместе с `cursor_id`, когда `sort=created_at`.
 	CursorCreatedAt *CursorCreatedAt `form:"cursor_created_at,omitempty" json:"cursor_created_at,omitempty"`
 
-	// CursorViews Cursor views count.
-	// Used together with `cursor_id` when `sort=popularity`.
+	// CursorViews Количество просмотров в курсоре.
+	// Используется вместе с `cursor_id`, когда `sort=popularity`.
 	CursorViews *CursorViews `form:"cursor_views,omitempty" json:"cursor_views,omitempty"`
 
-	// CursorId Cursor item ID used as a tie-breaker for stable pagination.
+	// CursorId ID объявления в курсоре, используемый как дополнительный критерий для стабильной пагинации.
 	CursorId *CursorId `form:"cursor_id,omitempty" json:"cursor_id,omitempty"`
 
-	// CursorLimit Maximum number of items to return
+	// CursorLimit Максимальное количество объявлений в ответе
 	CursorLimit *Limit `form:"cursor_limit,omitempty" json:"cursor_limit,omitempty"`
 }
 
 // ListOffersParamsSort defines parameters for ListOffers.
 type ListOffersParamsSort string
+
+// ListSubscribedOffersParams defines parameters for ListSubscribedOffers.
+type ListSubscribedOffersParams struct {
+	// Sort Режим сортировки списка объявлений
+	Sort ListSubscribedOffersParamsSort `form:"sort" json:"sort"`
+
+	// CursorCreatedAt Временная метка создания курсора в формате RFC3339.
+	// Используется вместе с `cursor_id`, когда `sort=created_at`.
+	CursorCreatedAt *CursorCreatedAt `form:"cursor_created_at,omitempty" json:"cursor_created_at,omitempty"`
+
+	// CursorViews Количество просмотров в курсоре.
+	// Используется вместе с `cursor_id`, когда `sort=popularity`.
+	CursorViews *CursorViews `form:"cursor_views,omitempty" json:"cursor_views,omitempty"`
+
+	// CursorId ID объявления в курсоре, используемый как дополнительный критерий для стабильной пагинации.
+	CursorId *CursorId `form:"cursor_id,omitempty" json:"cursor_id,omitempty"`
+
+	// CursorLimit Максимальное количество объявлений в ответе
+	CursorLimit *Limit `form:"cursor_limit,omitempty" json:"cursor_limit,omitempty"`
+}
+
+// ListSubscribedOffersParamsSort defines parameters for ListSubscribedOffers.
+type ListSubscribedOffersParamsSort string
 
 // ResolveOfferReportForAdminJSONRequestBody defines body for ResolveOfferReportForAdmin for application/json ContentType.
 type ResolveOfferReportForAdminJSONRequestBody = ResolveOfferReportRequest
