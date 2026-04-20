@@ -8,12 +8,12 @@ type OffersTab = "others" | "mine";
 
 const tabMeta: Record<OffersTab, { title: string; description: string }> = {
   others: {
-    title: "Чужие объявления",
-    description: "Объявления других пользователей, на которые можно откликнуться или посмотреть рейтинг.",
+    title: "Все объявления",
+    description: "Все объявления в каталоге. Список уже приходит с сервера в нужном виде.",
   },
   mine: {
-    title: "Мои объявления",
-    description: "Ваши опубликованные объявления. Здесь удобно следить за тем, как они выглядят в общем каталоге.",
+    title: "Только мои",
+    description: "Ваши опубликованные объявления. Список уже приходит с сервера отдельно от общего каталога.",
   },
 };
 
@@ -73,13 +73,13 @@ function OffersListPage() {
             variant={tab === "others" ? "contained" : "text"}
             onClick={() => handleTabChange("others")}
           >
-            Чужие объявления
+            Все объявления
           </Button>
           <Button
             variant={tab === "mine" ? "contained" : "text"}
             onClick={() => handleTabChange("mine")}
           >
-            Мои объявления
+            Только мои
           </Button>
         </ButtonGroup>
       </Paper>

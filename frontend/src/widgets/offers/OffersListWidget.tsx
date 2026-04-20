@@ -25,8 +25,9 @@ interface OffersListWidgetProps {
 
 function OffersListWidget({ mode }: OffersListWidgetProps) {
   const [sortType, setSortType] = useState<SortType>("ByTime");
+  const isMyOffers = mode === "mine";
   const { data: currentUser } = usersApi.useGetCurrentUserQuery();
-  const { countsByOfferId } = useDraftOfferCounts({ enabled: mode === "mine" });
+  const { countsByOfferId } = useDraftOfferCounts({ enabled: isMyOffers });
   const {
     data,
     isLoading,
@@ -35,15 +36,11 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
     refetch,
   } = offersApi.useGetOffersQuery({
     sort: sortType,
+    my: isMyOffers,
     cursor_limit: 20,
-    ...(mode === "mine" ? { my: true } : {}),
   });
 
   const offers = data?.offers ?? [];
-  const visibleOffers =
-    mode === "mine" || !currentUser
-      ? offers
-      : offers.filter((offer) => offer.authorId !== currentUser.id);
 
   if (isLoading) {
     return (
@@ -85,22 +82,23 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
         </Tooltip>
       </Box>
 
-      {visibleOffers.length === 0 ? (
+      {offers.length === 0 ? (
         <Typography color="text.secondary" textAlign="center" py={6}>
-          {mode === "mine" ? "У вас пока нет объявлений" : "Пока нет чужих объявлений"}
+          {isMyOffers ? "У вас пока нет объявлений" : "Пока нет объявлений"}
         </Typography>
       ) : (
         <Grid container spacing={2}>
-          {visibleOffers.map((offer) => (
+          {offers.map((offer) => (
             <Grid key={offer.id} size={{ xs: 12, sm: 6, md: 4, lg: 3 }}>
               <OfferCard
                 offer={offer}
+                isMine={offer.authorId === currentUser?.id}
                 showRating
-                showModerationState={mode === "mine" || currentUser?.isAdmin === true}
-                draftCount={mode === "mine" ? (countsByOfferId[offer.id] ?? 0) : 0}
+                showModerationState={isMyOffers || currentUser?.isAdmin === true}
+                draftCount={isMyOffers ? (countsByOfferId[offer.id] ?? 0) : 0}
                 offerHref={`/offers/${offer.id}`}
                 draftsHref={
-                  mode === "mine" && (countsByOfferId[offer.id] ?? 0) > 0
+                  isMyOffers && (countsByOfferId[offer.id] ?? 0) > 0
                     ? `/deals/drafts?offerId=${offer.id}`
                     : undefined
                 }
