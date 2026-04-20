@@ -549,7 +549,7 @@ func parseGetOffersRequest(
 		if err != nil {
 			log.Error("invalid my filter", slog.String("my", myStr), slog.Any("error", err))
 			httpx.WriteErrorStr(w, http.StatusBadRequest, "invalid my filter")
-			return "", nil, 0, false, false
+			return enums.SortType(0), nil, 0, false, false
 		}
 		my = parsedMy
 	}
@@ -569,7 +569,7 @@ func parseGetOffersRequest(
 	if err != nil {
 		log.Error("invalid sort type", slog.Any("error", err))
 		httpx.WriteErrorStr(w, http.StatusBadRequest, "invalid sort type")
-		return "", nil, 0, false, false
+		return enums.SortType(0), nil, 0, false, false
 	}
 
 	cursor, err := domain.NewUniversalCursor(createdAtStr, viewsStr, idStr)
