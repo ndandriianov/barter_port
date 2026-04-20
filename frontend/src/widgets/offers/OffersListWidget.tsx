@@ -254,9 +254,9 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
             ) : loadMoreError ? (
               <Alert severity="error">{loadMoreError}</Alert>
             ) : !nextCursor ? (
-              <Typography color="text.secondary" textAlign="center">
+              <Alert severity="warning" sx={{ justifyContent: "center" }}>
                 Больше объявлений нет
-              </Typography>
+              </Alert>
             ) : null}
           </Box>
         </>
