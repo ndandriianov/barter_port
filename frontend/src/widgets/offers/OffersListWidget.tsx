@@ -37,7 +37,7 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
   } = offersApi.useGetOffersQuery({
     sort: sortType,
     my: isMyOffers,
-    cursor_limit: 20,
+    cursor_limit: 8,
   });
 
   const offers = data?.offers ?? [];
