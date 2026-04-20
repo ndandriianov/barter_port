@@ -79,9 +79,15 @@ Demo-аккаунты:
 - `bob.demo@barterport.local`
 - `clara.demo@barterport.local`
 - `dan.demo@barterport.local`
+- `eva.demo@barterport.local`
+- `fedor.demo@barterport.local`
 
 Пароль по умолчанию: `password123`.
 Если задан `SEED_PASSWORD`, seed использует его для этих же аккаунтов.
+
+Для работы модерационных сценариев (жалобы на офферы, разрешение провалов сделок) seed логинится как администратор.
+По умолчанию используются кредs из `config/common.yaml` (`admin@barterport.com` / `admin`).
+Переопределить можно через `SEED_ADMIN_EMAIL` и `SEED_ADMIN_PASSWORD`.
 
 По умолчанию команда ходит в `http://localhost:80`, то есть ожидает поднятый app-контур через `caddy`.
 Для локального сценария требуется `MAILER_BYPASS=true`, иначе обычная клиентская регистрация не сможет залогиниться без подтверждения почты.
@@ -89,5 +95,7 @@ Demo-аккаунты:
 Полезные переменные:
 - `SEED_BASE_URL`
 - `SEED_PASSWORD`
+- `SEED_ADMIN_EMAIL`
+- `SEED_ADMIN_PASSWORD`
 - `SEED_TIMEOUT`
 - `SEED_POLL_INTERVAL`

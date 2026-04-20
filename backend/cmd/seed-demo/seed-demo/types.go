@@ -77,13 +77,28 @@ type offerSpec struct {
 }
 
 type SeedSummary struct {
-	Users             []seededUserSummary `json:"users"`
-	OfferGroupID      uuid.UUID           `json:"offerGroupId"`
-	OfferGroupDraftID uuid.UUID           `json:"offerGroupDraftId"`
-	DiscussionDealID  uuid.UUID           `json:"discussionDealId"`
-	CompletedDealID   uuid.UUID           `json:"completedDealId"`
-	DirectChatID      uuid.UUID           `json:"directChatId"`
-	DealChatID        uuid.UUID           `json:"dealChatId"`
+	Users []seededUserSummary `json:"users"`
+
+	OfferGroupID      uuid.UUID `json:"offerGroupId"`
+	OfferGroupDraftID uuid.UUID `json:"offerGroupDraftId"`
+	MultiUnitGroupID  uuid.UUID `json:"multiUnitGroupId"`
+
+	LookingDealID    uuid.UUID `json:"lookingDealId"`
+	DiscussionDealID uuid.UUID `json:"discussionDealId"`
+	ConfirmedDealID  uuid.UUID `json:"confirmedDealId"`
+	CompletedDealID  uuid.UUID `json:"completedDealId"`
+	CompletedDeal2ID uuid.UUID `json:"completedDeal2Id"`
+	CompletedDeal3ID uuid.UUID `json:"completedDeal3Id"`
+	CancelledDealID  uuid.UUID `json:"cancelledDealId"`
+	FailedDealID     uuid.UUID `json:"failedDealId"`
+	JoinDealID       uuid.UUID `json:"joinDealId"`
+
+	DirectChatID uuid.UUID `json:"directChatId"`
+	DealChatID   uuid.UUID `json:"dealChatId"`
+
+	PendingReportID  uuid.UUID `json:"pendingReportId"`
+	AcceptedReportID uuid.UUID `json:"acceptedReportId"`
+	RejectedReportID uuid.UUID `json:"rejectedReportId"`
 }
 
 type seededUserSummary struct {
