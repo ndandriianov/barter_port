@@ -26,13 +26,10 @@ func (s *Server) ListUsers(ctx context.Context, _ *userspb.ListUsersRequest) (*u
 
 	info := make([]*userspb.UserInfo, len(users))
 	for i, u := range users {
-		name := ""
-		if u.Name != nil {
-			name = *u.Name
-		}
+		curInfo := u.GetInfo()
 		info[i] = &userspb.UserInfo{
-			Id:   u.Id.String(),
-			Name: name,
+			Id:   curInfo.Id.String(),
+			Name: curInfo.Name,
 		}
 	}
 
@@ -127,4 +124,30 @@ func (s *Server) CheckSubscription(ctx context.Context, request *userspb.CheckSu
 		IsSubscribed:           isTargetSubscribed,
 		HasCreatedSubscription: hasCreatedSubscription,
 	}, nil
+}
+
+func (s *Server) ListSubscriptions(ctx context.Context, request *userspb.ListSubscriptionsRequest) (*userspb.ListSubscriptionsResponse, error) {
+	if request == nil {
+		return &userspb.ListSubscriptionsResponse{}, fmt.Errorf("request is nil")
+	}
+
+	userID, err := uuid.Parse(request.UserId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse user id %s: %w", request.UserId, err)
+	}
+
+	userInfos, err := s.usersService.GetSubscriptionsUserInfo(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user infos: %w", err)
+	}
+
+	info := make([]*userspb.UserInfo, len(userInfos))
+	for i, u := range userInfos {
+		info[i] = &userspb.UserInfo{
+			Id:   u.Id.String(),
+			Name: u.Name,
+		}
+	}
+
+	return &userspb.ListSubscriptionsResponse{Subscriptions: info}, nil
 }

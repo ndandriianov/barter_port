@@ -437,6 +437,95 @@ func (x *CheckSubscriptionResponse) GetHasCreatedSubscription() bool {
 	return false
 }
 
+// ListSubscriptions
+type ListSubscriptionsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListSubscriptionsRequest) Reset() {
+	*x = ListSubscriptionsRequest{}
+	mi := &file_contracts_grpc_users_v1_users_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListSubscriptionsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListSubscriptionsRequest) ProtoMessage() {}
+
+func (x *ListSubscriptionsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_contracts_grpc_users_v1_users_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListSubscriptionsRequest.ProtoReflect.Descriptor instead.
+func (*ListSubscriptionsRequest) Descriptor() ([]byte, []int) {
+	return file_contracts_grpc_users_v1_users_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *ListSubscriptionsRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+type ListSubscriptionsResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Subscriptions []*UserInfo            `protobuf:"bytes,1,rep,name=subscriptions,proto3" json:"subscriptions,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListSubscriptionsResponse) Reset() {
+	*x = ListSubscriptionsResponse{}
+	mi := &file_contracts_grpc_users_v1_users_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListSubscriptionsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListSubscriptionsResponse) ProtoMessage() {}
+
+func (x *ListSubscriptionsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_contracts_grpc_users_v1_users_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListSubscriptionsResponse.ProtoReflect.Descriptor instead.
+func (*ListSubscriptionsResponse) Descriptor() ([]byte, []int) {
+	return file_contracts_grpc_users_v1_users_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *ListSubscriptionsResponse) GetSubscriptions() []*UserInfo {
+	if x != nil {
+		return x.Subscriptions
+	}
+	return nil
+}
+
 var File_contracts_grpc_users_v1_users_proto protoreflect.FileDescriptor
 
 const file_contracts_grpc_users_v1_users_proto_rawDesc = "" +
@@ -461,12 +550,17 @@ const file_contracts_grpc_users_v1_users_proto_rawDesc = "" +
 	"\x0etarget_user_id\x18\x02 \x01(\tR\ftargetUserId\"z\n" +
 	"\x19CheckSubscriptionResponse\x12#\n" +
 	"\ris_subscribed\x18\x01 \x01(\bR\fisSubscribed\x128\n" +
-	"\x18has_created_subscription\x18\x02 \x01(\bR\x16hasCreatedSubscription2\xd9\x03\n" +
+	"\x18has_created_subscription\x18\x02 \x01(\bR\x16hasCreatedSubscription\"3\n" +
+	"\x18ListSubscriptionsRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\"`\n" +
+	"\x19ListSubscriptionsResponse\x12C\n" +
+	"\rsubscriptions\x18\x01 \x03(\v2\x1d.barterport.users.v1.UserInfoR\rsubscriptions2\xcd\x04\n" +
 	"\fUsersService\x12o\n" +
 	"\x10GetUsersWithInfo\x12,.barterport.users.v1.GetUsersWithInfoRequest\x1a-.barterport.users.v1.GetUsersWithInfoResponse\x12Z\n" +
 	"\tListUsers\x12%.barterport.users.v1.ListUsersRequest\x1a&.barterport.users.v1.ListUsersResponse\x12\x87\x01\n" +
 	"\x18ListUsersForChatCreation\x124.barterport.users.v1.ListUsersForChatCreationRequest\x1a5.barterport.users.v1.ListUsersForChatCreationResponse\x12r\n" +
-	"\x11CheckSubscription\x12-.barterport.users.v1.CheckSubscriptionRequest\x1a..barterport.users.v1.CheckSubscriptionResponseB5Z3barterport/internal/contracts/grpc/users/v1;userspbb\x06proto3"
+	"\x11CheckSubscription\x12-.barterport.users.v1.CheckSubscriptionRequest\x1a..barterport.users.v1.CheckSubscriptionResponse\x12r\n" +
+	"\x11ListSubscriptions\x12-.barterport.users.v1.ListSubscriptionsRequest\x1a..barterport.users.v1.ListSubscriptionsResponseB5Z3barterport/internal/contracts/grpc/users/v1;userspbb\x06proto3"
 
 var (
 	file_contracts_grpc_users_v1_users_proto_rawDescOnce sync.Once
@@ -480,7 +574,7 @@ func file_contracts_grpc_users_v1_users_proto_rawDescGZIP() []byte {
 	return file_contracts_grpc_users_v1_users_proto_rawDescData
 }
 
-var file_contracts_grpc_users_v1_users_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
+var file_contracts_grpc_users_v1_users_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
 var file_contracts_grpc_users_v1_users_proto_goTypes = []any{
 	(*GetUsersWithInfoRequest)(nil),          // 0: barterport.users.v1.GetUsersWithInfoRequest
 	(*UserInfo)(nil),                         // 1: barterport.users.v1.UserInfo
@@ -491,24 +585,29 @@ var file_contracts_grpc_users_v1_users_proto_goTypes = []any{
 	(*ListUsersForChatCreationResponse)(nil), // 6: barterport.users.v1.ListUsersForChatCreationResponse
 	(*CheckSubscriptionRequest)(nil),         // 7: barterport.users.v1.CheckSubscriptionRequest
 	(*CheckSubscriptionResponse)(nil),        // 8: barterport.users.v1.CheckSubscriptionResponse
+	(*ListSubscriptionsRequest)(nil),         // 9: barterport.users.v1.ListSubscriptionsRequest
+	(*ListSubscriptionsResponse)(nil),        // 10: barterport.users.v1.ListSubscriptionsResponse
 }
 var file_contracts_grpc_users_v1_users_proto_depIdxs = []int32{
-	1, // 0: barterport.users.v1.GetUsersWithInfoResponse.users:type_name -> barterport.users.v1.UserInfo
-	1, // 1: barterport.users.v1.ListUsersResponse.users:type_name -> barterport.users.v1.UserInfo
-	1, // 2: barterport.users.v1.ListUsersForChatCreationResponse.users:type_name -> barterport.users.v1.UserInfo
-	0, // 3: barterport.users.v1.UsersService.GetUsersWithInfo:input_type -> barterport.users.v1.GetUsersWithInfoRequest
-	3, // 4: barterport.users.v1.UsersService.ListUsers:input_type -> barterport.users.v1.ListUsersRequest
-	5, // 5: barterport.users.v1.UsersService.ListUsersForChatCreation:input_type -> barterport.users.v1.ListUsersForChatCreationRequest
-	7, // 6: barterport.users.v1.UsersService.CheckSubscription:input_type -> barterport.users.v1.CheckSubscriptionRequest
-	2, // 7: barterport.users.v1.UsersService.GetUsersWithInfo:output_type -> barterport.users.v1.GetUsersWithInfoResponse
-	4, // 8: barterport.users.v1.UsersService.ListUsers:output_type -> barterport.users.v1.ListUsersResponse
-	6, // 9: barterport.users.v1.UsersService.ListUsersForChatCreation:output_type -> barterport.users.v1.ListUsersForChatCreationResponse
-	8, // 10: barterport.users.v1.UsersService.CheckSubscription:output_type -> barterport.users.v1.CheckSubscriptionResponse
-	7, // [7:11] is the sub-list for method output_type
-	3, // [3:7] is the sub-list for method input_type
-	3, // [3:3] is the sub-list for extension type_name
-	3, // [3:3] is the sub-list for extension extendee
-	0, // [0:3] is the sub-list for field type_name
+	1,  // 0: barterport.users.v1.GetUsersWithInfoResponse.users:type_name -> barterport.users.v1.UserInfo
+	1,  // 1: barterport.users.v1.ListUsersResponse.users:type_name -> barterport.users.v1.UserInfo
+	1,  // 2: barterport.users.v1.ListUsersForChatCreationResponse.users:type_name -> barterport.users.v1.UserInfo
+	1,  // 3: barterport.users.v1.ListSubscriptionsResponse.subscriptions:type_name -> barterport.users.v1.UserInfo
+	0,  // 4: barterport.users.v1.UsersService.GetUsersWithInfo:input_type -> barterport.users.v1.GetUsersWithInfoRequest
+	3,  // 5: barterport.users.v1.UsersService.ListUsers:input_type -> barterport.users.v1.ListUsersRequest
+	5,  // 6: barterport.users.v1.UsersService.ListUsersForChatCreation:input_type -> barterport.users.v1.ListUsersForChatCreationRequest
+	7,  // 7: barterport.users.v1.UsersService.CheckSubscription:input_type -> barterport.users.v1.CheckSubscriptionRequest
+	9,  // 8: barterport.users.v1.UsersService.ListSubscriptions:input_type -> barterport.users.v1.ListSubscriptionsRequest
+	2,  // 9: barterport.users.v1.UsersService.GetUsersWithInfo:output_type -> barterport.users.v1.GetUsersWithInfoResponse
+	4,  // 10: barterport.users.v1.UsersService.ListUsers:output_type -> barterport.users.v1.ListUsersResponse
+	6,  // 11: barterport.users.v1.UsersService.ListUsersForChatCreation:output_type -> barterport.users.v1.ListUsersForChatCreationResponse
+	8,  // 12: barterport.users.v1.UsersService.CheckSubscription:output_type -> barterport.users.v1.CheckSubscriptionResponse
+	10, // 13: barterport.users.v1.UsersService.ListSubscriptions:output_type -> barterport.users.v1.ListSubscriptionsResponse
+	9,  // [9:14] is the sub-list for method output_type
+	4,  // [4:9] is the sub-list for method input_type
+	4,  // [4:4] is the sub-list for extension type_name
+	4,  // [4:4] is the sub-list for extension extendee
+	0,  // [0:4] is the sub-list for field type_name
 }
 
 func init() { file_contracts_grpc_users_v1_users_proto_init() }
@@ -522,7 +621,7 @@ func file_contracts_grpc_users_v1_users_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_contracts_grpc_users_v1_users_proto_rawDesc), len(file_contracts_grpc_users_v1_users_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   9,
+			NumMessages:   11,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

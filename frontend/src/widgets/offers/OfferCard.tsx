@@ -43,6 +43,7 @@ interface OfferCardProps {
   draftsHref?: string;
   onPhotoClick?: (photoUrl: string) => void;
   showModerationState?: boolean;
+  isMine?: boolean;
 }
 
 function OfferCard({
@@ -53,6 +54,7 @@ function OfferCard({
   draftsHref,
   onPhotoClick,
   showModerationState = false,
+  isMine = false,
 }: OfferCardProps) {
   const authorName = offer.authorName?.trim() || "Имя не указано";
   const { data: author } = usersApi.useGetUserByIdQuery(offer.authorId);
@@ -84,6 +86,7 @@ function OfferCard({
       )}
       <CardContent sx={{ flexGrow: 1 }}>
         <Box display="flex" gap={1} mb={1} flexWrap="wrap">
+          {isMine && <Chip label="Мой" size="small" color="secondary" />}
           <Chip label={typeLabels[offer.type]} size="small" variant="outlined" />
           <Chip label={actionLabels[offer.action]} size="small" color={actionColors[offer.action]} />
           {moderationLabel && (

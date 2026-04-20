@@ -9,28 +9,28 @@ Draft:
     id:
       type: string
       format: uuid
-      description: The unique identifier of the draft deal
+      description: Уникальный идентификатор черновой сделки
     authorId:
       type: string
       format: uuid
-      description: The unique identifier of the user who created the draft deal
+      description: Уникальный идентификатор пользователя, который создал черновую сделку
     name:
       type: string
-      description: The name of the draft deal
+      description: Название черновой сделки
     description:
       type: string
-      description: A detailed description of the draft deal
+      description: Подробное описание черновой сделки
     createdAt:
       type: string
       format: date-time
-      description: The timestamp when the draft deal was created
+      description: Временная метка создания черновой сделки
     updatedAt:
       type: string
       format: date-time
-      description: The timestamp when the draft deal was last updated
+      description: Временная метка последнего обновления черновой сделки
     offers:
       type: array
-      description: A list of offers included in the draft deal
+      description: Список объявлений, включённых в черновую сделку
       items:
         $ref: '#/OfferWithInfo'
 
@@ -105,10 +105,10 @@ OfferIDAndQuantity:
     offerID:
       type: string
       format: uuid
-      description: The ID of the offer to include in the draft deal
+      description: ID объявления, которое нужно включить в черновую сделку
     quantity:
       type: integer
-      description: The quantity of the offer to include in the draft deal
+      description: Количество единиц объявления для включения в черновую сделку
 
 
 
@@ -119,10 +119,10 @@ OfferInfo:
   properties:
     quantity:
       type: integer
-      description: The quantity of the offer to include in the draft deal
+      description: Количество единиц объявления для включения в черновую сделку
     confirmed:
       type: boolean
-      description: Whether the offer has been confirmed for the draft deal.
+      description: Подтверждено ли объявление для черновой сделки.
 
 
 
@@ -141,22 +141,22 @@ Offer:
     id:
       type: string
       format: uuid
-      description: Unique item identifier
+      description: Уникальный идентификатор объявления
     authorId:
       type: string
       format: uuid
-      description: Unique identifier of the user who created the item
+      description: Уникальный идентификатор пользователя, который создал объявление
     authorName:
       type: string
-      description: Name of the user who created the item
+      description: Имя пользователя, который создал объявление
     name:
       type: string
-      description: Short item title
-      example: Bicycle repair
+      description: Краткий заголовок объявления
+      example: Ремонт велосипеда
     description:
       type: string
-      description: Detailed item description
-      example: I can help fix city bikes and replace brake pads
+      description: Подробное описание объявления
+      example: Могу помочь с ремонтом городских велосипедов и заменой тормозных колодок
     type:
       $ref: '#/ItemType'
     action:
@@ -165,17 +165,17 @@ Offer:
       type: integer
       format: int64
       minimum: 0
-      description: Number of item views
+      description: Количество просмотров объявления
       example: 120
     createdAt:
       type: string
       format: date-time
-      description: Item creation timestamp
+      description: Временная метка создания объявления
       example: '2026-03-04T12:00:00Z'
     updatedAt:
       type: string
       format: date-time
-      description: Item last update timestamp
+      description: Временная метка последнего обновления объявления
       example: '2026-03-05T12:00:00Z'
     isHidden:
       type: boolean
@@ -324,7 +324,7 @@ OfferReportsForOffer:
 
 OffersCursor:
   type: object
-  description: Cursor for stable pagination
+  description: Курсор для стабильной пагинации
   required:
     - id
   properties:

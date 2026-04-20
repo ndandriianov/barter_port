@@ -2,23 +2,28 @@ import { Link as RouterLink, useSearchParams } from "react-router-dom";
 import { Box, Button, ButtonGroup, Paper, Stack, Typography } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import LayersOutlinedIcon from "@mui/icons-material/LayersOutlined";
+import NotificationsActiveOutlinedIcon from "@mui/icons-material/NotificationsActiveOutlined";
 import OffersListWidget from "@/widgets/offers/OffersListWidget.tsx";
 
-type OffersTab = "others" | "mine";
+type OffersTab = "others" | "subscriptions" | "mine";
 
 const tabMeta: Record<OffersTab, { title: string; description: string }> = {
   others: {
-    title: "Чужие объявления",
-    description: "Объявления других пользователей, на которые можно откликнуться или посмотреть рейтинг.",
+    title: "Все объявления",
+    description: "Все объявления в каталоге. Список уже приходит с сервера в нужном виде.",
+  },
+  subscriptions: {
+    title: "Подписки",
+    description: "Объявления пользователей, на которых вы подписаны. Лента загружается отдельным endpoint.",
   },
   mine: {
-    title: "Мои объявления",
-    description: "Ваши опубликованные объявления. Здесь удобно следить за тем, как они выглядят в общем каталоге.",
+    title: "Только мои",
+    description: "Ваши опубликованные объявления. Список уже приходит с сервера отдельно от общего каталога.",
   },
 };
 
 function isOffersTab(value: string | null): value is OffersTab {
-  return value === "others" || value === "mine";
+  return value === "others" || value === "subscriptions" || value === "mine";
 }
 
 function OffersListPage() {
@@ -67,19 +72,26 @@ function OffersListPage() {
         <ButtonGroup
           fullWidth
           variant="text"
-          sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(2, 1fr)" } }}
+          sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" } }}
         >
           <Button
             variant={tab === "others" ? "contained" : "text"}
             onClick={() => handleTabChange("others")}
           >
-            Чужие объявления
+            Все объявления
+          </Button>
+          <Button
+            variant={tab === "subscriptions" ? "contained" : "text"}
+            onClick={() => handleTabChange("subscriptions")}
+            startIcon={<NotificationsActiveOutlinedIcon />}
+          >
+            Подписки
           </Button>
           <Button
             variant={tab === "mine" ? "contained" : "text"}
             onClick={() => handleTabChange("mine")}
           >
-            Мои объявления
+            Только мои
           </Button>
         </ButtonGroup>
       </Paper>
@@ -89,6 +101,7 @@ function OffersListPage() {
       </Typography>
 
       {tab === "others" && <OffersListWidget mode="others" />}
+      {tab === "subscriptions" && <OffersListWidget mode="subscriptions" />}
       {tab === "mine" && <OffersListWidget mode="mine" />}
     </Box>
   );

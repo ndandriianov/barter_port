@@ -15,7 +15,7 @@ CreateDraftDealResponse:
     id:
       type: string
       format: uuid
-      description: The unique identifier of the created draft deal
+      description: Уникальный идентификатор созданной черновой сделки
 
 
 
@@ -54,14 +54,14 @@ ListOffersResponse:
   properties:
     offers:
       type: array
-      description: List of offers
+      description: Список объявлений
       items:
         $ref: 'schemas.yaml#/Offer'
     nextCursor:
       nullable: true
       allOf:
         - $ref: 'schemas.yaml#/OffersCursor'
-      description: Cursor for fetching the next page; null if there is no next page
+      description: Курсор для получения следующей страницы; `null`, если следующей страницы нет
 
 
 ListOfferReportsResponse:

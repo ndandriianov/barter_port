@@ -2,7 +2,7 @@ SortType:
   name: sort
   in: query
   required: true
-  description: Sorting mode for items list
+  description: Режим сортировки списка объявлений
   schema:
     type: string
     enum:
@@ -14,8 +14,8 @@ CursorCreatedAt:
   in: query
   required: false
   description: |
-    Cursor creation timestamp in RFC3339 format.
-    Used together with `cursor_id` when `sort=created_at`.
+    Временная метка создания курсора в формате RFC3339.
+    Используется вместе с `cursor_id`, когда `sort=created_at`.
   schema:
     type: string
     format: date-time
@@ -25,8 +25,8 @@ CursorViews:
   in: query
   required: false
   description: |
-    Cursor views count.
-    Used together with `cursor_id` when `sort=popularity`.
+    Количество просмотров в курсоре.
+    Используется вместе с `cursor_id`, когда `sort=popularity`.
   schema:
     type: integer
     format: int64
@@ -37,7 +37,7 @@ CursorId:
   in: query
   required: false
   description: |
-    Cursor item ID used as a tie-breaker for stable pagination.
+    ID объявления в курсоре, используемый как дополнительный критерий для стабильной пагинации.
   schema:
     type: string
     format: uuid
@@ -46,7 +46,7 @@ Limit:
   name: cursor_limit
   in: query
   required: false
-  description: Maximum number of items to return
+  description: Максимальное количество объявлений в ответе
   schema:
     type: integer
     minimum: 1

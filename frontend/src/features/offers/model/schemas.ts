@@ -66,5 +66,5 @@ export const universalCursorSchema = z.object({
 
 export const getOffersResponseSchema = z.object({
   offers: z.array(offerSchema),
-  nextCursor: z.nullable(universalCursorSchema),
+  nextCursor: universalCursorSchema.nullish().transform((value) => value ?? null),
 });

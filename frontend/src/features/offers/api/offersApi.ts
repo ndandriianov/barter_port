@@ -13,6 +13,7 @@ import type {
   CreateOfferRequest,
   GetOffersParams,
   GetOffersResponse,
+  GetSubscribedOffersParams,
   ListOfferReportsResponse,
   Offer,
   OfferReport,
@@ -39,6 +40,15 @@ const offersApi = createApi({
         return getOffersResponseSchema.parse(response);
       },
 
+      providesTags: ["Offers"],
+    }),
+
+    getSubscribedOffers: builder.query<GetOffersResponse, GetSubscribedOffersParams>({
+      query: (params) => ({
+        url: "/offers/subscriptions",
+        params,
+      }),
+      transformResponse: (response: unknown) => getOffersResponseSchema.parse(response),
       providesTags: ["Offers"],
     }),
 

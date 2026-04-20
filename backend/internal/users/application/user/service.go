@@ -225,6 +225,23 @@ func (s *Service) GetSubscriptions(ctx context.Context, userID uuid.UUID) ([]dom
 	return users, nil
 }
 
+// GetSubscriptionsUserInfo returns basic info of users that userID is subscribed to.
+//
+// No domain Errors
+func (s *Service) GetSubscriptionsUserInfo(ctx context.Context, userID uuid.UUID) ([]domain.UserInfo, error) {
+	users, err := s.repository.GetSubscriptions(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("repository.GetSubscriptions: %w", err)
+	}
+
+	userInfos := make([]domain.UserInfo, len(users))
+	for i, u := range users {
+		userInfos[i] = u.GetInfo()
+	}
+
+	return userInfos, nil
+}
+
 // GetSubscribers returns users subscribed to userID.
 //
 // No domain Errors

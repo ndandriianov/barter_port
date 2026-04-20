@@ -102,10 +102,10 @@ CreateOfferRequest:
   properties:
     name:
       type: string
-      example: Bicycle repair
+      example: Ремонт велосипеда
     description:
       type: string
-      example: I can help fix city bikes and replace brake pads
+      example: Могу помочь с ремонтом городских велосипедов и заменой тормозных колодок
     type:
       $ref: 'schemas.yaml#/ItemType'
     action:
@@ -130,10 +130,10 @@ UpdateOfferRequest:
   properties:
     name:
       type: string
-      example: Bicycle repair
+      example: Ремонт велосипеда
     description:
       type: string
-      example: I can help fix city bikes and replace brake pads
+      example: Могу помочь с ремонтом городских велосипедов и заменой тормозных колодок
     type:
       $ref: 'schemas.yaml#/ItemType'
     action:

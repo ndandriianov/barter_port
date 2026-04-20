@@ -46,6 +46,10 @@ func dealsURL() string {
 	return globalFixture.DealsURL
 }
 
+func usersURL() string {
+	return globalFixture.UsersURL
+}
+
 func mustJSONBody(t *testing.T, v any) io.Reader {
 	t.Helper()
 
@@ -196,6 +200,39 @@ func mustGetOffersBySort(t *testing.T, userID uuid.UUID, sort string, my *bool) 
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
 
 	return result
+}
+
+func mustGetSubscribedOffers(t *testing.T, userID uuid.UUID) types.ListOffersResponse {
+	t.Helper()
+
+	return mustGetSubscribedOffersBySort(t, userID, "ByTime")
+}
+
+func mustGetSubscribedOffersBySort(t *testing.T, userID uuid.UUID, sort string) types.ListOffersResponse {
+	t.Helper()
+
+	req := mustUserRequest(t, http.MethodGet, dealsURL()+"/offers/subscriptions?sort="+sort+"&cursor_limit=100", userID, nil)
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var result types.ListOffersResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
+
+	return result
+}
+
+func mustSubscribeToUser(t *testing.T, subscriberID, targetUserID uuid.UUID) {
+	t.Helper()
+
+	req := mustUserRequest(t, http.MethodPost, usersURL()+"/users/subscriptions", subscriberID, mustJSONBody(t, map[string]uuid.UUID{
+		"targetUserId": targetUserID,
+	}))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusCreated, resp.StatusCode)
 }
 
 func mustViewOfferByID(t *testing.T, userID uuid.UUID, offerID uuid.UUID) {

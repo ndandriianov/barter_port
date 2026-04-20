@@ -2,6 +2,7 @@ package repox
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -16,7 +17,7 @@ func FetchStructs[T any](
 ) ([]T, error) {
 	rows, err := db.Query(ctx, query, args...)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("sql: %w", err)
 	}
 	defer rows.Close()
 
@@ -25,7 +26,7 @@ func FetchStructs[T any](
 		if errors.Is(err, pgx.ErrNoRows) {
 			return []T{}, nil
 		}
-		return nil, err
+		return nil, fmt.Errorf("sql collect rows: %w", err)
 	}
 
 	return structs, nil

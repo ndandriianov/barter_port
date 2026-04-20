@@ -2,23 +2,23 @@ offers:
   get:
     tags:
       - offers
-    summary: List offers
+    summary: Список объявлений
     description: |
-      Returns a paginated list of offers.
+      Возвращает список объявлений с пагинацией.
       
-      - If `my=true`, only offers created by the current user are returned.
-      - Hidden offers are not shown to regular users.
-      - Hidden offers are visible to:
-        - the offer author (including in `my=true` mode);
-        - admin users.
+      - Если `my=true`, возвращаются только объявления, созданные текущим пользователем.
+      - Скрытые объявления не показываются обычным пользователям.
+      - Скрытые объявления видны:
+        - автору объявления (в режиме `my=true`);
+        - администраторам.
       
-      Supported sorting modes:
-      - `created_at`: newest offers first
-      - `popularity`: most viewed offers first
+      Поддерживаемые режимы сортировки:
+      - `created_at`: сначала новые объявления
+      - `popularity`: сначала самые просматриваемые объявления
       
-      Cursor fields depend on the selected sorting mode:
-      - for `created_at`: use `cursor_created_at` + `cursor_id`
-      - for `popularity`: use `cursor_views` + `cursor_id`
+      Поля курсора зависят от выбранного режима сортировки:
+      - для `created_at`: используйте `cursor_created_at` + `cursor_id`
+      - для `popularity`: используйте `cursor_views` + `cursor_id`
     operationId: listOffers
     security:
       - bearerAuth: [ ]
@@ -26,7 +26,11 @@ offers:
       - name: my
         in: query
         required: false
-        description: False by default. If true, returns only offers created by the current user.
+        description: |
+          По умолчанию `false`. Если `true`, возвращаются только объявления, созданные текущим пользователем,
+          включая скрытые.
+          
+          Если `false`, возвращаются все объявления, видимые текущему пользователю.
         schema:
           type: boolean
       - $ref: '../components/parameters.yaml#/SortType'
@@ -36,13 +40,13 @@ offers:
       - $ref: '../components/parameters.yaml#/Limit'
     responses:
       '200':
-        description: Offers page
+        description: Список объявлений и (опционально) курсор
         content:
           application/json:
             schema:
               $ref: '../components/responses.yaml#/ListOffersResponse'
       '400':
-        description: Invalid query parameters
+        description: Некорректные параметры запроса
         content:
           application/json:
             schema:
@@ -63,8 +67,8 @@ offers:
   post:
     tags:
       - offers
-    summary: Create offer
-    description: Creates a new barter offer
+    summary: Создать объявление
+    description: Создаёт новое объявление для бартера
     operationId: createOffers
     security:
       - bearerAuth: [ ]
@@ -76,13 +80,60 @@ offers:
             $ref: '../components/requests.yaml#/CreateOfferRequest'
     responses:
       '201':
-        description: Offers created
+        description: Объявление создано
         content:
           application/json:
             schema:
               $ref: '../components/schemas.yaml#/Offer'
       '400':
-        description: Invalid request body
+        description: Некорректное тело запроса
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+
+subscribedOffers:
+  get:
+    tags:
+      - offers
+      - subscriptions
+    summary: Список объявлений от подписок
+    description: |
+      Возвращает список объявлений с пагинацией, на которые подписан текущий пользователь.
+
+      Список сортируется по времени последнего обновления объявления.
+    operationId: listSubscribedOffers
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - $ref: '../components/parameters.yaml#/SortType'
+      - $ref: '../components/parameters.yaml#/CursorCreatedAt'
+      - $ref: '../components/parameters.yaml#/CursorViews'
+      - $ref: '../components/parameters.yaml#/CursorId'
+      - $ref: '../components/parameters.yaml#/Limit'
+    responses:
+      '200':
+        description: Страница подписанных объявлений
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ListOffersResponse'
+      '400':
+        description: Некорректные параметры запроса
         content:
           application/json:
             schema:
@@ -106,13 +157,13 @@ offerById:
   get:
     tags:
       - offers
-    summary: Get offer by ID
+    summary: Получить объявление по ID
     description: |
-      Returns a single offer by its ID.
+      Возвращает одно объявление по его ID.
 
-      Visibility rules for hidden offers:
-      - author and admin can access the offer;
-      - other users receive `404 Not Found`.
+      Правила видимости для скрытых (hidden) объявлений:
+      - автор и администратор могут получить объявление;
+      - остальные пользователи получают `404 Not Found`.
     operationId: getOfferById
     security:
       - bearerAuth: [ ]
@@ -157,8 +208,8 @@ offerById:
   patch:
     tags:
       - offers
-    summary: Update offer
-    description: Updates an existing offer. Only the author can edit it.
+    summary: Обновить объявление
+    description: Обновляет существующее объявление. Редактировать может только автор.
     operationId: updateOfferById
     security:
       - bearerAuth: [ ]
@@ -180,13 +231,13 @@ offerById:
             $ref: '../components/requests.yaml#/UpdateOfferRequest'
     responses:
       '200':
-        description: Updated offer
+        description: Объявление обновлено
         content:
           application/json:
             schema:
               $ref: '../components/schemas.yaml#/Offer'
       '400':
-        description: Invalid request body
+        description: Некорректное тело запроса
         content:
           application/json:
             schema:
@@ -198,7 +249,7 @@ offerById:
             schema:
               $ref: '../components/responses.yaml#/ErrorResponse'
       '403':
-        description: Forbidden
+        description: Доступ запрещён
         content:
           application/json:
             schema:
@@ -218,8 +269,8 @@ offerById:
   delete:
     tags:
       - offers
-    summary: Delete offer
-    description: Deletes an existing offer. Only the author can delete it.
+    summary: Удалить объявление
+    description: Удаляет существующее объявление. Удалить может только автор.
     operationId: deleteOfferById
     security:
       - bearerAuth: [ ]
@@ -240,7 +291,7 @@ offerById:
             schema:
               $ref: '../components/responses.yaml#/ErrorResponse'
       '403':
-        description: Forbidden
+        description: Доступ запрещён
         content:
           application/json:
             schema:
@@ -314,7 +365,7 @@ offerReports:
     tags:
       - offers
       - offer-reports
-    summary: Get reports for own offer
+    summary: Получить жалобы по своему объявлению
     description: |
       Возвращает жалобы на конкретное объявление вместе со связанными `messageId`.
 
@@ -335,7 +386,7 @@ offerReports:
           format: uuid
     responses:
       '200':
-        description: Reports for offer
+        description: Жалобы по объявлению
         content:
           application/json:
             schema:
@@ -353,7 +404,7 @@ offerReports:
             schema:
               $ref: '../components/responses.yaml#/ErrorResponse'
       '403':
-        description: Forbidden
+        description: Доступ запрещён
         content:
           application/json:
             schema:
@@ -375,7 +426,7 @@ offerReports:
     tags:
       - offers
       - offer-reports
-    summary: Report offer
+    summary: Пожаловаться на объявление
     description: |
       Создает жалобу на объявление.
 
@@ -403,19 +454,19 @@ offerReports:
             $ref: '../components/requests.yaml#/CreateOfferReportRequest'
     responses:
       '200':
-        description: Message attached to existing pending report
+        description: Сообщение добавлено к существующей `Pending`-жалобе
         content:
           application/json:
             schema:
               $ref: '../components/schemas.yaml#/OfferReport'
       '201':
-        description: New report created
+        description: Создана новая жалоба
         content:
           application/json:
             schema:
               $ref: '../components/schemas.yaml#/OfferReport'
       '400':
-        description: Invalid request body
+        description: Некорректное тело запроса
         content:
           application/json:
             schema:
@@ -427,7 +478,7 @@ offerReports:
             schema:
               $ref: '../components/responses.yaml#/ErrorResponse'
       '403':
-        description: Forbidden
+        description: Доступ запрещён
         content:
           application/json:
             schema:
@@ -439,7 +490,7 @@ offerReports:
             schema:
               $ref: '../components/responses.yaml#/ErrorResponse'
       '409':
-        description: User already attached a message to the current pending report
+        description: Пользователь уже добавил сообщение к текущей `Pending`-жалобе
         content:
           application/json:
             schema:
@@ -458,7 +509,7 @@ adminOfferReports:
     tags:
       - admin
       - offer-reports
-    summary: List offer reports for moderation
+    summary: Список жалоб на объявления для модерации
     description: |
       Возвращает список жалоб на объявления для администратора.
 
@@ -475,12 +526,12 @@ adminOfferReports:
       - name: status
         in: query
         required: false
-        description: Optional status filter. If omitted, returns all statuses.
+        description: Необязательный фильтр по статусу. Если не указан, возвращаются все статусы.
         schema:
           $ref: '../components/schemas.yaml#/OfferReportStatus'
     responses:
       '200':
-        description: Offer reports page
+        description: Список  жалоб на объявления
         content:
           application/json:
             schema:
@@ -511,7 +562,7 @@ adminOfferReportById:
     tags:
       - admin
       - offer-reports
-    summary: Get offer report details
+    summary: Получить детали жалобы на объявление
     description: |
       Возвращает карточку жалобы для администратора:
       - сам `offer`;
@@ -529,7 +580,7 @@ adminOfferReportById:
           format: uuid
     responses:
       '200':
-        description: Offer report details
+        description: Детали жалобы на объявление
         content:
           application/json:
             schema:
@@ -608,7 +659,7 @@ adminOfferReportResolution:
             schema:
               $ref: '../components/schemas.yaml#/OfferReport'
       '400':
-        description: Invalid request body
+        description: Некорректное тело запроса
         content:
           application/json:
             schema:
