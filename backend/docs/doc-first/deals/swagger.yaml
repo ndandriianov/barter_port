@@ -54,6 +54,8 @@ paths:
     $ref: './paths/failures.yaml#/dealFailureModeratorResolution'
   /offers:
     $ref: './paths/offers.yaml#/offers'
+  /offers/subscriptions:
+    $ref: './paths/offers.yaml#/subscribedOffers'
   /offers/{offerId}:
     $ref: './paths/offers.yaml#/offerById'
   /offers/{offerId}/view:

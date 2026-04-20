@@ -102,6 +102,53 @@ offers:
 
 
 
+subscribedOffers:
+  get:
+    tags:
+      - offers
+      - subscriptions
+    summary: List subscribed offers
+    description: |
+      Returns a paginated list of offers that the current user is subscribed to.
+
+      The list is sorted by the time of the last update in the offer.
+    operationId: listSubscribedOffers
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - $ref: '../components/parameters.yaml#/SortType'
+      - $ref: '../components/parameters.yaml#/CursorCreatedAt'
+      - $ref: '../components/parameters.yaml#/CursorViews'
+      - $ref: '../components/parameters.yaml#/CursorId'
+      - $ref: '../components/parameters.yaml#/Limit'
+    responses:
+      '200':
+        description: Subscribed offers page
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ListOffersResponse'
+      '400':
+        description: Invalid query parameters
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+
 offerById:
   get:
     tags:
