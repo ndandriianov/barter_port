@@ -8,7 +8,6 @@ import (
 	"barter-port/internal/deals/domain/enums"
 	"barter-port/internal/deals/domain/htypes"
 	failuresrepo "barter-port/internal/deals/infrastructure/repository/failures"
-	outbox "barter-port/internal/deals/infrastructure/repository/reputation-events-outbox"
 	"barter-port/pkg/db"
 	"context"
 	"errors"
@@ -24,7 +23,6 @@ import (
 type Service struct {
 	*appdeals.Service
 	repository *failuresrepo.Repository
-	outbox     *outbox.Repository
 }
 
 func NewService(base *appdeals.Service, repository *failuresrepo.Repository) *Service {
@@ -248,7 +246,11 @@ func (s *Service) ModeratorResolutionForFailure(
 			Comment:    comment,
 		}
 
-		err = s.outbox.WriteOutboxMessage(ctx, tx, outboxMsg)
+		if s.ReputationOutboxRepository() == nil {
+			return fmt.Errorf("reputation outbox repository is not configured")
+		}
+
+		err = s.ReputationOutboxRepository().WriteOutboxMessage(ctx, tx, outboxMsg)
 		if err != nil {
 			return err
 		}

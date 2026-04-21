@@ -91,10 +91,18 @@ function ProfilePage() {
   const formatReputationDelta = (delta: number) => (delta > 0 ? `+${delta}` : `${delta}`);
 
   const formatSourceType = (sourceType: string) => {
-    if (sourceType === "offer_report" || sourceType === "offerreport") {
-      return "жалоба на предложение";
+    switch (sourceType) {
+      case "deals.offer_report.penalty":
+        return "штраф по жалобе на предложение";
+      case "deals.deal_failure.responsible":
+        return "штраф за провал сделки";
+      case "deals.deal_completion.reward":
+        return "завершение сделки";
+      case "deals.review_creation.reward":
+        return "оставленный отзыв";
+      default:
+        return sourceType;
     }
-    return sourceType;
   };
 
   const handleLogout = async () => {

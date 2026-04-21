@@ -1,6 +1,7 @@
 package reviews
 
 import (
+	dealsusers "barter-port/contracts/kafka/messages/deals-users"
 	"barter-port/contracts/openapi/deals/types"
 	appdeals "barter-port/internal/deals/application/deals"
 	"barter-port/internal/deals/domain"
@@ -10,6 +11,7 @@ import (
 	"barter-port/pkg/db"
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -79,7 +81,36 @@ func (s *Service) CreateDealItemReview(
 			storedItemID, offerID,
 			rating, comment,
 		)
-		return err
+		if err != nil {
+			return err
+		}
+
+		if s.ReputationOutboxRepository() == nil || s.ReviewCreationRewardPoints() == 0 {
+			return nil
+		}
+
+		rewardComment := "Начисление за оставленный отзыв"
+		msg := dealsusers.ReputationMessage{
+			ID:         uuid.New(),
+			SourceType: dealsusers.ReviewCreationRewardMessageType,
+			SourceID: dealsusers.BuildReviewCreationRewardSourceID(
+				dealID,
+				storedItemID,
+				offerID,
+				userID,
+				*item.ProviderID,
+			),
+			UserID:    userID,
+			Delta:     s.ReviewCreationRewardPoints(),
+			CreatedAt: time.Now().UTC(),
+			Comment:   &rewardComment,
+		}
+
+		if err = s.ReputationOutboxRepository().WriteOutboxMessage(ctx, tx, msg); err != nil {
+			return fmt.Errorf("write review reward outbox message: %w", err)
+		}
+
+		return nil
 	})
 	if err != nil {
 		return domain.Review{}, err

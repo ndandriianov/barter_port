@@ -1,6 +1,7 @@
 package integration
 
 import (
+	dealsusers "barter-port/contracts/kafka/messages/deals-users"
 	usertypes "barter-port/contracts/openapi/users/types"
 	"context"
 	"encoding/json"
@@ -14,6 +15,8 @@ import (
 )
 
 const integrationAsyncWaitTimeout = 60 * time.Second
+const dealCompletionRewardPoints = 5
+const reviewCreationRewardPoints = 2
 
 type userReputationEventRecord struct {
 	ID         uuid.UUID
@@ -152,7 +155,7 @@ func mustFindReputationEvent(
 	t.Helper()
 
 	for _, event := range events {
-		if event.SourceType == sourceType && uuid.UUID(event.SourceId) == sourceID {
+		if string(event.SourceType) == sourceType && uuid.UUID(event.SourceId) == sourceID {
 			return event
 		}
 	}
@@ -176,7 +179,7 @@ func waitForCurrentUserReputationAPIEvent(
 	for time.Now().Before(deadline) {
 		lastEvents = mustGetCurrentUserReputationEvents(t, fixture, userID)
 		for _, event := range lastEvents {
-			if event.SourceType == sourceType && uuid.UUID(event.SourceId) == sourceID {
+			if string(event.SourceType) == sourceType && uuid.UUID(event.SourceId) == sourceID {
 				return event
 			}
 		}
@@ -193,4 +196,75 @@ func waitForCurrentUserReputationAPIEvent(
 	)
 	require.FailNowf(t, "reputation event not found via users API", "source_type=%s source_id=%s", sourceType, sourceID)
 	return usertypes.ReputationEvent{}
+}
+
+func waitForCurrentUserReputationPoints(
+	t *testing.T,
+	fixture *Fixture,
+	userID uuid.UUID,
+	expected int,
+) usertypes.Me {
+	t.Helper()
+
+	deadline := time.Now().Add(integrationAsyncWaitTimeout)
+	var lastMe usertypes.Me
+
+	for time.Now().Before(deadline) {
+		lastMe = mustGetCurrentUser(t, fixture, userID)
+		if int(lastMe.ReputationPoints) == expected {
+			return lastMe
+		}
+
+		time.Sleep(100 * time.Millisecond)
+	}
+
+	t.Logf(
+		"reputation points did not reach expected value; user_id=%s expected=%d actual=%d",
+		userID,
+		expected,
+		lastMe.ReputationPoints,
+	)
+	require.FailNowf(t, "unexpected reputation points", "expected=%d actual=%d", expected, lastMe.ReputationPoints)
+	return lastMe
+}
+
+func countUserReputationEvents(
+	t *testing.T,
+	fixture *Fixture,
+	userID uuid.UUID,
+	sourceType string,
+	sourceID uuid.UUID,
+) int {
+	t.Helper()
+
+	pool := OpenDatabase(t, fixture, UsersDBName)
+	var count int
+	err := pool.QueryRow(
+		context.Background(),
+		`SELECT COUNT(*)
+		 FROM user_reputation_events
+		 WHERE user_id = $1 AND source_type = $2 AND source_id = $3`,
+		userID,
+		sourceType,
+		sourceID,
+	).Scan(&count)
+	require.NoError(t, err)
+
+	return count
+}
+
+func requireReviewCreationRewardEvent(
+	t *testing.T,
+	fixture *Fixture,
+	userID uuid.UUID,
+	dealID uuid.UUID,
+	itemID, offerID *uuid.UUID,
+	providerID uuid.UUID,
+) userReputationEventRecord {
+	t.Helper()
+
+	sourceID := dealsusers.BuildReviewCreationRewardSourceID(dealID, itemID, offerID, userID, providerID)
+	event := waitForUserReputationEvent(t, fixture, userID, dealsusers.ReviewCreationRewardMessageType, sourceID)
+	require.Equal(t, reviewCreationRewardPoints, event.Delta)
+	return event
 }

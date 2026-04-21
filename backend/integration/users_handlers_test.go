@@ -1,6 +1,7 @@
 package integration
 
 import (
+	dealsusers "barter-port/contracts/kafka/messages/deals-users"
 	usertypes "barter-port/contracts/openapi/users/types"
 	"barter-port/pkg/jwt"
 	"bytes"
@@ -114,7 +115,7 @@ func TestUsersGetCurrentUserReputationEvents(t *testing.T) {
 		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
 		olderEventID,
 		registered.UserID,
-		"offerreport",
+		dealsusers.OfferReportPenaltyMessageType,
 		olderSourceID,
 		-5,
 		olderCreatedAt,
@@ -132,7 +133,7 @@ func TestUsersGetCurrentUserReputationEvents(t *testing.T) {
 		 VALUES ($1, $2, $3, $4, $5, $6, NULL)`,
 		newerEventID,
 		registered.UserID,
-		"offerreport",
+		dealsusers.OfferReportPenaltyMessageType,
 		newerSourceID,
 		10,
 		newerCreatedAt,
@@ -156,14 +157,14 @@ func TestUsersGetCurrentUserReputationEvents(t *testing.T) {
 	require.Len(t, events, 2)
 
 	require.Equal(t, newerEventID, uuid.UUID(events[0].Id))
-	require.Equal(t, "offerreport", events[0].SourceType)
+	require.Equal(t, usertypes.DealsOfferReportPenalty, events[0].SourceType)
 	require.Equal(t, newerSourceID, uuid.UUID(events[0].SourceId))
 	require.Equal(t, 10, events[0].Delta)
 	require.True(t, events[0].CreatedAt.Equal(newerCreatedAt))
 	require.Nil(t, events[0].Comment)
 
 	require.Equal(t, olderEventID, uuid.UUID(events[1].Id))
-	require.Equal(t, "offerreport", events[1].SourceType)
+	require.Equal(t, usertypes.DealsOfferReportPenalty, events[1].SourceType)
 	require.Equal(t, olderSourceID, uuid.UUID(events[1].SourceId))
 	require.Equal(t, -5, events[1].Delta)
 	require.True(t, events[1].CreatedAt.Equal(olderCreatedAt))

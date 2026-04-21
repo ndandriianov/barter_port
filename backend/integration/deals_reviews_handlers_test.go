@@ -1,10 +1,12 @@
 package integration
 
 import (
+	dealsusers "barter-port/contracts/kafka/messages/deals-users"
 	"barter-port/contracts/openapi/deals/types"
 	"encoding/json"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -37,7 +39,9 @@ func TestGetDealItemReviewEligibilityCanCreate(t *testing.T) {
 func TestCreateDealItemReviewSuccess(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)
+	dumpUsersLogs(t)
 
+	fixture := globalFixture
 	userA := uuid.New()
 	userB := uuid.New()
 	dealID, itemIDByA, _ := mustCreateCompletedReviewableTwoPartyDeal(t, userA, userB)
@@ -51,6 +55,12 @@ func TestCreateDealItemReviewSuccess(t *testing.T) {
 	require.Equal(t, comment, *review.Comment)
 	require.NotNil(t, review.OfferRef)
 	require.NotNil(t, review.ItemRef)
+
+	itemRefID := uuid.UUID(review.ItemRef.ItemId)
+	offerRefID := uuid.UUID(review.OfferRef.OfferId)
+	event := requireReviewCreationRewardEvent(t, fixture, userB, dealID, &itemRefID, &offerRefID, userA)
+	waitForCurrentUserReputationAPIEvent(t, fixture, userB, dealsusers.ReviewCreationRewardMessageType, event.SourceID)
+	waitForCurrentUserReputationPoints(t, fixture, userB, dealCompletionRewardPoints+reviewCreationRewardPoints)
 }
 
 func TestCreateDealItemReviewConflictAfterDuplicate(t *testing.T) {
@@ -294,8 +304,12 @@ func TestUpdateReviewSuccess(t *testing.T) {
 func TestDeleteReviewSuccessAllowsRecreate(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)
+	dumpUsersLogs(t)
 
+	fixture := globalFixture
 	ctx := mustCreateReviewedOfferItemContext(t)
+	sourceID := dealsusers.BuildReviewCreationRewardSourceID(ctx.DealID, &ctx.ItemID, &ctx.OfferID, ctx.ReceiverID, ctx.ProviderID)
+	waitForCurrentUserReputationPoints(t, fixture, ctx.ReceiverID, dealCompletionRewardPoints+reviewCreationRewardPoints)
 
 	deleteReq := mustUserRequest(t, http.MethodDelete, dealsURL()+"/reviews/"+ctx.Review.Id.String(), ctx.ReceiverID, nil)
 	deleteResp := mustDo(t, deleteReq)
@@ -304,4 +318,9 @@ func TestDeleteReviewSuccessAllowsRecreate(t *testing.T) {
 
 	recreated := mustCreateDealItemReview(t, ctx.ReceiverID, ctx.DealID, ctx.ItemID, 5, new("recreated"))
 	require.NotEqual(t, ctx.Review.Id, recreated.Id)
+
+	time.Sleep(2 * time.Second)
+	require.Equal(t, 1, countUserReputationEvents(t, fixture, ctx.ReceiverID, dealsusers.ReviewCreationRewardMessageType, sourceID))
+	me := mustGetCurrentUser(t, fixture, ctx.ReceiverID)
+	require.Equal(t, dealCompletionRewardPoints+reviewCreationRewardPoints, int(me.ReputationPoints))
 }
