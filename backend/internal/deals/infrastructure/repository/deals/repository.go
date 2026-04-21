@@ -94,12 +94,19 @@ func (r *Repository) CreateDeal(ctx context.Context, tx pgx.Tx, deal domain.Deal
 // GET DEAL IDs
 // ================================================================================
 
-// GetDealIDs returns deal IDs with participant UUIDs.
-// If userID is non-nil, returns only deals the user participates in.
-// If open is true, returns only deals that are not in a final status.
+// GetDealIDs returns deal IDs with participant UUIDs visible to the requester.
+// If onlyMy is true, returns only deals the requester participates in.
+// If onlyLookingForParticipants is true, returns only deals in LookingForParticipants status.
 //
 // No domain errors.
-func (r *Repository) GetDealIDs(ctx context.Context, exec db.DB, userID *uuid.UUID, open bool) ([]htypes.DealIDWithParticipantIDs, error) {
+func (r *Repository) GetDealIDs(
+	ctx context.Context,
+	exec db.DB,
+	requesterID uuid.UUID,
+	isAdmin bool,
+	onlyMy bool,
+	onlyLookingForParticipants bool,
+) ([]htypes.DealIDWithParticipantIDs, error) {
 	query := `
 		SELECT d.id,
 			   d.status,
@@ -107,15 +114,21 @@ func (r *Repository) GetDealIDs(ctx context.Context, exec db.DB, userID *uuid.UU
 			   COALESCE(array_agg(DISTINCT p.user_id) FILTER ( WHERE p.user_id IS NOT NULL), '{}'::uuid[]) AS participant_ids
 		FROM deals d
 				 LEFT JOIN participants p ON p.deal_id = d.id
-		WHERE ($1::uuid IS NULL
+		WHERE (NOT $1::boolean OR d.status::text = 'LookingForParticipants')
+		  AND (NOT $2::boolean
 			OR EXISTS(SELECT 1
 					  FROM participants p2
 					  WHERE p2.deal_id = d.id
-						AND (p2.user_id = $1)))
-		  AND (NOT $2::boolean OR d.status::text NOT IN ('Completed', 'Cancelled', 'Failed'))
+						AND p2.user_id = $3))
+		  AND ($4::boolean
+			OR d.status::text = 'LookingForParticipants'
+			OR EXISTS(SELECT 1
+					  FROM participants p3
+					  WHERE p3.deal_id = d.id
+						AND p3.user_id = $3))
 		GROUP BY d.id`
 
-	rows, err := exec.Query(ctx, query, userID, open)
+	rows, err := exec.Query(ctx, query, onlyLookingForParticipants, onlyMy, requesterID, isAdmin)
 	if err != nil {
 		return nil, fmt.Errorf("sql get deal ids: %w", err)
 	}

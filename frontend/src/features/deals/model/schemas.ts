@@ -126,6 +126,7 @@ export const dealIdAndParticipantsSchema = z.object({
   id: z.string(),
   name: z.string().optional(),
   status: dealStatusSchema,
+  items: z.array(itemSchema),
   participants: z.array(z.string()),
 });
 
