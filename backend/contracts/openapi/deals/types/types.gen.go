@@ -302,6 +302,12 @@ type CreateOfferRequest struct {
 	// Каждая фотография передается отдельным бинарным файлом в `multipart/form-data`.
 	Photos *[]openapi_types.File `json:"photos,omitempty"`
 
+	// Tags Необязательный список тегов объявления.
+	// Сервер нормализует каждый тег как `trim + lowercase`.
+	// Если пользователь укажет тег, которого ещё нет в приложении, сервер создаст его автоматически.
+	// В `multipart/form-data` теги передаются повторяющимися полями `tags`.
+	Tags *[]TagName `json:"tags,omitempty"`
+
 	// Type Type of barter item
 	Type ItemType `json:"type"`
 }
@@ -564,6 +570,9 @@ type ListOffersResponse struct {
 	Offers []Offer `json:"offers"`
 }
 
+// ListTagsResponse defines model for ListTagsResponse.
+type ListTagsResponse = []TagName
+
 // ModeratorResolutionForFailureRequest defines model for ModeratorResolutionForFailureRequest.
 type ModeratorResolutionForFailureRequest struct {
 	// Comment Комментарий админа, объясняющий его решение. Может быть пустым
@@ -684,6 +693,11 @@ type Offer struct {
 
 	// PhotoUrls Публичные URL фотографий объявления
 	PhotoUrls *[]string `json:"photoUrls,omitempty"`
+
+	// Tags Список тегов объявления, отсортированный по `name ASC`.
+	// Каждый тег хранится и возвращается как нормализованная строка:
+	// `trim + lowercase`, только латинские и кириллические буквы, длина от 1 до 15 символов.
+	Tags []TagName `json:"tags"`
 
 	// Type Type of barter item
 	Type ItemType `json:"type"`
@@ -838,6 +852,11 @@ type OfferWithInfo struct {
 
 	// Quantity Количество единиц объявления для включения в черновую сделку
 	Quantity int `json:"quantity"`
+
+	// Tags Список тегов объявления, отсортированный по `name ASC`.
+	// Каждый тег хранится и возвращается как нормализованная строка:
+	// `trim + lowercase`, только латинские и кириллические буквы, длина от 1 до 15 символов.
+	Tags []TagName `json:"tags"`
 
 	// Type Type of barter item
 	Type ItemType `json:"type"`
@@ -999,6 +1018,10 @@ type ReviewSummary struct {
 	RatingBreakdown ReviewRatingBreakdown `json:"ratingBreakdown"`
 }
 
+// TagName Имя тега. Сервер выполняет нормализацию `trim + lowercase`.
+// Допустимы только латинские и кириллические буквы.
+type TagName = string
+
 // UpdateDealItemRequest Хотя бы одно поле обязательно.
 // Один и тот же пользователь не может одновременно быть `provider` и `receiver` для одной позиции.
 type UpdateDealItemRequest struct {
@@ -1056,6 +1079,13 @@ type UpdateOfferRequest struct {
 	// и будет добавлена в конец списка после оставшихся фотографий.
 	Photos *[]openapi_types.File `json:"photos,omitempty"`
 
+	// Tags Полная замена списка тегов объявления.
+	// Если поле передано пустым массивом, сервер удаляет все теги у объявления.
+	// Если поле не передано, список тегов не изменяется.
+	// Сервер нормализует каждый тег как `trim + lowercase`.
+	// В `multipart/form-data` теги передаются повторяющимися полями `tags`.
+	Tags *[]TagName `json:"tags,omitempty"`
+
 	// Type Type of barter item
 	Type *ItemType `json:"type,omitempty"`
 }
@@ -1107,6 +1137,12 @@ type ListOfferReportsForAdminParams struct {
 	Status *OfferReportStatus `form:"status,omitempty" json:"status,omitempty"`
 }
 
+// DeleteAdminTagParams defines parameters for DeleteAdminTag.
+type DeleteAdminTagParams struct {
+	// Name Имя тега для удаления.
+	Name TagName `form:"name" json:"name"`
+}
+
 // GetDealsParams defines parameters for GetDeals.
 type GetDealsParams struct {
 	// My False by default. Если true, возвращает только сделки, в которых текущий пользователь является участником
@@ -1126,6 +1162,9 @@ type GetMyDraftDealsParams struct {
 type ProcessJoinRequestParams struct {
 	Accept bool `form:"accept" json:"accept"`
 }
+
+// ListOffersJSONBody defines parameters for ListOffers.
+type ListOffersJSONBody interface{}
 
 // ListOffersParams defines parameters for ListOffers.
 type ListOffersParams struct {
@@ -1214,6 +1253,12 @@ type CreateOfferGroupJSONRequestBody = CreateOfferGroupRequest
 
 // CreateDraftDealFromOfferGroupJSONRequestBody defines body for CreateDraftDealFromOfferGroup for application/json ContentType.
 type CreateDraftDealFromOfferGroupJSONRequestBody = CreateOfferGroupDraftRequest
+
+// ListOffersJSONRequestBody defines body for ListOffers for application/json ContentType.
+type ListOffersJSONRequestBody ListOffersJSONBody
+
+// CreateOffersJSONRequestBody defines body for CreateOffers for application/json ContentType.
+type CreateOffersJSONRequestBody = CreateOfferRequest
 
 // CreateOffersMultipartRequestBody defines body for CreateOffers for multipart/form-data ContentType.
 type CreateOffersMultipartRequestBody = CreateOfferRequest
