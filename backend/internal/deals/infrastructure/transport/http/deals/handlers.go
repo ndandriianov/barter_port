@@ -88,7 +88,14 @@ func (h *Handlers) GetDealByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	deal, err := h.dealsService.GetDealByID(r.Context(), id)
+	userID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		log.Error("failed to get userID from context")
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
+	deal, err := h.dealsService.GetDealByIDForUser(r.Context(), id, userID)
 	if err != nil {
 		if errors.Is(err, domain.ErrDealNotFound) {
 			log.Info("deal not found", slog.String("dealId", idStr))

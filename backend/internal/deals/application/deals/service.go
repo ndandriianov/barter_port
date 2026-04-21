@@ -311,17 +311,18 @@ func (s *Service) CancelDraft(ctx context.Context, id uuid.UUID, userID uuid.UUI
 // GET DEALS
 // ================================================================================
 
-// GetDeals returns deal IDs with participant UUIDs.
-// If my is true, filters to only deals the user participates in.
-// If open is true, filters to deals that are not in a final status.
+// GetDeals returns deal IDs with participant UUIDs visible to the requester.
+// Admins can see all deals. Non-admins can see LookingForParticipants deals and
+// deals in other statuses only if they participate in them.
 //
 // No domain errors.
 func (s *Service) GetDeals(ctx context.Context, userID uuid.UUID, my bool, open bool) ([]htypes.DealIDWithParticipantIDs, error) {
-	var filterUserID *uuid.UUID
-	if my {
-		filterUserID = &userID
+	isAdmin, err := s.adminChecker.IsAdmin(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("check admin: %w", err)
 	}
-	return s.dealsRepository.GetDealIDs(ctx, s.db, filterUserID, open)
+
+	return s.dealsRepository.GetDealIDs(ctx, s.db, userID, isAdmin, my, open)
 }
 
 // ================================================================================
@@ -346,6 +347,28 @@ func (s *Service) GetDealByID(ctx context.Context, id uuid.UUID) (domain.Deal, e
 	return deal, nil
 }
 
+// GetDealByIDForUser returns a deal by ID if it is visible to the requester.
+//
+// Domain errors:
+//   - domain.ErrDealNotFound: if no deal with the specified ID exists or it is not visible.
+func (s *Service) GetDealByIDForUser(ctx context.Context, id uuid.UUID, userID uuid.UUID) (domain.Deal, error) {
+	isAdmin, err := s.adminChecker.IsAdmin(ctx, userID)
+	if err != nil {
+		return domain.Deal{}, fmt.Errorf("check admin: %w", err)
+	}
+
+	deal, err := s.GetDealByID(ctx, id)
+	if err != nil {
+		return domain.Deal{}, err
+	}
+
+	if isAdmin || deal.Status == enums.DealStatusLookingForParticipants || userParticipatesInDeal(deal, userID) {
+		return deal, nil
+	}
+
+	return domain.Deal{}, domain.ErrDealNotFound
+}
+
 // GetDealStatus returns the current status of a deal.
 //
 // Domain errors:
@@ -357,6 +380,16 @@ func (s *Service) GetDealStatus(ctx context.Context, id uuid.UUID) (enums.DealSt
 	}
 
 	return deal.Status, nil
+}
+
+func userParticipatesInDeal(deal domain.Deal, userID uuid.UUID) bool {
+	for _, participantID := range deal.Participants {
+		if participantID == userID {
+			return true
+		}
+	}
+
+	return false
 }
 
 func (s *Service) HasPendingFailureReview(ctx context.Context, id uuid.UUID) (bool, error) {
