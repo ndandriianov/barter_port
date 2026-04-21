@@ -2,13 +2,23 @@ deals:
   get:
     tags:
       - Deals
-    summary: Получить все сделки
+    summary: Получить список доступных сделок
     description: |
-      Получить все сделки.
-      
-      - Если указать параметр my=true, то будут возвращены только сделки, в которых текущий пользователь является участником.
-      - Если указать параметр open=true, то будут возвращены только открытые сделки.
-      - Для каждой сделки также возвращается список `items` с их фотографиями.
+      Возвращает список сделок, доступных текущему пользователю.
+
+      Признак администратора определяется сервером по Bearer JWT. Клиент не передает роль или `adminId` в запросе.
+
+      Правила доступа:
+      - администратор может просматривать все сделки;
+      - не-администратор может просматривать все сделки в статусе `LookingForParticipants`;
+      - не-администратор может просматривать сделки в остальных статусах только если его `userId` входит в `participants`.
+
+      Правила фильтрации:
+      - `my=true` возвращает только сделки, в которых текущий пользователь является участником;
+      - `open=true` возвращает только сделки в статусе `LookingForParticipants`;
+      - если указаны оба параметра, возвращается пересечение фильтров доступа и параметров запроса.
+
+      Для каждой сделки также возвращается список `items` с их фотографиями.
     operationId: getDeals
     parameters:
       - name: my
@@ -19,7 +29,7 @@ deals:
           type: boolean
       - name: open
         in: query
-        description: False by default. Если true, возвращает только открытые сделки
+        description: False by default. Если true, возвращает только сделки в статусе `LookingForParticipants`
         required: false
         schema:
           type: boolean
@@ -27,7 +37,7 @@ deals:
       - bearerAuth: [ ]
     responses:
       '200':
-        description: OK
+        description: Список сделок, доступных текущему пользователю
         content:
           application/json:
             schema:
@@ -187,8 +197,16 @@ dealById:
   get:
     tags:
       - Deals
-    summary: Получить сделку по ее ID
-    description: Получить сделку по ее ID
+    summary: Получить сделку по ID
+    description: |
+      Возвращает сделку по ID, если она доступна текущему пользователю.
+
+      Признак администратора определяется сервером по Bearer JWT. Клиент не передает роль или `adminId` в запросе.
+
+      Правила доступа:
+      - администратор может получить любую сделку;
+      - не-администратор может получить сделку в статусе `LookingForParticipants`;
+      - не-администратор может получить сделку в любом другом статусе только если его `userId` входит в `participants`.
     operationId: getDealById
     parameters:
       - name: dealId
@@ -201,7 +219,7 @@ dealById:
       - bearerAuth: [ ]
     responses:
       '200':
-        description: OK
+        description: Сделка доступна текущему пользователю
         content:
           application/json:
             schema:
@@ -219,7 +237,7 @@ dealById:
             schema:
               $ref: '../components/responses.yaml#/ErrorResponse'
       '404':
-        description: Deal not found
+        description: Сделка не найдена или недоступна текущему пользователю
         content:
           application/json:
             schema:
