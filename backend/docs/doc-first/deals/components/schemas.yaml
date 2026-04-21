@@ -135,6 +135,7 @@ Offer:
     - type
     - action
     - description
+    - tags
     - createdAt
     - views
   properties:
@@ -157,6 +158,15 @@ Offer:
       type: string
       description: Подробное описание объявления
       example: Могу помочь с ремонтом городских велосипедов и заменой тормозных колодок
+    tags:
+      type: array
+      maxItems: 5
+      description: |
+        Список тегов объявления, отсортированный по `name ASC`.
+        Каждый тег хранится и возвращается как нормализованная строка:
+        `trim + lowercase`, только латинские и кириллические буквы, длина от 1 до 15 символов.
+      items:
+        $ref: '#/TagName'
     type:
       $ref: '#/ItemType'
     action:
@@ -199,6 +209,16 @@ Offer:
       items:
         type: string
         format: uri
+
+
+TagName:
+  type: string
+  minLength: 1
+  maxLength: 15
+  pattern: '^[A-Za-zА-Яа-яЁё]+$'
+  description: |
+    Имя тега. Сервер выполняет нормализацию `trim + lowercase`.
+    Допустимы только латинские и кириллические буквы.
 
 
 ItemType:

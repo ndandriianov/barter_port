@@ -54,6 +54,8 @@ paths:
     $ref: './paths/failures.yaml#/dealFailureModeratorResolution'
   /offers:
     $ref: './paths/offers.yaml#/offers'
+  /tags:
+    $ref: './paths/tags.yaml#/tagsCollection'
   /offers/subscriptions:
     $ref: './paths/offers.yaml#/subscribedOffers'
   /offers/{offerId}:
@@ -72,6 +74,8 @@ paths:
     $ref: './paths/offers.yaml#/adminOfferReportById'
   /admin/offer-reports/{reportId}/resolution:
     $ref: './paths/offers.yaml#/adminOfferReportResolution'
+  /admin/tags:
+    $ref: './paths/tags.yaml#/adminTags'
   /me/statistics:
     $ref: './paths/statistics.yaml#/myStatistics'
   /offer-groups:

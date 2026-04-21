@@ -1,0 +1,96 @@
+tagsCollection:
+  get:
+    tags:
+      - offers
+      - tags
+    summary: Список всех тегов
+    description: |
+      Возвращает список всех тегов, существующих в приложении.
+
+      Правила:
+      - список отсортирован по `name ASC`;
+      - каждый тег возвращается как нормализованная строка: `trim + lowercase`;
+      - если после отвязки от `offers` тег больше нигде не используется, он удаляется автоматически.
+    operationId: listTags
+    security:
+      - bearerAuth: [ ]
+    responses:
+      '200':
+        description: Список тегов
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ListTagsResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+
+adminTags:
+  delete:
+    tags:
+      - admin
+      - tags
+    summary: Удалить тег
+    description: |
+      Удаляет тег по имени.
+
+      Endpoint доступен только администратору.
+
+      Правила:
+      - имя тега нормализуется сервером как `trim + lowercase`;
+      - тег удаляется из всех `offers`, где он был привязан;
+      - если тег не найден, сервер возвращает `404`.
+    operationId: deleteAdminTag
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - name: name
+        in: query
+        required: true
+        description: Имя тега для удаления.
+        schema:
+          $ref: '../components/schemas.yaml#/TagName'
+    responses:
+      '204':
+        description: Tag deleted
+      '400':
+        description: Некорректное имя тега
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: Доступ запрещён
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Tag not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
