@@ -20,7 +20,12 @@ export const userAvatarUploadSchema = z.object({
 
 export const reputationEventSchema = z.object({
   id: z.string().uuid(),
-  sourceType: z.string(),
+  sourceType: z.enum([
+    "deals.offer_report.penalty",
+    "deals.deal_failure.responsible",
+    "deals.deal_completion.reward",
+    "deals.review_creation.reward",
+  ]),
   sourceId: z.string().uuid(),
   delta: z.number(),
   createdAt: z.string(),
@@ -34,4 +39,3 @@ export const subscribeRequestSchema = z.object({
 });
 
 export const subscriptionsResponseSchema = z.array(userSchema);
-

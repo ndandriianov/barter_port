@@ -3,9 +3,9 @@ package offer_reports
 import (
 	dealsusers "barter-port/contracts/kafka/messages/deals-users"
 	"barter-port/internal/deals/domain"
-	offer_report_outbox "barter-port/internal/deals/infrastructure/repository/offer-report-outbox"
 	offer_reports "barter-port/internal/deals/infrastructure/repository/offer-reports"
 	offersrepo "barter-port/internal/deals/infrastructure/repository/offers"
+	offer_report_outbox "barter-port/internal/deals/infrastructure/repository/reputation-events-outbox"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/db"
 	"context"

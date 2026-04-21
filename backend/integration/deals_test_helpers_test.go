@@ -782,8 +782,22 @@ func mustCreateDealItemReview(
 func mustCreateReviewedOfferItemContext(t *testing.T) reviewedDealContext {
 	t.Helper()
 
-	providerID := uuid.New()
-	receiverID := uuid.New()
+	return mustCreateReviewedOfferItemContextWithUsers(t, uuid.New(), uuid.New())
+}
+
+func mustCreateReviewedOfferItemContextWithRegisteredUsers(t *testing.T) reviewedDealContext {
+	t.Helper()
+
+	fixture := globalFixture
+	providerID := mustRegisterProjectedUser(t, fixture)
+	receiverID := mustRegisterProjectedUser(t, fixture)
+
+	return mustCreateReviewedOfferItemContextWithUsers(t, providerID, receiverID)
+}
+
+func mustCreateReviewedOfferItemContextWithUsers(t *testing.T, providerID uuid.UUID, receiverID uuid.UUID) reviewedDealContext {
+	t.Helper()
+
 	dealID, itemID, otherItemID := mustCreateCompletedReviewableTwoPartyDeal(t, providerID, receiverID)
 	review := mustCreateDealItemReview(t, receiverID, dealID, itemID, 5, new("excellent"))
 

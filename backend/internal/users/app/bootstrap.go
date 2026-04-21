@@ -116,21 +116,30 @@ func (app *App) initReputationEventConsumer(cfg bootstrap.Config) error {
 	if app.reputationInboxRepo == nil {
 		return errors.New("reputationInboxRepo is not initialized")
 	}
-	if cfg.Kafka.OfferReportPenaltyTopic == "" {
-		return errors.New("offer report penalty topic is not configured")
+	reputationTopic := cfg.Kafka.ReputationTopic
+	if reputationTopic == "" {
+		reputationTopic = cfg.Kafka.OfferReportPenaltyTopic
 	}
-	if cfg.Kafka.OfferReportPenaltyGroup == "" {
-		return errors.New("offer report penalty group is not configured")
+	if reputationTopic == "" {
+		return errors.New("reputation topic is not configured")
+	}
+
+	reputationGroup := cfg.Kafka.ReputationGroup
+	if reputationGroup == "" {
+		reputationGroup = cfg.Kafka.OfferReportPenaltyGroup
+	}
+	if reputationGroup == "" {
+		return errors.New("reputation group is not configured")
 	}
 
 	topicInitCtx, cancelTopicInit := context.WithTimeout(context.Background(), cfg.Kafka.WriteTimeout)
 	defer cancelTopicInit()
 
-	if err := kafkax.EnsureTopic(topicInitCtx, cfg.Kafka.Brokers, cfg.Kafka.OfferReportPenaltyTopic, 1, 1); err != nil {
-		return fmt.Errorf("failed to ensure offer report penalty topic: %w", err)
+	if err := kafkax.EnsureTopic(topicInitCtx, cfg.Kafka.Brokers, reputationTopic, 1, 1); err != nil {
+		return fmt.Errorf("failed to ensure reputation topic: %w", err)
 	}
 
-	reader := kafkax.NewMessageReader(cfg.Kafka.Brokers, cfg.Kafka.OfferReportPenaltyTopic, cfg.Kafka.OfferReportPenaltyGroup)
+	reader := kafkax.NewMessageReader(cfg.Kafka.Brokers, reputationTopic, reputationGroup)
 	kafkaConsumer := kafkax.NewInboxConsumer[dealsusers.ReputationMessage](app.log, reader, cfg.Kafka.PollInterval)
 	app.reputationEventConsumer = consumer.NewReputationInboxConsumer(app.db, app.reputationInboxRepo, kafkaConsumer)
 

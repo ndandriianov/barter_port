@@ -1,4 +1,4 @@
-package offer_report_outbox
+package reputation_events_outbox
 
 import (
 	dealsusers "barter-port/contracts/kafka/messages/deals-users"

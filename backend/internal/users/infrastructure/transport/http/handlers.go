@@ -119,7 +119,7 @@ func (h *Handlers) HandleGetCurrentUserReputationEvents(w http.ResponseWriter, r
 	for _, event := range events {
 		response = append(response, types.ReputationEvent{
 			Id:         event.Id,
-			SourceType: event.SourceType,
+			SourceType: types.ReputationEventSourceType(event.SourceType),
 			SourceId:   event.SourceID,
 			Delta:      event.Delta,
 			CreatedAt:  event.CreatedAt,
@@ -192,7 +192,7 @@ func (h *Handlers) HandleUploadMeAvatar(w http.ResponseWriter, r *http.Request) 
 		slog.String("avatar_url", avatarURL),
 	)
 
-	httpx.WriteJSON(w, http.StatusOK, avatarUploadResponse{AvatarURL: avatarURL})
+	httpx.WriteJSON(w, http.StatusOK, types.AvatarUploadResponse{AvatarUrl: avatarURL})
 }
 
 // ================================================================================
@@ -440,10 +440,6 @@ func (h *Handlers) HandleGetSubscribersByID(w http.ResponseWriter, r *http.Reque
 	}
 
 	httpx.WriteJSON(w, http.StatusOK, makeUsersResponse(users))
-}
-
-type avatarUploadResponse struct {
-	AvatarURL string `json:"avatarUrl"`
 }
 
 func handleUpdateError(w http.ResponseWriter, log *slog.Logger, err error, userID uuid.UUID) {

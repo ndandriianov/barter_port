@@ -49,10 +49,17 @@ type Config struct {
 		UserCreationResultGroup string        `mapstructure:"user_creation_result_group"`
 		OfferReportPenaltyTopic string        `mapstructure:"offer_report_penalty_topic"`
 		OfferReportPenaltyGroup string        `mapstructure:"offer_report_penalty_group"`
+		ReputationTopic         string        `mapstructure:"reputation_topic"`
+		ReputationGroup         string        `mapstructure:"reputation_group"`
 		BatchSize               int           `mapstructure:"batch_size"`
 		PollInterval            time.Duration `mapstructure:"poll_interval"`
 		WriteTimeout            time.Duration `mapstructure:"write_timeout"`
 	} `mapstructure:"kafka"`
+
+	Reputation struct {
+		DealCompletionRewardPoints int `mapstructure:"deal_completion_reward_points"`
+		ReviewCreationRewardPoints int `mapstructure:"review_creation_reward_points"`
+	} `mapstructure:"reputation"`
 
 	Admin struct {
 		Email    string `mapstructure:"email"`
@@ -124,6 +131,8 @@ func LoadConfig(options ConfigOptions) (Config, error) {
 	bindEnv(v, "jwt.access_secret")
 	bindEnv(v, "jwt.refresh_secret")
 	bindEnv(v, "kafka.user_creation_topic")
+	bindEnv(v, "kafka.reputation_topic")
+	bindEnv(v, "kafka.reputation_group")
 	bindEnv(v, "mailer.bypass")
 	bindEnv(v, "admin.email")
 	bindEnv(v, "admin.password")
@@ -134,6 +143,8 @@ func LoadConfig(options ConfigOptions) (Config, error) {
 	bindEnv(v, "storage.access_key_id")
 	bindEnv(v, "storage.secret_access_key")
 	bindEnv(v, "storage.region")
+	bindEnv(v, "reputation.deal_completion_reward_points")
+	bindEnv(v, "reputation.review_creation_reward_points")
 
 	// десериализация в структуру
 	var config Config

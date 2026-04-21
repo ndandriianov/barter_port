@@ -2,6 +2,7 @@ package deals
 
 import (
 	chatspb "barter-port/contracts/grpc/chats/v1"
+	dealsusers "barter-port/contracts/kafka/messages/deals-users"
 	"barter-port/internal/deals/domain"
 	"barter-port/internal/deals/domain/enums"
 	"barter-port/internal/deals/domain/htypes"
@@ -10,6 +11,7 @@ import (
 	failuresrepo "barter-port/internal/deals/infrastructure/repository/failures"
 	"barter-port/internal/deals/infrastructure/repository/joins"
 	"barter-port/internal/deals/infrastructure/repository/offers"
+	reputationoutboxrepo "barter-port/internal/deals/infrastructure/repository/reputation-events-outbox"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/db"
 	"context"
@@ -17,6 +19,7 @@ import (
 	"fmt"
 	"log/slog"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -41,16 +44,19 @@ type PhotoUpload struct {
 }
 
 type Service struct {
-	db               *pgxpool.Pool
-	draftsRepository *drafts.Repository
-	dealsRepository  *deals.Repository
-	failuresRepo     *failuresrepo.Repository
-	joinsRepository  *joins.Repository
-	offersRepository *offers.Repository
-	itemPhotoStorage ItemPhotoStorage
-	chatsClient      chatspb.ChatsServiceClient
-	adminChecker     *authkit.AdminChecker
-	logger           *slog.Logger
+	db                         *pgxpool.Pool
+	draftsRepository           *drafts.Repository
+	dealsRepository            *deals.Repository
+	failuresRepo               *failuresrepo.Repository
+	joinsRepository            *joins.Repository
+	offersRepository           *offers.Repository
+	itemPhotoStorage           ItemPhotoStorage
+	reputationOutbox           *reputationoutboxrepo.Repository
+	dealCompletionRewardPoints int
+	reviewCreationRewardPoints int
+	chatsClient                chatspb.ChatsServiceClient
+	adminChecker               *authkit.AdminChecker
+	logger                     *slog.Logger
 }
 
 func NewService(
@@ -76,6 +82,17 @@ func NewService(
 
 func (s *Service) WithChatsClient(client chatspb.ChatsServiceClient) *Service {
 	s.chatsClient = client
+	return s
+}
+
+func (s *Service) WithReputationOutbox(repo *reputationoutboxrepo.Repository) *Service {
+	s.reputationOutbox = repo
+	return s
+}
+
+func (s *Service) WithReputationRewardPoints(dealCompletionPoints, reviewCreationPoints int) *Service {
+	s.dealCompletionRewardPoints = dealCompletionPoints
+	s.reviewCreationRewardPoints = reviewCreationPoints
 	return s
 }
 
@@ -111,6 +128,18 @@ func (s *Service) JoinsRepository() *joins.Repository {
 
 func (s *Service) OffersRepository() *offers.Repository {
 	return s.offersRepository
+}
+
+func (s *Service) ReputationOutboxRepository() *reputationoutboxrepo.Repository {
+	return s.reputationOutbox
+}
+
+func (s *Service) DealCompletionRewardPoints() int {
+	return s.dealCompletionRewardPoints
+}
+
+func (s *Service) ReviewCreationRewardPoints() int {
+	return s.reviewCreationRewardPoints
 }
 
 func (s *Service) ChatsClient() chatspb.ChatsServiceClient {
@@ -904,6 +933,8 @@ func (s *Service) confirmDeal(ctx context.Context, id uuid.UUID, userID uuid.UUI
 		}
 
 		if allVoted {
+			now := time.Now().UTC()
+
 			if targetStatus == enums.DealStatusDiscussion {
 				ok, err := s.checkParticipants(ctx, tx, id)
 				if err != nil {
@@ -921,6 +952,11 @@ func (s *Service) confirmDeal(ctx context.Context, id uuid.UUID, userID uuid.UUI
 			}
 			if err = s.dealsRepository.DeleteStatusVotes(ctx, tx, id); err != nil {
 				return err
+			}
+			if targetStatus == enums.DealStatusCompleted {
+				if err = s.enqueueDealCompletionRewards(ctx, tx, id, deal.Participants, now); err != nil {
+					return err
+				}
 			}
 		}
 
@@ -1101,6 +1137,36 @@ func (s *Service) EnsureNoPendingFailureReview(ctx context.Context, tx pgx.Tx, d
 	}
 	if hasPending {
 		return domain.ErrFailureReviewRequired
+	}
+
+	return nil
+}
+
+func (s *Service) enqueueDealCompletionRewards(
+	ctx context.Context,
+	tx pgx.Tx,
+	dealID uuid.UUID,
+	participantIDs []uuid.UUID,
+	now time.Time,
+) error {
+	if s.reputationOutbox == nil || s.dealCompletionRewardPoints == 0 {
+		return nil
+	}
+
+	comment := "Начисление за завершение сделки"
+	for _, participantID := range participantIDs {
+		msg := dealsusers.ReputationMessage{
+			ID:         uuid.New(),
+			SourceType: dealsusers.DealCompletionRewardMessageType,
+			SourceID:   dealsusers.BuildDealCompletionRewardSourceID(dealID, participantID),
+			UserID:     participantID,
+			Delta:      s.dealCompletionRewardPoints,
+			CreatedAt:  now,
+			Comment:    &comment,
+		}
+		if err := s.reputationOutbox.WriteOutboxMessage(ctx, tx, msg); err != nil {
+			return fmt.Errorf("write deal completion reward outbox message: %w", err)
+		}
 	}
 
 	return nil

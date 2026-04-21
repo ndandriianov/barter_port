@@ -138,6 +138,50 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /users/subscriptions/{id}:
+    get:
+      tags:
+        - Subscriptions
+      summary: Получить список подписок пользователя
+      description: |
+        Позволяет получить список пользователей, на которых подписан другой пользователь.
+      operationId: getSubscriptionsByUserId
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Список подписок
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/getSubscriptionsResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /users/subscribers:
     get:
       tags:
@@ -180,7 +224,7 @@ paths:
       security:
         - bearerAuth: []
       parameters:
-        - name: userId
+        - name: id
           in: path
           required: true
           schema:
@@ -222,6 +266,8 @@ paths:
         Возвращает информацию о текущем пользователе.
         Обращается к auth сервису для получения email, createdAt и признака admin.
         Также возвращает текущий рейтинг пользователя (`reputationPoints`).
+        В это значение входят как штрафы, так и положительные начисления,
+        включая награду за завершение сделки и за оставление отзыва.
       operationId: getCurrentUser
       security:
         - bearerAuth: []
@@ -385,6 +431,8 @@ paths:
         Возвращает список событий, связанных с изменением репутации текущего пользователя.
         Каждое событие содержит информацию о том, что произошло, сколько очков репутации было добавлено или отнято,
         и когда это произошло.
+        В список входят как штрафы, так и положительные начисления из `deals`,
+        в том числе за завершение сделки и за создание отзыва.
       operationId: getCurrentUserReputationEvents
       security:
         - bearerAuth: []
@@ -466,7 +514,7 @@ components:
           description: Идентификатор пользователя, на которого нужно подписаться
     ReputationPoints:
       type: integer
-      description: Current user reputation score
+      description: Current user reputation score including rewards and penalties
       example: -10
     Me:
       type: object
@@ -531,15 +579,22 @@ components:
           description: Уникальный идентификатор события репутации
         sourceType:
           type: string
+          enum:
+            - deals.offer_report.penalty
+            - deals.deal_failure.responsible
+            - deals.deal_completion.reward
+            - deals.review_creation.reward
           description: |
-            Источник изменения репутации. Возможные варианты: 
-            - "offerreport"
+            Источник изменения репутации.
         sourceId:
           type: string
           format: uuid
           description: |
             Идентификатор источника изменения репутации:
-            - для "offerreport" - id жалобы на оффер
+            - для `deals.offer_report.penalty` - id жалобы на оффер;
+            - для `deals.deal_failure.responsible` - уникальный id события штрафа за провал сделки;
+            - для `deals.deal_completion.reward` - уникальный id начисления за конкретную пару `(dealId, userId)`;
+            - для `deals.review_creation.reward` - уникальный id начисления за review-контекст автора.
         delta:
           type: integer
           description: Изменение репутации (положительное или отрицательное)
@@ -549,7 +604,7 @@ components:
           description: Время изменения репутации
         comment:
           type: string
-          description: Комментарий к изменению репутации (например, причина изменения)
+          description: Комментарий к изменению репутации (например, причина изменения или пояснение начисления)
     GetReputationEventsResponse:
       type: array
       items:

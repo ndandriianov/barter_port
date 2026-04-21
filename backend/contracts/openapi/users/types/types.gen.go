@@ -13,6 +13,30 @@ const (
 	BearerAuthScopes = "bearerAuth.Scopes"
 )
 
+// Defines values for ReputationEventSourceType.
+const (
+	DealsDealCompletionReward   ReputationEventSourceType = "deals.deal_completion.reward"
+	DealsDealFailureResponsible ReputationEventSourceType = "deals.deal_failure.responsible"
+	DealsOfferReportPenalty     ReputationEventSourceType = "deals.offer_report.penalty"
+	DealsReviewCreationReward   ReputationEventSourceType = "deals.review_creation.reward"
+)
+
+// Valid indicates whether the value is a known member of the ReputationEventSourceType enum.
+func (e ReputationEventSourceType) Valid() bool {
+	switch e {
+	case DealsDealCompletionReward:
+		return true
+	case DealsDealFailureResponsible:
+		return true
+	case DealsOfferReportPenalty:
+		return true
+	case DealsReviewCreationReward:
+		return true
+	default:
+		return false
+	}
+}
+
 // AvatarUploadResponse defines model for AvatarUploadResponse.
 type AvatarUploadResponse struct {
 	// AvatarUrl User avatar URL
@@ -56,7 +80,7 @@ type Me struct {
 	// Name User name
 	Name *Name `json:"name,omitempty"`
 
-	// ReputationPoints Current user reputation score
+	// ReputationPoints Current user reputation score including rewards and penalties
 	ReputationPoints ReputationPoints `json:"reputationPoints"`
 }
 
@@ -65,7 +89,7 @@ type Name = string
 
 // ReputationEvent defines model for ReputationEvent.
 type ReputationEvent struct {
-	// Comment Комментарий к изменению репутации (например, причина изменения)
+	// Comment Комментарий к изменению репутации (например, причина изменения или пояснение начисления)
 	Comment *string `json:"comment,omitempty"`
 
 	// CreatedAt Время изменения репутации
@@ -78,15 +102,20 @@ type ReputationEvent struct {
 	Id openapi_types.UUID `json:"id"`
 
 	// SourceId Идентификатор источника изменения репутации:
-	// - для "offerreport" - id жалобы на оффер
+	// - для `deals.offer_report.penalty` - id жалобы на оффер;
+	// - для `deals.deal_failure.responsible` - уникальный id события штрафа за провал сделки;
+	// - для `deals.deal_completion.reward` - уникальный id начисления за конкретную пару `(dealId, userId)`;
+	// - для `deals.review_creation.reward` - уникальный id начисления за review-контекст автора.
 	SourceId openapi_types.UUID `json:"sourceId"`
 
-	// SourceType Источник изменения репутации. Возможные варианты:
-	// - "offerreport"
-	SourceType string `json:"sourceType"`
+	// SourceType Источник изменения репутации.
+	SourceType ReputationEventSourceType `json:"sourceType"`
 }
 
-// ReputationPoints Current user reputation score
+// ReputationEventSourceType Источник изменения репутации.
+type ReputationEventSourceType string
+
+// ReputationPoints Current user reputation score including rewards and penalties
 type ReputationPoints = int
 
 // SubscribeRequest defines model for SubscribeRequest.

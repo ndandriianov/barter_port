@@ -1,6 +1,7 @@
 package deals_users
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -8,6 +9,10 @@ import (
 
 const OfferReportPenaltyMessageType = "deals.offer_report.penalty"
 const DealFailureResponsibleMessageType = "deals.deal_failure.responsible"
+const DealCompletionRewardMessageType = "deals.deal_completion.reward"
+const ReviewCreationRewardMessageType = "deals.review_creation.reward"
+
+var reputationSourceNamespace = uuid.MustParse("2df40a4b-1846-43af-bdbb-61af8dcb23f8")
 
 type ReputationMessage struct {
 	ID         uuid.UUID `db:"id"`
@@ -29,4 +34,30 @@ func (m ReputationMessage) GetCreatedAt() time.Time {
 
 func (m ReputationMessage) GetMessageType() string {
 	return m.SourceType
+}
+
+func BuildDealCompletionRewardSourceID(dealID, userID uuid.UUID) uuid.UUID {
+	return uuid.NewSHA1(reputationSourceNamespace, []byte(fmt.Sprintf("deal-completion:%s:%s", dealID, userID)))
+}
+
+func BuildReviewCreationRewardSourceID(
+	dealID uuid.UUID,
+	itemID, offerID *uuid.UUID,
+	authorID, providerID uuid.UUID,
+) uuid.UUID {
+	return uuid.NewSHA1(reputationSourceNamespace, []byte(fmt.Sprintf(
+		"review-creation:%s:%s:%s:%s:%s",
+		dealID,
+		uuidOrNil(offerID),
+		uuidOrNil(itemID),
+		authorID,
+		providerID,
+	)))
+}
+
+func uuidOrNil(id *uuid.UUID) uuid.UUID {
+	if id == nil {
+		return uuid.Nil
+	}
+	return *id
 }

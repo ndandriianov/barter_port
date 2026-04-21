@@ -1,7 +1,7 @@
 package penalty_outbox
 
 import (
-	offer_report_outbox "barter-port/internal/deals/infrastructure/repository/offer-report-outbox"
+	offer_report_outbox "barter-port/internal/deals/infrastructure/repository/reputation-events-outbox"
 	"barter-port/pkg/db"
 	"barter-port/pkg/kafkax"
 	"context"

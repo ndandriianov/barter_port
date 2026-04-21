@@ -1,6 +1,7 @@
 package integration
 
 import (
+	dealsusers "barter-port/contracts/kafka/messages/deals-users"
 	"barter-port/contracts/openapi/deals/types"
 	"bytes"
 	"context"
@@ -717,6 +718,30 @@ func TestChangeDealStatusConsensusMovesToDiscussion(t *testing.T) {
 
 	secondVote := mustChangeDealStatus(t, dealID, userB, types.Discussion)
 	require.Equal(t, types.Discussion, secondVote.Status)
+}
+
+func TestChangeDealStatusCompletedAwardsReputationToParticipants(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+	dumpUsersLogs(t)
+
+	fixture := globalFixture
+	userA := mustRegisterProjectedUser(t, fixture)
+	userB := mustRegisterProjectedUser(t, fixture)
+
+	dealID, _, _ := mustCreateCompletedReviewableTwoPartyDeal(t, userA, userB)
+
+	sourceIDA := dealsusers.BuildDealCompletionRewardSourceID(dealID, userA)
+	eventA := waitForUserReputationEvent(t, fixture, userA, dealsusers.DealCompletionRewardMessageType, sourceIDA)
+	require.Equal(t, dealCompletionRewardPoints, eventA.Delta)
+	waitForCurrentUserReputationAPIEvent(t, fixture, userA, dealsusers.DealCompletionRewardMessageType, sourceIDA)
+	waitForCurrentUserReputationPoints(t, fixture, userA, dealCompletionRewardPoints)
+
+	sourceIDB := dealsusers.BuildDealCompletionRewardSourceID(dealID, userB)
+	eventB := waitForUserReputationEvent(t, fixture, userB, dealsusers.DealCompletionRewardMessageType, sourceIDB)
+	require.Equal(t, dealCompletionRewardPoints, eventB.Delta)
+	waitForCurrentUserReputationAPIEvent(t, fixture, userB, dealsusers.DealCompletionRewardMessageType, sourceIDB)
+	waitForCurrentUserReputationPoints(t, fixture, userB, dealCompletionRewardPoints)
 }
 
 func TestChangeDealStatusCancelledAppliesImmediately(t *testing.T) {

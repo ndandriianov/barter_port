@@ -16,10 +16,10 @@ import (
 	"barter-port/internal/deals/infrastructure/repository/drafts"
 	failuresrepo "barter-port/internal/deals/infrastructure/repository/failures"
 	"barter-port/internal/deals/infrastructure/repository/joins"
-	offerreportoutboxrepo "barter-port/internal/deals/infrastructure/repository/offer-report-outbox"
 	offerreportsrepo "barter-port/internal/deals/infrastructure/repository/offer-reports"
 	offergroupsrepo "barter-port/internal/deals/infrastructure/repository/offergroups"
 	offersr "barter-port/internal/deals/infrastructure/repository/offers"
+	offerreportoutboxrepo "barter-port/internal/deals/infrastructure/repository/reputation-events-outbox"
 	reviewsrepo "barter-port/internal/deals/infrastructure/repository/reviews"
 	statsrepo "barter-port/internal/deals/infrastructure/repository/statistics"
 	itemphotostorage "barter-port/internal/deals/infrastructure/storage/itemphoto"
@@ -126,6 +126,8 @@ func main() {
 	offerGroupsRepo := offergroupsrepo.NewRepository(db)
 	reviewsRepo := reviewsrepo.NewRepository(dealsRepo)
 	dealsService := dealssvc.NewService(db, draftsRepo, dealsRepo, failuresRepo, joinsRepo, offersRepo, itemPhotoStorage).
+		WithReputationOutbox(offerreportoutboxrepo.NewRepository()).
+		WithReputationRewardPoints(cfg.Reputation.DealCompletionRewardPoints, cfg.Reputation.ReviewCreationRewardPoints).
 		WithAdminChecker(adminChecker).
 		WithLogger(logg)
 	if chatsClient != nil {
@@ -138,23 +140,31 @@ func main() {
 
 	// Offer reports
 	offerReportsRepo := offerreportsrepo.NewRepository(db)
-	offerReportOutboxRepo := offerreportoutboxrepo.NewRepository()
+	offerReportOutboxRepo := dealsService.ReputationOutboxRepository()
 	offerReportsService := offerreportssvc.NewService(db, offersRepo, offerReportsRepo, offerReportOutboxRepo, adminChecker, logg)
 
 	// Penalty outbox Kafka producer
 	topicInitCtx, cancelTopicInit := context.WithTimeout(context.Background(), cfg.Kafka.WriteTimeout)
 	defer cancelTopicInit()
 
-	if err = kafkax.EnsureTopic(topicInitCtx, cfg.Kafka.Brokers, cfg.Kafka.OfferReportPenaltyTopic, 1, 1); err != nil {
-		log.Fatal("failed to ensure offer report penalty topic:", err)
+	reputationTopic := cfg.Kafka.ReputationTopic
+	if reputationTopic == "" {
+		reputationTopic = cfg.Kafka.OfferReportPenaltyTopic
+	}
+	if reputationTopic == "" {
+		log.Fatal("failed to initialize reputation topic: kafka.reputation_topic is not configured")
 	}
 
-	kafkaWriter := kafkax.NewWriter(cfg.Kafka.Brokers, cfg.Kafka.OfferReportPenaltyTopic)
+	if err = kafkax.EnsureTopic(topicInitCtx, cfg.Kafka.Brokers, reputationTopic, 1, 1); err != nil {
+		log.Fatal("failed to ensure reputation topic:", err)
+	}
+
+	kafkaWriter := kafkax.NewWriter(cfg.Kafka.Brokers, reputationTopic)
 	penaltyPublisher := kafkax.NewOutboxPublisher(
 		kafkaWriter,
 		logg,
 		cfg.Kafka.Brokers,
-		cfg.Kafka.OfferReportPenaltyTopic,
+		reputationTopic,
 		cfg.Kafka.BatchSize,
 		cfg.Kafka.PollInterval,
 		cfg.Kafka.WriteTimeout,
