@@ -70,15 +70,22 @@ ReputationEvent:
       description: Уникальный идентификатор события репутации
     sourceType:
       type: string
+      enum:
+        - deals.offer_report.penalty
+        - deals.deal_failure.responsible
+        - deals.deal_completion.reward
+        - deals.review_creation.reward
       description: |
-        Источник изменения репутации. Возможные варианты: 
-        - "offerreport"
+        Источник изменения репутации.
     sourceId:
       type: string
       format: uuid
       description: |
         Идентификатор источника изменения репутации:
-        - для "offerreport" - id жалобы на оффер
+        - для `deals.offer_report.penalty` - id жалобы на оффер;
+        - для `deals.deal_failure.responsible` - уникальный id события штрафа за провал сделки;
+        - для `deals.deal_completion.reward` - уникальный id начисления за конкретную пару `(dealId, userId)`;
+        - для `deals.review_creation.reward` - уникальный id начисления за review-контекст автора.
     delta:
       type: integer
       description: Изменение репутации (положительное или отрицательное)
@@ -88,4 +95,4 @@ ReputationEvent:
       description: Время изменения репутации
     comment:
       type: string
-      description: Комментарий к изменению репутации (например, причина изменения)
+      description: Комментарий к изменению репутации (например, причина изменения или пояснение начисления)

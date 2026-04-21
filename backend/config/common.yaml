@@ -17,9 +17,15 @@ kafka:
   user_creation_result_group: "auth-service-ucr"
   offer_report_penalty_topic: "deals-users.offer-report-penalty"
   offer_report_penalty_group: "users-service-orp"
+  reputation_topic: "deals-users.reputation"
+  reputation_group: "users-service-reputation"
   batch_size: 100
   poll_interval: 2s
   write_timeout: 10s
+
+reputation:
+  deal_completion_reward_points: 5
+  review_creation_reward_points: 2
 
 frontend:
   url: "http://localhost:5173"

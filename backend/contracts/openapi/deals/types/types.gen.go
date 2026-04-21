@@ -1112,7 +1112,7 @@ type GetDealsParams struct {
 	// My False by default. Если true, возвращает только сделки, в которых текущий пользователь является участником
 	My *bool `form:"my,omitempty" json:"my,omitempty"`
 
-	// Open False by default. Если true, возвращает только открытые сделки
+	// Open False by default. Если true, возвращает только сделки в статусе `LookingForParticipants`
 	Open *bool `form:"open,omitempty" json:"open,omitempty"`
 }
 

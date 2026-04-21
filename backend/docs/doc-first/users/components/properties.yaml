@@ -22,5 +22,5 @@ AvatarUrl:
 
 ReputationPoints:
   type: integer
-  description: Current user reputation score
+  description: Current user reputation score including rewards and penalties
   example: -10
