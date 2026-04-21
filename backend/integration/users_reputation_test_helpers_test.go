@@ -155,24 +155,6 @@ func waitForUserReputationEvent(
 	return event
 }
 
-func mustFindReputationEvent(
-	t *testing.T,
-	events usertypes.GetReputationEventsResponse,
-	sourceType string,
-	sourceID uuid.UUID,
-) usertypes.ReputationEvent {
-	t.Helper()
-
-	for _, event := range events {
-		if string(event.SourceType) == sourceType && uuid.UUID(event.SourceId) == sourceID {
-			return event
-		}
-	}
-
-	require.FailNowf(t, "reputation event not found", "source_type=%s source_id=%s", sourceType, sourceID)
-	return usertypes.ReputationEvent{}
-}
-
 func waitForCurrentUserReputationAPIEvent(
 	t *testing.T,
 	fixture *Fixture,
