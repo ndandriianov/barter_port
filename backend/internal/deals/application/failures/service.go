@@ -8,7 +8,7 @@ import (
 	"barter-port/internal/deals/domain/enums"
 	"barter-port/internal/deals/domain/htypes"
 	failuresrepo "barter-port/internal/deals/infrastructure/repository/failures"
-	outbox "barter-port/internal/deals/infrastructure/repository/offer-report-outbox"
+	outbox "barter-port/internal/deals/infrastructure/repository/reputation-events-outbox"
 	"barter-port/pkg/db"
 	"context"
 	"errors"
