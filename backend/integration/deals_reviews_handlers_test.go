@@ -42,8 +42,8 @@ func TestCreateDealItemReviewSuccess(t *testing.T) {
 	dumpUsersLogs(t)
 
 	fixture := globalFixture
-	userA := uuid.New()
-	userB := uuid.New()
+	userA := mustRegisterProjectedUser(t, fixture)
+	userB := mustRegisterProjectedUser(t, fixture)
 	dealID, itemIDByA, _ := mustCreateCompletedReviewableTwoPartyDeal(t, userA, userB)
 	comment := "excellent"
 
@@ -307,7 +307,7 @@ func TestDeleteReviewSuccessAllowsRecreate(t *testing.T) {
 	dumpUsersLogs(t)
 
 	fixture := globalFixture
-	ctx := mustCreateReviewedOfferItemContext(t)
+	ctx := mustCreateReviewedOfferItemContextWithRegisteredUsers(t)
 	sourceID := dealsusers.BuildReviewCreationRewardSourceID(ctx.DealID, &ctx.ItemID, &ctx.OfferID, ctx.ReceiverID, ctx.ProviderID)
 	waitForCurrentUserReputationPoints(t, fixture, ctx.ReceiverID, dealCompletionRewardPoints+reviewCreationRewardPoints)
 

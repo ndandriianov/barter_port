@@ -32,6 +32,15 @@ func dumpUsersLogs(t *testing.T) {
 	DumpLogsOnFailure(t, globalFixture.Users, "users")
 }
 
+func mustRegisterProjectedUser(t *testing.T, fixture *Fixture) uuid.UUID {
+	t.Helper()
+
+	registered := registerAuthUser(t, fixture)
+	waitForUsersProjection(t, fixture, registered.UserID)
+
+	return registered.UserID
+}
+
 func mustGetCurrentUser(t *testing.T, fixture *Fixture, userID uuid.UUID) usertypes.Me {
 	t.Helper()
 
