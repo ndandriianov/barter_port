@@ -97,6 +97,10 @@ function CreateOfferForm({ mode = "create", offer }: CreateOfferFormProps) {
     setTagsInput(normalizeOfferTags([...parsedTags, tag]).join(", "));
   };
 
+  const handleRemoveTag = (tagToRemove: string) => {
+    setTagsInput(normalizeOfferTags(parsedTags.filter((tag) => tag !== tagToRemove)).join(", "));
+  };
+
   const handleSelectPhotos = () => {
     fileInputRef.current?.click();
   };
@@ -193,7 +197,7 @@ function CreateOfferForm({ mode = "create", offer }: CreateOfferFormProps) {
         {parsedTags.length > 0 && (
           <Box display="flex" gap={1} flexWrap="wrap" mt={1.5}>
             {parsedTags.map((tag) => (
-              <Chip key={tag} label={tag} size="small" />
+              <Chip key={tag} label={tag} size="small" clickable onClick={() => handleRemoveTag(tag)} />
             ))}
           </Box>
         )}
