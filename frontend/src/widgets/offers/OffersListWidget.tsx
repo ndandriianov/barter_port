@@ -266,6 +266,10 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
     setWithoutTagsOnly(false);
   };
 
+  const handleRemoveTag = (tagToRemove: string) => {
+    setTagsInput(normalizeOfferTags(parsedTags.filter((tag) => tag !== tagToRemove)).join(", "));
+  };
+
   return (
     <Box>
       <Box display="flex" alignItems="center" gap={2} mb={3} flexWrap="wrap">
@@ -323,7 +327,13 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
             {parsedTags.length > 0 && (
               <Box display="flex" gap={0.75} flexWrap="wrap">
                 {parsedTags.map((tag) => (
-                  <Chip key={tag} label={`#${tag}`} size="small" />
+                  <Chip
+                    key={tag}
+                    label={`#${tag}`}
+                    size="small"
+                    clickable
+                    onClick={() => handleRemoveTag(tag)}
+                  />
                 ))}
               </Box>
             )}
