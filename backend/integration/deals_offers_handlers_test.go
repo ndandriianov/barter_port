@@ -400,6 +400,7 @@ func TestGetOffersByTimeSupportsCursorPaginationWithinSameSecond(t *testing.T) {
 	dumpDealsLogs(t)
 
 	userID := uuid.New()
+	myOffersOnly := true
 	newerOfferID := mustCreateOffer(t, userID)
 	olderOfferID := mustCreateOffer(t, userID)
 
@@ -407,12 +408,12 @@ func TestGetOffersByTimeSupportsCursorPaginationWithinSameSecond(t *testing.T) {
 	mustSetOfferCreatedAt(t, newerOfferID, baseTime.Add(900*time.Millisecond))
 	mustSetOfferCreatedAt(t, olderOfferID, baseTime.Add(500*time.Millisecond))
 
-	firstPage := mustGetOffersPage(t, userID, "ByTime", nil, 1, nil)
+	firstPage := mustGetOffersPage(t, userID, "ByTime", nil, 1, &myOffersOnly)
 	require.Len(t, firstPage.Offers, 1)
 	require.Equal(t, newerOfferID, firstPage.Offers[0].Id)
 	require.NotNil(t, firstPage.NextCursor)
 
-	secondPage := mustGetOffersPage(t, userID, "ByTime", firstPage.NextCursor, 1, nil)
+	secondPage := mustGetOffersPage(t, userID, "ByTime", firstPage.NextCursor, 1, &myOffersOnly)
 	require.Len(t, secondPage.Offers, 1)
 	require.Equal(t, olderOfferID, secondPage.Offers[0].Id)
 }
