@@ -679,7 +679,9 @@ func extractTagFilter(tagFilter *[]string) ([]string, bool) {
 		return nil, false
 	}
 
-	return append([]string(nil), (*tagFilter)...), true
+	result := make([]string, len(*tagFilter))
+	copy(result, *tagFilter)
+	return result, true
 }
 
 func (s *Service) cleanupUploadedPhotos(ctx context.Context, offerID uuid.UUID, positions []int) {

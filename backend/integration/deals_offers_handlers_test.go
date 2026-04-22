@@ -361,9 +361,11 @@ func TestGetOffersFiltersByTagsFromBody(t *testing.T) {
 		Action:      types.Give,
 	})
 
-	result := mustGetOffersBySortAndTags(t, userID, "ByTime", nil, &fullTags)
+	my := true
+	result := mustGetOffersBySortAndTags(t, userID, "ByTime", &my, &fullTags)
 	require.Len(t, result.Offers, 1)
 	require.Equal(t, target.Id, result.Offers[0].Id)
+	require.Equal(t, userID, result.Offers[0].AuthorId)
 	require.Equal(t, []types.TagName{"filteralpha", "filterbeta"}, result.Offers[0].Tags)
 }
 
@@ -387,9 +389,11 @@ func TestGetOffersFiltersByEmptyTagsArray(t *testing.T) {
 	})
 
 	emptyTags := []types.TagName{}
-	result := mustGetOffersBySortAndTags(t, userID, "ByTime", nil, &emptyTags)
+	my := true
+	result := mustGetOffersBySortAndTags(t, userID, "ByTime", &my, &emptyTags)
 	require.Len(t, result.Offers, 1)
 	require.Equal(t, untagged.Id, result.Offers[0].Id)
+	require.Equal(t, userID, result.Offers[0].AuthorId)
 	require.Empty(t, result.Offers[0].Tags)
 }
 
