@@ -3,6 +3,7 @@ package integration
 import (
 	"barter-port/contracts/openapi/deals/types"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -247,6 +248,64 @@ func mustGetSubscribedOffersBySort(t *testing.T, userID uuid.UUID, sort string) 
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
 
 	return result
+}
+
+func mustAddOfferToFavorites(t *testing.T, userID uuid.UUID, offerID uuid.UUID) {
+	t.Helper()
+
+	req := mustUserRequest(t, http.MethodPut, dealsURL()+"/offers/"+offerID.String()+"/favorite", userID, nil)
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusNoContent, resp.StatusCode)
+}
+
+func mustRemoveOfferFromFavorites(t *testing.T, userID uuid.UUID, offerID uuid.UUID) {
+	t.Helper()
+
+	req := mustUserRequest(t, http.MethodDelete, dealsURL()+"/offers/"+offerID.String()+"/favorite", userID, nil)
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusNoContent, resp.StatusCode)
+}
+
+func mustGetFavoriteOffers(t *testing.T, userID uuid.UUID) types.ListFavoriteOffersResponse {
+	t.Helper()
+
+	return mustGetFavoriteOffersPage(t, userID, nil, 100)
+}
+
+func mustGetFavoriteOffersPage(
+	t *testing.T,
+	userID uuid.UUID,
+	cursor *types.FavoriteOffersCursor,
+	limit int,
+) types.ListFavoriteOffersResponse {
+	t.Helper()
+
+	values := url.Values{}
+	values.Set("cursor_limit", fmt.Sprintf("%d", limit))
+	if cursor != nil {
+		values.Set("cursor_favorited_at", cursor.FavoritedAt.Format(time.RFC3339Nano))
+		values.Set("cursor_id", cursor.Id.String())
+	}
+
+	req := mustUserRequest(t, http.MethodGet, dealsURL()+"/offers/favorites?"+values.Encode(), userID, nil)
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var result types.ListFavoriteOffersResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
+
+	return result
+}
+
+func mustSetOfferHidden(t *testing.T, offerID uuid.UUID, hidden bool) {
+	t.Helper()
+
+	pool := OpenDatabase(t, globalFixture, "deals_db")
+	_, err := pool.Exec(context.Background(), `UPDATE offers SET is_hidden = $2 WHERE id = $1`, offerID, hidden)
+	require.NoError(t, err)
 }
 
 func mustSubscribeToUser(t *testing.T, subscriberID, targetUserID uuid.UUID) {
