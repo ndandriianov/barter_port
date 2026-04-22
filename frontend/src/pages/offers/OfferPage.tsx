@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import { Alert, Box, Button, CircularProgress, Dialog, DialogContent, Divider, ImageList, ImageListItem, Typography } from "@mui/material";
+import FavoriteBorderOutlinedIcon from "@mui/icons-material/FavoriteBorderOutlined";
+import FavoriteRoundedIcon from "@mui/icons-material/FavoriteRounded";
 import offersApi from "@/features/offers/api/offersApi";
 import usersApi from "@/features/users/api/usersApi";
 import useDraftOfferCounts from "@/features/deals/model/useDraftOfferCounts.ts";
@@ -17,10 +19,13 @@ function OfferPage() {
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
   const [openedPhotoUrl, setOpenedPhotoUrl] = useState<string | null>(null);
   const [reportSuccessMessage, setReportSuccessMessage] = useState<string | null>(null);
+  const [favoriteOverride, setFavoriteOverride] = useState<{ offerId: string; value: boolean } | null>(null);
   const viewedOfferIdsRef = useRef<Set<string>>(new Set());
   const { data: meData } = usersApi.useGetCurrentUserQuery();
   const [deleteOffer, { isLoading: isDeleting, error: deleteError }] = offersApi.useDeleteOfferMutation();
   const [viewOfferById] = offersApi.useViewOfferByIdMutation();
+  const [addOfferToFavorites, { isLoading: isAddingToFavorites }] = offersApi.useAddOfferToFavoritesMutation();
+  const [removeOfferFromFavorites, { isLoading: isRemovingFromFavorites }] = offersApi.useRemoveOfferFromFavoritesMutation();
 
   const { data: offer, isLoading, error } = offersApi.useGetOfferByIdQuery(offerId ?? "", {
     skip: !offerId,
@@ -30,6 +35,7 @@ function OfferPage() {
   });
   const isAdmin = meData?.isAdmin === true;
   const isOwnOffer = !!meData && !!offer && offer.authorId === meData.id;
+  const isFavoriteActionLoading = isAddingToFavorites || isRemovingFromFavorites;
   const { countsByOfferId } = useDraftOfferCounts({ enabled: isOwnOffer });
 
   useEffect(() => {
@@ -58,6 +64,11 @@ function OfferPage() {
   }
 
   const canRespond = !!meData && offer.authorId !== meData.id;
+  const displayedIsFavorite = favoriteOverride?.offerId === offer.id ? favoriteOverride.value : offer.isFavorite;
+  const displayedOffer = {
+    ...offer,
+    isFavorite: displayedIsFavorite,
+  };
 
   const handleDelete = async () => {
     if (!window.confirm("Удалить объявление?")) {
@@ -72,6 +83,26 @@ function OfferPage() {
     }
   };
 
+  const handleToggleFavorite = async () => {
+    const nextIsFavorite = !displayedIsFavorite;
+    setFavoriteOverride({ offerId: offer.id, value: nextIsFavorite });
+
+    try {
+      if (nextIsFavorite) {
+        await addOfferToFavorites(offer.id).unwrap();
+        return;
+      }
+
+      await removeOfferFromFavorites(offer.id).unwrap();
+    } catch {
+      setFavoriteOverride(null);
+    }
+  };
+
+  const handleFavoriteChange = (_offerId: string, isFavorite: boolean) => {
+    setFavoriteOverride({ offerId: offer.id, value: isFavorite });
+  };
+
   return (
     <Box maxWidth={700} mx="auto">
       <Button
@@ -84,11 +115,12 @@ function OfferPage() {
       </Button>
 
       <Typography variant="h4" fontWeight={700} mb={3}>
-        {offer.name}
+        {displayedOffer.name}
       </Typography>
 
       <OfferCard
-        offer={offer}
+        offer={displayedOffer}
+        onFavoriteChange={handleFavoriteChange}
         showModerationState={isOwnOffer || isAdmin}
         draftCount={isOwnOffer ? (countsByOfferId[offer.id] ?? 0) : 0}
         draftsHref={
@@ -167,6 +199,17 @@ function OfferPage() {
             Откликнуться
           </Button>
         )}
+        {canRespond && (
+          <Button
+            variant={displayedIsFavorite ? "contained" : "outlined"}
+            color={displayedIsFavorite ? "error" : "inherit"}
+            startIcon={displayedIsFavorite ? <FavoriteRoundedIcon /> : <FavoriteBorderOutlinedIcon />}
+            onClick={() => void handleToggleFavorite()}
+            disabled={isFavoriteActionLoading}
+          >
+            {displayedIsFavorite ? "В избранном" : "В избранное"}
+          </Button>
+        )}
         {isOwnOffer && (
           <Button
             component={RouterLink}
@@ -204,7 +247,7 @@ function OfferPage() {
       </Box>
 
       <RespondToOfferModal
-        targetOffer={offer}
+        targetOffer={displayedOffer}
         isOpen={isRespondModalOpen}
         onClose={() => setIsRespondModalOpen(false)}
       />

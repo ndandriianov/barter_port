@@ -1,6 +1,7 @@
 import {createApi} from "@reduxjs/toolkit/query/react";
 import {baseQueryWithReauth} from "@/shared/api/baseApi.ts";
 import {
+  getFavoriteOffersResponseSchema,
   getOffersResponseSchema,
   listTagsResponseSchema,
   listOfferReportsResponseSchema,
@@ -12,6 +13,8 @@ import {
 import type {
   CreateOfferReportRequest,
   CreateOfferRequest,
+  GetFavoriteOffersParams,
+  GetFavoriteOffersResponse,
   GetOffersParams,
   GetOffersResponse,
   GetSubscribedOffersParams,
@@ -29,7 +32,7 @@ import type {
 const offersApi = createApi({
   reducerPath: "offersApi",
   baseQuery: baseQueryWithReauth,
-  tagTypes: ["Offers", "OfferReports", "AdminOfferReports", "Tags"],
+  tagTypes: ["Offers", "FavoriteOffers", "OfferReports", "AdminOfferReports", "Tags"],
   endpoints: (builder) => ({
     getOffers: builder.query<GetOffersResponse, GetOffersParams>({
       query: (params) => ({
@@ -49,6 +52,18 @@ const offersApi = createApi({
       providesTags: ["Offers"],
     }),
 
+    getFavoriteOffers: builder.query<GetFavoriteOffersResponse, GetFavoriteOffersParams | void>({
+      query: (params) =>
+        params
+          ? {
+              url: "/offers/favorites",
+              params,
+            }
+          : "/offers/favorites",
+      transformResponse: (response: unknown) => getFavoriteOffersResponseSchema.parse(response),
+      providesTags: ["FavoriteOffers", "Offers"],
+    }),
+
     getOfferById: builder.query<Offer, string>({
       query: (offerId) => `/offers/${offerId}`,
       transformResponse: (response: unknown) => offerSchema.parse(response),
@@ -61,6 +76,30 @@ const offersApi = createApi({
         method: "POST",
       }),
       invalidatesTags: (_result, _error, offerId) => ["Offers", {type: "Offers", id: offerId}],
+    }),
+
+    addOfferToFavorites: builder.mutation<void, string>({
+      query: (offerId) => ({
+        url: `/offers/${offerId}/favorite`,
+        method: "PUT",
+      }),
+      invalidatesTags: (_result, _error, offerId) => [
+        "Offers",
+        "FavoriteOffers",
+        { type: "Offers", id: offerId },
+      ],
+    }),
+
+    removeOfferFromFavorites: builder.mutation<void, string>({
+      query: (offerId) => ({
+        url: `/offers/${offerId}/favorite`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (_result, _error, offerId) => [
+        "Offers",
+        "FavoriteOffers",
+        { type: "Offers", id: offerId },
+      ],
     }),
 
     createOffer: builder.mutation<void, CreateOfferRequest>({

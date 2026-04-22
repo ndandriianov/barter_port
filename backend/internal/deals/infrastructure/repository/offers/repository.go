@@ -439,3 +439,57 @@ func (r *Repository) DeleteOffer(ctx context.Context, exec db.DB, offerID uuid.U
 
 	return domain.ErrForbidden
 }
+
+func (r *Repository) AddOfferToFavorites(ctx context.Context, exec db.DB, userID uuid.UUID, offerID uuid.UUID) error {
+	const query = `
+		INSERT INTO favorite_offers (user_id, offer_id)
+		VALUES ($1, $2)
+		ON CONFLICT (user_id, offer_id) DO NOTHING
+	`
+
+	if _, err := exec.Exec(ctx, query, userID, offerID); err != nil {
+		return fmt.Errorf("sql add offer to favorites: %w", err)
+	}
+
+	return nil
+}
+
+func (r *Repository) RemoveOfferFromFavorites(ctx context.Context, exec db.DB, userID uuid.UUID, offerID uuid.UUID) error {
+	if _, err := exec.Exec(ctx, `DELETE FROM favorite_offers WHERE user_id = $1 AND offer_id = $2`, userID, offerID); err != nil {
+		return fmt.Errorf("sql remove offer from favorites: %w", err)
+	}
+
+	return nil
+}
+
+func (r *Repository) GetFavoriteOfferIDs(ctx context.Context, userID uuid.UUID, offerIDs []uuid.UUID) (map[uuid.UUID]bool, error) {
+	result := make(map[uuid.UUID]bool, len(offerIDs))
+	if len(offerIDs) == 0 {
+		return result, nil
+	}
+
+	rows, err := r.db.Query(ctx, `
+		SELECT offer_id
+		FROM favorite_offers
+		WHERE user_id = $1
+		  AND offer_id = ANY($2)
+	`, userID, offerIDs)
+	if err != nil {
+		return nil, fmt.Errorf("sql get favorite offer ids: %w", err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		var offerID uuid.UUID
+		if err := rows.Scan(&offerID); err != nil {
+			return nil, fmt.Errorf("scan favorite offer id: %w", err)
+		}
+		result[offerID] = true
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate favorite offer ids: %w", err)
+	}
+
+	return result, nil
+}

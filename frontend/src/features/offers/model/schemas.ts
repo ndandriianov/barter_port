@@ -18,6 +18,7 @@ export const offerSchema = z.object({
   createdAt: z.string(),
   updatedAt: z.string().nullish(),
   isHidden: z.boolean().nullish().transform((value) => value ?? false),
+  isFavorite: z.boolean().nullish().transform((value) => value ?? false),
   modificationBlocked: z.boolean().nullish().transform((value) => value ?? false),
 });
 
@@ -68,6 +69,20 @@ export const universalCursorSchema = z.object({
 export const getOffersResponseSchema = z.object({
   offers: z.array(offerSchema),
   nextCursor: universalCursorSchema.nullish().transform((value) => value ?? null),
+});
+
+export const favoriteOffersCursorSchema = z.object({
+  id: z.string(),
+  favoritedAt: z.string(),
+});
+
+export const favoritedOfferSchema = offerSchema.extend({
+  favoritedAt: z.string(),
+});
+
+export const getFavoriteOffersResponseSchema = z.object({
+  offers: z.array(favoritedOfferSchema),
+  nextCursor: favoriteOffersCursorSchema.nullish().transform((value) => value ?? null),
 });
 
 export const listTagsResponseSchema = z.array(z.string());

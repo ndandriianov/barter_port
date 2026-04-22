@@ -497,13 +497,11 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 		return nil, fmt.Errorf("fedor vote for failure: %w", err)
 	}
 
-	punishmentPoints := 10
-	comment := "Сделка провалена по вине Fedor: товар не соответствовал описанию."
 	if err := client.moderatorResolutionForFailure(ctx, adminToken, failedDealID, dealtypes.ModeratorResolutionForFailureRequest{
 		Confirmed:        true,
 		UserId:           &fedor.UserID,
-		PunishmentPoints: &punishmentPoints,
-		Comment:          &comment,
+		PunishmentPoints: new(10),
+		Comment:          new("Сделка провалена по вине Fedor: товар не соответствовал описанию."),
 	}); err != nil {
 		return nil, fmt.Errorf("moderator resolution for failure: %w", err)
 	}
@@ -540,8 +538,7 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 		return nil, fmt.Errorf("create accepted report: %w", err)
 	}
 
-	acceptComment := "Повторная публикация — нарушение правил."
-	if _, err := client.resolveOfferReport(ctx, adminToken, acceptedReport.Id, true, &acceptComment); err != nil {
+	if _, err := client.resolveOfferReport(ctx, adminToken, acceptedReport.Id, true, new("Повторная публикация — нарушение правил.")); err != nil {
 		return nil, fmt.Errorf("resolve accepted report: %w", err)
 	}
 
@@ -552,8 +549,7 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 		return nil, fmt.Errorf("create rejected report: %w", err)
 	}
 
-	rejectComment := "Жалоба не подтверждена: объявление соответствует правилам площадки."
-	if _, err := client.resolveOfferReport(ctx, adminToken, rejectedReport.Id, false, &rejectComment); err != nil {
+	if _, err := client.resolveOfferReport(ctx, adminToken, rejectedReport.Id, false, new("Жалоба не подтверждена: объявление соответствует правилам площадки.")); err != nil {
 		return nil, fmt.Errorf("resolve rejected report: %w", err)
 	}
 

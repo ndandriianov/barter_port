@@ -58,8 +58,12 @@ paths:
     $ref: './paths/tags.yaml#/tagsCollection'
   /offers/subscriptions:
     $ref: './paths/offers.yaml#/subscribedOffers'
+  /offers/favorites:
+    $ref: './paths/offers.yaml#/favoriteOffers'
   /offers/{offerId}:
     $ref: './paths/offers.yaml#/offerById'
+  /offers/{offerId}/favorite:
+    $ref: './paths/offers.yaml#/offerFavoriteById'
   /offers/{offerId}/view:
     $ref: './paths/offers.yaml#/viewOfferById'
   /offers/{offerId}/reports:

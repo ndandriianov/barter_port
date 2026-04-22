@@ -1,6 +1,9 @@
-import { Box, Button, Card, CardContent, CardMedia, Chip, Typography } from "@mui/material";
+import { useState } from "react";
+import { Box, Button, Card, CardContent, CardMedia, Chip, IconButton, Tooltip, Typography } from "@mui/material";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
+import FavoriteBorderOutlinedIcon from "@mui/icons-material/FavoriteBorderOutlined";
+import FavoriteRoundedIcon from "@mui/icons-material/FavoriteRounded";
 import StarRoundedIcon from "@mui/icons-material/StarRounded";
 import { Link as RouterLink } from "react-router-dom";
 import type { Offer, OfferAction, OfferType } from "@/features/offers/model/types";
@@ -42,6 +45,7 @@ interface OfferCardProps {
   offerHref?: string;
   draftsHref?: string;
   onPhotoClick?: (photoUrl: string) => void;
+  onFavoriteChange?: (offerId: string, isFavorite: boolean) => void;
   showModerationState?: boolean;
   isMine?: boolean;
 }
@@ -53,6 +57,7 @@ function OfferCard({
   offerHref,
   draftsHref,
   onPhotoClick,
+  onFavoriteChange,
   showModerationState = false,
   isMine = false,
 }: OfferCardProps) {
@@ -64,8 +69,31 @@ function OfferCard({
   const { data: offerReports } = offersApi.useGetOfferReportsQuery(offer.id, {
     skip: !showModerationState,
   });
+  const [addOfferToFavorites, { isLoading: isAddingToFavorites }] = offersApi.useAddOfferToFavoritesMutation();
+  const [removeOfferFromFavorites, { isLoading: isRemovingFromFavorites }] = offersApi.useRemoveOfferFromFavoritesMutation();
   const moderationState = getOfferModerationState(offer, offerReports);
   const moderationLabel = getOfferModerationLabel(moderationState);
+  const isFavoriteActionLoading = isAddingToFavorites || isRemovingFromFavorites;
+  const [favoriteOverride, setFavoriteOverride] = useState<boolean | null>(null);
+  const isFavorite = favoriteOverride ?? offer.isFavorite;
+
+  const handleToggleFavorite = async () => {
+    const nextIsFavorite = !isFavorite;
+    setFavoriteOverride(nextIsFavorite);
+    onFavoriteChange?.(offer.id, nextIsFavorite);
+
+    try {
+      if (nextIsFavorite) {
+        await addOfferToFavorites(offer.id).unwrap();
+        return;
+      }
+
+      await removeOfferFromFavorites(offer.id).unwrap();
+    } catch {
+      setFavoriteOverride(null);
+      onFavoriteChange?.(offer.id, !nextIsFavorite);
+    }
+  };
 
   return (
     <Card variant="outlined" sx={{ height: "100%", display: "flex", flexDirection: "column" }}>
@@ -85,21 +113,35 @@ function OfferCard({
         />
       )}
       <CardContent sx={{ flexGrow: 1 }}>
-        <Box display="flex" gap={1} mb={1} flexWrap="wrap">
-          {isMine && <Chip label="Мой" size="small" color="secondary" />}
-          <Chip label={typeLabels[offer.type]} size="small" variant="outlined" />
-          <Chip label={actionLabels[offer.action]} size="small" color={actionColors[offer.action]} />
-          {moderationLabel && (
-            <Chip
-              label={moderationLabel}
-              size="small"
-              color={moderationState === "hidden" ? "error" : moderationState === "pending" ? "warning" : "info"}
-              variant={moderationState === "hidden" ? "filled" : "outlined"}
-            />
-          )}
-          {draftCount > 0 && (
-            <Chip label={`Черновики: ${draftCount}`} size="small" color="warning" variant="outlined" />
-          )}
+        <Box display="flex" justifyContent="space-between" alignItems="flex-start" gap={1} mb={1}>
+          <Box display="flex" gap={1} flexWrap="wrap">
+            {isMine && <Chip label="Мой" size="small" color="secondary" />}
+            <Chip label={typeLabels[offer.type]} size="small" variant="outlined" />
+            <Chip label={actionLabels[offer.action]} size="small" color={actionColors[offer.action]} />
+            {moderationLabel && (
+              <Chip
+                label={moderationLabel}
+                size="small"
+                color={moderationState === "hidden" ? "error" : moderationState === "pending" ? "warning" : "info"}
+                variant={moderationState === "hidden" ? "filled" : "outlined"}
+              />
+            )}
+            {draftCount > 0 && (
+              <Chip label={`Черновики: ${draftCount}`} size="small" color="warning" variant="outlined" />
+            )}
+          </Box>
+          <Tooltip title={isFavorite ? "Убрать из избранного" : "Добавить в избранное"}>
+            <span>
+              <IconButton
+                size="small"
+                color={isFavorite ? "error" : "default"}
+                onClick={() => void handleToggleFavorite()}
+                disabled={isFavoriteActionLoading}
+              >
+                {isFavorite ? <FavoriteRoundedIcon /> : <FavoriteBorderOutlinedIcon />}
+              </IconButton>
+            </span>
+          </Tooltip>
         </Box>
 
         <Typography variant="h6" fontWeight={600} gutterBottom noWrap>

@@ -2216,6 +2216,52 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /offers/favorites:
+    get:
+      tags:
+        - offers
+        - favorites
+      summary: Список избранных объявлений
+      description: |
+        Возвращает список объявлений, которые текущий пользователь добавил в избранное.
+
+        Список сортируется по времени добавления в избранное: сначала новые.
+
+        Применяются обычные правила видимости объявлений:
+        - если объявление скрыто и недоступно текущему пользователю, оно не возвращается;
+        - если объявление было удалено, запись в избранном удаляется каскадно.
+      operationId: listFavoriteOffers
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/CursorFavoritedAt'
+        - $ref: '#/components/parameters/CursorId'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Страница избранных объявлений
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListFavoriteOffersResponse'
+        '400':
+          description: Некорректные параметры запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /offers/{offerId}:
     get:
       tags:
@@ -2361,6 +2407,97 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Offer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /offers/{offerId}/favorite:
+    put:
+      tags:
+        - offers
+        - favorites
+      summary: Добавить объявление в избранное
+      description: |
+        Добавляет объявление в избранное текущего пользователя.
+
+        Операция идемпотентна:
+        - если объявление уже находится в избранном, сервер всё равно возвращает `204 No Content`;
+        - объявление должно существовать и быть доступно текущему пользователю по обычным правилам видимости.
+      operationId: addOfferToFavorites
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: offerId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Объявление находится в избранном
+        '400':
+          description: Invalid offer ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Offer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - offers
+        - favorites
+      summary: Удалить объявление из избранного
+      description: |
+        Удаляет объявление из избранного текущего пользователя.
+
+        Операция идемпотентна:
+        - если объявления нет в избранном, сервер всё равно возвращает `204 No Content`;
+        - существование самого объявления для удаления из избранного не требуется.
+      operationId: removeOfferFromFavorites
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: offerId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Объявление удалено из избранного
+        '400':
+          description: Invalid offer ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
           content:
             application/json:
               schema:
@@ -3348,6 +3485,11 @@ components:
           format: date-time
           description: Временная метка последнего обновления объявления
           example: '2026-03-05T12:00:00Z'
+        isFavorite:
+          type: boolean
+          description: |
+            Находится ли объявление в избранном у текущего пользователя.
+            Поле актуально только в контексте авторизованного пользователя.
         isHidden:
           type: boolean
           description: |
@@ -4160,6 +4302,48 @@ components:
       type: array
       items:
         $ref: '#/components/schemas/TagName'
+    FavoritedOffer:
+      allOf:
+        - $ref: '#/components/schemas/Offer'
+        - type: object
+          required:
+            - favoritedAt
+          properties:
+            favoritedAt:
+              type: string
+              format: date-time
+              description: Временная метка добавления объявления в избранное
+              example: '2026-03-10T09:30:00Z'
+    FavoriteOffersCursor:
+      type: object
+      description: Курсор для стабильной пагинации списка избранных объявлений
+      required:
+        - favoritedAt
+        - id
+      properties:
+        favoritedAt:
+          type: string
+          format: date-time
+          example: '2026-03-10T09:30:00Z'
+        id:
+          type: string
+          format: uuid
+          example: 550e8400-e29b-41d4-a716-446655440000
+    ListFavoriteOffersResponse:
+      type: object
+      required:
+        - offers
+      properties:
+        offers:
+          type: array
+          description: Список избранных объявлений
+          items:
+            $ref: '#/components/schemas/FavoritedOffer'
+        nextCursor:
+          nullable: true
+          allOf:
+            - $ref: '#/components/schemas/FavoriteOffersCursor'
+          description: Курсор для получения следующей страницы; `null`, если следующей страницы нет
     UpdateOfferRequest:
       type: object
       minProperties: 1
@@ -4626,3 +4810,13 @@ components:
         Нельзя передавать вместе с `tags`.
       schema:
         type: boolean
+    CursorFavoritedAt:
+      name: cursor_favorited_at
+      in: query
+      required: false
+      description: |
+        Временная метка добавления объявления в избранное в формате RFC3339.
+        Используется вместе с `cursor_id` для пагинации списка избранного.
+      schema:
+        type: string
+        format: date-time

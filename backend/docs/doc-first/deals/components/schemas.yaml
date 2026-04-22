@@ -187,6 +187,11 @@ Offer:
       format: date-time
       description: Временная метка последнего обновления объявления
       example: '2026-03-05T12:00:00Z'
+    isFavorite:
+      type: boolean
+      description: |
+        Находится ли объявление в избранном у текущего пользователя.
+        Поле актуально только в контексте авторизованного пользователя.
     isHidden:
       type: boolean
       description: |
@@ -209,6 +214,20 @@ Offer:
       items:
         type: string
         format: uri
+
+
+FavoritedOffer:
+  allOf:
+    - $ref: '#/Offer'
+    - type: object
+      required:
+        - favoritedAt
+      properties:
+        favoritedAt:
+          type: string
+          format: date-time
+          description: Временная метка добавления объявления в избранное
+          example: '2026-03-10T09:30:00Z'
 
 
 TagName:
@@ -356,6 +375,23 @@ OffersCursor:
       type: integer
       format: int64
       example: 120
+    id:
+      type: string
+      format: uuid
+      example: '550e8400-e29b-41d4-a716-446655440000'
+
+
+FavoriteOffersCursor:
+  type: object
+  description: Курсор для стабильной пагинации списка избранных объявлений
+  required:
+    - favoritedAt
+    - id
+  properties:
+    favoritedAt:
+      type: string
+      format: date-time
+      example: '2026-03-10T09:30:00Z'
     id:
       type: string
       format: uuid

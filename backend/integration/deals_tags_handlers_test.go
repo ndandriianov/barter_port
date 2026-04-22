@@ -33,9 +33,9 @@ func TestListTagsReturnsSortedUniqueNormalizedTags(t *testing.T) {
 	})
 
 	tags := mustListTags(t, userID)
-	require.Contains(t, tags, types.TagName("alphatag"))
-	require.Contains(t, tags, types.TagName("omegatag"))
-	require.Contains(t, tags, types.TagName("specatag"))
+	require.Contains(t, tags, "alphatag")
+	require.Contains(t, tags, "omegatag")
+	require.Contains(t, tags, "specatag")
 	require.True(t, sort.SliceIsSorted(tags, func(i, j int) bool { return tags[i] < tags[j] }))
 }
 
@@ -64,8 +64,8 @@ func TestDeleteAdminTagRemovesItFromOffers(t *testing.T) {
 	mustDeleteAdminTag(t, adminToken, "deletetagalpha")
 
 	remainingTags := mustListTags(t, userID)
-	require.NotContains(t, remainingTags, types.TagName("deletetagalpha"))
-	require.Contains(t, remainingTags, types.TagName("deletetagbeta"))
+	require.NotContains(t, remainingTags, "deletetagalpha")
+	require.Contains(t, remainingTags, "deletetagbeta")
 	require.Equal(t, []types.TagName{"deletetagbeta"}, mustGetOfferByID(t, userID, first.Id).Tags)
 	require.Equal(t, []types.TagName{"deletetagbeta"}, mustGetOfferByID(t, userID, second.Id).Tags)
 }

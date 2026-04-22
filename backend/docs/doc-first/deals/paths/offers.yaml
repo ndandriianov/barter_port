@@ -163,6 +163,55 @@ subscribedOffers:
 
 
 
+favoriteOffers:
+  get:
+    tags:
+      - offers
+      - favorites
+    summary: Список избранных объявлений
+    description: |
+      Возвращает список объявлений, которые текущий пользователь добавил в избранное.
+
+      Список сортируется по времени добавления в избранное: сначала новые.
+
+      Применяются обычные правила видимости объявлений:
+      - если объявление скрыто и недоступно текущему пользователю, оно не возвращается;
+      - если объявление было удалено, запись в избранном удаляется каскадно.
+    operationId: listFavoriteOffers
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - $ref: '../components/parameters.yaml#/CursorFavoritedAt'
+      - $ref: '../components/parameters.yaml#/CursorId'
+      - $ref: '../components/parameters.yaml#/Limit'
+    responses:
+      '200':
+        description: Страница избранных объявлений
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ListFavoriteOffersResponse'
+      '400':
+        description: Некорректные параметры запроса
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+
 offerById:
   get:
     tags:
@@ -308,6 +357,101 @@ offerById:
               $ref: '../components/responses.yaml#/ErrorResponse'
       '404':
         description: Offer not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+
+offerFavoriteById:
+  put:
+    tags:
+      - offers
+      - favorites
+    summary: Добавить объявление в избранное
+    description: |
+      Добавляет объявление в избранное текущего пользователя.
+
+      Операция идемпотентна:
+      - если объявление уже находится в избранном, сервер всё равно возвращает `204 No Content`;
+      - объявление должно существовать и быть доступно текущему пользователю по обычным правилам видимости.
+    operationId: addOfferToFavorites
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - name: offerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '204':
+        description: Объявление находится в избранном
+      '400':
+        description: Invalid offer ID
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Offer not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+  delete:
+    tags:
+      - offers
+      - favorites
+    summary: Удалить объявление из избранного
+    description: |
+      Удаляет объявление из избранного текущего пользователя.
+
+      Операция идемпотентна:
+      - если объявления нет в избранном, сервер всё равно возвращает `204 No Content`;
+      - существование самого объявления для удаления из избранного не требуется.
+    operationId: removeOfferFromFavorites
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - name: offerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '204':
+        description: Объявление удалено из избранного
+      '400':
+        description: Invalid offer ID
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
         content:
           application/json:
             schema:

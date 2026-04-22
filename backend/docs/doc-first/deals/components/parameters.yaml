@@ -20,6 +20,17 @@ CursorCreatedAt:
     type: string
     format: date-time
 
+CursorFavoritedAt:
+  name: cursor_favorited_at
+  in: query
+  required: false
+  description: |
+    Временная метка добавления объявления в избранное в формате RFC3339.
+    Используется вместе с `cursor_id` для пагинации списка избранного.
+  schema:
+    type: string
+    format: date-time
+
 CursorViews:
   name: cursor_views
   in: query

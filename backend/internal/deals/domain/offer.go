@@ -13,6 +13,7 @@ type Offer struct {
 	ID                  uuid.UUID         `db:"id"`
 	AuthorId            uuid.UUID         `db:"author_id"`
 	AuthorName          *string           `db:"-"`
+	IsFavorite          *bool             `db:"-"`
 	Name                string            `db:"name"`
 	Tags                []string          `db:"tags"`
 	PhotoIds            []uuid.UUID       `db:"photo_ids"`
@@ -56,8 +57,9 @@ func (i *Offer) ToDto() types.Offer {
 		CreatedAt:           i.CreatedAt,
 		UpdatedAt:           i.UpdatedAt,
 		Views:               int64(i.Views),
-		IsHidden:            boolPtr(i.IsHidden),
-		ModificationBlocked: boolPtr(i.ModificationBlocked),
+		IsFavorite:          i.IsFavorite,
+		IsHidden:            new(i.IsHidden),
+		ModificationBlocked: new(i.ModificationBlocked),
 	}
 }
 
@@ -83,8 +85,9 @@ func (i *Offer) ToDTOWithInfo(info OfferInfo) types.OfferWithInfo {
 		CreatedAt:           i.CreatedAt,
 		Description:         i.Description,
 		Id:                  i.ID,
-		IsHidden:            boolPtr(i.IsHidden),
-		ModificationBlocked: boolPtr(i.ModificationBlocked),
+		IsFavorite:          i.IsFavorite,
+		IsHidden:            new(i.IsHidden),
+		ModificationBlocked: new(i.ModificationBlocked),
 		Name:                i.Name,
 		PhotoIds:            photoIDs,
 		PhotoUrls:           photoURLs,
@@ -104,12 +107,8 @@ func (i *Offer) tagsToDTO() []types.TagName {
 
 	tags := make([]types.TagName, 0, len(i.Tags))
 	for _, tag := range i.Tags {
-		tags = append(tags, types.TagName(tag))
+		tags = append(tags, tag)
 	}
 
 	return tags
-}
-
-func boolPtr(v bool) *bool {
-	return new(v)
 }

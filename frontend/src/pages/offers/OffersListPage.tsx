@@ -1,16 +1,21 @@
 import { Link as RouterLink, useSearchParams } from "react-router-dom";
 import { Box, Button, ButtonGroup, Paper, Stack, Typography } from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
+import FavoriteBorderOutlinedIcon from "@mui/icons-material/FavoriteBorderOutlined";
 import LayersOutlinedIcon from "@mui/icons-material/LayersOutlined";
 import NotificationsActiveOutlinedIcon from "@mui/icons-material/NotificationsActiveOutlined";
 import OffersListWidget from "@/widgets/offers/OffersListWidget.tsx";
 
-type OffersTab = "others" | "subscriptions" | "mine";
+type OffersTab = "others" | "favorites" | "subscriptions" | "mine";
 
 const tabMeta: Record<OffersTab, { title: string; description: string }> = {
   others: {
     title: "Все объявления",
     description: "Все объявления в каталоге. Список уже приходит с сервера в нужном виде.",
+  },
+  favorites: {
+    title: "Избранное",
+    description: "Объявления, которые вы сохранили. Список идет в порядке добавления в избранное.",
   },
   subscriptions: {
     title: "Подписки",
@@ -23,7 +28,7 @@ const tabMeta: Record<OffersTab, { title: string; description: string }> = {
 };
 
 function isOffersTab(value: string | null): value is OffersTab {
-  return value === "others" || value === "subscriptions" || value === "mine";
+  return value === "others" || value === "favorites" || value === "subscriptions" || value === "mine";
 }
 
 function OffersListPage() {
@@ -72,13 +77,20 @@ function OffersListPage() {
         <ButtonGroup
           fullWidth
           variant="text"
-          sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" } }}
+          sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(4, 1fr)" } }}
         >
           <Button
             variant={tab === "others" ? "contained" : "text"}
             onClick={() => handleTabChange("others")}
           >
             Все объявления
+          </Button>
+          <Button
+            variant={tab === "favorites" ? "contained" : "text"}
+            onClick={() => handleTabChange("favorites")}
+            startIcon={<FavoriteBorderOutlinedIcon />}
+          >
+            Избранное
           </Button>
           <Button
             variant={tab === "subscriptions" ? "contained" : "text"}
@@ -101,6 +113,7 @@ function OffersListPage() {
       </Typography>
 
       {tab === "others" && <OffersListWidget mode="others" />}
+      {tab === "favorites" && <OffersListWidget mode="favorites" />}
       {tab === "subscriptions" && <OffersListWidget mode="subscriptions" />}
       {tab === "mine" && <OffersListWidget mode="mine" />}
     </Box>

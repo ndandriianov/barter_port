@@ -170,8 +170,8 @@ func TestGetDealByIDCopiesOfferPhotosIntoItemAndPersistsMetadata(t *testing.T) {
 		item.Id,
 	).Scan(&photoIDs, &photoURLs)
 	require.NoError(t, err)
-	require.Equal(t, []uuid.UUID(*item.PhotoIds), photoIDs)
-	require.Equal(t, []string(*item.PhotoUrls), photoURLs)
+	require.Equal(t, *item.PhotoIds, photoIDs)
+	require.Equal(t, *item.PhotoUrls, photoURLs)
 }
 
 func TestGetDealByIDNotFound(t *testing.T) {

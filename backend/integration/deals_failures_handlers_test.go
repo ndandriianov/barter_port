@@ -177,7 +177,7 @@ func TestModeratorResolutionForFailureSuccessAndReadableByParticipant(t *testing
 	require.Equal(t, -points, me.ReputationPoints)
 
 	apiEvent := waitForCurrentUserReputationAPIEvent(t, fixture, userB.UserID, dealsusers.DealFailureResponsibleMessageType, dealID)
-	require.Equal(t, event.ID, uuid.UUID(apiEvent.Id))
+	require.Equal(t, event.ID, apiEvent.Id)
 	require.Equal(t, -points, apiEvent.Delta)
 	require.NotNil(t, apiEvent.Comment)
 	require.Equal(t, reportComment, *apiEvent.Comment)

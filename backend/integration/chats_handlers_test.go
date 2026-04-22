@@ -69,7 +69,7 @@ func getSubscriptions(t *testing.T, fixture *Fixture, userID uuid.UUID) usertype
 
 func hasUser(subscriptions usertypes.GetSubscriptionsResponse, userID uuid.UUID) bool {
 	for _, u := range subscriptions {
-		if uuid.UUID(u.Id) == userID {
+		if u.Id == userID {
 			return true
 		}
 	}
@@ -99,7 +99,7 @@ func TestChatsCreateDirectChatCreated(t *testing.T) {
 
 	var chat chattypes.Chat
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&chat))
-	require.NotEqual(t, uuid.Nil, uuid.UUID(chat.Id))
+	require.NotEqual(t, uuid.Nil, chat.Id)
 	require.Len(t, chat.Participants, 2)
 
 	// CheckSubscription должен автоматически создать обратную подписку requester -> target.
