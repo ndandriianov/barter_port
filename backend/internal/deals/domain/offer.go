@@ -112,7 +112,3 @@ func (i *Offer) tagsToDTO() []types.TagName {
 
 	return tags
 }
-
-func boolPtr(v bool) *bool {
-	return &v
-}

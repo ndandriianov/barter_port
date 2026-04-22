@@ -821,10 +821,6 @@ func extractTagFilter(tagFilter *[]string) ([]string, bool) {
 	return result, true
 }
 
-func boolPtr(v bool) *bool {
-	return &v
-}
-
 func (s *Service) cleanupUploadedPhotos(ctx context.Context, offerID uuid.UUID, positions []int) {
 	if s.photoStorage == nil || len(positions) == 0 {
 		return
