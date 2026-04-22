@@ -1,5 +1,8 @@
 import {z} from "zod";
 import {
+  favoriteOffersCursorSchema,
+  favoritedOfferSchema,
+  getFavoriteOffersResponseSchema,
   getOffersResponseSchema,
   listTagsResponseSchema,
   listOfferReportsResponseSchema,
@@ -26,6 +29,8 @@ export type OfferReportThread = z.Infer<typeof offerReportThreadSchema>;
 export type OfferReportsForOffer = z.Infer<typeof offerReportsForOfferSchema>;
 export type OfferReportDetails = z.Infer<typeof offerReportDetailsSchema>;
 export type UniversalCursor = z.Infer<typeof universalCursorSchema>;
+export type FavoriteOffersCursor = z.Infer<typeof favoriteOffersCursorSchema>;
+export type FavoritedOffer = z.Infer<typeof favoritedOfferSchema>;
 export type ListOfferReportsResponse = z.Infer<typeof listOfferReportsResponseSchema>;
 
 export type SortType = "ByTime" | "ByPopularity";
@@ -47,7 +52,14 @@ export interface GetOffersParams extends OffersListParams {
 export type GetSubscribedOffersParams = OffersListParams;
 
 export type GetOffersResponse = z.Infer<typeof getOffersResponseSchema>;
+export type GetFavoriteOffersResponse = z.Infer<typeof getFavoriteOffersResponseSchema>;
 export type ListTagsResponse = z.Infer<typeof listTagsResponseSchema>;
+
+export interface GetFavoriteOffersParams {
+  cursor_favorited_at?: string;
+  cursor_id?: string;
+  cursor_limit?: number;
+}
 
 export interface CreateOfferRequest {
   name: string;

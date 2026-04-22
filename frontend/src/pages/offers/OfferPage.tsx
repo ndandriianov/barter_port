@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Link as RouterLink, useNavigate, useParams } from "react-router-dom";
 import { Alert, Box, Button, CircularProgress, Dialog, DialogContent, Divider, ImageList, ImageListItem, Typography } from "@mui/material";
+import FavoriteBorderOutlinedIcon from "@mui/icons-material/FavoriteBorderOutlined";
+import FavoriteRoundedIcon from "@mui/icons-material/FavoriteRounded";
 import offersApi from "@/features/offers/api/offersApi";
 import usersApi from "@/features/users/api/usersApi";
 import useDraftOfferCounts from "@/features/deals/model/useDraftOfferCounts.ts";
@@ -21,6 +23,8 @@ function OfferPage() {
   const { data: meData } = usersApi.useGetCurrentUserQuery();
   const [deleteOffer, { isLoading: isDeleting, error: deleteError }] = offersApi.useDeleteOfferMutation();
   const [viewOfferById] = offersApi.useViewOfferByIdMutation();
+  const [addOfferToFavorites, { isLoading: isAddingToFavorites }] = offersApi.useAddOfferToFavoritesMutation();
+  const [removeOfferFromFavorites, { isLoading: isRemovingFromFavorites }] = offersApi.useRemoveOfferFromFavoritesMutation();
 
   const { data: offer, isLoading, error } = offersApi.useGetOfferByIdQuery(offerId ?? "", {
     skip: !offerId,
@@ -30,6 +34,7 @@ function OfferPage() {
   });
   const isAdmin = meData?.isAdmin === true;
   const isOwnOffer = !!meData && !!offer && offer.authorId === meData.id;
+  const isFavoriteActionLoading = isAddingToFavorites || isRemovingFromFavorites;
   const { countsByOfferId } = useDraftOfferCounts({ enabled: isOwnOffer });
 
   useEffect(() => {
@@ -69,6 +74,19 @@ function OfferPage() {
       navigate("/offers?tab=mine", { replace: true });
     } catch {
       // The error is surfaced via RTK Query state.
+    }
+  };
+
+  const handleToggleFavorite = async () => {
+    try {
+      if (offer.isFavorite) {
+        await removeOfferFromFavorites(offer.id).unwrap();
+        return;
+      }
+
+      await addOfferToFavorites(offer.id).unwrap();
+    } catch {
+      // RTK Query keeps the request state; page stays usable.
     }
   };
 
@@ -165,6 +183,17 @@ function OfferPage() {
         {canRespond && (
           <Button variant="contained" onClick={() => setIsRespondModalOpen(true)}>
             Откликнуться
+          </Button>
+        )}
+        {canRespond && (
+          <Button
+            variant={offer.isFavorite ? "contained" : "outlined"}
+            color={offer.isFavorite ? "error" : "inherit"}
+            startIcon={offer.isFavorite ? <FavoriteRoundedIcon /> : <FavoriteBorderOutlinedIcon />}
+            onClick={() => void handleToggleFavorite()}
+            disabled={isFavoriteActionLoading}
+          >
+            {offer.isFavorite ? "В избранном" : "В избранное"}
           </Button>
         )}
         {isOwnOffer && (

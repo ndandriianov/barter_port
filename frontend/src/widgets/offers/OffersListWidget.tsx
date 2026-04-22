@@ -20,6 +20,9 @@ import RefreshIcon from "@mui/icons-material/Refresh";
 import offersApi from "@/features/offers/api/offersApi";
 import usersApi from "@/features/users/api/usersApi.ts";
 import type {
+  FavoriteOffersCursor,
+  FavoritedOffer,
+  GetFavoriteOffersParams,
   GetOffersParams,
   GetSubscribedOffersParams,
   Offer,
@@ -31,7 +34,7 @@ import useDraftOfferCounts from "@/features/deals/model/useDraftOfferCounts.ts";
 import OfferCard from "@/widgets/offers/OfferCard";
 
 interface OffersListWidgetProps {
-  mode: "mine" | "others" | "subscriptions";
+  mode: "mine" | "others" | "subscriptions" | "favorites";
 }
 
 const PAGE_SIZE = 8;
@@ -108,10 +111,26 @@ const buildSubscribedOffersParams = (
   return params;
 };
 
+const buildFavoriteOffersParams = (cursor: FavoriteOffersCursor | null): GetFavoriteOffersParams => {
+  const params: GetFavoriteOffersParams = {
+    cursor_limit: PAGE_SIZE,
+  };
+
+  if (!cursor) {
+    return params;
+  }
+
+  params.cursor_id = cursor.id;
+  params.cursor_favorited_at = cursor.favoritedAt;
+
+  return params;
+};
+
 function OffersListWidget({ mode }: OffersListWidgetProps) {
   const [sortType, setSortType] = useState<SortType>("ByTime");
   const [offers, setOffers] = useState<Offer[]>([]);
   const [nextCursor, setNextCursor] = useState<UniversalCursor | null>(null);
+  const [nextFavoriteCursor, setNextFavoriteCursor] = useState<FavoriteOffersCursor | null>(null);
   const [tagsInput, setTagsInput] = useState("");
   const [withoutTagsOnly, setWithoutTagsOnly] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
@@ -121,16 +140,19 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
   const isMyOffers = mode === "mine";
   const isSubscribedOffers = mode === "subscriptions";
+  const isFavoriteOffers = mode === "favorites";
   const sentinelRef = useRef<HTMLDivElement | null>(null);
   const nextCursorRef = useRef<UniversalCursor | null>(null);
+  const nextFavoriteCursorRef = useRef<FavoriteOffersCursor | null>(null);
   const isInitialLoadingRef = useRef(true);
   const isLoadingMoreRef = useRef(false);
   const hasLoadedOnceRef = useRef(false);
   const feedKeyRef = useRef("");
   const [triggerGetOffers] = offersApi.useLazyGetOffersQuery();
   const [triggerGetSubscribedOffers] = offersApi.useLazyGetSubscribedOffersQuery();
+  const [triggerGetFavoriteOffers] = offersApi.useLazyGetFavoriteOffersQuery();
   const { data: existingTags = [] } = offersApi.useListTagsQuery(undefined, {
-    skip: isSubscribedOffers,
+    skip: isSubscribedOffers || isFavoriteOffers,
   });
   const { data: currentUser } = usersApi.useGetCurrentUserQuery();
   const { countsByOfferId } = useDraftOfferCounts({ enabled: isMyOffers });
@@ -144,8 +166,13 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
 
   feedKeyRef.current = feedKey;
   nextCursorRef.current = nextCursor;
+  nextFavoriteCursorRef.current = nextFavoriteCursor;
 
-  const loadOffersPage = useCallback(async (cursor: UniversalCursor | null, replace: boolean) => {
+  const loadOffersPage = useCallback(async (
+    cursor: UniversalCursor | null,
+    favoriteCursor: FavoriteOffersCursor | null,
+    replace: boolean,
+  ) => {
     const requestFeedKey = feedKey;
 
     if (replace) {
@@ -158,9 +185,11 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
       setInitialError(null);
       setLoadMoreError(null);
       setNextCursor(null);
+      setNextFavoriteCursor(null);
       nextCursorRef.current = null;
+      nextFavoriteCursorRef.current = null;
     } else {
-      if (!cursor || isInitialLoadingRef.current || isLoadingMoreRef.current) {
+      if ((!cursor && !favoriteCursor) || isInitialLoadingRef.current || isLoadingMoreRef.current) {
         return;
       }
 
@@ -170,17 +199,34 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
     }
 
     try {
-      const response = isSubscribedOffers
-        ? await triggerGetSubscribedOffers(buildSubscribedOffersParams(sortType, cursor)).unwrap()
-        : await triggerGetOffers(buildOffersParams(sortType, isMyOffers, cursor, parsedTags, withoutTagsOnly)).unwrap();
+      if (isFavoriteOffers) {
+        const response = await triggerGetFavoriteOffers(buildFavoriteOffersParams(favoriteCursor)).unwrap();
 
-      if (feedKeyRef.current !== requestFeedKey) {
-        return;
+        if (feedKeyRef.current !== requestFeedKey) {
+          return;
+        }
+
+        const nextOffers: Offer[] = response.offers as FavoritedOffer[];
+        setOffers((currentOffers) => (replace ? nextOffers : mergeOffers(currentOffers, nextOffers)));
+        setNextFavoriteCursor(response.nextCursor);
+        nextFavoriteCursorRef.current = response.nextCursor;
+        setNextCursor(null);
+        nextCursorRef.current = null;
+      } else {
+        const response = isSubscribedOffers
+          ? await triggerGetSubscribedOffers(buildSubscribedOffersParams(sortType, cursor)).unwrap()
+          : await triggerGetOffers(buildOffersParams(sortType, isMyOffers, cursor, parsedTags, withoutTagsOnly)).unwrap();
+
+        if (feedKeyRef.current !== requestFeedKey) {
+          return;
+        }
+
+        setOffers((currentOffers) => (replace ? response.offers : mergeOffers(currentOffers, response.offers)));
+        setNextCursor(response.nextCursor);
+        nextCursorRef.current = response.nextCursor;
+        setNextFavoriteCursor(null);
+        nextFavoriteCursorRef.current = null;
       }
-
-      setOffers((currentOffers) => (replace ? response.offers : mergeOffers(currentOffers, response.offers)));
-      setNextCursor(response.nextCursor);
-      nextCursorRef.current = response.nextCursor;
 
       if (replace) {
         hasLoadedOnceRef.current = true;
@@ -195,17 +241,23 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
         hasLoadedOnceRef.current = true;
         setHasLoadedOnce(true);
         setInitialError(
-          isSubscribedOffers
-            ? "Не удалось загрузить объявления от подписок"
-            : "Не удалось загрузить список объявлений",
+          isFavoriteOffers
+            ? "Не удалось загрузить избранные объявления"
+            : isSubscribedOffers
+              ? "Не удалось загрузить объявления от подписок"
+              : "Не удалось загрузить список объявлений",
         );
         setNextCursor(null);
+        setNextFavoriteCursor(null);
         nextCursorRef.current = null;
+        nextFavoriteCursorRef.current = null;
       } else {
         setLoadMoreError(
-          isSubscribedOffers
-            ? "Не удалось загрузить следующие объявления от подписок"
-            : "Не удалось загрузить следующие объявления",
+          isFavoriteOffers
+            ? "Не удалось загрузить следующие избранные объявления"
+            : isSubscribedOffers
+              ? "Не удалось загрузить следующие объявления от подписок"
+              : "Не удалось загрузить следующие объявления",
         );
       }
     } finally {
@@ -224,17 +276,19 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
     }
   }, [
     feedKey,
+    isFavoriteOffers,
     isMyOffers,
     isSubscribedOffers,
     parsedTags,
     sortType,
+    triggerGetFavoriteOffers,
     triggerGetOffers,
     triggerGetSubscribedOffers,
     withoutTagsOnly,
   ]);
 
   useEffect(() => {
-    void loadOffersPage(null, true);
+    void loadOffersPage(null, null, true);
   }, [loadOffersPage]);
 
   useEffect(() => {
@@ -251,12 +305,19 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
     const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
+        const nextRegularCursor = nextCursorRef.current;
+        const nextFavoritesCursor = nextFavoriteCursorRef.current;
 
-        if (!entry?.isIntersecting || !nextCursorRef.current || isInitialLoadingRef.current || isLoadingMoreRef.current) {
+        if (
+          !entry?.isIntersecting ||
+          (!nextRegularCursor && !nextFavoritesCursor) ||
+          isInitialLoadingRef.current ||
+          isLoadingMoreRef.current
+        ) {
           return;
         }
 
-        void loadOffersPage(nextCursorRef.current, false);
+        void loadOffersPage(nextRegularCursor, nextFavoritesCursor, false);
       },
       {
         rootMargin: "300px 0px",
@@ -304,6 +365,7 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
             value={sortType}
             label="Сортировка"
             onChange={(e) => setSortType(e.target.value as SortType)}
+            disabled={isFavoriteOffers}
           >
             <MenuItem value="ByTime">Сначала новые</MenuItem>
             <MenuItem value="ByPopularity">По популярности</MenuItem>
@@ -312,14 +374,14 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
 
         <Tooltip title="Обновить">
           <span>
-            <IconButton onClick={() => void loadOffersPage(null, true)} disabled={isInitialLoading || isLoadingMore}>
+            <IconButton onClick={() => void loadOffersPage(null, null, true)} disabled={isInitialLoading || isLoadingMore}>
               <RefreshIcon />
             </IconButton>
           </span>
         </Tooltip>
       </Box>
 
-      {!isSubscribedOffers && (
+      {!isSubscribedOffers && !isFavoriteOffers && (
         <Box mb={3}>
           <TextField
             label="Фильтр по тегам"
@@ -384,7 +446,9 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
         <Typography color="text.secondary" textAlign="center" py={6}>
           {isMyOffers
             ? "У вас пока нет объявлений"
-            : isSubscribedOffers
+            : isFavoriteOffers
+              ? "Вы пока ничего не добавили в избранное"
+              : isSubscribedOffers
               ? "Пока нет объявлений от ваших подписок"
               : "Пока нет объявлений"}
         </Typography>
@@ -410,7 +474,7 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
             ))}
           </Grid>
 
-          <Box ref={sentinelRef} sx={{ height: 1 }} />
+          {(nextCursor || nextFavoriteCursor) && <Box ref={sentinelRef} sx={{ height: 1 }} />}
 
           <Box py={3}>
             {isLoadingMore ? (
@@ -419,7 +483,7 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
               </Box>
             ) : loadMoreError ? (
               <Alert severity="error">{loadMoreError}</Alert>
-            ) : !nextCursor ? (
+            ) : !nextCursor && !nextFavoriteCursor ? (
               <Alert severity="warning" sx={{ justifyContent: "center" }}>
                 Больше объявлений нет
               </Alert>
