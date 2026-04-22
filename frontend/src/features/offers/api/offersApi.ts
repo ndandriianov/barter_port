@@ -2,6 +2,7 @@ import {createApi} from "@reduxjs/toolkit/query/react";
 import {baseQueryWithReauth} from "@/shared/api/baseApi.ts";
 import {
   getOffersResponseSchema,
+  listTagsResponseSchema,
   listOfferReportsResponseSchema,
   offerReportDetailsSchema,
   offerReportSchema,
@@ -15,6 +16,7 @@ import type {
   GetOffersResponse,
   GetSubscribedOffersParams,
   ListOfferReportsResponse,
+  ListTagsResponse,
   Offer,
   OfferReport,
   OfferReportDetails,
@@ -27,19 +29,14 @@ import type {
 const offersApi = createApi({
   reducerPath: "offersApi",
   baseQuery: baseQueryWithReauth,
-  tagTypes: ["Offers", "OfferReports", "AdminOfferReports"],
+  tagTypes: ["Offers", "OfferReports", "AdminOfferReports", "Tags"],
   endpoints: (builder) => ({
     getOffers: builder.query<GetOffersResponse, GetOffersParams>({
       query: (params) => ({
         url: "/offers",
         params,
       }),
-
-      transformResponse: (response: unknown) => {
-        console.log("Raw response from /offers:", response);
-        return getOffersResponseSchema.parse(response);
-      },
-
+      transformResponse: (response: unknown) => getOffersResponseSchema.parse(response),
       providesTags: ["Offers"],
     }),
 
@@ -67,12 +64,15 @@ const offersApi = createApi({
     }),
 
     createOffer: builder.mutation<void, CreateOfferRequest>({
-      query: ({ photos = [], ...body }) => {
+      query: ({ photos = [], tags = [], ...body }) => {
         if (photos.length === 0) {
           return {
             url: "/offers",
             method: "POST",
-            body,
+            body: {
+              ...body,
+              tags: tags.length > 0 ? tags : undefined,
+            },
           };
         }
 
@@ -81,6 +81,9 @@ const offersApi = createApi({
         formData.append("description", body.description);
         formData.append("action", body.action);
         formData.append("type", body.type);
+        for (const tag of tags) {
+          formData.append("tags", tag);
+        }
 
         for (const photo of photos) {
           formData.append("photos", photo);
@@ -92,7 +95,7 @@ const offersApi = createApi({
           body: formData,
         };
       },
-      invalidatesTags: ["Offers"],
+      invalidatesTags: ["Offers", "Tags"],
     }),
 
     updateOffer: builder.mutation<Offer, { offerId: string; body: UpdateOfferRequest }>({
@@ -103,7 +106,10 @@ const offersApi = createApi({
           return {
             url: `/offers/${offerId}`,
             method: "PATCH",
-            body,
+            body: {
+              ...body,
+              tags: body.tags,
+            },
           };
         }
 
@@ -121,6 +127,11 @@ const offersApi = createApi({
         if (body.type !== undefined) {
           formData.append("type", body.type);
         }
+        if (body.tags !== undefined) {
+          for (const tag of body.tags) {
+            formData.append("tags", tag);
+          }
+        }
         for (const photoId of body.deletePhotoIds ?? []) {
           formData.append("deletePhotoIds", photoId);
         }
@@ -135,7 +146,7 @@ const offersApi = createApi({
         };
       },
       transformResponse: (response: unknown) => offerSchema.parse(response),
-      invalidatesTags: (_result, _error, { offerId }) => ["Offers", {type: "Offers", id: offerId}],
+      invalidatesTags: (_result, _error, { offerId }) => ["Offers", {type: "Offers", id: offerId}, "Tags"],
     }),
 
     deleteOffer: builder.mutation<void, string>({
@@ -143,7 +154,22 @@ const offersApi = createApi({
         url: `/offers/${offerId}`,
         method: "DELETE",
       }),
-      invalidatesTags: (_result, _error, offerId) => ["Offers", {type: "Offers", id: offerId}],
+      invalidatesTags: (_result, _error, offerId) => ["Offers", {type: "Offers", id: offerId}, "Tags"],
+    }),
+
+    listTags: builder.query<ListTagsResponse, void>({
+      query: () => "/tags",
+      transformResponse: (response: unknown) => listTagsResponseSchema.parse(response),
+      providesTags: ["Tags"],
+    }),
+
+    deleteAdminTag: builder.mutation<void, string>({
+      query: (name) => ({
+        url: "/admin/tags",
+        method: "DELETE",
+        params: { name },
+      }),
+      invalidatesTags: ["Tags", "Offers"],
     }),
 
     createOfferReport: builder.mutation<OfferReport, { offerId: string; body: CreateOfferReportRequest }>({

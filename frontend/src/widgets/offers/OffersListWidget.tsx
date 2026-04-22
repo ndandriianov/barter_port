@@ -1,14 +1,18 @@
-import { useEffect, useEffectEvent, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Box,
+  Checkbox,
+  Chip,
   CircularProgress,
   FormControl,
+  FormControlLabel,
   Grid,
   IconButton,
   InputLabel,
   MenuItem,
   Select,
+  TextField,
   Tooltip,
   Typography,
 } from "@mui/material";
@@ -22,6 +26,7 @@ import type {
   SortType,
   UniversalCursor,
 } from "@/features/offers/model/types";
+import { normalizeOfferTags, parseOfferTagsInput } from "@/features/offers/model/tagUtils.ts";
 import useDraftOfferCounts from "@/features/deals/model/useDraftOfferCounts.ts";
 import OfferCard from "@/widgets/offers/OfferCard";
 
@@ -45,12 +50,20 @@ const buildOffersParams = (
   sortType: SortType,
   isMyOffers: boolean,
   cursor: UniversalCursor | null,
+  tags: string[],
+  withoutTags: boolean,
 ): GetOffersParams => {
   const params: GetOffersParams = {
     sort: sortType,
     my: isMyOffers,
     cursor_limit: PAGE_SIZE,
   };
+
+  if (withoutTags) {
+    params.withoutTags = true;
+  } else if (tags.length > 0) {
+    params.tags = tags;
+  }
 
   if (!cursor) {
     return params;
@@ -99,6 +112,8 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
   const [sortType, setSortType] = useState<SortType>("ByTime");
   const [offers, setOffers] = useState<Offer[]>([]);
   const [nextCursor, setNextCursor] = useState<UniversalCursor | null>(null);
+  const [tagsInput, setTagsInput] = useState("");
+  const [withoutTagsOnly, setWithoutTagsOnly] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const [initialError, setInitialError] = useState<string | null>(null);
@@ -112,9 +127,17 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
   const feedKeyRef = useRef("");
   const [triggerGetOffers] = offersApi.useLazyGetOffersQuery();
   const [triggerGetSubscribedOffers] = offersApi.useLazyGetSubscribedOffersQuery();
+  const { data: existingTags = [] } = offersApi.useListTagsQuery(undefined, {
+    skip: isSubscribedOffers,
+  });
   const { data: currentUser } = usersApi.useGetCurrentUserQuery();
   const { countsByOfferId } = useDraftOfferCounts({ enabled: isMyOffers });
-  const feedKey = `${mode}:${sortType}`;
+  const parsedTags = useMemo(() => parseOfferTagsInput(tagsInput), [tagsInput]);
+  const suggestedTags = useMemo(
+    () => existingTags.filter((tag) => !parsedTags.includes(tag)).slice(0, 10),
+    [existingTags, parsedTags],
+  );
+  const feedKey = `${mode}:${sortType}:${withoutTagsOnly}:${parsedTags.join("|")}`;
 
   feedKeyRef.current = feedKey;
   nextCursorRef.current = nextCursor;
@@ -145,7 +168,7 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
     try {
       const response = isSubscribedOffers
         ? await triggerGetSubscribedOffers(buildSubscribedOffersParams(sortType, cursor)).unwrap()
-        : await triggerGetOffers(buildOffersParams(sortType, isMyOffers, cursor)).unwrap();
+        : await triggerGetOffers(buildOffersParams(sortType, isMyOffers, cursor, parsedTags, withoutTagsOnly)).unwrap();
 
       if (feedKeyRef.current !== requestFeedKey) {
         return;
@@ -193,7 +216,7 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
 
   useEffect(() => {
     void loadOffersPage(null, true);
-  }, [mode, sortType]);
+  }, [mode, sortType, withoutTagsOnly, parsedTags.join("|")]);
 
   useEffect(() => {
     if (offers.length === 0) {
@@ -238,6 +261,11 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
     return <Alert severity="error">{initialError}</Alert>;
   }
 
+  const handleAddSuggestedTag = (tag: string) => {
+    setTagsInput(normalizeOfferTags([...parsedTags, tag]).join(", "));
+    setWithoutTagsOnly(false);
+  };
+
   return (
     <Box>
       <Box display="flex" alignItems="center" gap={2} mb={3} flexWrap="wrap">
@@ -261,6 +289,61 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
           </span>
         </Tooltip>
       </Box>
+
+      {!isSubscribedOffers && (
+        <Box mb={3}>
+          <TextField
+            label="Фильтр по тегам"
+            value={tagsInput}
+            onChange={(e) => {
+              setTagsInput(e.target.value);
+              if (e.target.value.trim() !== "") {
+                setWithoutTagsOnly(false);
+              }
+            }}
+            placeholder="bike, repair"
+            fullWidth
+            helperText="Через запятую. Будут показаны объявления, содержащие все указанные теги."
+          />
+          <Box mt={1} display="flex" alignItems="center" gap={2} flexWrap="wrap">
+            <FormControlLabel
+              control={
+                <Checkbox
+                  checked={withoutTagsOnly}
+                  onChange={(e) => {
+                    setWithoutTagsOnly(e.target.checked);
+                    if (e.target.checked) {
+                      setTagsInput("");
+                    }
+                  }}
+                />
+              }
+              label="Только без тегов"
+            />
+            {parsedTags.length > 0 && (
+              <Box display="flex" gap={0.75} flexWrap="wrap">
+                {parsedTags.map((tag) => (
+                  <Chip key={tag} label={`#${tag}`} size="small" />
+                ))}
+              </Box>
+            )}
+          </Box>
+          {suggestedTags.length > 0 && !withoutTagsOnly && (
+            <Box mt={1.5} display="flex" gap={0.75} flexWrap="wrap">
+              {suggestedTags.map((tag) => (
+                <Chip
+                  key={tag}
+                  label={tag}
+                  size="small"
+                  variant="outlined"
+                  clickable
+                  onClick={() => handleAddSuggestedTag(tag)}
+                />
+              ))}
+            </Box>
+          )}
+        </Box>
+      )}
 
       {offers.length === 0 ? (
         <Typography color="text.secondary" textAlign="center" py={6}>

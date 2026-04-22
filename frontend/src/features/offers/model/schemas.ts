@@ -8,6 +8,7 @@ export const offerSchema = z.object({
   authorId: z.string(),
   authorName: z.string().nullish(),
   name: z.string(),
+  tags: z.array(z.string()).nullish().transform((value) => value ?? []),
   photoIds: z.array(z.string()).nullish().transform((value) => value ?? []),
   photoUrls: z.array(z.string()).nullish().transform((value) => value ?? []),
   description: z.string(),
@@ -68,3 +69,5 @@ export const getOffersResponseSchema = z.object({
   offers: z.array(offerSchema),
   nextCursor: universalCursorSchema.nullish().transform((value) => value ?? null),
 });
+
+export const listTagsResponseSchema = z.array(z.string());

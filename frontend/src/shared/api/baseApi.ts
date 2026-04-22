@@ -12,6 +12,26 @@ type RefreshResponse = {
 const rawBaseQuery = fetchBaseQuery({
   baseUrl: "http://localhost:80",
   credentials: "include", // для refresh cookie
+  paramsSerializer: (params) => {
+    const searchParams = new URLSearchParams();
+
+    for (const [key, value] of Object.entries(params)) {
+      if (value === undefined || value === null) {
+        continue;
+      }
+
+      if (Array.isArray(value)) {
+        for (const item of value) {
+          searchParams.append(key, String(item));
+        }
+        continue;
+      }
+
+      searchParams.set(key, String(value));
+    }
+
+    return searchParams.toString();
+  },
   prepareHeaders: (headers, {getState}) => {
     const token = (getState() as RootState).auth.accessToken;
     console.log("token", token);

@@ -124,6 +124,14 @@ function OfferCard({
           {offer.description}
         </Typography>
 
+        {offer.tags.length > 0 && (
+          <Box display="flex" gap={0.75} flexWrap="wrap" mb={2}>
+            {offer.tags.map((tag) => (
+              <Chip key={tag} label={`#${tag}`} size="small" variant="outlined" />
+            ))}
+          </Box>
+        )}
+
         {showRating && (
           <Box display="flex" alignItems="center" gap={0.75} mb={2} color={summary && summary.count > 0 ? "warning.main" : "text.disabled"}>
             <StarRoundedIcon fontSize="small" />

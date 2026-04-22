@@ -14,6 +14,7 @@ import {
   Typography,
 } from "@mui/material";
 import AdminPanelSettingsOutlinedIcon from "@mui/icons-material/AdminPanelSettingsOutlined";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
 import SettingsEthernetOutlinedIcon from "@mui/icons-material/SettingsEthernetOutlined";
 import ShieldOutlinedIcon from "@mui/icons-material/ShieldOutlined";
@@ -112,6 +113,8 @@ function AdminPage() {
   const { data: drafts, isLoading: isDraftsLoading } = dealsApi.useGetMyDraftDealsQuery(
     isAdmin ? undefined : skipToken,
   );
+  const { data: tags, isLoading: isTagsLoading } = offersApi.useListTagsQuery(isAdmin ? undefined : skipToken);
+  const [deleteAdminTag] = offersApi.useDeleteAdminTagMutation();
 
   const isOverviewLoading =
     isVisibleUsersLoading || isChatsLoading || isOffersLoading || isDealsLoading || isDraftsLoading;
@@ -233,6 +236,35 @@ function AdminPage() {
               Открыть раздел
             </Button>
           </Box>
+        </CardContent>
+      </Card>
+
+      <Card variant="outlined" sx={{ borderRadius: 3 }}>
+        <CardContent>
+          <Typography variant="h5" fontWeight={700} mb={1}>
+            Теги объявлений
+          </Typography>
+          <Typography variant="body2" color="text.secondary" mb={2}>
+            Общий список тегов из `GET /tags`. Удаление вызывает `DELETE /admin/tags`.
+          </Typography>
+
+          {isTagsLoading ? (
+            <CircularProgress size={24} />
+          ) : !tags || tags.length === 0 ? (
+            <Alert severity="info">Тегов пока нет.</Alert>
+          ) : (
+            <Box display="flex" gap={1} flexWrap="wrap">
+              {tags.map((tag) => (
+                <Chip
+                  key={tag}
+                  label={tag}
+                  onDelete={() => void deleteAdminTag(tag)}
+                  deleteIcon={<DeleteOutlineIcon fontSize="small" />}
+                  variant="outlined"
+                />
+              ))}
+            </Box>
+          )}
         </CardContent>
       </Card>
 

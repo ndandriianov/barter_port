@@ -4,6 +4,7 @@ import {
   Alert,
   Box,
   Button,
+  Chip,
   CircularProgress,
   FormControl,
   FormHelperText,
@@ -16,6 +17,7 @@ import {
 } from "@mui/material";
 import offersApi from "@/features/offers/api/offersApi";
 import type { Offer, OfferAction, OfferType } from "@/features/offers/model/types";
+import { normalizeOfferTags, parseOfferTagsInput } from "@/features/offers/model/tagUtils.ts";
 import { getErrorMessage } from "@/shared/utils/getErrorMessage.ts";
 
 const MAX_PHOTO_COUNT = 10;
@@ -35,11 +37,13 @@ function CreateOfferForm({ mode = "create", offer }: CreateOfferFormProps) {
   const [description, setDescription] = useState(offer?.description ?? "");
   const [action, setAction] = useState<OfferAction>(offer?.action ?? "give");
   const [type, setType] = useState<OfferType>(offer?.type ?? "good");
+  const [tagsInput, setTagsInput] = useState((offer?.tags ?? []).join(", "));
   const [photos, setPhotos] = useState<File[]>([]);
   const [deletedPhotoIds, setDeletedPhotoIds] = useState<string[]>([]);
   const [photoError, setPhotoError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const navigate = useNavigate();
+  const { data: existingTags = [] } = offersApi.useListTagsQuery();
   const existingPhotos = useMemo(
     () => (offer ? offer.photoUrls.map((url, index) => ({ id: offer.photoIds[index] ?? `${offer.id}-${index}`, url })) : []),
     [offer],
@@ -49,6 +53,11 @@ function CreateOfferForm({ mode = "create", offer }: CreateOfferFormProps) {
     [photos],
   );
   const activeExistingPhotoCount = existingPhotos.filter((photo) => !deletedPhotoIds.includes(photo.id)).length;
+  const parsedTags = useMemo(() => parseOfferTagsInput(tagsInput), [tagsInput]);
+  const suggestedTags = useMemo(
+    () => existingTags.filter((tag) => !parsedTags.includes(tag)).slice(0, 12),
+    [existingTags, parsedTags],
+  );
 
   useEffect(() => {
     return () => {
@@ -71,6 +80,7 @@ function CreateOfferForm({ mode = "create", offer }: CreateOfferFormProps) {
           description,
           action,
           type,
+          tags: parsedTags,
           deletePhotoIds: deletedPhotoIds.length > 0 ? deletedPhotoIds : undefined,
           photos,
         },
@@ -79,8 +89,12 @@ function CreateOfferForm({ mode = "create", offer }: CreateOfferFormProps) {
       return;
     }
 
-    await createOffer({ name, description, action, type, photos }).unwrap();
+    await createOffer({ name, description, action, type, tags: parsedTags, photos }).unwrap();
     navigate("/offers");
+  };
+
+  const handleAddSuggestedTag = (tag: string) => {
+    setTagsInput(normalizeOfferTags([...parsedTags, tag]).join(", "));
   };
 
   const handleSelectPhotos = () => {
@@ -166,6 +180,44 @@ function CreateOfferForm({ mode = "create", offer }: CreateOfferFormProps) {
         value={description}
         onChange={(e) => setDescription(e.target.value)}
       />
+
+      <Box>
+        <TextField
+          label="Теги"
+          fullWidth
+          value={tagsInput}
+          onChange={(e) => setTagsInput(e.target.value)}
+          helperText="До 5 тегов. Разделяйте запятыми. Сервер нормализует теги в lowercase."
+        />
+
+        {parsedTags.length > 0 && (
+          <Box display="flex" gap={1} flexWrap="wrap" mt={1.5}>
+            {parsedTags.map((tag) => (
+              <Chip key={tag} label={tag} size="small" />
+            ))}
+          </Box>
+        )}
+
+        {suggestedTags.length > 0 && (
+          <Box mt={1.5}>
+            <Typography variant="caption" color="text.secondary" display="block" mb={0.75}>
+              Популярные теги
+            </Typography>
+            <Box display="flex" gap={1} flexWrap="wrap">
+              {suggestedTags.map((tag) => (
+                <Chip
+                  key={tag}
+                  label={tag}
+                  size="small"
+                  variant="outlined"
+                  clickable
+                  onClick={() => handleAddSuggestedTag(tag)}
+                />
+              ))}
+            </Box>
+          </Box>
+        )}
+      </Box>
 
       <FormControl fullWidth>
         <InputLabel>Тип действия</InputLabel>
