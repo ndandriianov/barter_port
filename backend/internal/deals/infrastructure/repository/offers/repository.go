@@ -37,6 +37,37 @@ func (r *Repository) AddOffer(ctx context.Context, exec db.DB, offer domain.Offe
 	return err
 }
 
+func (r *Repository) ReplaceOfferTags(ctx context.Context, exec db.DB, offerID uuid.UUID, tags []string) error {
+	if _, err := exec.Exec(ctx, `DELETE FROM offer_tags WHERE offer_id = $1`, offerID); err != nil {
+		return fmt.Errorf("delete offer tags: %w", err)
+	}
+
+	if len(tags) > 0 {
+		if _, err := exec.Exec(ctx, `
+			INSERT INTO tags (name)
+			SELECT DISTINCT tag_name
+			FROM unnest($1::text[]) AS tag_name
+			ON CONFLICT (name) DO NOTHING
+		`, tags); err != nil {
+			return fmt.Errorf("upsert tags: %w", err)
+		}
+
+		if _, err := exec.Exec(ctx, `
+			INSERT INTO offer_tags (offer_id, tag_name)
+			SELECT $1, tag_name
+			FROM unnest($2::text[]) AS tag_name
+		`, offerID, tags); err != nil {
+			return fmt.Errorf("insert offer tags: %w", err)
+		}
+	}
+
+	if err := r.DeleteUnusedTags(ctx, exec); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (r *Repository) AddOfferPhotos(ctx context.Context, exec db.DB, photos []domain.OfferPhoto) error {
 	if len(photos) == 0 {
 		return nil
@@ -100,6 +131,52 @@ func (r *Repository) DeleteOfferPhotos(ctx context.Context, exec db.DB, offerID 
 	return nil
 }
 
+func (r *Repository) ListTags(ctx context.Context) ([]string, error) {
+	rows, err := r.db.Query(ctx, `SELECT name FROM tags ORDER BY name ASC`)
+	if err != nil {
+		return nil, fmt.Errorf("list tags: %w", err)
+	}
+	defer rows.Close()
+
+	result := make([]string, 0)
+	for rows.Next() {
+		var tag string
+		if err := rows.Scan(&tag); err != nil {
+			return nil, fmt.Errorf("scan tag: %w", err)
+		}
+		result = append(result, tag)
+	}
+
+	return result, rows.Err()
+}
+
+func (r *Repository) DeleteTagByName(ctx context.Context, exec db.DB, name string) error {
+	tag, err := exec.Exec(ctx, `DELETE FROM tags WHERE name = $1`, name)
+	if err != nil {
+		return fmt.Errorf("delete tag: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return domain.ErrTagNotFound
+	}
+
+	return nil
+}
+
+func (r *Repository) DeleteUnusedTags(ctx context.Context, exec db.DB) error {
+	if _, err := exec.Exec(ctx, `
+		DELETE FROM tags t
+		WHERE NOT EXISTS (
+			SELECT 1
+			FROM offer_tags ot
+			WHERE ot.tag_name = t.name
+		)
+	`); err != nil {
+		return fmt.Errorf("delete unused tags: %w", err)
+	}
+
+	return nil
+}
+
 // ================================================================================
 // GET OFFER NAMES BY IDS
 // ================================================================================
@@ -153,6 +230,7 @@ func (r *Repository) GetOffersByIDs(ctx context.Context, exec db.DB, ids []uuid.
 			o.created_at,
 			o.updated_at,
 			o.views,
+			COALESCE((SELECT array_agg(ot.tag_name ORDER BY ot.tag_name) FROM offer_tags ot WHERE ot.offer_id = o.id), '{}'::text[]) AS tags,
 			COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = o.id), '{}'::uuid[]) AS photo_ids,
 			COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = o.id), '{}'::text[]) AS photo_urls,
 			o.is_hidden,
@@ -180,6 +258,7 @@ func (r *Repository) GetOffersByIDs(ctx context.Context, exec db.DB, ids []uuid.
 			&item.CreatedAt,
 			&item.UpdatedAt,
 			&item.Views,
+			&item.Tags,
 			&item.PhotoIds,
 			&item.PhotoUrls,
 			&item.IsHidden,
@@ -212,6 +291,7 @@ func (r *Repository) GetOfferByID(ctx context.Context, id uuid.UUID) (*domain.Of
 func (r *Repository) GetOffer(ctx context.Context, exec db.DB, id uuid.UUID) (*domain.Offer, error) {
 	query := `
 		SELECT id, author_id, name, type, action, description, created_at, updated_at, views,
+		       COALESCE((SELECT array_agg(ot.tag_name ORDER BY ot.tag_name) FROM offer_tags ot WHERE ot.offer_id = offers.id), '{}'::text[]) AS tags,
 		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
 		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
 		       is_hidden, modification_blocked
@@ -229,6 +309,7 @@ func (r *Repository) GetOffer(ctx context.Context, exec db.DB, id uuid.UUID) (*d
 		&offer.CreatedAt,
 		&offer.UpdatedAt,
 		&offer.Views,
+		&offer.Tags,
 		&offer.PhotoIds,
 		&offer.PhotoUrls,
 		&offer.IsHidden,
@@ -274,12 +355,14 @@ func (r *Repository) UpdateOffer(
 ) (domain.Offer, error) {
 	var itemType *string
 	if patch.Type != nil {
-		itemType = new(patch.Type.String())
+		value := patch.Type.String()
+		itemType = &value
 	}
 
 	var action *string
 	if patch.Action != nil {
-		action = new(patch.Action.String())
+		value := patch.Action.String()
+		action = &value
 	}
 
 	const query = `
@@ -292,6 +375,7 @@ func (r *Repository) UpdateOffer(
 		WHERE id = $1
 		  AND author_id = $2
 		RETURNING id, author_id, name, type, action, description, created_at, updated_at, views,
+		          COALESCE((SELECT array_agg(ot.tag_name ORDER BY ot.tag_name) FROM offer_tags ot WHERE ot.offer_id = offers.id), '{}'::text[]) AS tags,
 		          COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
 		          COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
 		          is_hidden, modification_blocked`
@@ -307,6 +391,7 @@ func (r *Repository) UpdateOffer(
 		&offer.CreatedAt,
 		&offer.UpdatedAt,
 		&offer.Views,
+		&offer.Tags,
 		&offer.PhotoIds,
 		&offer.PhotoUrls,
 		&offer.IsHidden,

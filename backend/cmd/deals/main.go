@@ -35,6 +35,7 @@ import (
 	offersh "barter-port/internal/deals/infrastructure/transport/http/offers"
 	reviewsh "barter-port/internal/deals/infrastructure/transport/http/reviews"
 	statisticsh "barter-port/internal/deals/infrastructure/transport/http/statistics"
+	tagsh "barter-port/internal/deals/infrastructure/transport/http/tags"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/bootstrap"
 	"barter-port/pkg/kafkax"
@@ -199,7 +200,8 @@ func main() {
 	reviewsHandlers := reviewsh.NewHandlers(logg, reviewsService)
 	offerReportsHandlers := offerreportsh.NewHandlers(offerReportsService)
 	statisticsHandlers := statisticsh.NewHandlers(logg, statisticsService)
-	router := transporthttp.NewRouter(logg, validator, offersHandlers, offerGroupsHandlers, draftsHandlers, dealsHandlers, failuresHandlers, joinsHandlers, reviewsHandlers, offerReportsHandlers, statisticsHandlers)
+	tagsHandlers := tagsh.NewHandlers(offersService)
+	router := transporthttp.NewRouter(logg, validator, offersHandlers, offerGroupsHandlers, draftsHandlers, dealsHandlers, failuresHandlers, joinsHandlers, reviewsHandlers, offerReportsHandlers, statisticsHandlers, tagsHandlers)
 
 	port := bootstrap.InitPortStringFromConfig(cfg, 8080)
 	httpServer := &http.Server{

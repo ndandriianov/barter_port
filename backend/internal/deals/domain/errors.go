@@ -4,6 +4,8 @@ import "errors"
 
 var (
 	ErrInvalidOfferName                 = errors.New("invalid offer name")
+	ErrInvalidTagName                   = errors.New("invalid tag name")
+	ErrTooManyTags                      = errors.New("too many tags")
 	ErrInvalidQuantity                  = errors.New("invalid quantity")
 	ErrDraftNotFound                    = errors.New("draft not found")
 	ErrDealNotFound                     = errors.New("deal not found")
@@ -39,6 +41,7 @@ var (
 	ErrSameProviderAndReceiver = errors.New("provider and receiver are the same user")
 
 	ErrReportNotFound          = errors.New("report not found")
+	ErrTagNotFound             = errors.New("tag not found")
 	ErrAlreadyReviewed         = errors.New("report already reviewed")
 	ErrSelfReport              = errors.New("cannot report own offer")
 	ErrReporterAlreadyAttached = errors.New("reporter already attached to this report")

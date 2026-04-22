@@ -60,6 +60,25 @@ func TestCreateOfferMultipartWithPhotosSuccess(t *testing.T) {
 	require.Equal(t, offer.PhotoUrls, fetched.PhotoUrls)
 }
 
+func TestCreateOfferWithTagsSuccess(t *testing.T) {
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	tags := []types.TagName{" VeloTag ", "RepairTag", "velotag"}
+	offer := mustCreateOfferDetails(t, userID, types.CreateOfferRequest{
+		Name:        "Tagged bike",
+		Description: "City bike in good condition",
+		Type:        types.Good,
+		Action:      types.Give,
+		Tags:        &tags,
+	})
+
+	require.Equal(t, []types.TagName{"repairtag", "velotag"}, offer.Tags)
+
+	fetched := mustGetOfferByID(t, userID, offer.Id)
+	require.Equal(t, []types.TagName{"repairtag", "velotag"}, fetched.Tags)
+}
+
 func TestCreateOfferUnauthorized(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)
@@ -314,6 +333,66 @@ func TestGetOffersResponseIsJSON(t *testing.T) {
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&decoded))
 }
 
+func TestGetOffersFiltersByTagsFromBody(t *testing.T) {
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	fullTags := []types.TagName{"filteralpha", "filterbeta"}
+	bikeOnly := []types.TagName{"filteralpha"}
+
+	target := mustCreateOfferDetails(t, userID, types.CreateOfferRequest{
+		Name:        "Repair bike",
+		Description: "Tagged target offer",
+		Type:        types.Service,
+		Action:      types.Give,
+		Tags:        &fullTags,
+	})
+	_ = mustCreateOfferDetails(t, userID, types.CreateOfferRequest{
+		Name:        "Just bike",
+		Description: "Partial match",
+		Type:        types.Good,
+		Action:      types.Give,
+		Tags:        &bikeOnly,
+	})
+	_ = mustCreateOfferDetails(t, userID, types.CreateOfferRequest{
+		Name:        "No tags",
+		Description: "Should not match",
+		Type:        types.Good,
+		Action:      types.Give,
+	})
+
+	result := mustGetOffersBySortAndTags(t, userID, "ByTime", nil, &fullTags)
+	require.Len(t, result.Offers, 1)
+	require.Equal(t, target.Id, result.Offers[0].Id)
+	require.Equal(t, []types.TagName{"filteralpha", "filterbeta"}, result.Offers[0].Tags)
+}
+
+func TestGetOffersFiltersByEmptyTagsArray(t *testing.T) {
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	tags := []types.TagName{"emptyfiltertag"}
+	_ = mustCreateOfferDetails(t, userID, types.CreateOfferRequest{
+		Name:        "Tagged",
+		Description: "Has tags",
+		Type:        types.Good,
+		Action:      types.Give,
+		Tags:        &tags,
+	})
+	untagged := mustCreateOfferDetails(t, userID, types.CreateOfferRequest{
+		Name:        "Untagged",
+		Description: "No tags",
+		Type:        types.Good,
+		Action:      types.Give,
+	})
+
+	emptyTags := []types.TagName{}
+	result := mustGetOffersBySortAndTags(t, userID, "ByTime", nil, &emptyTags)
+	require.Len(t, result.Offers, 1)
+	require.Equal(t, untagged.Id, result.Offers[0].Id)
+	require.Empty(t, result.Offers[0].Tags)
+}
+
 func TestGetSubscribedOffersUnauthorized(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)
@@ -462,6 +541,32 @@ func TestUpdateOfferPhotosKeepsRemainingOrderAndAppendsNewPhotos(t *testing.T) {
 	fetched := mustGetOfferByID(t, userID, offer.Id)
 	require.Equal(t, updated.PhotoIds, fetched.PhotoIds)
 	require.Equal(t, updated.PhotoUrls, fetched.PhotoUrls)
+}
+
+func TestUpdateOfferReplacesTags(t *testing.T) {
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	initialTags := []types.TagName{"updatetagalpha", "updatetagbeta"}
+	offer := mustCreateOfferDetails(t, userID, types.CreateOfferRequest{
+		Name:        "Vintage bike",
+		Description: "City bike in good condition",
+		Type:        types.Good,
+		Action:      types.Give,
+		Tags:        &initialTags,
+	})
+
+	newTags := []types.TagName{"updatetaggamma"}
+	updated := mustUpdateOffer(t, userID, offer.Id, types.UpdateOfferRequest{
+		Tags: &newTags,
+	})
+	require.Equal(t, []types.TagName{"updatetaggamma"}, updated.Tags)
+
+	emptyTags := []types.TagName{}
+	cleared := mustUpdateOffer(t, userID, offer.Id, types.UpdateOfferRequest{
+		Tags: &emptyTags,
+	})
+	require.Empty(t, cleared.Tags)
 }
 
 func TestUpdateOfferRejectsUnknownPhotoID(t *testing.T) {

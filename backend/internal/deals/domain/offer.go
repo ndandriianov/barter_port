@@ -14,6 +14,7 @@ type Offer struct {
 	AuthorId            uuid.UUID         `db:"author_id"`
 	AuthorName          *string           `db:"-"`
 	Name                string            `db:"name"`
+	Tags                []string          `db:"tags"`
 	PhotoIds            []uuid.UUID       `db:"photo_ids"`
 	PhotoUrls           []string          `db:"photo_urls"`
 	Type                enums.ItemType    `db:"type"`
@@ -38,23 +39,25 @@ func (i *Offer) ToDto() types.Offer {
 
 	var photoURLs *[]string
 	if len(i.PhotoUrls) > 0 {
-		copied := append([]string(nil), i.PhotoUrls...)
-		photoURLs = &copied
+		photoURLs = new(append([]string(nil), i.PhotoUrls...))
 	}
 
 	return types.Offer{
-		Id:          i.ID,
-		AuthorId:    i.AuthorId,
-		AuthorName:  i.AuthorName,
-		Name:        i.Name,
-		PhotoIds:    photoIDs,
-		PhotoUrls:   photoURLs,
-		Type:        types.ItemType(i.Type.String()),
-		Action:      types.OfferAction(i.Action.String()),
-		Description: i.Description,
-		CreatedAt:   i.CreatedAt,
-		UpdatedAt:   i.UpdatedAt,
-		Views:       int64(i.Views),
+		Id:                  i.ID,
+		AuthorId:            i.AuthorId,
+		AuthorName:          i.AuthorName,
+		Name:                i.Name,
+		Tags:                append([]types.TagName(nil), i.tagsToDTO()...),
+		PhotoIds:            photoIDs,
+		PhotoUrls:           photoURLs,
+		Type:                types.ItemType(i.Type.String()),
+		Action:              types.OfferAction(i.Action.String()),
+		Description:         i.Description,
+		CreatedAt:           i.CreatedAt,
+		UpdatedAt:           i.UpdatedAt,
+		Views:               int64(i.Views),
+		IsHidden:            boolPtr(i.IsHidden),
+		ModificationBlocked: boolPtr(i.ModificationBlocked),
 	}
 }
 
@@ -70,24 +73,43 @@ func (i *Offer) ToDTOWithInfo(info OfferInfo) types.OfferWithInfo {
 
 	var photoURLs *[]string
 	if len(i.PhotoUrls) > 0 {
-		copied := append([]string(nil), i.PhotoUrls...)
-		photoURLs = &copied
+		photoURLs = new(append([]string(nil), i.PhotoUrls...))
 	}
 
 	return types.OfferWithInfo{
-		Action:      types.OfferAction(i.Action.String()),
-		AuthorId:    i.AuthorId,
-		AuthorName:  i.AuthorName,
-		CreatedAt:   i.CreatedAt,
-		Description: i.Description,
-		Id:          i.ID,
-		Name:        i.Name,
-		PhotoIds:    photoIDs,
-		PhotoUrls:   photoURLs,
-		Quantity:    info.Quantity,
-		Type:        types.ItemType(i.Type.String()),
-		UpdatedAt:   i.UpdatedAt,
-		Views:       int64(i.Views),
-		Confirmed:   info.Confirmed,
+		Action:              types.OfferAction(i.Action.String()),
+		AuthorId:            i.AuthorId,
+		AuthorName:          i.AuthorName,
+		CreatedAt:           i.CreatedAt,
+		Description:         i.Description,
+		Id:                  i.ID,
+		IsHidden:            boolPtr(i.IsHidden),
+		ModificationBlocked: boolPtr(i.ModificationBlocked),
+		Name:                i.Name,
+		PhotoIds:            photoIDs,
+		PhotoUrls:           photoURLs,
+		Quantity:            info.Quantity,
+		Tags:                append([]types.TagName(nil), i.tagsToDTO()...),
+		Type:                types.ItemType(i.Type.String()),
+		UpdatedAt:           i.UpdatedAt,
+		Views:               int64(i.Views),
+		Confirmed:           info.Confirmed,
 	}
+}
+
+func (i *Offer) tagsToDTO() []types.TagName {
+	if len(i.Tags) == 0 {
+		return []types.TagName{}
+	}
+
+	tags := make([]types.TagName, 0, len(i.Tags))
+	for _, tag := range i.Tags {
+		tags = append(tags, types.TagName(tag))
+	}
+
+	return tags
+}
+
+func boolPtr(v bool) *bool {
+	return new(v)
 }

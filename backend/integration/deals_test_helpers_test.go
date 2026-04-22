@@ -8,6 +8,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"testing"
 	"time"
 
@@ -139,6 +140,11 @@ func mustCreateOfferMultipartDetails(t *testing.T, userID uuid.UUID, body types.
 	require.NoError(t, writer.WriteField("description", body.Description))
 	require.NoError(t, writer.WriteField("type", string(body.Type)))
 	require.NoError(t, writer.WriteField("action", string(body.Action)))
+	if body.Tags != nil {
+		for _, tag := range *body.Tags {
+			require.NoError(t, writer.WriteField("tags", string(tag)))
+		}
+	}
 
 	for i, photo := range photos {
 		part, err := writer.CreateFormFile("photos", fmt.Sprintf("photo-%d.png", i))
@@ -184,6 +190,10 @@ func mustGetOffers(t *testing.T, userID uuid.UUID, my *bool) types.ListOffersRes
 }
 
 func mustGetOffersBySort(t *testing.T, userID uuid.UUID, sort string, my *bool) types.ListOffersResponse {
+	return mustGetOffersBySortAndTags(t, userID, sort, my, nil)
+}
+
+func mustGetOffersBySortAndTags(t *testing.T, userID uuid.UUID, sort string, my *bool, tags *[]types.TagName) types.ListOffersResponse {
 	t.Helper()
 
 	url := dealsURL() + "/offers?sort=" + sort + "&cursor_limit=100"
@@ -191,7 +201,15 @@ func mustGetOffersBySort(t *testing.T, userID uuid.UUID, sort string, my *bool) 
 		url += fmt.Sprintf("&my=%t", *my)
 	}
 
-	req := mustUserRequest(t, http.MethodGet, url, userID, nil)
+	var body io.Reader
+	if tags != nil {
+		body = mustJSONBody(t, map[string]any{"tags": tags})
+	}
+
+	req := mustUserRequest(t, http.MethodGet, url, userID, body)
+	if tags != nil {
+		req.Header.Set("Content-Type", "application/json")
+	}
 	resp := mustDo(t, req)
 	defer func() { _ = resp.Body.Close() }()
 	require.Equal(t, http.StatusOK, resp.StatusCode)
@@ -284,6 +302,11 @@ func mustUpdateOfferMultipartDetails(
 	if body.Action != nil {
 		require.NoError(t, writer.WriteField("action", string(*body.Action)))
 	}
+	if body.Tags != nil {
+		for _, tag := range *body.Tags {
+			require.NoError(t, writer.WriteField("tags", string(tag)))
+		}
+	}
 	if body.DeletePhotoIds != nil {
 		for _, photoID := range *body.DeletePhotoIds {
 			require.NoError(t, writer.WriteField("deletePhotoIds", photoID.String()))
@@ -310,6 +333,29 @@ func mustUpdateOfferMultipartDetails(
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&offer))
 
 	return offer
+}
+
+func mustListTags(t *testing.T, userID uuid.UUID) types.ListTagsResponse {
+	t.Helper()
+
+	req := mustUserRequest(t, http.MethodGet, dealsURL()+"/tags", userID, nil)
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var tags types.ListTagsResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&tags))
+
+	return tags
+}
+
+func mustDeleteAdminTag(t *testing.T, adminToken string, name string) {
+	t.Helper()
+
+	req := mustBearerRequest(t, http.MethodDelete, dealsURL()+"/admin/tags?name="+url.QueryEscape(name), adminToken, nil)
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusNoContent, resp.StatusCode)
 }
 
 func mustDeleteOffer(t *testing.T, userID uuid.UUID, offerID uuid.UUID) {

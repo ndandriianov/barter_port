@@ -11,6 +11,7 @@ import (
 	"barter-port/internal/deals/infrastructure/transport/http/offers"
 	reviewsh "barter-port/internal/deals/infrastructure/transport/http/reviews"
 	statisticsh "barter-port/internal/deals/infrastructure/transport/http/statistics"
+	tagsh "barter-port/internal/deals/infrastructure/transport/http/tags"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/authkit/validators"
 	"barter-port/pkg/logger"
@@ -34,6 +35,7 @@ func NewRouter(
 	reviewsHandlers *reviewsh.Handlers,
 	offerReportsHandlers *offerreports.Handlers,
 	statisticsHandlers *statisticsh.Handlers,
+	tagsHandlers *tagsh.Handlers,
 ) http.Handler {
 	if logg == nil {
 		log.Fatal("logger is required")
@@ -65,6 +67,9 @@ func NewRouter(
 	if statisticsHandlers == nil {
 		log.Fatal("statistics handlers are required")
 	}
+	if tagsHandlers == nil {
+		log.Fatal("tags handlers are required")
+	}
 
 	r := chi.NewRouter()
 
@@ -91,6 +96,7 @@ func NewRouter(
 		r.Use(authkit.Middleware(logg, validator, nil))
 		r.Use(logger.Middleware(logg))
 		r.Get("/me/statistics", statisticsHandlers.HandleGetMyStatistics)
+		r.Get("/tags", tagsHandlers.HandleListTags)
 		r.Route("/offers", func(r chi.Router) {
 			r.Post("/", offersHandlers.HandleCreateOffer)
 			r.Get("/", offersHandlers.HandleGetOffers)
@@ -109,6 +115,7 @@ func NewRouter(
 			r.Get("/{reportId}", offerReportsHandlers.HandleGetAdminReportDetails)
 			r.Post("/{reportId}/resolution", offerReportsHandlers.HandleResolveReport)
 		})
+		r.Delete("/admin/tags", tagsHandlers.HandleDeleteAdminTag)
 		r.Route("/offer-groups", func(r chi.Router) {
 			r.Get("/", offerGroupsHandlers.ListOfferGroups)
 			r.Post("/", offerGroupsHandlers.CreateOfferGroup)
