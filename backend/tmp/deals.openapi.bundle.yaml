@@ -2045,8 +2045,10 @@ paths:
         - для `created_at`: используйте `cursor_created_at` + `cursor_id`
         - для `popularity`: используйте `cursor_views` + `cursor_id`
 
-        Для поиска по тэгам необходимо передать список тэгов в тело запроса.
-        В этом случае возвращаются объявления, которые содержат **все** указанные тэги.
+        Фильтрация по тегам:
+        - `tags`: вернуть объявления, содержащие **все** указанные теги;
+        - `withoutTags=true`: вернуть только объявления без тегов;
+        - `tags` и `withoutTags=true` одновременно передавать нельзя.
       operationId: listOffers
       security:
         - bearerAuth: []
@@ -2066,20 +2068,8 @@ paths:
         - $ref: '#/components/parameters/CursorViews'
         - $ref: '#/components/parameters/CursorId'
         - $ref: '#/components/parameters/Limit'
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema: null
-            type: object
-            properties:
-              tags:
-                type: array
-                description: |
-                  Список тегов для фильтрации объявлений. Если не передано, возвращаются объявления с любыми тегами.
-                  Если передано пустым массивом, возвращаются только объявления без тегов.
-                items:
-                  $ref: schemas.yaml#/TagName
+        - $ref: '#/components/parameters/OfferTagsFilter'
+        - $ref: '#/components/parameters/WithoutTags'
       responses:
         '200':
           description: Список объявлений и (опционально) курсор
@@ -4612,3 +4602,27 @@ components:
         minimum: 1
         maximum: 100
         default: 10
+    OfferTagsFilter:
+      name: tags
+      in: query
+      required: false
+      description: |
+        Фильтр по тегам. Возвращаются объявления, содержащие **все** переданные теги.
+        Повторяйте параметр в query:
+        `?tags=bike&tags=repair`
+      schema:
+        type: array
+        maxItems: 5
+        items:
+          $ref: '#/components/schemas/TagName'
+      style: form
+      explode: true
+    WithoutTags:
+      name: withoutTags
+      in: query
+      required: false
+      description: |
+        Если `true`, вернуть только объявления без тегов.
+        Нельзя передавать вместе с `tags`.
+      schema:
+        type: boolean

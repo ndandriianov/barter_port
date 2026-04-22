@@ -1128,8 +1128,14 @@ type CursorViews = int64
 // Limit defines model for Limit.
 type Limit = int
 
+// OfferTagsFilter defines model for OfferTagsFilter.
+type OfferTagsFilter = []TagName
+
 // SortType defines model for SortType.
 type SortType string
+
+// WithoutTags defines model for WithoutTags.
+type WithoutTags = bool
 
 // ListOfferReportsForAdminParams defines parameters for ListOfferReportsForAdmin.
 type ListOfferReportsForAdminParams struct {
@@ -1163,9 +1169,6 @@ type ProcessJoinRequestParams struct {
 	Accept bool `form:"accept" json:"accept"`
 }
 
-// ListOffersJSONBody defines parameters for ListOffers.
-type ListOffersJSONBody interface{}
-
 // ListOffersParams defines parameters for ListOffers.
 type ListOffersParams struct {
 	// My По умолчанию `false`. Если `true`, возвращаются только объявления, созданные текущим пользователем,
@@ -1190,6 +1193,15 @@ type ListOffersParams struct {
 
 	// CursorLimit Максимальное количество объявлений в ответе
 	CursorLimit *Limit `form:"cursor_limit,omitempty" json:"cursor_limit,omitempty"`
+
+	// Tags Фильтр по тегам. Возвращаются объявления, содержащие **все** переданные теги.
+	// Повторяйте параметр в query:
+	// `?tags=bike&tags=repair`
+	Tags *OfferTagsFilter `form:"tags,omitempty" json:"tags,omitempty"`
+
+	// WithoutTags Если `true`, вернуть только объявления без тегов.
+	// Нельзя передавать вместе с `tags`.
+	WithoutTags *WithoutTags `form:"withoutTags,omitempty" json:"withoutTags,omitempty"`
 }
 
 // ListOffersParamsSort defines parameters for ListOffers.
@@ -1253,9 +1265,6 @@ type CreateOfferGroupJSONRequestBody = CreateOfferGroupRequest
 
 // CreateDraftDealFromOfferGroupJSONRequestBody defines body for CreateDraftDealFromOfferGroup for application/json ContentType.
 type CreateDraftDealFromOfferGroupJSONRequestBody = CreateOfferGroupDraftRequest
-
-// ListOffersJSONRequestBody defines body for ListOffers for application/json ContentType.
-type ListOffersJSONRequestBody ListOffersJSONBody
 
 // CreateOffersJSONRequestBody defines body for CreateOffers for application/json ContentType.
 type CreateOffersJSONRequestBody = CreateOfferRequest

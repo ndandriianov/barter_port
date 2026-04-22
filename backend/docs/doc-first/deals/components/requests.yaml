@@ -314,14 +314,3 @@ ModeratorResolutionForFailureRequest:
       description: |
         Комментарий админа, объясняющий его решение. Может быть пустым
 
-
-ListOffersRequest:
-  type: object
-  properties:
-    tags:
-      type: array
-      description: |
-        Список тегов для фильтрации объявлений. Если не передано, возвращаются объявления с любыми тегами.
-        Если передано пустым массивом, возвращаются только объявления без тегов.
-      items:
-        $ref: 'schemas.yaml#/TagName'

@@ -190,26 +190,35 @@ func mustGetOffers(t *testing.T, userID uuid.UUID, my *bool) types.ListOffersRes
 }
 
 func mustGetOffersBySort(t *testing.T, userID uuid.UUID, sort string, my *bool) types.ListOffersResponse {
-	return mustGetOffersBySortAndTags(t, userID, sort, my, nil)
+	return mustGetOffersBySortAndTags(t, userID, sort, my, nil, false)
 }
 
-func mustGetOffersBySortAndTags(t *testing.T, userID uuid.UUID, sort string, my *bool, tags *[]types.TagName) types.ListOffersResponse {
+func mustGetOffersBySortAndTags(
+	t *testing.T,
+	userID uuid.UUID,
+	sort string,
+	my *bool,
+	tags *[]types.TagName,
+	withoutTags bool,
+) types.ListOffersResponse {
 	t.Helper()
 
-	url := dealsURL() + "/offers?sort=" + sort + "&cursor_limit=100"
+	values := url.Values{}
+	values.Set("sort", sort)
+	values.Set("cursor_limit", "100")
 	if my != nil {
-		url += fmt.Sprintf("&my=%t", *my)
+		values.Set("my", fmt.Sprintf("%t", *my))
+	}
+	if tags != nil {
+		for _, tag := range *tags {
+			values.Add("tags", string(tag))
+		}
+	}
+	if withoutTags {
+		values.Set("withoutTags", "true")
 	}
 
-	var body io.Reader
-	if tags != nil {
-		body = mustJSONBody(t, map[string]any{"tags": tags})
-	}
-
-	req := mustUserRequest(t, http.MethodGet, url, userID, body)
-	if tags != nil {
-		req.Header.Set("Content-Type", "application/json")
-	}
+	req := mustUserRequest(t, http.MethodGet, dealsURL()+"/offers?"+values.Encode(), userID, nil)
 	resp := mustDo(t, req)
 	defer func() { _ = resp.Body.Close() }()
 	require.Equal(t, http.StatusOK, resp.StatusCode)

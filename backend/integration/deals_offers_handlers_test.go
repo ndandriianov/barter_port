@@ -333,7 +333,7 @@ func TestGetOffersResponseIsJSON(t *testing.T) {
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&decoded))
 }
 
-func TestGetOffersFiltersByTagsFromBody(t *testing.T) {
+func TestGetOffersFiltersByTagsQuery(t *testing.T) {
 	dumpDealsLogs(t)
 
 	userID := uuid.New()
@@ -362,14 +362,14 @@ func TestGetOffersFiltersByTagsFromBody(t *testing.T) {
 	})
 
 	my := true
-	result := mustGetOffersBySortAndTags(t, userID, "ByTime", &my, &fullTags)
+	result := mustGetOffersBySortAndTags(t, userID, "ByTime", &my, &fullTags, false)
 	require.Len(t, result.Offers, 1)
 	require.Equal(t, target.Id, result.Offers[0].Id)
 	require.Equal(t, userID, result.Offers[0].AuthorId)
 	require.Equal(t, []types.TagName{"filteralpha", "filterbeta"}, result.Offers[0].Tags)
 }
 
-func TestGetOffersFiltersByEmptyTagsArray(t *testing.T) {
+func TestGetOffersFiltersWithoutTags(t *testing.T) {
 	dumpDealsLogs(t)
 
 	userID := uuid.New()
@@ -388,9 +388,8 @@ func TestGetOffersFiltersByEmptyTagsArray(t *testing.T) {
 		Action:      types.Give,
 	})
 
-	emptyTags := []types.TagName{}
 	my := true
-	result := mustGetOffersBySortAndTags(t, userID, "ByTime", &my, &emptyTags)
+	result := mustGetOffersBySortAndTags(t, userID, "ByTime", &my, nil, true)
 	require.Len(t, result.Offers, 1)
 	require.Equal(t, untagged.Id, result.Offers[0].Id)
 	require.Equal(t, userID, result.Offers[0].AuthorId)

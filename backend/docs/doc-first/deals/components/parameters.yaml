@@ -52,3 +52,29 @@ Limit:
     minimum: 1
     maximum: 100
     default: 10
+
+OfferTagsFilter:
+  name: tags
+  in: query
+  required: false
+  description: |
+    Фильтр по тегам. Возвращаются объявления, содержащие **все** переданные теги.
+    Повторяйте параметр в query:
+    `?tags=bike&tags=repair`
+  schema:
+    type: array
+    maxItems: 5
+    items:
+      $ref: 'schemas.yaml#/TagName'
+  style: form
+  explode: true
+
+WithoutTags:
+  name: withoutTags
+  in: query
+  required: false
+  description: |
+    Если `true`, вернуть только объявления без тегов.
+    Нельзя передавать вместе с `tags`.
+  schema:
+    type: boolean

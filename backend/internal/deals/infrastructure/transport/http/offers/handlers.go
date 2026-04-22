@@ -9,7 +9,6 @@ import (
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/httpx"
 	"barter-port/pkg/logger"
-	"encoding/json"
 	"errors"
 	"io"
 	"log/slog"
@@ -626,10 +625,6 @@ func writeListOffersResponse(w http.ResponseWriter, offerList []domain.Offer, ne
 	})
 }
 
-type listOffersRequestBody struct {
-	Tags *[]types.TagName `json:"tags,omitempty"`
-}
-
 func decodeListOffersRequest(r *http.Request) (types.ListOffersParams, *[]string, error) {
 	params := types.ListOffersParams{}
 	query := r.URL.Query()
@@ -674,42 +669,45 @@ func decodeListOffersRequest(r *http.Request) (types.ListOffersParams, *[]string
 		limit := types.Limit(value)
 		params.CursorLimit = &limit
 	}
+	if rawWithoutTags := query.Get("withoutTags"); rawWithoutTags != "" {
+		value, err := strconv.ParseBool(rawWithoutTags)
+		if err != nil {
+			return types.ListOffersParams{}, nil, errors.New("invalid withoutTags")
+		}
+		params.WithoutTags = &value
+	}
 
-	tagFilter, err := decodeListOffersTagFilter(r)
+	rawTags := query["tags"]
+	if len(rawTags) == 1 && strings.Contains(rawTags[0], ",") {
+		rawTags = strings.Split(rawTags[0], ",")
+	}
+	if len(rawTags) > 0 {
+		tags := make([]types.TagName, 0, len(rawTags))
+		for _, tag := range rawTags {
+			tags = append(tags, types.TagName(tag))
+		}
+		params.Tags = &tags
+	}
+
+	if params.Tags != nil && params.WithoutTags != nil && *params.WithoutTags {
+		return types.ListOffersParams{}, nil, errors.New("tags and withoutTags cannot be used together")
+	}
+
+	if params.WithoutTags != nil && *params.WithoutTags {
+		emptyTags := []string{}
+		return params, &emptyTags, nil
+	}
+
+	tagFilter, err := normalizeTagNames(params.Tags)
 	if err != nil {
 		return types.ListOffersParams{}, nil, err
 	}
 
-	return params, tagFilter, nil
-}
-
-func decodeListOffersTagFilter(r *http.Request) (*[]string, error) {
-	if r.Body == nil {
-		return nil, nil
+	if params.Tags == nil {
+		return params, nil, nil
 	}
 
-	body, err := io.ReadAll(r.Body)
-	if err != nil {
-		return nil, httpx.ErrCannotDecodeRequestBody
-	}
-	if len(strings.TrimSpace(string(body))) == 0 {
-		return nil, nil
-	}
-
-	var req listOffersRequestBody
-	if err := json.Unmarshal(body, &req); err != nil {
-		return nil, httpx.ErrCannotDecodeRequestBody
-	}
-	if req.Tags == nil {
-		return nil, nil
-	}
-
-	normalized, err := normalizeTagNames(req.Tags)
-	if err != nil {
-		return nil, err
-	}
-
-	return &normalized, nil
+	return params, &tagFilter, nil
 }
 
 func normalizeTagNames(tags *[]types.TagName) ([]string, error) {
