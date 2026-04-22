@@ -19,6 +19,11 @@ offers:
       Поля курсора зависят от выбранного режима сортировки:
       - для `created_at`: используйте `cursor_created_at` + `cursor_id`
       - для `popularity`: используйте `cursor_views` + `cursor_id`
+
+      Фильтрация по тегам:
+      - `tags`: вернуть объявления, содержащие **все** указанные теги;
+      - `withoutTags=true`: вернуть только объявления без тегов;
+      - `tags` и `withoutTags=true` одновременно передавать нельзя.
     operationId: listOffers
     security:
       - bearerAuth: [ ]
@@ -38,6 +43,8 @@ offers:
       - $ref: '../components/parameters.yaml#/CursorViews'
       - $ref: '../components/parameters.yaml#/CursorId'
       - $ref: '../components/parameters.yaml#/Limit'
+      - $ref: '../components/parameters.yaml#/OfferTagsFilter'
+      - $ref: '../components/parameters.yaml#/WithoutTags'
     responses:
       '200':
         description: Список объявлений и (опционально) курсор
@@ -75,6 +82,9 @@ offers:
     requestBody:
       required: true
       content:
+        application/json:
+          schema:
+            $ref: '../components/requests.yaml#/CreateOfferRequest'
         multipart/form-data:
           schema:
             $ref: '../components/requests.yaml#/CreateOfferRequest'

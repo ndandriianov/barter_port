@@ -2044,6 +2044,11 @@ paths:
         Поля курсора зависят от выбранного режима сортировки:
         - для `created_at`: используйте `cursor_created_at` + `cursor_id`
         - для `popularity`: используйте `cursor_views` + `cursor_id`
+
+        Фильтрация по тегам:
+        - `tags`: вернуть объявления, содержащие **все** указанные теги;
+        - `withoutTags=true`: вернуть только объявления без тегов;
+        - `tags` и `withoutTags=true` одновременно передавать нельзя.
       operationId: listOffers
       security:
         - bearerAuth: []
@@ -2063,6 +2068,8 @@ paths:
         - $ref: '#/components/parameters/CursorViews'
         - $ref: '#/components/parameters/CursorId'
         - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/OfferTagsFilter'
+        - $ref: '#/components/parameters/WithoutTags'
       responses:
         '200':
           description: Список объявлений и (опционально) курсор
@@ -2099,6 +2106,9 @@ paths:
       requestBody:
         required: true
         content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOfferRequest'
           multipart/form-data:
             schema:
               $ref: '#/components/schemas/CreateOfferRequest'
@@ -2115,6 +2125,41 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /tags:
+    get:
+      tags:
+        - offers
+        - tags
+      summary: Список всех тегов
+      description: |
+        Возвращает список всех тегов, существующих в приложении.
+
+        Правила:
+        - список отсортирован по `name ASC`;
+        - каждый тег возвращается как нормализованная строка: `trim + lowercase`;
+        - если после отвязки от `offers` тег больше нигде не используется, он удаляется автоматически.
+      operationId: listTags
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Список тегов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListTagsResponse'
         '401':
           description: Unauthorized
           content:
@@ -2808,6 +2853,64 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /admin/tags:
+    delete:
+      tags:
+        - admin
+        - tags
+      summary: Удалить тег
+      description: |
+        Удаляет тег по имени.
+
+        Endpoint доступен только администратору.
+
+        Правила:
+        - имя тега нормализуется сервером как `trim + lowercase`;
+        - тег удаляется из всех `offers`, где он был привязан;
+        - если тег не найден, сервер возвращает `404`.
+      operationId: deleteAdminTag
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: name
+          in: query
+          required: true
+          description: Имя тега для удаления.
+          schema:
+            $ref: '#/components/schemas/TagName'
+      responses:
+        '204':
+          description: Tag deleted
+        '400':
+          description: Некорректное имя тега
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Доступ запрещён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Tag not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /me/statistics:
     get:
       tags:
@@ -3164,6 +3267,14 @@ components:
           type: string
           format: uuid
           description: Уникальный идентификатор созданной черновой сделки
+    TagName:
+      type: string
+      minLength: 1
+      maxLength: 15
+      pattern: ^[A-Za-zА-Яа-яЁё]+$
+      description: |
+        Имя тега. Сервер выполняет нормализацию `trim + lowercase`.
+        Допустимы только латинские и кириллические буквы.
     ItemType:
       type: string
       description: Type of barter item
@@ -3185,6 +3296,7 @@ components:
         - type
         - action
         - description
+        - tags
         - createdAt
         - views
       properties:
@@ -3207,6 +3319,15 @@ components:
           type: string
           description: Подробное описание объявления
           example: Могу помочь с ремонтом городских велосипедов и заменой тормозных колодок
+        tags:
+          type: array
+          maxItems: 5
+          description: |
+            Список тегов объявления, отсортированный по `name ASC`.
+            Каждый тег хранится и возвращается как нормализованная строка:
+            `trim + lowercase`, только латинские и кириллические буквы, длина от 1 до 15 символов.
+          items:
+            $ref: '#/components/schemas/TagName'
         type:
           $ref: '#/components/schemas/ItemType'
         action:
@@ -4017,6 +4138,16 @@ components:
           $ref: '#/components/schemas/ItemType'
         action:
           $ref: '#/components/schemas/OfferAction'
+        tags:
+          type: array
+          maxItems: 5
+          description: |
+            Необязательный список тегов объявления.
+            Сервер нормализует каждый тег как `trim + lowercase`.
+            Если пользователь укажет тег, которого ещё нет в приложении, сервер создаст его автоматически.
+            В `multipart/form-data` теги передаются повторяющимися полями `tags`.
+          items:
+            $ref: '#/components/schemas/TagName'
         photos:
           type: array
           description: |
@@ -4025,6 +4156,10 @@ components:
           items:
             type: string
             format: binary
+    ListTagsResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/TagName'
     UpdateOfferRequest:
       type: object
       minProperties: 1
@@ -4042,6 +4177,17 @@ components:
           $ref: '#/components/schemas/ItemType'
         action:
           $ref: '#/components/schemas/OfferAction'
+        tags:
+          type: array
+          maxItems: 5
+          description: |
+            Полная замена списка тегов объявления.
+            Если поле передано пустым массивом, сервер удаляет все теги у объявления.
+            Если поле не передано, список тегов не изменяется.
+            Сервер нормализует каждый тег как `trim + lowercase`.
+            В `multipart/form-data` теги передаются повторяющимися полями `tags`.
+          items:
+            $ref: '#/components/schemas/TagName'
         deletePhotoIds:
           type: array
           description: |
@@ -4456,3 +4602,27 @@ components:
         minimum: 1
         maximum: 100
         default: 10
+    OfferTagsFilter:
+      name: tags
+      in: query
+      required: false
+      description: |
+        Фильтр по тегам. Возвращаются объявления, содержащие **все** переданные теги.
+        Повторяйте параметр в query:
+        `?tags=bike&tags=repair`
+      schema:
+        type: array
+        maxItems: 5
+        items:
+          $ref: '#/components/schemas/TagName'
+      style: form
+      explode: true
+    WithoutTags:
+      name: withoutTags
+      in: query
+      required: false
+      description: |
+        Если `true`, вернуть только объявления без тегов.
+        Нельзя передавать вместе с `tags`.
+      schema:
+        type: boolean

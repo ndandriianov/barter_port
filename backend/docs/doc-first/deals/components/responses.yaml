@@ -64,6 +64,12 @@ ListOffersResponse:
       description: Курсор для получения следующей страницы; `null`, если следующей страницы нет
 
 
+ListTagsResponse:
+  type: array
+  items:
+    $ref: 'schemas.yaml#/TagName'
+
+
 ListOfferReportsResponse:
   type: array
   items:

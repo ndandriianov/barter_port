@@ -110,6 +110,16 @@ CreateOfferRequest:
       $ref: 'schemas.yaml#/ItemType'
     action:
       $ref: 'schemas.yaml#/OfferAction'
+    tags:
+      type: array
+      maxItems: 5
+      description: |
+        Необязательный список тегов объявления.
+        Сервер нормализует каждый тег как `trim + lowercase`.
+        Если пользователь укажет тег, которого ещё нет в приложении, сервер создаст его автоматически.
+        В `multipart/form-data` теги передаются повторяющимися полями `tags`.
+      items:
+        $ref: 'schemas.yaml#/TagName'
     photos:
       type: array
       description: |
@@ -138,6 +148,17 @@ UpdateOfferRequest:
       $ref: 'schemas.yaml#/ItemType'
     action:
       $ref: 'schemas.yaml#/OfferAction'
+    tags:
+      type: array
+      maxItems: 5
+      description: |
+        Полная замена списка тегов объявления.
+        Если поле передано пустым массивом, сервер удаляет все теги у объявления.
+        Если поле не передано, список тегов не изменяется.
+        Сервер нормализует каждый тег как `trim + lowercase`.
+        В `multipart/form-data` теги передаются повторяющимися полями `tags`.
+      items:
+        $ref: 'schemas.yaml#/TagName'
     deletePhotoIds:
       type: array
       description: |
@@ -292,3 +313,4 @@ ModeratorResolutionForFailureRequest:
       type: string
       description: |
         Комментарий админа, объясняющий его решение. Может быть пустым
+

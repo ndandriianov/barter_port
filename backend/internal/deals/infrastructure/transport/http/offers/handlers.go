@@ -16,6 +16,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -76,11 +77,21 @@ func (h *Handlers) HandleCreateOffer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	offer, err := h.offerService.CreateOffer(r.Context(), userID, req.Name, itemType, action, req.Description, photos)
+	tags, err := normalizeTagNames(req.Tags)
+	if err != nil {
+		httpx.WriteErrorStr(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	offer, err := h.offerService.CreateOffer(r.Context(), userID, req.Name, itemType, action, req.Description, tags, photos)
 	if err != nil {
 		if errors.Is(err, domain.ErrInvalidOfferName) {
 			log.Warn("invalid offer name", slog.Any("error", err))
 			httpx.WriteError(w, http.StatusBadRequest, domain.ErrInvalidOfferName)
+			return
+		}
+		if errors.Is(err, domain.ErrInvalidTagName) || errors.Is(err, domain.ErrTooManyTags) {
+			httpx.WriteErrorStr(w, http.StatusBadRequest, err.Error())
 			return
 		}
 		if errors.Is(err, offersapp.ErrOfferPhotoStorageNotConfigured) {
@@ -102,52 +113,59 @@ func (h *Handlers) HandleCreateOffer(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusCreated, offer.ToDto())
 }
 
-func decodeCreateOfferRequest(w http.ResponseWriter, r *http.Request) (types.CreateOfferRequest, []offersapp.PhotoUpload, error) {
+func decodeCreateOfferRequest(w http.ResponseWriter, r *http.Request) (types.CreateOffersJSONRequestBody, []offersapp.PhotoUpload, error) {
 	if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
 		return decodeCreateOfferMultipartRequest(w, r)
 	}
 
-	var req types.CreateOfferRequest
+	var req types.CreateOffersJSONRequestBody
 	if err := httpx.DecodeJSON(r, &req); err != nil {
-		return types.CreateOfferRequest{}, nil, httpx.ErrCannotDecodeRequestBody
+		return types.CreateOffersJSONRequestBody{}, nil, httpx.ErrCannotDecodeRequestBody
 	}
 
 	return req, nil, nil
 }
 
-func decodeCreateOfferMultipartRequest(w http.ResponseWriter, r *http.Request) (types.CreateOfferRequest, []offersapp.PhotoUpload, error) {
+func decodeCreateOfferMultipartRequest(w http.ResponseWriter, r *http.Request) (types.CreateOffersMultipartRequestBody, []offersapp.PhotoUpload, error) {
 	maxBodySize := int64(maxOfferPhotoCount*maxOfferPhotoUploadSize + (1 << 20))
 	r.Body = http.MaxBytesReader(w, r.Body, maxBodySize)
 	if err := r.ParseMultipartForm(maxBodySize); err != nil {
-		return types.CreateOfferRequest{}, nil, errors.New("invalid offer upload")
+		return types.CreateOffersMultipartRequestBody{}, nil, errors.New("invalid offer upload")
 	}
 
-	req := types.CreateOfferRequest{
+	req := types.CreateOffersMultipartRequestBody{
 		Name:        r.FormValue("name"),
 		Description: r.FormValue("description"),
 		Type:        types.ItemType(r.FormValue("type")),
 		Action:      types.OfferAction(r.FormValue("action")),
 	}
+	if rawTags, ok := r.MultipartForm.Value["tags"]; ok {
+		tags := make([]types.TagName, 0, len(rawTags))
+		for _, tag := range rawTags {
+			tags = append(tags, types.TagName(tag))
+		}
+		req.Tags = &tags
+	}
 
 	fileHeaders := r.MultipartForm.File["photos"]
 	if len(fileHeaders) > maxOfferPhotoCount {
-		return types.CreateOfferRequest{}, nil, errors.New("too many offer photos")
+		return types.CreateOffersMultipartRequestBody{}, nil, errors.New("too many offer photos")
 	}
 
 	photos := make([]offersapp.PhotoUpload, 0, len(fileHeaders))
 	for _, fileHeader := range fileHeaders {
 		file, err := fileHeader.Open()
 		if err != nil {
-			return types.CreateOfferRequest{}, nil, errors.New("failed to read offer photo")
+			return types.CreateOffersMultipartRequestBody{}, nil, errors.New("failed to read offer photo")
 		}
 
 		content, contentType, readErr := readOfferPhotoUpload(file)
 		closeErr := file.Close()
 		if readErr != nil {
-			return types.CreateOfferRequest{}, nil, readErr
+			return types.CreateOffersMultipartRequestBody{}, nil, readErr
 		}
 		if closeErr != nil {
-			return types.CreateOfferRequest{}, nil, errors.New("failed to close offer photo")
+			return types.CreateOffersMultipartRequestBody{}, nil, errors.New("failed to close offer photo")
 		}
 
 		photos = append(photos, offersapp.PhotoUpload{
@@ -281,7 +299,7 @@ func (h *Handlers) HandleUpdateOffer(w http.ResponseWriter, r *http.Request) {
 	if r.MultipartForm != nil {
 		defer func() { _ = r.MultipartForm.RemoveAll() }()
 	}
-	if req.Name == nil && req.Description == nil && req.Type == nil && req.Action == nil &&
+	if req.Name == nil && req.Description == nil && req.Type == nil && req.Action == nil && req.Tags == nil &&
 		(req.DeletePhotoIds == nil || len(*req.DeletePhotoIds) == 0) && len(photos) == 0 {
 		httpx.WriteEmptyError(w, http.StatusBadRequest)
 		return
@@ -295,6 +313,14 @@ func (h *Handlers) HandleUpdateOffer(w http.ResponseWriter, r *http.Request) {
 		for _, photoID := range *req.DeletePhotoIds {
 			patch.DeletePhotoIds = append(patch.DeletePhotoIds, photoID)
 		}
+	}
+	if req.Tags != nil {
+		tags, normalizeErr := normalizeTagNames(req.Tags)
+		if normalizeErr != nil {
+			httpx.WriteErrorStr(w, http.StatusBadRequest, normalizeErr.Error())
+			return
+		}
+		patch.Tags = &tags
 	}
 
 	if req.Type != nil {
@@ -341,28 +367,28 @@ func (h *Handlers) HandleUpdateOffer(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, offer.ToDto())
 }
 
-func decodeUpdateOfferRequest(w http.ResponseWriter, r *http.Request) (types.UpdateOfferRequest, []offersapp.PhotoUpload, error) {
+func decodeUpdateOfferRequest(w http.ResponseWriter, r *http.Request) (types.UpdateOfferByIdJSONRequestBody, []offersapp.PhotoUpload, error) {
 	if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
 		return decodeUpdateOfferMultipartRequest(w, r)
 	}
 
-	var req types.UpdateOfferRequest
+	var req types.UpdateOfferByIdJSONRequestBody
 	if err := httpx.DecodeJSON(r, &req); err != nil {
-		return types.UpdateOfferRequest{}, nil, httpx.ErrCannotDecodeRequestBody
+		return types.UpdateOfferByIdJSONRequestBody{}, nil, httpx.ErrCannotDecodeRequestBody
 	}
 
 	return req, nil, nil
 }
 
-func decodeUpdateOfferMultipartRequest(w http.ResponseWriter, r *http.Request) (types.UpdateOfferRequest, []offersapp.PhotoUpload, error) {
+func decodeUpdateOfferMultipartRequest(w http.ResponseWriter, r *http.Request) (types.UpdateOfferByIdMultipartRequestBody, []offersapp.PhotoUpload, error) {
 	maxBodySize := int64(maxOfferPhotoCount*maxOfferPhotoUploadSize + (1 << 20))
 	r.Body = http.MaxBytesReader(w, r.Body, maxBodySize)
 	if err := r.ParseMultipartForm(maxBodySize); err != nil {
-		return types.UpdateOfferRequest{}, nil, errors.New("invalid offer upload")
+		return types.UpdateOfferByIdMultipartRequestBody{}, nil, errors.New("invalid offer upload")
 	}
 
 	values := r.MultipartForm.Value
-	req := types.UpdateOfferRequest{}
+	req := types.UpdateOfferByIdMultipartRequestBody{}
 
 	if value, ok := firstMultipartValue(values, "name"); ok {
 		req.Name = &value
@@ -378,12 +404,19 @@ func decodeUpdateOfferMultipartRequest(w http.ResponseWriter, r *http.Request) (
 		action := types.OfferAction(value)
 		req.Action = &action
 	}
+	if rawTags, ok := values["tags"]; ok {
+		tags := make([]types.TagName, 0, len(rawTags))
+		for _, tag := range rawTags {
+			tags = append(tags, types.TagName(tag))
+		}
+		req.Tags = &tags
+	}
 	if rawIDs, ok := values["deletePhotoIds"]; ok {
 		deletePhotoIDs := make([]uuid.UUID, 0, len(rawIDs))
 		for _, rawID := range rawIDs {
 			photoID, err := uuid.Parse(rawID)
 			if err != nil {
-				return types.UpdateOfferRequest{}, nil, errors.New("invalid deletePhotoIds")
+				return types.UpdateOfferByIdMultipartRequestBody{}, nil, errors.New("invalid deletePhotoIds")
 			}
 			deletePhotoIDs = append(deletePhotoIDs, photoID)
 		}
@@ -392,23 +425,23 @@ func decodeUpdateOfferMultipartRequest(w http.ResponseWriter, r *http.Request) (
 
 	fileHeaders := r.MultipartForm.File["photos"]
 	if len(fileHeaders) > maxOfferPhotoCount {
-		return types.UpdateOfferRequest{}, nil, errors.New("too many offer photos")
+		return types.UpdateOfferByIdMultipartRequestBody{}, nil, errors.New("too many offer photos")
 	}
 
 	photos := make([]offersapp.PhotoUpload, 0, len(fileHeaders))
 	for _, fileHeader := range fileHeaders {
 		file, err := fileHeader.Open()
 		if err != nil {
-			return types.UpdateOfferRequest{}, nil, errors.New("failed to read offer photo")
+			return types.UpdateOfferByIdMultipartRequestBody{}, nil, errors.New("failed to read offer photo")
 		}
 
 		content, contentType, readErr := readOfferPhotoUpload(file)
 		closeErr := file.Close()
 		if readErr != nil {
-			return types.UpdateOfferRequest{}, nil, readErr
+			return types.UpdateOfferByIdMultipartRequestBody{}, nil, readErr
 		}
 		if closeErr != nil {
-			return types.UpdateOfferRequest{}, nil, errors.New("failed to close offer photo")
+			return types.UpdateOfferByIdMultipartRequestBody{}, nil, errors.New("failed to close offer photo")
 		}
 
 		photos = append(photos, offersapp.PhotoUpload{
@@ -475,7 +508,7 @@ func (h *Handlers) HandleDeleteOffer(w http.ResponseWriter, r *http.Request) {
 func (h *Handlers) HandleGetOffers(w http.ResponseWriter, r *http.Request) {
 	log := logger.LogFrom(r.Context(), slog.Default())
 
-	sortType, cursor, limit, my, ok := parseGetOffersRequest(w, r, log)
+	sortType, cursor, limit, my, tagFilter, ok := parseGetOffersRequest(w, r, log)
 	if !ok {
 		return
 	}
@@ -496,7 +529,7 @@ func (h *Handlers) HandleGetOffers(w http.ResponseWriter, r *http.Request) {
 		authorID = &requesterID
 	}
 
-	offerList, nextCursor, err := h.offerService.GetOffers(r.Context(), sortType, cursor, limit, authorID, requesterIDPtr)
+	offerList, nextCursor, err := h.offerService.GetOffers(r.Context(), sortType, cursor, limit, authorID, requesterIDPtr, tagFilter)
 	if err != nil {
 		log.Error("failed to get items", slog.Any("error", err))
 		httpx.WriteEmptyError(w, http.StatusInternalServerError)
@@ -509,7 +542,7 @@ func (h *Handlers) HandleGetOffers(w http.ResponseWriter, r *http.Request) {
 func (h *Handlers) HandleGetSubscribedOffers(w http.ResponseWriter, r *http.Request) {
 	log := logger.LogFrom(r.Context(), slog.Default())
 
-	sortType, cursor, limit, _, ok := parseGetOffersRequest(w, r, log)
+	sortType, cursor, limit, _, _, ok := parseGetOffersRequest(w, r, log)
 	if !ok {
 		return
 	}
@@ -535,58 +568,43 @@ func parseGetOffersRequest(
 	w http.ResponseWriter,
 	r *http.Request,
 	log *slog.Logger,
-) (enums.SortType, *domain.UniversalCursor, int, bool, bool) {
-	sortTypeStr := r.URL.Query().Get("sort")
-	myStr := r.URL.Query().Get("my")
-	createdAtStr := r.URL.Query().Get("cursor_created_at")
-	viewsStr := r.URL.Query().Get("cursor_views")
-	idStr := r.URL.Query().Get("cursor_id")
-	limitStr := r.URL.Query().Get("cursor_limit")
-
-	my := false
-	if myStr != "" {
-		parsedMy, err := strconv.ParseBool(myStr)
-		if err != nil {
-			log.Error("invalid my filter", slog.String("my", myStr), slog.Any("error", err))
-			httpx.WriteErrorStr(w, http.StatusBadRequest, "invalid my filter")
-			return enums.SortType(0), nil, 0, false, false
-		}
-		my = parsedMy
+) (enums.SortType, *domain.UniversalCursor, int, bool, *[]string, bool) {
+	params, tagsFilter, err := decodeListOffersRequest(r)
+	if err != nil {
+		log.Error("failed to decode list offers request", slog.Any("error", err))
+		httpx.WriteErrorStr(w, http.StatusBadRequest, err.Error())
+		return enums.SortType(0), nil, 0, false, nil, false
 	}
 
-	log = log.With(
-		slog.String("sortTypeStr", sortTypeStr),
-		slog.String("myStr", myStr),
-		slog.Bool("my", my),
-		slog.String("createdAtStr", createdAtStr),
-		slog.String("viewsStr", viewsStr),
-		slog.String("idStr", idStr),
-		slog.String("limitStr", limitStr),
-	)
+	my := params.My != nil && *params.My
 	log.Info("handling get offers request")
 
-	sortType, err := enums.SortTypeString(sortTypeStr)
+	sortType, err := enums.SortTypeString(string(params.Sort))
 	if err != nil {
 		log.Error("invalid sort type", slog.Any("error", err))
 		httpx.WriteErrorStr(w, http.StatusBadRequest, "invalid sort type")
-		return enums.SortType(0), nil, 0, false, false
+		return enums.SortType(0), nil, 0, false, nil, false
 	}
 
-	cursor, err := domain.NewUniversalCursor(createdAtStr, viewsStr, idStr)
+	cursor, err := newUniversalCursorFromParams(params.CursorCreatedAt, params.CursorViews, params.CursorId)
 	if err != nil {
 		log.Error("failed to create offers cursor", slog.Any("error", err))
-		cursor = nil
+		httpx.WriteErrorStr(w, http.StatusBadRequest, "invalid cursor")
+		return enums.SortType(0), nil, 0, false, nil, false
 	}
 
-	limit, err := strconv.Atoi(limitStr)
-	if err != nil || limit <= 0 {
-		log.Warn("invalid limit", slog.Any("error", err))
-		limit = 10
+	limit := 10
+	if params.CursorLimit != nil {
+		limit = int(*params.CursorLimit)
+		if limit <= 0 {
+			httpx.WriteErrorStr(w, http.StatusBadRequest, "invalid limit")
+			return enums.SortType(0), nil, 0, false, nil, false
+		}
 	}
 
 	log.Debug("parsing finished", slog.Any("cursor", cursor), slog.Int("limit", limit), slog.Bool("my", my))
 
-	return sortType, cursor, limit, my, true
+	return sortType, cursor, limit, my, tagsFilter, true
 }
 
 func writeListOffersResponse(w http.ResponseWriter, offerList []domain.Offer, nextCursor *domain.UniversalCursor) {
@@ -597,11 +615,133 @@ func writeListOffersResponse(w http.ResponseWriter, offerList []domain.Offer, ne
 
 	var respCursor *types.OffersCursor
 	if nextCursor != nil {
-		respCursor = new(nextCursor.ToDto())
+		cursorDTO := nextCursor.ToDto()
+		respCursor = &cursorDTO
 	}
 
 	httpx.WriteJSON(w, http.StatusOK, types.ListOffersResponse{
 		Offers:     respOffers,
 		NextCursor: respCursor,
 	})
+}
+
+func decodeListOffersRequest(r *http.Request) (types.ListOffersParams, *[]string, error) {
+	params := types.ListOffersParams{}
+	query := r.URL.Query()
+
+	params.Sort = types.ListOffersParamsSort(query.Get("sort"))
+	if rawMy := query.Get("my"); rawMy != "" {
+		value, err := strconv.ParseBool(rawMy)
+		if err != nil {
+			return types.ListOffersParams{}, nil, errors.New("invalid my filter")
+		}
+		params.My = &value
+	}
+	if rawCreatedAt := query.Get("cursor_created_at"); rawCreatedAt != "" {
+		value, err := time.Parse(time.RFC3339, rawCreatedAt)
+		if err != nil {
+			return types.ListOffersParams{}, nil, errors.New("invalid cursor_created_at")
+		}
+		createdAt := types.CursorCreatedAt(value)
+		params.CursorCreatedAt = &createdAt
+	}
+	if rawViews := query.Get("cursor_views"); rawViews != "" {
+		value, err := strconv.ParseInt(rawViews, 10, 64)
+		if err != nil {
+			return types.ListOffersParams{}, nil, errors.New("invalid cursor_views")
+		}
+		cursorViews := types.CursorViews(value)
+		params.CursorViews = &cursorViews
+	}
+	if rawID := query.Get("cursor_id"); rawID != "" {
+		value, err := uuid.Parse(rawID)
+		if err != nil {
+			return types.ListOffersParams{}, nil, errors.New("invalid cursor_id")
+		}
+		cursorID := types.CursorId(value)
+		params.CursorId = &cursorID
+	}
+	if rawLimit := query.Get("cursor_limit"); rawLimit != "" {
+		value, err := strconv.Atoi(rawLimit)
+		if err != nil {
+			return types.ListOffersParams{}, nil, errors.New("invalid cursor_limit")
+		}
+		limit := types.Limit(value)
+		params.CursorLimit = &limit
+	}
+	if rawWithoutTags := query.Get("withoutTags"); rawWithoutTags != "" {
+		value, err := strconv.ParseBool(rawWithoutTags)
+		if err != nil {
+			return types.ListOffersParams{}, nil, errors.New("invalid withoutTags")
+		}
+		params.WithoutTags = &value
+	}
+
+	rawTags := query["tags"]
+	if len(rawTags) == 1 && strings.Contains(rawTags[0], ",") {
+		rawTags = strings.Split(rawTags[0], ",")
+	}
+	if len(rawTags) > 0 {
+		tags := make([]types.TagName, 0, len(rawTags))
+		for _, tag := range rawTags {
+			tags = append(tags, types.TagName(tag))
+		}
+		params.Tags = &tags
+	}
+
+	if params.Tags != nil && params.WithoutTags != nil && *params.WithoutTags {
+		return types.ListOffersParams{}, nil, errors.New("tags and withoutTags cannot be used together")
+	}
+
+	if params.WithoutTags != nil && *params.WithoutTags {
+		emptyTags := []string{}
+		return params, &emptyTags, nil
+	}
+
+	tagFilter, err := normalizeTagNames(params.Tags)
+	if err != nil {
+		return types.ListOffersParams{}, nil, err
+	}
+
+	if params.Tags == nil {
+		return params, nil, nil
+	}
+
+	return params, &tagFilter, nil
+}
+
+func normalizeTagNames(tags *[]types.TagName) ([]string, error) {
+	if tags == nil {
+		return nil, nil
+	}
+
+	raw := make([]string, 0, len(*tags))
+	for _, tag := range *tags {
+		raw = append(raw, string(tag))
+	}
+
+	return domain.NormalizeTags(raw)
+}
+
+func newUniversalCursorFromParams(createdAt *types.CursorCreatedAt, views *types.CursorViews, id *types.CursorId) (*domain.UniversalCursor, error) {
+	if createdAt == nil && views == nil && id == nil {
+		return nil, nil
+	}
+
+	var createdAtStr string
+	if createdAt != nil {
+		createdAtStr = time.Time(*createdAt).Format(time.RFC3339)
+	}
+
+	var viewsStr string
+	if views != nil {
+		viewsStr = strconv.FormatInt(int64(*views), 10)
+	}
+
+	var idStr string
+	if id != nil {
+		idStr = uuid.UUID(*id).String()
+	}
+
+	return domain.NewUniversalCursor(createdAtStr, viewsStr, idStr)
 }

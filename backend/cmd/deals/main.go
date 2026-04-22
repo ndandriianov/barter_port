@@ -35,6 +35,7 @@ import (
 	offersh "barter-port/internal/deals/infrastructure/transport/http/offers"
 	reviewsh "barter-port/internal/deals/infrastructure/transport/http/reviews"
 	statisticsh "barter-port/internal/deals/infrastructure/transport/http/statistics"
+	tagsh "barter-port/internal/deals/infrastructure/transport/http/tags"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/bootstrap"
 	"barter-port/pkg/kafkax"
@@ -101,19 +102,31 @@ func main() {
 	if err != nil {
 		log.Fatal("failed to initialize auth grpc client:", err)
 	}
-	defer authConn.Close()
+	defer func() {
+		if closeErr := authConn.Close(); closeErr != nil {
+			logg.Warn("failed to close auth grpc connection", slog.Any("error", closeErr))
+		}
+	}()
 
 	usersClient, usersConn, err := app.InitUsersGRPCClient(cfg)
 	if err != nil {
 		log.Fatal("failed to initialize users grpc client:", err)
 	}
-	defer usersConn.Close()
+	defer func() {
+		if closeErr := usersConn.Close(); closeErr != nil {
+			logg.Warn("failed to close users grpc connection", slog.Any("error", closeErr))
+		}
+	}()
 
 	chatsClient, chatsConn, err := app.InitChatsGRPCClient(cfg)
 	if err != nil {
 		logg.Warn("failed to initialize chats grpc client, deal->chat integration disabled", slog.Any("error", err))
 	} else {
-		defer chatsConn.Close()
+		defer func() {
+			if closeErr := chatsConn.Close(); closeErr != nil {
+				logg.Warn("failed to close chats grpc connection", slog.Any("error", closeErr))
+			}
+		}()
 	}
 
 	adminChecker := authkit.NewAdminChecker(authClient)
@@ -199,7 +212,8 @@ func main() {
 	reviewsHandlers := reviewsh.NewHandlers(logg, reviewsService)
 	offerReportsHandlers := offerreportsh.NewHandlers(offerReportsService)
 	statisticsHandlers := statisticsh.NewHandlers(logg, statisticsService)
-	router := transporthttp.NewRouter(logg, validator, offersHandlers, offerGroupsHandlers, draftsHandlers, dealsHandlers, failuresHandlers, joinsHandlers, reviewsHandlers, offerReportsHandlers, statisticsHandlers)
+	tagsHandlers := tagsh.NewHandlers(offersService)
+	router := transporthttp.NewRouter(logg, validator, offersHandlers, offerGroupsHandlers, draftsHandlers, dealsHandlers, failuresHandlers, joinsHandlers, reviewsHandlers, offerReportsHandlers, statisticsHandlers, tagsHandlers)
 
 	port := bootstrap.InitPortStringFromConfig(cfg, 8080)
 	httpServer := &http.Server{

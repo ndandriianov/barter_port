@@ -1,6 +1,7 @@
 import {z} from "zod";
 import {
   getOffersResponseSchema,
+  listTagsResponseSchema,
   listOfferReportsResponseSchema,
   offerActionSchema,
   offerReportDetailsSchema,
@@ -39,17 +40,21 @@ export interface OffersListParams {
 
 export interface GetOffersParams extends OffersListParams {
   my?: boolean;
+  tags?: string[];
+  withoutTags?: boolean;
 }
 
 export type GetSubscribedOffersParams = OffersListParams;
 
 export type GetOffersResponse = z.Infer<typeof getOffersResponseSchema>;
+export type ListTagsResponse = z.Infer<typeof listTagsResponseSchema>;
 
 export interface CreateOfferRequest {
   name: string;
   description: string;
   action: OfferAction;
   type: OfferType;
+  tags?: string[];
   photos?: File[];
 }
 
@@ -58,6 +63,7 @@ export interface UpdateOfferRequest {
   description?: string;
   action?: OfferAction;
   type?: OfferType;
+  tags?: string[];
   photos?: File[];
   deletePhotoIds?: string[];
 }

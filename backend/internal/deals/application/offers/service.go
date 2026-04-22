@@ -70,6 +70,7 @@ func (s *Service) CreateOffer(
 	itemType enums.ItemType,
 	action enums.OfferAction,
 	description string,
+	tags []string,
 	photos []PhotoUpload,
 ) (*domain.Offer, error) {
 	if name == "" {
@@ -87,6 +88,7 @@ func (s *Service) CreateOffer(
 		ID:          uuid.New(),
 		AuthorId:    userID,
 		Name:        name,
+		Tags:        append([]string(nil), tags...),
 		Type:        itemType,
 		Action:      action,
 		Description: description,
@@ -128,6 +130,9 @@ func (s *Service) CreateOffer(
 		if err := s.repo.AddOffer(ctx, tx, item); err != nil {
 			return err
 		}
+		if err := s.repo.ReplaceOfferTags(ctx, tx, item.ID, tags); err != nil {
+			return err
+		}
 		return s.repo.AddOfferPhotos(ctx, tx, uploadedPhotos)
 	})
 	if err != nil {
@@ -161,6 +166,7 @@ func (s *Service) GetOffers(
 	limit int,
 	authorID *uuid.UUID,
 	requesterID *uuid.UUID,
+	tagFilter *[]string,
 ) ([]domain.Offer, *domain.UniversalCursor, error) {
 
 	isAdmin := false
@@ -179,7 +185,7 @@ func (s *Service) GetOffers(
 			return nil, nil, err
 		}
 
-		offers, newTimeCursor, err := s.getOffersByTime(ctx, timeCursor, limit, authorID, isAdmin)
+		offers, newTimeCursor, err := s.getOffersByTime(ctx, timeCursor, limit, authorID, isAdmin, tagFilter)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -202,7 +208,7 @@ func (s *Service) GetOffers(
 			return nil, nil, err
 		}
 
-		offers, newPopularityCursor, err := s.getOffersByPopularity(ctx, popularityCursor, limit, authorID, isAdmin)
+		offers, newPopularityCursor, err := s.getOffersByPopularity(ctx, popularityCursor, limit, authorID, isAdmin, tagFilter)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -325,22 +331,24 @@ func (s *Service) getOffersByTime(
 	limit int,
 	authorID *uuid.UUID,
 	isAdmin bool,
+	tagFilter *[]string,
 ) ([]domain.Offer, *domain.TimeCursor, error) {
+	tags, tagsFilterPresent := extractTagFilter(tagFilter)
 
 	switch { // наличие курсора
 	case cursor != nil:
 		switch { // my
 		case authorID != nil:
-			return s.repo.GetMyOffersOrderByTime(ctx, *cursor, *authorID, limit)
+			return s.repo.GetMyOffersOrderByTime(ctx, *cursor, *authorID, limit, tags, tagsFilterPresent)
 		default:
-			return s.repo.GetOffersOrderByTime(ctx, limit, *cursor, isAdmin)
+			return s.repo.GetOffersOrderByTime(ctx, limit, *cursor, isAdmin, tags, tagsFilterPresent)
 		}
 	default:
 		switch { // my
 		case authorID != nil:
-			return s.repo.GetMyOffersOrderByTimeNoCursor(ctx, *authorID, limit)
+			return s.repo.GetMyOffersOrderByTimeNoCursor(ctx, *authorID, limit, tags, tagsFilterPresent)
 		default:
-			return s.repo.GetOffersOrderByTimeNoCursor(ctx, limit, isAdmin)
+			return s.repo.GetOffersOrderByTimeNoCursor(ctx, limit, isAdmin, tags, tagsFilterPresent)
 		}
 	}
 }
@@ -372,22 +380,24 @@ func (s *Service) getOffersByPopularity(
 	limit int,
 	authorID *uuid.UUID,
 	isAdmin bool,
+	tagFilter *[]string,
 ) ([]domain.Offer, *domain.PopularityCursor, error) {
+	tags, tagsFilterPresent := extractTagFilter(tagFilter)
 
 	switch { // наличие курсора
 	case cursor != nil:
 		switch { // my
 		case authorID != nil:
-			return s.repo.GetMyOffersOrderByPopularity(ctx, limit, *cursor, *authorID)
+			return s.repo.GetMyOffersOrderByPopularity(ctx, limit, *cursor, *authorID, tags, tagsFilterPresent)
 		default:
-			return s.repo.GetOffersOrderByPopularity(ctx, limit, *cursor, isAdmin)
+			return s.repo.GetOffersOrderByPopularity(ctx, limit, *cursor, isAdmin, tags, tagsFilterPresent)
 		}
 	default:
 		switch { // my
 		case authorID != nil:
-			return s.repo.GetMyOffersOrderByPopularityNoCursor(ctx, limit, *authorID)
+			return s.repo.GetMyOffersOrderByPopularityNoCursor(ctx, limit, *authorID, tags, tagsFilterPresent)
 		default:
-			return s.repo.GetOffersOrderByPopularityNoCursor(ctx, limit, isAdmin)
+			return s.repo.GetOffersOrderByPopularityNoCursor(ctx, limit, isAdmin, tags, tagsFilterPresent)
 		}
 	}
 }
@@ -577,6 +587,11 @@ func (s *Service) UpdateOffer(
 		if err = s.repo.AddOfferPhotos(ctx, tx, uploadedPhotos); err != nil {
 			return err
 		}
+		if patch.Tags != nil {
+			if err = s.repo.ReplaceOfferTags(ctx, tx, offerID, *patch.Tags); err != nil {
+				return err
+			}
+		}
 
 		updatedOffer, err := s.repo.UpdateOffer(ctx, tx, offerID, userID, patch)
 		if err != nil {
@@ -620,17 +635,53 @@ func (s *Service) UpdateOffer(
 //   - domain.ErrForbidden
 //   - domain.ErrModificationBlocked
 func (s *Service) DeleteOffer(ctx context.Context, userID uuid.UUID, offerID uuid.UUID) error {
-	offer, err := s.repo.GetOffer(ctx, s.db, offerID)
+	return db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
+		offer, err := s.repo.GetOffer(ctx, tx, offerID)
+		if err != nil {
+			return err
+		}
+		if offer.AuthorId != userID {
+			return domain.ErrForbidden
+		}
+		if offer.ModificationBlocked {
+			return domain.ErrModificationBlocked
+		}
+		if err := s.repo.DeleteOffer(ctx, tx, offerID, userID); err != nil {
+			return err
+		}
+		return s.repo.DeleteUnusedTags(ctx, tx)
+	})
+}
+
+func (s *Service) ListTags(ctx context.Context) ([]string, error) {
+	return s.repo.ListTags(ctx)
+}
+
+func (s *Service) DeleteTag(ctx context.Context, requesterID uuid.UUID, rawName string) error {
+	normalized, err := domain.NormalizeTag(rawName)
 	if err != nil {
 		return err
 	}
-	if offer.AuthorId != userID {
-		return domain.ErrForbidden
+
+	isAdmin, err := s.adminChecker.IsAdmin(ctx, requesterID)
+	if err != nil {
+		return fmt.Errorf("check admin: %w", err)
 	}
-	if offer.ModificationBlocked {
-		return domain.ErrModificationBlocked
+	if !isAdmin {
+		return domain.ErrAdminOnly
 	}
-	return s.repo.DeleteOffer(ctx, s.db, offerID, userID)
+
+	return s.repo.DeleteTagByName(ctx, s.db, normalized)
+}
+
+func extractTagFilter(tagFilter *[]string) ([]string, bool) {
+	if tagFilter == nil {
+		return nil, false
+	}
+
+	result := make([]string, len(*tagFilter))
+	copy(result, *tagFilter)
+	return result, true
 }
 
 func (s *Service) cleanupUploadedPhotos(ctx context.Context, offerID uuid.UUID, positions []int) {

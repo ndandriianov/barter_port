@@ -8,6 +8,7 @@ import (
 	"io"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"testing"
 	"time"
 
@@ -139,6 +140,11 @@ func mustCreateOfferMultipartDetails(t *testing.T, userID uuid.UUID, body types.
 	require.NoError(t, writer.WriteField("description", body.Description))
 	require.NoError(t, writer.WriteField("type", string(body.Type)))
 	require.NoError(t, writer.WriteField("action", string(body.Action)))
+	if body.Tags != nil {
+		for _, tag := range *body.Tags {
+			require.NoError(t, writer.WriteField("tags", string(tag)))
+		}
+	}
 
 	for i, photo := range photos {
 		part, err := writer.CreateFormFile("photos", fmt.Sprintf("photo-%d.png", i))
@@ -184,14 +190,35 @@ func mustGetOffers(t *testing.T, userID uuid.UUID, my *bool) types.ListOffersRes
 }
 
 func mustGetOffersBySort(t *testing.T, userID uuid.UUID, sort string, my *bool) types.ListOffersResponse {
+	return mustGetOffersBySortAndTags(t, userID, sort, my, nil, false)
+}
+
+func mustGetOffersBySortAndTags(
+	t *testing.T,
+	userID uuid.UUID,
+	sort string,
+	my *bool,
+	tags *[]types.TagName,
+	withoutTags bool,
+) types.ListOffersResponse {
 	t.Helper()
 
-	url := dealsURL() + "/offers?sort=" + sort + "&cursor_limit=100"
+	values := url.Values{}
+	values.Set("sort", sort)
+	values.Set("cursor_limit", "100")
 	if my != nil {
-		url += fmt.Sprintf("&my=%t", *my)
+		values.Set("my", fmt.Sprintf("%t", *my))
+	}
+	if tags != nil {
+		for _, tag := range *tags {
+			values.Add("tags", string(tag))
+		}
+	}
+	if withoutTags {
+		values.Set("withoutTags", "true")
 	}
 
-	req := mustUserRequest(t, http.MethodGet, url, userID, nil)
+	req := mustUserRequest(t, http.MethodGet, dealsURL()+"/offers?"+values.Encode(), userID, nil)
 	resp := mustDo(t, req)
 	defer func() { _ = resp.Body.Close() }()
 	require.Equal(t, http.StatusOK, resp.StatusCode)
@@ -284,6 +311,11 @@ func mustUpdateOfferMultipartDetails(
 	if body.Action != nil {
 		require.NoError(t, writer.WriteField("action", string(*body.Action)))
 	}
+	if body.Tags != nil {
+		for _, tag := range *body.Tags {
+			require.NoError(t, writer.WriteField("tags", string(tag)))
+		}
+	}
 	if body.DeletePhotoIds != nil {
 		for _, photoID := range *body.DeletePhotoIds {
 			require.NoError(t, writer.WriteField("deletePhotoIds", photoID.String()))
@@ -310,6 +342,29 @@ func mustUpdateOfferMultipartDetails(
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&offer))
 
 	return offer
+}
+
+func mustListTags(t *testing.T, userID uuid.UUID) types.ListTagsResponse {
+	t.Helper()
+
+	req := mustUserRequest(t, http.MethodGet, dealsURL()+"/tags", userID, nil)
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var tags types.ListTagsResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&tags))
+
+	return tags
+}
+
+func mustDeleteAdminTag(t *testing.T, adminToken string, name string) {
+	t.Helper()
+
+	req := mustBearerRequest(t, http.MethodDelete, dealsURL()+"/admin/tags?name="+url.QueryEscape(name), adminToken, nil)
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusNoContent, resp.StatusCode)
 }
 
 func mustDeleteOffer(t *testing.T, userID uuid.UUID, offerID uuid.UUID) {
@@ -353,12 +408,12 @@ func mustCreateDraft(
 func mustGetDraftIDs(t *testing.T, userID uuid.UUID, createdByMe *bool) []uuid.UUID {
 	t.Helper()
 
-	url := dealsURL() + "/deals/drafts"
+	requestURL := dealsURL() + "/deals/drafts"
 	if createdByMe != nil {
-		url += fmt.Sprintf("?createdByMe=%t", *createdByMe)
+		requestURL += fmt.Sprintf("?createdByMe=%t", *createdByMe)
 	}
 
-	req := mustUserRequest(t, http.MethodGet, url, userID, nil)
+	req := mustUserRequest(t, http.MethodGet, requestURL, userID, nil)
 	resp := mustDo(t, req)
 	defer func() { _ = resp.Body.Close() }()
 	require.Equal(t, http.StatusOK, resp.StatusCode)
@@ -398,12 +453,12 @@ func mustGetDealIDs(t *testing.T, userID uuid.UUID, my bool) []uuid.UUID {
 func mustGetDealsResponse(t *testing.T, userID uuid.UUID, my bool) types.GetDealsResponse {
 	t.Helper()
 
-	url := dealsURL() + "/deals"
+	requestURL := dealsURL() + "/deals"
 	if my {
-		url += "?my=true"
+		requestURL += "?my=true"
 	}
 
-	req := mustUserRequest(t, http.MethodGet, url, userID, nil)
+	req := mustUserRequest(t, http.MethodGet, requestURL, userID, nil)
 	resp := mustDo(t, req)
 	defer func() { _ = resp.Body.Close() }()
 	require.Equal(t, http.StatusOK, resp.StatusCode)

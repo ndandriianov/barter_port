@@ -1,0 +1,2 @@
+DROP TABLE IF EXISTS offer_tags;
+DROP TABLE IF EXISTS tags;

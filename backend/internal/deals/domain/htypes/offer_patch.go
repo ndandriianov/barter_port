@@ -11,5 +11,6 @@ type OfferPatch struct {
 	Description    *string
 	Type           *enums.ItemType
 	Action         *enums.OfferAction
+	Tags           *[]string
 	DeletePhotoIds []uuid.UUID
 }
