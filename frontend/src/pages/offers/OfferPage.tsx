@@ -19,6 +19,7 @@ function OfferPage() {
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
   const [openedPhotoUrl, setOpenedPhotoUrl] = useState<string | null>(null);
   const [reportSuccessMessage, setReportSuccessMessage] = useState<string | null>(null);
+  const [optimisticIsFavorite, setOptimisticIsFavorite] = useState(false);
   const viewedOfferIdsRef = useRef<Set<string>>(new Set());
   const { data: meData } = usersApi.useGetCurrentUserQuery();
   const [deleteOffer, { isLoading: isDeleting, error: deleteError }] = offersApi.useDeleteOfferMutation();
@@ -48,6 +49,10 @@ function OfferPage() {
     });
   }, [meData, offer, viewOfferById]);
 
+  useEffect(() => {
+    setOptimisticIsFavorite(offer?.isFavorite ?? false);
+  }, [offer?.id, offer?.isFavorite]);
+
   if (!offerId) return <Alert severity="warning">Объявление не найдено</Alert>;
 
   if (isLoading) {
@@ -63,6 +68,10 @@ function OfferPage() {
   }
 
   const canRespond = !!meData && offer.authorId !== meData.id;
+  const displayedOffer = {
+    ...offer,
+    isFavorite: optimisticIsFavorite,
+  };
 
   const handleDelete = async () => {
     if (!window.confirm("Удалить объявление?")) {
@@ -78,16 +87,23 @@ function OfferPage() {
   };
 
   const handleToggleFavorite = async () => {
+    const nextIsFavorite = !optimisticIsFavorite;
+    setOptimisticIsFavorite(nextIsFavorite);
+
     try {
-      if (offer.isFavorite) {
-        await removeOfferFromFavorites(offer.id).unwrap();
+      if (nextIsFavorite) {
+        await addOfferToFavorites(offer.id).unwrap();
         return;
       }
 
-      await addOfferToFavorites(offer.id).unwrap();
+      await removeOfferFromFavorites(offer.id).unwrap();
     } catch {
-      // RTK Query keeps the request state; page stays usable.
+      setOptimisticIsFavorite(!nextIsFavorite);
     }
+  };
+
+  const handleFavoriteChange = (_offerId: string, isFavorite: boolean) => {
+    setOptimisticIsFavorite(isFavorite);
   };
 
   return (
@@ -102,11 +118,12 @@ function OfferPage() {
       </Button>
 
       <Typography variant="h4" fontWeight={700} mb={3}>
-        {offer.name}
+        {displayedOffer.name}
       </Typography>
 
       <OfferCard
-        offer={offer}
+        offer={displayedOffer}
+        onFavoriteChange={handleFavoriteChange}
         showModerationState={isOwnOffer || isAdmin}
         draftCount={isOwnOffer ? (countsByOfferId[offer.id] ?? 0) : 0}
         draftsHref={
@@ -187,13 +204,13 @@ function OfferPage() {
         )}
         {canRespond && (
           <Button
-            variant={offer.isFavorite ? "contained" : "outlined"}
-            color={offer.isFavorite ? "error" : "inherit"}
-            startIcon={offer.isFavorite ? <FavoriteRoundedIcon /> : <FavoriteBorderOutlinedIcon />}
+            variant={optimisticIsFavorite ? "contained" : "outlined"}
+            color={optimisticIsFavorite ? "error" : "inherit"}
+            startIcon={optimisticIsFavorite ? <FavoriteRoundedIcon /> : <FavoriteBorderOutlinedIcon />}
             onClick={() => void handleToggleFavorite()}
             disabled={isFavoriteActionLoading}
           >
-            {offer.isFavorite ? "В избранном" : "В избранное"}
+            {optimisticIsFavorite ? "В избранном" : "В избранное"}
           </Button>
         )}
         {isOwnOffer && (
@@ -233,7 +250,7 @@ function OfferPage() {
       </Box>
 
       <RespondToOfferModal
-        targetOffer={offer}
+        targetOffer={displayedOffer}
         isOpen={isRespondModalOpen}
         onClose={() => setIsRespondModalOpen(false)}
       />

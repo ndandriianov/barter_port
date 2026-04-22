@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Box, Button, Card, CardContent, CardMedia, Chip, IconButton, Tooltip, Typography } from "@mui/material";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
@@ -44,6 +45,7 @@ interface OfferCardProps {
   offerHref?: string;
   draftsHref?: string;
   onPhotoClick?: (photoUrl: string) => void;
+  onFavoriteChange?: (offerId: string, isFavorite: boolean) => void;
   showModerationState?: boolean;
   isMine?: boolean;
 }
@@ -55,6 +57,7 @@ function OfferCard({
   offerHref,
   draftsHref,
   onPhotoClick,
+  onFavoriteChange,
   showModerationState = false,
   isMine = false,
 }: OfferCardProps) {
@@ -71,14 +74,28 @@ function OfferCard({
   const moderationState = getOfferModerationState(offer, offerReports);
   const moderationLabel = getOfferModerationLabel(moderationState);
   const isFavoriteActionLoading = isAddingToFavorites || isRemovingFromFavorites;
+  const [isFavorite, setIsFavorite] = useState(offer.isFavorite);
+
+  useEffect(() => {
+    setIsFavorite(offer.isFavorite);
+  }, [offer.id, offer.isFavorite]);
 
   const handleToggleFavorite = async () => {
-    if (offer.isFavorite) {
-      await removeOfferFromFavorites(offer.id).unwrap();
-      return;
-    }
+    const nextIsFavorite = !isFavorite;
+    setIsFavorite(nextIsFavorite);
+    onFavoriteChange?.(offer.id, nextIsFavorite);
 
-    await addOfferToFavorites(offer.id).unwrap();
+    try {
+      if (nextIsFavorite) {
+        await addOfferToFavorites(offer.id).unwrap();
+        return;
+      }
+
+      await removeOfferFromFavorites(offer.id).unwrap();
+    } catch {
+      setIsFavorite(!nextIsFavorite);
+      onFavoriteChange?.(offer.id, !nextIsFavorite);
+    }
   };
 
   return (
@@ -116,15 +133,15 @@ function OfferCard({
               <Chip label={`Черновики: ${draftCount}`} size="small" color="warning" variant="outlined" />
             )}
           </Box>
-          <Tooltip title={offer.isFavorite ? "Убрать из избранного" : "Добавить в избранное"}>
+          <Tooltip title={isFavorite ? "Убрать из избранного" : "Добавить в избранное"}>
             <span>
               <IconButton
                 size="small"
-                color={offer.isFavorite ? "error" : "default"}
+                color={isFavorite ? "error" : "default"}
                 onClick={() => void handleToggleFavorite()}
                 disabled={isFavoriteActionLoading}
               >
-                {offer.isFavorite ? <FavoriteRoundedIcon /> : <FavoriteBorderOutlinedIcon />}
+                {isFavorite ? <FavoriteRoundedIcon /> : <FavoriteBorderOutlinedIcon />}
               </IconButton>
             </span>
           </Tooltip>

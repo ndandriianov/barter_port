@@ -350,6 +350,20 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
     setTagsInput(normalizeOfferTags(parsedTags.filter((tag) => tag !== tagToRemove)).join(", "));
   };
 
+  const handleFavoriteChange = (offerId: string, isFavorite: boolean) => {
+    setOffers((currentOffers) => {
+      if (isFavoriteOffers && !isFavorite) {
+        return currentOffers.filter((offer) => offer.id !== offerId);
+      }
+
+      return currentOffers.map((offer) => (
+        offer.id === offerId
+          ? { ...offer, isFavorite }
+          : offer
+      ));
+    });
+  };
+
   return (
     <Box>
       {initialError && hasLoadedOnce && (
@@ -460,6 +474,7 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
                 <OfferCard
                   offer={offer}
                   isMine={offer.authorId === currentUser?.id}
+                  onFavoriteChange={handleFavoriteChange}
                   showRating
                   showModerationState={isMyOffers || currentUser?.isAdmin === true}
                   draftCount={isMyOffers ? (countsByOfferId[offer.id] ?? 0) : 0}
