@@ -976,8 +976,7 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 		return nil, fmt.Errorf("get direct chat messages: %w", err)
 	}
 	if len(directMessages) > 0 {
-		after := directMessages[0].CreatedAt
-		if _, err := client.getChatMessages(ctx, alice.Token, directChatID, &after); err != nil {
+		if _, err := client.getChatMessages(ctx, alice.Token, directChatID, new(directMessages[0].CreatedAt)); err != nil {
 			return nil, fmt.Errorf("get direct chat messages after cursor: %w", err)
 		}
 	}
@@ -1050,8 +1049,7 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 	if _, err := client.listOfferReportsForAdmin(ctx, adminToken, nil); err != nil {
 		return nil, fmt.Errorf("list all offer reports for admin: %w", err)
 	}
-	pendingStatus := dealtypes.Pending
-	if _, err := client.listOfferReportsForAdmin(ctx, adminToken, &pendingStatus); err != nil {
+	if _, err := client.listOfferReportsForAdmin(ctx, adminToken, new(dealtypes.Pending)); err != nil {
 		return nil, fmt.Errorf("list pending offer reports for admin: %w", err)
 	}
 	if _, err := client.getOfferReportForAdmin(ctx, adminToken, acceptedReport.Id); err != nil {
