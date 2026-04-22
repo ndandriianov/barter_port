@@ -116,6 +116,7 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
   const [withoutTagsOnly, setWithoutTagsOnly] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);
   const [initialError, setInitialError] = useState<string | null>(null);
   const [loadMoreError, setLoadMoreError] = useState<string | null>(null);
   const isMyOffers = mode === "mine";
@@ -146,13 +147,14 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
     const requestFeedKey = feedKeyRef.current;
 
     if (replace) {
-      setIsInitialLoading(true);
+      if (!hasLoadedOnce) {
+        setIsInitialLoading(true);
+      }
       isInitialLoadingRef.current = true;
       setIsLoadingMore(false);
       isLoadingMoreRef.current = false;
       setInitialError(null);
       setLoadMoreError(null);
-      setOffers([]);
       setNextCursor(null);
       nextCursorRef.current = null;
     } else {
@@ -177,18 +179,22 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
       setOffers((currentOffers) => (replace ? response.offers : mergeOffers(currentOffers, response.offers)));
       setNextCursor(response.nextCursor);
       nextCursorRef.current = response.nextCursor;
+
+      if (replace) {
+        setHasLoadedOnce(true);
+      }
     } catch {
       if (feedKeyRef.current !== requestFeedKey) {
         return;
       }
 
       if (replace) {
+        setHasLoadedOnce(true);
         setInitialError(
           isSubscribedOffers
             ? "Не удалось загрузить объявления от подписок"
             : "Не удалось загрузить список объявлений",
         );
-        setOffers([]);
         setNextCursor(null);
         nextCursorRef.current = null;
       } else {
@@ -249,7 +255,7 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
     return () => observer.disconnect();
   }, [offers.length, mode, sortType]);
 
-  if (isInitialLoading) {
+  if (isInitialLoading && !hasLoadedOnce) {
     return (
       <Box display="flex" justifyContent="center" py={6}>
         <CircularProgress />
@@ -257,7 +263,7 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
     );
   }
 
-  if (initialError) {
+  if (initialError && !hasLoadedOnce) {
     return <Alert severity="error">{initialError}</Alert>;
   }
 
@@ -272,6 +278,12 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
 
   return (
     <Box>
+      {initialError && hasLoadedOnce && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {initialError}
+        </Alert>
+      )}
+
       <Box display="flex" alignItems="center" gap={2} mb={3} flexWrap="wrap">
         <FormControl size="small" sx={{ minWidth: 200 }}>
           <InputLabel>Сортировка</InputLabel>
