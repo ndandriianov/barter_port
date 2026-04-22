@@ -44,3 +44,7 @@ func durationFromEnv(key string, fallback time.Duration) time.Duration {
 
 	return value
 }
+
+func new[T any](value T) *T {
+	return &value
+}

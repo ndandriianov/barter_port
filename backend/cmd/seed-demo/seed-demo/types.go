@@ -32,6 +32,10 @@ type loginResponse struct {
 	AccessToken string `json:"accessToken"`
 }
 
+type refreshResponse struct {
+	AccessToken string `json:"access_token"`
+}
+
 type offerGroupRequest struct {
 	Name        *string                 `json:"name,omitempty"`
 	Description *string                 `json:"description,omitempty"`
@@ -74,6 +78,7 @@ type offerSpec struct {
 	Description string
 	Type        dealtypes.ItemType
 	Action      dealtypes.OfferAction
+	Tags        []dealtypes.TagName
 }
 
 type SeedSummary struct {
