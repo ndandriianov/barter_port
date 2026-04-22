@@ -10,11 +10,11 @@ import (
 )
 
 const rowsToSelect = `
-	id, author_id, name, type, action, description, created_at, updated_at, views,
+	offers.id, offers.author_id, offers.name, offers.type, offers.action, offers.description, offers.created_at, offers.updated_at, offers.views,
 	COALESCE((SELECT array_agg(ot.tag_name ORDER BY ot.tag_name) FROM offer_tags ot WHERE ot.offer_id = offers.id), '{}'::text[]) AS tags,
 	COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
 	COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
-	is_hidden, modification_blocked`
+	offers.is_hidden, offers.modification_blocked`
 
 const tagFilterClause = `
 	AND (
