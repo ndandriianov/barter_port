@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -986,7 +985,7 @@ func registerAuthUser(t *testing.T, fixture *Fixture) registerResponse {
 	t.Helper()
 
 	payload, err := json.Marshal(registerRequest{
-		Email:    fmt.Sprintf("user-%d@example.com", time.Now().UnixNano()),
+		Email:    "user-" + uuid.NewString() + "@example.com",
 		Password: "password123",
 	})
 	require.NoError(t, err)
