@@ -431,6 +431,71 @@ type FailureVotesResponseItem struct {
 	Vote openapi_types.UUID `json:"vote"`
 }
 
+// FavoriteOffersCursor Курсор для стабильной пагинации списка избранных объявлений
+type FavoriteOffersCursor struct {
+	FavoritedAt time.Time          `json:"favoritedAt"`
+	Id          openapi_types.UUID `json:"id"`
+}
+
+// FavoritedOffer defines model for FavoritedOffer.
+type FavoritedOffer struct {
+	// Action Whether the user offers or requests something
+	Action OfferAction `json:"action"`
+
+	// AuthorId Уникальный идентификатор пользователя, который создал объявление
+	AuthorId openapi_types.UUID `json:"authorId"`
+
+	// AuthorName Имя пользователя, который создал объявление
+	AuthorName *string `json:"authorName,omitempty"`
+
+	// CreatedAt Временная метка создания объявления
+	CreatedAt time.Time `json:"createdAt"`
+
+	// Description Подробное описание объявления
+	Description string `json:"description"`
+
+	// FavoritedAt Временная метка добавления объявления в избранное
+	FavoritedAt time.Time `json:"favoritedAt"`
+
+	// Id Уникальный идентификатор объявления
+	Id openapi_types.UUID `json:"id"`
+
+	// IsFavorite Находится ли объявление в избранном у текущего пользователя.
+	// Поле актуально только в контексте авторизованного пользователя.
+	IsFavorite *bool `json:"isFavorite,omitempty"`
+
+	// IsHidden Признак того, что объявление скрыто модератором.
+	// Скрытые объявления видны только автору объявления и администратору.
+	IsHidden *bool `json:"isHidden,omitempty"`
+
+	// ModificationBlocked Признак того, что объявление временно заблокировано для редактирования из-за pending-жалобы.
+	ModificationBlocked *bool `json:"modificationBlocked,omitempty"`
+
+	// Name Краткий заголовок объявления
+	Name string `json:"name"`
+
+	// PhotoIds Идентификаторы фотографий объявления в том же порядке, что и `photoUrls`.
+	// Используются для удаления отдельных фотографий при редактировании.
+	PhotoIds *[]openapi_types.UUID `json:"photoIds,omitempty"`
+
+	// PhotoUrls Публичные URL фотографий объявления
+	PhotoUrls *[]string `json:"photoUrls,omitempty"`
+
+	// Tags Список тегов объявления, отсортированный по `name ASC`.
+	// Каждый тег хранится и возвращается как нормализованная строка:
+	// `trim + lowercase`, только латинские и кириллические буквы, длина от 1 до 15 символов.
+	Tags []TagName `json:"tags"`
+
+	// Type Type of barter item
+	Type ItemType `json:"type"`
+
+	// UpdatedAt Временная метка последнего обновления объявления
+	UpdatedAt *time.Time `json:"updatedAt,omitempty"`
+
+	// Views Количество просмотров объявления
+	Views int64 `json:"views"`
+}
+
 // GetAuthorReviewsResponse defines model for GetAuthorReviewsResponse.
 type GetAuthorReviewsResponse = []Review
 
@@ -555,6 +620,15 @@ type Item struct {
 // ItemType Type of barter item
 type ItemType string
 
+// ListFavoriteOffersResponse defines model for ListFavoriteOffersResponse.
+type ListFavoriteOffersResponse struct {
+	// NextCursor Курсор для получения следующей страницы; `null`, если следующей страницы нет
+	NextCursor *FavoriteOffersCursor `json:"nextCursor,omitempty"`
+
+	// Offers Список избранных объявлений
+	Offers []FavoritedOffer `json:"offers"`
+}
+
 // ListOfferGroupsResponse defines model for ListOfferGroupsResponse.
 type ListOfferGroupsResponse = []OfferGroup
 
@@ -676,6 +750,10 @@ type Offer struct {
 
 	// Id Уникальный идентификатор объявления
 	Id openapi_types.UUID `json:"id"`
+
+	// IsFavorite Находится ли объявление в избранном у текущего пользователя.
+	// Поле актуально только в контексте авторизованного пользователя.
+	IsFavorite *bool `json:"isFavorite,omitempty"`
 
 	// IsHidden Признак того, что объявление скрыто модератором.
 	// Скрытые объявления видны только автору объявления и администратору.
@@ -832,6 +910,10 @@ type OfferWithInfo struct {
 
 	// Id Уникальный идентификатор объявления
 	Id openapi_types.UUID `json:"id"`
+
+	// IsFavorite Находится ли объявление в избранном у текущего пользователя.
+	// Поле актуально только в контексте авторизованного пользователя.
+	IsFavorite *bool `json:"isFavorite,omitempty"`
 
 	// IsHidden Признак того, что объявление скрыто модератором.
 	// Скрытые объявления видны только автору объявления и администратору.
@@ -1119,6 +1201,9 @@ type VoteForFailureRequest struct {
 // CursorCreatedAt defines model for CursorCreatedAt.
 type CursorCreatedAt = time.Time
 
+// CursorFavoritedAt defines model for CursorFavoritedAt.
+type CursorFavoritedAt = time.Time
+
 // CursorId defines model for CursorId.
 type CursorId = openapi_types.UUID
 
@@ -1206,6 +1291,19 @@ type ListOffersParams struct {
 
 // ListOffersParamsSort defines parameters for ListOffers.
 type ListOffersParamsSort string
+
+// ListFavoriteOffersParams defines parameters for ListFavoriteOffers.
+type ListFavoriteOffersParams struct {
+	// CursorFavoritedAt Временная метка добавления объявления в избранное в формате RFC3339.
+	// Используется вместе с `cursor_id` для пагинации списка избранного.
+	CursorFavoritedAt *CursorFavoritedAt `form:"cursor_favorited_at,omitempty" json:"cursor_favorited_at,omitempty"`
+
+	// CursorId ID объявления в курсоре, используемый как дополнительный критерий для стабильной пагинации.
+	CursorId *CursorId `form:"cursor_id,omitempty" json:"cursor_id,omitempty"`
+
+	// CursorLimit Максимальное количество объявлений в ответе
+	CursorLimit *Limit `form:"cursor_limit,omitempty" json:"cursor_limit,omitempty"`
+}
 
 // ListSubscribedOffersParams defines parameters for ListSubscribedOffers.
 type ListSubscribedOffersParams struct {
