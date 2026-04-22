@@ -64,6 +64,23 @@ ListOffersResponse:
       description: Курсор для получения следующей страницы; `null`, если следующей страницы нет
 
 
+ListFavoriteOffersResponse:
+  type: object
+  required:
+    - offers
+  properties:
+    offers:
+      type: array
+      description: Список избранных объявлений
+      items:
+        $ref: 'schemas.yaml#/FavoritedOffer'
+    nextCursor:
+      nullable: true
+      allOf:
+        - $ref: 'schemas.yaml#/FavoriteOffersCursor'
+      description: Курсор для получения следующей страницы; `null`, если следующей страницы нет
+
+
 ListTagsResponse:
   type: array
   items:
