@@ -408,12 +408,12 @@ func mustCreateDraft(
 func mustGetDraftIDs(t *testing.T, userID uuid.UUID, createdByMe *bool) []uuid.UUID {
 	t.Helper()
 
-	url := dealsURL() + "/deals/drafts"
+	requestURL := dealsURL() + "/deals/drafts"
 	if createdByMe != nil {
-		url += fmt.Sprintf("?createdByMe=%t", *createdByMe)
+		requestURL += fmt.Sprintf("?createdByMe=%t", *createdByMe)
 	}
 
-	req := mustUserRequest(t, http.MethodGet, url, userID, nil)
+	req := mustUserRequest(t, http.MethodGet, requestURL, userID, nil)
 	resp := mustDo(t, req)
 	defer func() { _ = resp.Body.Close() }()
 	require.Equal(t, http.StatusOK, resp.StatusCode)
@@ -453,12 +453,12 @@ func mustGetDealIDs(t *testing.T, userID uuid.UUID, my bool) []uuid.UUID {
 func mustGetDealsResponse(t *testing.T, userID uuid.UUID, my bool) types.GetDealsResponse {
 	t.Helper()
 
-	url := dealsURL() + "/deals"
+	requestURL := dealsURL() + "/deals"
 	if my {
-		url += "?my=true"
+		requestURL += "?my=true"
 	}
 
-	req := mustUserRequest(t, http.MethodGet, url, userID, nil)
+	req := mustUserRequest(t, http.MethodGet, requestURL, userID, nil)
 	resp := mustDo(t, req)
 	defer func() { _ = resp.Body.Close() }()
 	require.Equal(t, http.StatusOK, resp.StatusCode)

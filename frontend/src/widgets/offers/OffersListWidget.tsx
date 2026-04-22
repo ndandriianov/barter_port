@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Alert,
   Box,
@@ -125,6 +125,7 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
   const nextCursorRef = useRef<UniversalCursor | null>(null);
   const isInitialLoadingRef = useRef(true);
   const isLoadingMoreRef = useRef(false);
+  const hasLoadedOnceRef = useRef(false);
   const feedKeyRef = useRef("");
   const [triggerGetOffers] = offersApi.useLazyGetOffersQuery();
   const [triggerGetSubscribedOffers] = offersApi.useLazyGetSubscribedOffersQuery();
@@ -138,16 +139,17 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
     () => existingTags.filter((tag) => !parsedTags.includes(tag)).slice(0, 10),
     [existingTags, parsedTags],
   );
-  const feedKey = `${mode}:${sortType}:${withoutTagsOnly}:${parsedTags.join("|")}`;
+  const parsedTagsKey = parsedTags.join("|");
+  const feedKey = `${mode}:${sortType}:${withoutTagsOnly}:${parsedTagsKey}`;
 
   feedKeyRef.current = feedKey;
   nextCursorRef.current = nextCursor;
 
-  const loadOffersPage = useEffectEvent(async (cursor: UniversalCursor | null, replace: boolean) => {
-    const requestFeedKey = feedKeyRef.current;
+  const loadOffersPage = useCallback(async (cursor: UniversalCursor | null, replace: boolean) => {
+    const requestFeedKey = feedKey;
 
     if (replace) {
-      if (!hasLoadedOnce) {
+      if (!hasLoadedOnceRef.current) {
         setIsInitialLoading(true);
       }
       isInitialLoadingRef.current = true;
@@ -181,6 +183,7 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
       nextCursorRef.current = response.nextCursor;
 
       if (replace) {
+        hasLoadedOnceRef.current = true;
         setHasLoadedOnce(true);
       }
     } catch {
@@ -189,6 +192,7 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
       }
 
       if (replace) {
+        hasLoadedOnceRef.current = true;
         setHasLoadedOnce(true);
         setInitialError(
           isSubscribedOffers
@@ -218,11 +222,20 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
         }
       }
     }
-  });
+  }, [
+    feedKey,
+    isMyOffers,
+    isSubscribedOffers,
+    parsedTags,
+    sortType,
+    triggerGetOffers,
+    triggerGetSubscribedOffers,
+    withoutTagsOnly,
+  ]);
 
   useEffect(() => {
     void loadOffersPage(null, true);
-  }, [mode, sortType, withoutTagsOnly, parsedTags.join("|")]);
+  }, [loadOffersPage]);
 
   useEffect(() => {
     if (offers.length === 0) {
@@ -253,7 +266,7 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
     observer.observe(sentinelNode);
 
     return () => observer.disconnect();
-  }, [offers.length, mode, sortType]);
+  }, [loadOffersPage, offers.length]);
 
   if (isInitialLoading && !hasLoadedOnce) {
     return (

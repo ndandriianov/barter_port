@@ -355,14 +355,12 @@ func (r *Repository) UpdateOffer(
 ) (domain.Offer, error) {
 	var itemType *string
 	if patch.Type != nil {
-		value := patch.Type.String()
-		itemType = &value
+		itemType = new(patch.Type.String())
 	}
 
 	var action *string
 	if patch.Action != nil {
-		value := patch.Action.String()
-		action = &value
+		action = new(patch.Action.String())
 	}
 
 	const query = `
