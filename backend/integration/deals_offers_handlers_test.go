@@ -563,7 +563,7 @@ func TestUpdateOfferReplacesTags(t *testing.T) {
 	})
 	require.Equal(t, []types.TagName{"updatetaggamma"}, updated.Tags)
 
-	var emptyTags []types.TagName
+	emptyTags := []types.TagName{}
 	cleared := mustUpdateOffer(t, userID, offer.Id, types.UpdateOfferRequest{
 		Tags: &emptyTags,
 	})
