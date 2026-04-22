@@ -19,7 +19,7 @@ function OfferPage() {
   const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
   const [openedPhotoUrl, setOpenedPhotoUrl] = useState<string | null>(null);
   const [reportSuccessMessage, setReportSuccessMessage] = useState<string | null>(null);
-  const [optimisticIsFavorite, setOptimisticIsFavorite] = useState(false);
+  const [favoriteOverride, setFavoriteOverride] = useState<{ offerId: string; value: boolean } | null>(null);
   const viewedOfferIdsRef = useRef<Set<string>>(new Set());
   const { data: meData } = usersApi.useGetCurrentUserQuery();
   const [deleteOffer, { isLoading: isDeleting, error: deleteError }] = offersApi.useDeleteOfferMutation();
@@ -49,10 +49,6 @@ function OfferPage() {
     });
   }, [meData, offer, viewOfferById]);
 
-  useEffect(() => {
-    setOptimisticIsFavorite(offer?.isFavorite ?? false);
-  }, [offer?.id, offer?.isFavorite]);
-
   if (!offerId) return <Alert severity="warning">Объявление не найдено</Alert>;
 
   if (isLoading) {
@@ -68,9 +64,10 @@ function OfferPage() {
   }
 
   const canRespond = !!meData && offer.authorId !== meData.id;
+  const displayedIsFavorite = favoriteOverride?.offerId === offer.id ? favoriteOverride.value : offer.isFavorite;
   const displayedOffer = {
     ...offer,
-    isFavorite: optimisticIsFavorite,
+    isFavorite: displayedIsFavorite,
   };
 
   const handleDelete = async () => {
@@ -87,8 +84,8 @@ function OfferPage() {
   };
 
   const handleToggleFavorite = async () => {
-    const nextIsFavorite = !optimisticIsFavorite;
-    setOptimisticIsFavorite(nextIsFavorite);
+    const nextIsFavorite = !displayedIsFavorite;
+    setFavoriteOverride({ offerId: offer.id, value: nextIsFavorite });
 
     try {
       if (nextIsFavorite) {
@@ -98,12 +95,12 @@ function OfferPage() {
 
       await removeOfferFromFavorites(offer.id).unwrap();
     } catch {
-      setOptimisticIsFavorite(!nextIsFavorite);
+      setFavoriteOverride(null);
     }
   };
 
   const handleFavoriteChange = (_offerId: string, isFavorite: boolean) => {
-    setOptimisticIsFavorite(isFavorite);
+    setFavoriteOverride({ offerId: offer.id, value: isFavorite });
   };
 
   return (
@@ -204,13 +201,13 @@ function OfferPage() {
         )}
         {canRespond && (
           <Button
-            variant={optimisticIsFavorite ? "contained" : "outlined"}
-            color={optimisticIsFavorite ? "error" : "inherit"}
-            startIcon={optimisticIsFavorite ? <FavoriteRoundedIcon /> : <FavoriteBorderOutlinedIcon />}
+            variant={displayedIsFavorite ? "contained" : "outlined"}
+            color={displayedIsFavorite ? "error" : "inherit"}
+            startIcon={displayedIsFavorite ? <FavoriteRoundedIcon /> : <FavoriteBorderOutlinedIcon />}
             onClick={() => void handleToggleFavorite()}
             disabled={isFavoriteActionLoading}
           >
-            {optimisticIsFavorite ? "В избранном" : "В избранное"}
+            {displayedIsFavorite ? "В избранном" : "В избранное"}
           </Button>
         )}
         {isOwnOffer && (

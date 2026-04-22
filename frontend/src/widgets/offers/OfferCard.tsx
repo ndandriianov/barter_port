@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Box, Button, Card, CardContent, CardMedia, Chip, IconButton, Tooltip, Typography } from "@mui/material";
 import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
 import CalendarTodayOutlinedIcon from "@mui/icons-material/CalendarTodayOutlined";
@@ -74,15 +74,12 @@ function OfferCard({
   const moderationState = getOfferModerationState(offer, offerReports);
   const moderationLabel = getOfferModerationLabel(moderationState);
   const isFavoriteActionLoading = isAddingToFavorites || isRemovingFromFavorites;
-  const [isFavorite, setIsFavorite] = useState(offer.isFavorite);
-
-  useEffect(() => {
-    setIsFavorite(offer.isFavorite);
-  }, [offer.id, offer.isFavorite]);
+  const [favoriteOverride, setFavoriteOverride] = useState<boolean | null>(null);
+  const isFavorite = favoriteOverride ?? offer.isFavorite;
 
   const handleToggleFavorite = async () => {
     const nextIsFavorite = !isFavorite;
-    setIsFavorite(nextIsFavorite);
+    setFavoriteOverride(nextIsFavorite);
     onFavoriteChange?.(offer.id, nextIsFavorite);
 
     try {
@@ -93,7 +90,7 @@ function OfferCard({
 
       await removeOfferFromFavorites(offer.id).unwrap();
     } catch {
-      setIsFavorite(!nextIsFavorite);
+      setFavoriteOverride(null);
       onFavoriteChange?.(offer.id, !nextIsFavorite);
     }
   };
