@@ -50,7 +50,7 @@ func (h *Handlers) HandleListFavoriteOffers(w http.ResponseWriter, r *http.Reque
 
 	limit := 10
 	if params.CursorLimit != nil {
-		limit = int(*params.CursorLimit)
+		limit = *params.CursorLimit
 		if limit <= 0 {
 			httpx.WriteErrorStr(w, http.StatusBadRequest, "invalid limit")
 			return
@@ -71,8 +71,7 @@ func (h *Handlers) HandleListFavoriteOffers(w http.ResponseWriter, r *http.Reque
 
 	var respCursor *types.FavoriteOffersCursor
 	if nextCursor != nil {
-		cursorDTO := nextCursor.ToDto()
-		respCursor = &cursorDTO
+		respCursor = new(nextCursor.ToDto())
 	}
 
 	httpx.WriteJSON(w, http.StatusOK, types.ListFavoriteOffersResponse{
@@ -141,24 +140,21 @@ func decodeListFavoriteOffersRequest(r *http.Request) (types.ListFavoriteOffersP
 		if err != nil {
 			return types.ListFavoriteOffersParams{}, errors.New("invalid cursor_favorited_at")
 		}
-		cursorFavoritedAt := types.CursorFavoritedAt(value)
-		params.CursorFavoritedAt = &cursorFavoritedAt
+		params.CursorFavoritedAt = new(value)
 	}
 	if rawID := query.Get("cursor_id"); rawID != "" {
 		value, err := uuid.Parse(rawID)
 		if err != nil {
 			return types.ListFavoriteOffersParams{}, errors.New("invalid cursor_id")
 		}
-		cursorID := types.CursorId(value)
-		params.CursorId = &cursorID
+		params.CursorId = new(value)
 	}
 	if rawLimit := query.Get("cursor_limit"); rawLimit != "" {
 		value, err := strconv.Atoi(rawLimit)
 		if err != nil {
 			return types.ListFavoriteOffersParams{}, errors.New("invalid cursor_limit")
 		}
-		limit := types.Limit(value)
-		params.CursorLimit = &limit
+		params.CursorLimit = new(value)
 	}
 
 	return params, nil
@@ -173,8 +169,8 @@ func newFavoriteCursorFromParams(favoritedAt *types.CursorFavoritedAt, id *types
 	}
 
 	return &domain.FavoriteOffersCursor{
-		FavoritedAt: time.Time(*favoritedAt),
-		Id:          uuid.UUID(*id),
+		FavoritedAt: *favoritedAt,
+		Id:          *id,
 	}, nil
 }
 

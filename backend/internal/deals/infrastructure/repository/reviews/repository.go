@@ -389,14 +389,11 @@ func (r *Repository) GetPendingReviewsForParticipant(
 
 		switch {
 		case providerID == nil:
-			r := types.ProviderMissing
-			e.Reason = &r
+			e.Reason = new(types.ProviderMissing)
 		case *providerID == userID:
-			r := types.SameProviderAndReceiver
-			e.Reason = &r
+			e.Reason = new(types.SameProviderAndReceiver)
 		case alreadyReviewed:
-			r := types.AlreadyReviewed
-			e.Reason = &r
+			e.Reason = new(types.AlreadyReviewed)
 		default:
 			e.CanCreate = true
 		}

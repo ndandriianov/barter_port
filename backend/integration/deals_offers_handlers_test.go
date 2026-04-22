@@ -361,8 +361,7 @@ func TestGetOffersFiltersByTagsQuery(t *testing.T) {
 		Action:      types.Give,
 	})
 
-	my := true
-	result := mustGetOffersBySortAndTags(t, userID, "ByTime", &my, &fullTags, false)
+	result := mustGetOffersBySortAndTags(t, userID, "ByTime", new(true), &fullTags, false)
 	require.Len(t, result.Offers, 1)
 	require.Equal(t, target.Id, result.Offers[0].Id)
 	require.Equal(t, userID, result.Offers[0].AuthorId)
@@ -388,8 +387,7 @@ func TestGetOffersFiltersWithoutTags(t *testing.T) {
 		Action:      types.Give,
 	})
 
-	my := true
-	result := mustGetOffersBySortAndTags(t, userID, "ByTime", &my, nil, true)
+	result := mustGetOffersBySortAndTags(t, userID, "ByTime", new(true), nil, true)
 	require.Len(t, result.Offers, 1)
 	require.Equal(t, untagged.Id, result.Offers[0].Id)
 	require.Equal(t, userID, result.Offers[0].AuthorId)
@@ -565,7 +563,7 @@ func TestUpdateOfferReplacesTags(t *testing.T) {
 	})
 	require.Equal(t, []types.TagName{"updatetaggamma"}, updated.Tags)
 
-	emptyTags := []types.TagName{}
+	var emptyTags []types.TagName
 	cleared := mustUpdateOffer(t, userID, offer.Id, types.UpdateOfferRequest{
 		Tags: &emptyTags,
 	})

@@ -506,7 +506,7 @@ func (s *Service) addFavoriteFlagToOffers(ctx context.Context, userID uuid.UUID,
 	}
 
 	for i := range offers {
-		offers[i].IsFavorite = boolPtr(favoriteIDs[offers[i].ID])
+		offers[i].IsFavorite = new(favoriteIDs[offers[i].ID])
 	}
 
 	return offers, nil
@@ -620,7 +620,7 @@ func (s *Service) GetFavoriteOffers(
 	}
 
 	for i := range offers {
-		offers[i].IsFavorite = boolPtr(true)
+		offers[i].IsFavorite = new(true)
 	}
 
 	return offers, nextCursor, nil

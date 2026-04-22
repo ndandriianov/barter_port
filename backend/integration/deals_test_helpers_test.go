@@ -143,7 +143,7 @@ func mustCreateOfferMultipartDetails(t *testing.T, userID uuid.UUID, body types.
 	require.NoError(t, writer.WriteField("action", string(body.Action)))
 	if body.Tags != nil {
 		for _, tag := range *body.Tags {
-			require.NoError(t, writer.WriteField("tags", string(tag)))
+			require.NoError(t, writer.WriteField("tags", tag))
 		}
 	}
 
@@ -212,7 +212,7 @@ func mustGetOffersBySortAndTags(
 	}
 	if tags != nil {
 		for _, tag := range *tags {
-			values.Add("tags", string(tag))
+			values.Add("tags", tag)
 		}
 	}
 	if withoutTags {
@@ -372,7 +372,7 @@ func mustUpdateOfferMultipartDetails(
 	}
 	if body.Tags != nil {
 		for _, tag := range *body.Tags {
-			require.NoError(t, writer.WriteField("tags", string(tag)))
+			require.NoError(t, writer.WriteField("tags", tag))
 		}
 	}
 	if body.DeletePhotoIds != nil {

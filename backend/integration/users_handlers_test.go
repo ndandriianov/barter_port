@@ -87,8 +87,8 @@ func TestUsersGetMe(t *testing.T) {
 
 	var me usertypes.Me
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&me))
-	require.Equal(t, registered.UserID, uuid.UUID(me.Id))
-	require.Equal(t, registered.Email, string(me.Email))
+	require.Equal(t, registered.UserID, me.Id)
+	require.Equal(t, registered.Email, me.Email)
 	require.Nil(t, me.Name)
 	require.Nil(t, me.Bio)
 	require.Nil(t, me.AvatarUrl)
@@ -156,16 +156,16 @@ func TestUsersGetCurrentUserReputationEvents(t *testing.T) {
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&events))
 	require.Len(t, events, 2)
 
-	require.Equal(t, newerEventID, uuid.UUID(events[0].Id))
+	require.Equal(t, newerEventID, events[0].Id)
 	require.Equal(t, usertypes.DealsOfferReportPenalty, events[0].SourceType)
-	require.Equal(t, newerSourceID, uuid.UUID(events[0].SourceId))
+	require.Equal(t, newerSourceID, events[0].SourceId)
 	require.Equal(t, 10, events[0].Delta)
 	require.True(t, events[0].CreatedAt.Equal(newerCreatedAt))
 	require.Nil(t, events[0].Comment)
 
-	require.Equal(t, olderEventID, uuid.UUID(events[1].Id))
+	require.Equal(t, olderEventID, events[1].Id)
 	require.Equal(t, usertypes.DealsOfferReportPenalty, events[1].SourceType)
-	require.Equal(t, olderSourceID, uuid.UUID(events[1].SourceId))
+	require.Equal(t, olderSourceID, events[1].SourceId)
 	require.Equal(t, -5, events[1].Delta)
 	require.True(t, events[1].CreatedAt.Equal(olderCreatedAt))
 	require.NotNil(t, events[1].Comment)
@@ -216,11 +216,11 @@ func TestUsersUpdateMeAndGetUser(t *testing.T) {
 	var me usertypes.Me
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&me))
 	require.NotNil(t, me.Name)
-	require.Equal(t, "Nick", string(*me.Name))
+	require.Equal(t, "Nick", *me.Name)
 	require.NotNil(t, me.Bio)
-	require.Equal(t, "barter enthusiast", string(*me.Bio))
+	require.Equal(t, "barter enthusiast", *me.Bio)
 	require.NotNil(t, me.AvatarUrl)
-	require.Equal(t, "http://localhost:8333/avatars/user-1/avatar.jpg", string(*me.AvatarUrl))
+	require.Equal(t, "http://localhost:8333/avatars/user-1/avatar.jpg", *me.AvatarUrl)
 
 	getReq, err := http.NewRequest(http.MethodGet, fixture.UsersURL+"/users/"+registered.UserID.String(), nil)
 	require.NoError(t, err)
@@ -236,13 +236,13 @@ func TestUsersUpdateMeAndGetUser(t *testing.T) {
 
 	var user usertypes.User
 	require.NoError(t, json.NewDecoder(getResp.Body).Decode(&user))
-	require.Equal(t, registered.UserID, uuid.UUID(user.Id))
+	require.Equal(t, registered.UserID, user.Id)
 	require.NotNil(t, user.Name)
-	require.Equal(t, "Nick", string(*user.Name))
+	require.Equal(t, "Nick", *user.Name)
 	require.NotNil(t, user.Bio)
-	require.Equal(t, "barter enthusiast", string(*user.Bio))
+	require.Equal(t, "barter enthusiast", *user.Bio)
 	require.NotNil(t, user.AvatarUrl)
-	require.Equal(t, "http://localhost:8333/avatars/user-1/avatar.jpg", string(*user.AvatarUrl))
+	require.Equal(t, "http://localhost:8333/avatars/user-1/avatar.jpg", *user.AvatarUrl)
 }
 
 func TestUsersUpdateAvatarOnlyAndClear(t *testing.T) {
@@ -271,7 +271,7 @@ func TestUsersUpdateAvatarOnlyAndClear(t *testing.T) {
 	var afterSet usertypes.Me
 	require.NoError(t, json.NewDecoder(setResp.Body).Decode(&afterSet))
 	require.NotNil(t, afterSet.AvatarUrl)
-	require.Equal(t, "http://localhost:8333/avatars/user-2/avatar.png", string(*afterSet.AvatarUrl))
+	require.Equal(t, "http://localhost:8333/avatars/user-2/avatar.png", *afterSet.AvatarUrl)
 
 	clearReq, err := http.NewRequest(http.MethodPatch, fixture.UsersURL+"/users/me", bytes.NewReader([]byte(`{"avatarUrl":""}`)))
 	require.NoError(t, err)
@@ -606,7 +606,7 @@ func TestGetSubscriptions(t *testing.T) {
 	var subs usertypes.GetSubscriptionsResponse
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&subs))
 	require.Len(t, subs, 1)
-	require.Equal(t, target.UserID, uuid.UUID(subs[0].Id))
+	require.Equal(t, target.UserID, subs[0].Id)
 }
 
 func TestGetSubscriptionsUnauthorized(t *testing.T) {
@@ -683,7 +683,7 @@ func TestGetSubscribers(t *testing.T) {
 	var subscribers usertypes.GetSubscriptionsResponse
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&subscribers))
 	require.Len(t, subscribers, 1)
-	require.Equal(t, subscriber.UserID, uuid.UUID(subscribers[0].Id))
+	require.Equal(t, subscriber.UserID, subscribers[0].Id)
 }
 
 func TestGetSubscribersUnauthorized(t *testing.T) {
@@ -737,7 +737,7 @@ func TestSubscribeUnsubscribeAndVerifyLists(t *testing.T) {
 	require.NoError(t, json.NewDecoder(getSubsResp.Body).Decode(&subs))
 	_ = getSubsResp.Body.Close()
 	require.Len(t, subs, 1)
-	require.Equal(t, target.UserID, uuid.UUID(subs[0].Id))
+	require.Equal(t, target.UserID, subs[0].Id)
 
 	// подписчики target содержат subscriber
 	getFollowersReq, err := http.NewRequest(http.MethodGet, fixture.UsersURL+"/users/subscribers", nil)
@@ -749,7 +749,7 @@ func TestSubscribeUnsubscribeAndVerifyLists(t *testing.T) {
 	require.NoError(t, json.NewDecoder(getFollowersResp.Body).Decode(&followers))
 	_ = getFollowersResp.Body.Close()
 	require.Len(t, followers, 1)
-	require.Equal(t, subscriber.UserID, uuid.UUID(followers[0].Id))
+	require.Equal(t, subscriber.UserID, followers[0].Id)
 
 	// отписываемся
 	unsubReq, err := http.NewRequest(http.MethodDelete, fixture.UsersURL+"/users/subscriptions", bytes.NewReader(body))

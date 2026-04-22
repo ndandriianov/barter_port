@@ -170,7 +170,7 @@ func waitForCurrentUserReputationAPIEvent(
 	for time.Now().Before(deadline) {
 		lastEvents = mustGetCurrentUserReputationEvents(t, fixture, userID)
 		for _, event := range lastEvents {
-			if string(event.SourceType) == sourceType && uuid.UUID(event.SourceId) == sourceID {
+			if string(event.SourceType) == sourceType && event.SourceId == sourceID {
 				return event
 			}
 		}
@@ -202,7 +202,7 @@ func waitForCurrentUserReputationPoints(
 
 	for time.Now().Before(deadline) {
 		lastMe = mustGetCurrentUser(t, fixture, userID)
-		if int(lastMe.ReputationPoints) == expected {
+		if lastMe.ReputationPoints == expected {
 			return lastMe
 		}
 

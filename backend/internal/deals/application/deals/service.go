@@ -846,8 +846,6 @@ func (s *Service) createDeal(ctx context.Context, tx pgx.Tx, draft domain.Draft)
 	for i, o := range draft.Offers {
 		var receiver *uuid.UUID = nil
 		var provider *uuid.UUID = nil
-		offerID := o.Offer.ID
-
 		if o.Offer.Action == enums.OfferActionGive {
 			provider = &o.Offer.AuthorId
 		} else {
@@ -856,7 +854,7 @@ func (s *Service) createDeal(ctx context.Context, tx pgx.Tx, draft domain.Draft)
 
 		items[i] = domain.Item{
 			ID:          uuid.New(),
-			OfferID:     &offerID,
+			OfferID:     new(o.Offer.ID),
 			AuthorID:    o.Offer.AuthorId,
 			ProviderID:  provider,
 			ReceiverID:  receiver,

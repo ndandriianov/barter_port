@@ -36,8 +36,7 @@ func (i *Item) ToDTO() types.Item {
 
 	var photoURLs *[]string
 	if len(i.PhotoURLs) > 0 {
-		copied := append([]string(nil), i.PhotoURLs...)
-		photoURLs = &copied
+		photoURLs = new(append([]string(nil), i.PhotoURLs...))
 	}
 
 	return types.Item{

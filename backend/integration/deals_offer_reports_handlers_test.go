@@ -325,7 +325,7 @@ func TestAdminResolveReportAcceptHidesOffer(t *testing.T) {
 	require.Equal(t, -10, me.ReputationPoints)
 
 	apiEvent := waitForCurrentUserReputationAPIEvent(t, fixture, author.UserID, dealsusers.OfferReportPenaltyMessageType, offerID)
-	require.Equal(t, event.ID, uuid.UUID(apiEvent.Id))
+	require.Equal(t, event.ID, apiEvent.Id)
 	require.Equal(t, -10, apiEvent.Delta)
 	require.NotNil(t, apiEvent.Comment)
 	require.Equal(t, resolutionComment, *apiEvent.Comment)

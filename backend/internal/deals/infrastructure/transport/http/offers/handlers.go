@@ -4,7 +4,7 @@ import (
 	"barter-port/contracts/openapi/deals/types"
 	offersapp "barter-port/internal/deals/application/offers"
 	"barter-port/internal/deals/domain"
-	enums "barter-port/internal/deals/domain/enums"
+	"barter-port/internal/deals/domain/enums"
 	"barter-port/internal/deals/domain/htypes"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/httpx"
@@ -142,7 +142,7 @@ func decodeCreateOfferMultipartRequest(w http.ResponseWriter, r *http.Request) (
 	if rawTags, ok := r.MultipartForm.Value["tags"]; ok {
 		tags := make([]types.TagName, 0, len(rawTags))
 		for _, tag := range rawTags {
-			tags = append(tags, types.TagName(tag))
+			tags = append(tags, tag)
 		}
 		req.Tags = &tags
 	}
@@ -397,17 +397,15 @@ func decodeUpdateOfferMultipartRequest(w http.ResponseWriter, r *http.Request) (
 		req.Description = &value
 	}
 	if value, ok := firstMultipartValue(values, "type"); ok {
-		itemType := types.ItemType(value)
-		req.Type = &itemType
+		req.Type = new(types.ItemType(value))
 	}
 	if value, ok := firstMultipartValue(values, "action"); ok {
-		action := types.OfferAction(value)
-		req.Action = &action
+		req.Action = new(types.OfferAction(value))
 	}
 	if rawTags, ok := values["tags"]; ok {
 		tags := make([]types.TagName, 0, len(rawTags))
 		for _, tag := range rawTags {
-			tags = append(tags, types.TagName(tag))
+			tags = append(tags, tag)
 		}
 		req.Tags = &tags
 	}
@@ -595,7 +593,7 @@ func parseGetOffersRequest(
 
 	limit := 10
 	if params.CursorLimit != nil {
-		limit = int(*params.CursorLimit)
+		limit = *params.CursorLimit
 		if limit <= 0 {
 			httpx.WriteErrorStr(w, http.StatusBadRequest, "invalid limit")
 			return enums.SortType(0), nil, 0, false, nil, false
@@ -615,8 +613,7 @@ func writeListOffersResponse(w http.ResponseWriter, offerList []domain.Offer, ne
 
 	var respCursor *types.OffersCursor
 	if nextCursor != nil {
-		cursorDTO := nextCursor.ToDto()
-		respCursor = &cursorDTO
+		respCursor = new(nextCursor.ToDto())
 	}
 
 	httpx.WriteJSON(w, http.StatusOK, types.ListOffersResponse{
@@ -642,32 +639,28 @@ func decodeListOffersRequest(r *http.Request) (types.ListOffersParams, *[]string
 		if err != nil {
 			return types.ListOffersParams{}, nil, errors.New("invalid cursor_created_at")
 		}
-		createdAt := types.CursorCreatedAt(value)
-		params.CursorCreatedAt = &createdAt
+		params.CursorCreatedAt = new(value)
 	}
 	if rawViews := query.Get("cursor_views"); rawViews != "" {
 		value, err := strconv.ParseInt(rawViews, 10, 64)
 		if err != nil {
 			return types.ListOffersParams{}, nil, errors.New("invalid cursor_views")
 		}
-		cursorViews := types.CursorViews(value)
-		params.CursorViews = &cursorViews
+		params.CursorViews = new(value)
 	}
 	if rawID := query.Get("cursor_id"); rawID != "" {
 		value, err := uuid.Parse(rawID)
 		if err != nil {
 			return types.ListOffersParams{}, nil, errors.New("invalid cursor_id")
 		}
-		cursorID := types.CursorId(value)
-		params.CursorId = &cursorID
+		params.CursorId = new(value)
 	}
 	if rawLimit := query.Get("cursor_limit"); rawLimit != "" {
 		value, err := strconv.Atoi(rawLimit)
 		if err != nil {
 			return types.ListOffersParams{}, nil, errors.New("invalid cursor_limit")
 		}
-		limit := types.Limit(value)
-		params.CursorLimit = &limit
+		params.CursorLimit = new(value)
 	}
 	if rawWithoutTags := query.Get("withoutTags"); rawWithoutTags != "" {
 		value, err := strconv.ParseBool(rawWithoutTags)
@@ -684,7 +677,7 @@ func decodeListOffersRequest(r *http.Request) (types.ListOffersParams, *[]string
 	if len(rawTags) > 0 {
 		tags := make([]types.TagName, 0, len(rawTags))
 		for _, tag := range rawTags {
-			tags = append(tags, types.TagName(tag))
+			tags = append(tags, tag)
 		}
 		params.Tags = &tags
 	}
@@ -694,7 +687,7 @@ func decodeListOffersRequest(r *http.Request) (types.ListOffersParams, *[]string
 	}
 
 	if params.WithoutTags != nil && *params.WithoutTags {
-		emptyTags := []string{}
+		var emptyTags []string
 		return params, &emptyTags, nil
 	}
 
@@ -717,7 +710,7 @@ func normalizeTagNames(tags *[]types.TagName) ([]string, error) {
 
 	raw := make([]string, 0, len(*tags))
 	for _, tag := range *tags {
-		raw = append(raw, string(tag))
+		raw = append(raw, tag)
 	}
 
 	return domain.NormalizeTags(raw)
@@ -730,17 +723,17 @@ func newUniversalCursorFromParams(createdAt *types.CursorCreatedAt, views *types
 
 	var createdAtStr string
 	if createdAt != nil {
-		createdAtStr = time.Time(*createdAt).Format(time.RFC3339)
+		createdAtStr = (*createdAt).Format(time.RFC3339)
 	}
 
 	var viewsStr string
 	if views != nil {
-		viewsStr = strconv.FormatInt(int64(*views), 10)
+		viewsStr = strconv.FormatInt(*views, 10)
 	}
 
 	var idStr string
 	if id != nil {
-		idStr = uuid.UUID(*id).String()
+		idStr = (*id).String()
 	}
 
 	return domain.NewUniversalCursor(createdAtStr, viewsStr, idStr)

@@ -56,9 +56,7 @@ func TestCreateDealItemReviewSuccess(t *testing.T) {
 	require.NotNil(t, review.OfferRef)
 	require.NotNil(t, review.ItemRef)
 
-	itemRefID := uuid.UUID(review.ItemRef.ItemId)
-	offerRefID := uuid.UUID(review.OfferRef.OfferId)
-	event := requireReviewCreationRewardEvent(t, fixture, userB, dealID, &itemRefID, &offerRefID, userA)
+	event := requireReviewCreationRewardEvent(t, fixture, userB, dealID, new(uuid.UUID(review.ItemRef.ItemId)), new(uuid.UUID(review.OfferRef.OfferId)), userA)
 	waitForCurrentUserReputationAPIEvent(t, fixture, userB, dealsusers.ReviewCreationRewardMessageType, event.SourceID)
 	waitForCurrentUserReputationPoints(t, fixture, userB, dealCompletionRewardPoints+reviewCreationRewardPoints)
 }
@@ -322,5 +320,5 @@ func TestDeleteReviewSuccessAllowsRecreate(t *testing.T) {
 	time.Sleep(2 * time.Second)
 	require.Equal(t, 1, countUserReputationEvents(t, fixture, ctx.ReceiverID, dealsusers.ReviewCreationRewardMessageType, sourceID))
 	me := mustGetCurrentUser(t, fixture, ctx.ReceiverID)
-	require.Equal(t, dealCompletionRewardPoints+reviewCreationRewardPoints, int(me.ReputationPoints))
+	require.Equal(t, dealCompletionRewardPoints+reviewCreationRewardPoints, me.ReputationPoints)
 }

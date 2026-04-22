@@ -40,8 +40,7 @@ func (i *Offer) ToDto() types.Offer {
 
 	var photoURLs *[]string
 	if len(i.PhotoUrls) > 0 {
-		copied := append([]string(nil), i.PhotoUrls...)
-		photoURLs = &copied
+		photoURLs = new(append([]string(nil), i.PhotoUrls...))
 	}
 
 	return types.Offer{
@@ -59,8 +58,8 @@ func (i *Offer) ToDto() types.Offer {
 		UpdatedAt:           i.UpdatedAt,
 		Views:               int64(i.Views),
 		IsFavorite:          i.IsFavorite,
-		IsHidden:            boolPtr(i.IsHidden),
-		ModificationBlocked: boolPtr(i.ModificationBlocked),
+		IsHidden:            new(i.IsHidden),
+		ModificationBlocked: new(i.ModificationBlocked),
 	}
 }
 
@@ -76,8 +75,7 @@ func (i *Offer) ToDTOWithInfo(info OfferInfo) types.OfferWithInfo {
 
 	var photoURLs *[]string
 	if len(i.PhotoUrls) > 0 {
-		copied := append([]string(nil), i.PhotoUrls...)
-		photoURLs = &copied
+		photoURLs = new(append([]string(nil), i.PhotoUrls...))
 	}
 
 	return types.OfferWithInfo{
@@ -88,8 +86,8 @@ func (i *Offer) ToDTOWithInfo(info OfferInfo) types.OfferWithInfo {
 		Description:         i.Description,
 		Id:                  i.ID,
 		IsFavorite:          i.IsFavorite,
-		IsHidden:            boolPtr(i.IsHidden),
-		ModificationBlocked: boolPtr(i.ModificationBlocked),
+		IsHidden:            new(i.IsHidden),
+		ModificationBlocked: new(i.ModificationBlocked),
 		Name:                i.Name,
 		PhotoIds:            photoIDs,
 		PhotoUrls:           photoURLs,
@@ -109,7 +107,7 @@ func (i *Offer) tagsToDTO() []types.TagName {
 
 	tags := make([]types.TagName, 0, len(i.Tags))
 	for _, tag := range i.Tags {
-		tags = append(tags, types.TagName(tag))
+		tags = append(tags, tag)
 	}
 
 	return tags

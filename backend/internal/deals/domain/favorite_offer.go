@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	openapitypes "github.com/oapi-codegen/runtime/types"
 )
 
 type FavoritedOffer struct {
@@ -45,6 +44,6 @@ type FavoriteOffersCursor struct {
 func (c *FavoriteOffersCursor) ToDto() types.FavoriteOffersCursor {
 	return types.FavoriteOffersCursor{
 		FavoritedAt: c.FavoritedAt,
-		Id:          openapitypes.UUID(c.Id),
+		Id:          c.Id,
 	}
 }

@@ -35,13 +35,11 @@ func (v *LocalJWT) ValidateAccess(_ context.Context, token string) (authkit.Prin
 	}
 
 	if claims.IssuedAt != nil {
-		t := claims.IssuedAt.Time
-		p.IssuedAt = &t
+		p.IssuedAt = new(claims.IssuedAt.Time)
 	}
 
 	if claims.ExpiresAt != nil {
-		t := claims.ExpiresAt.Time
-		p.ExpiresAt = &t
+		p.ExpiresAt = new(claims.ExpiresAt.Time)
 	}
 
 	return p, nil

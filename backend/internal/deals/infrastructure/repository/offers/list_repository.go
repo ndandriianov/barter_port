@@ -59,9 +59,7 @@ func offersAndTimeCursor(offers []domain.Offer, err error) ([]domain.Offer, *dom
 		return offers, nil, nil
 	}
 	lastOffer := offers[len(offers)-1]
-	nextCursor := timeCursor(lastOffer)
-
-	return offers, &nextCursor, nil
+	return offers, new(timeCursor(lastOffer)), nil
 }
 
 func popularityCursor(offer domain.Offer) domain.PopularityCursor {
@@ -80,9 +78,7 @@ func offersAndPopularityCursor(offers []domain.Offer, err error) ([]domain.Offer
 		return offers, nil, nil
 	}
 	lastOffer := offers[len(offers)-1]
-	nextCursor := popularityCursor(lastOffer)
-
-	return offers, &nextCursor, nil
+	return offers, new(popularityCursor(lastOffer)), nil
 }
 
 func favoriteOffersCursor(offer domain.FavoritedOffer) domain.FavoriteOffersCursor {
@@ -102,9 +98,7 @@ func offersAndFavoriteCursor(offers []domain.FavoritedOffer, err error) ([]domai
 	}
 
 	lastOffer := offers[len(offers)-1]
-	nextCursor := favoriteOffersCursor(lastOffer)
-
-	return offers, &nextCursor, nil
+	return offers, new(favoriteOffersCursor(lastOffer)), nil
 }
 
 // ================================================================================

@@ -89,7 +89,6 @@ func (s *Service) CreateDealItemReview(
 			return nil
 		}
 
-		rewardComment := "Начисление за оставленный отзыв"
 		msg := dealsusers.ReputationMessage{
 			ID:         uuid.New(),
 			SourceType: dealsusers.ReviewCreationRewardMessageType,
@@ -103,7 +102,7 @@ func (s *Service) CreateDealItemReview(
 			UserID:    userID,
 			Delta:     s.ReviewCreationRewardPoints(),
 			CreatedAt: time.Now().UTC(),
-			Comment:   &rewardComment,
+			Comment:   new("Начисление за оставленный отзыв"),
 		}
 
 		if err = s.ReputationOutboxRepository().WriteOutboxMessage(ctx, tx, msg); err != nil {
@@ -284,28 +283,23 @@ func (s *Service) GetDealItemReviewEligibility(
 	}
 
 	if deal.Status != enums.DealStatusCompleted {
-		r := types.DealNotCompleted
-		e.Reason = &r
+		e.Reason = new(types.DealNotCompleted)
 		return e, nil
 	}
 	if item.ReceiverID == nil {
-		r := types.ReceiverMissing
-		e.Reason = &r
+		e.Reason = new(types.ReceiverMissing)
 		return e, nil
 	}
 	if *item.ReceiverID != userID {
-		r := types.ForbiddenNotReceiver
-		e.Reason = &r
+		e.Reason = new(types.ForbiddenNotReceiver)
 		return e, nil
 	}
 	if item.ProviderID == nil {
-		r := types.ProviderMissing
-		e.Reason = &r
+		e.Reason = new(types.ProviderMissing)
 		return e, nil
 	}
 	if *item.ProviderID == *item.ReceiverID {
-		r := types.SameProviderAndReceiver
-		e.Reason = &r
+		e.Reason = new(types.SameProviderAndReceiver)
 		return e, nil
 	}
 
@@ -316,8 +310,7 @@ func (s *Service) GetDealItemReviewEligibility(
 		return htypes.ReviewEligibility{}, fmt.Errorf("check review exists: %w", err)
 	}
 	if exists {
-		r := types.AlreadyReviewed
-		e.Reason = &r
+		e.Reason = new(types.AlreadyReviewed)
 		return e, nil
 	}
 

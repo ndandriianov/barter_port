@@ -69,12 +69,20 @@ func (c *testUsersClient) ListUsers(context.Context, *userspb.ListUsersRequest, 
 	return nil, errors.New("not implemented")
 }
 
+func (c *testUsersClient) ListUsersForChatCreation(context.Context, *userspb.ListUsersForChatCreationRequest, ...grpc.CallOption) (*userspb.ListUsersForChatCreationResponse, error) {
+	return nil, errors.New("not implemented")
+}
+
 func (c *testUsersClient) CheckSubscription(_ context.Context, req *userspb.CheckSubscriptionRequest, _ ...grpc.CallOption) (*userspb.CheckSubscriptionResponse, error) {
 	c.checkReq = req
 	if c.checkErr != nil {
 		return nil, c.checkErr
 	}
 	return c.checkResp, nil
+}
+
+func (c *testUsersClient) ListSubscriptions(context.Context, *userspb.ListSubscriptionsRequest, ...grpc.CallOption) (*userspb.ListSubscriptionsResponse, error) {
+	return nil, errors.New("not implemented")
 }
 
 func TestCreateChat_CheckSubscriptionSuccess(t *testing.T) {

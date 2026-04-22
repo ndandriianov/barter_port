@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	openapitypes "github.com/oapi-codegen/runtime/types"
 )
 
 var (
@@ -59,7 +58,7 @@ func (c *UniversalCursor) ToDto() types.OffersCursor {
 
 	return types.OffersCursor{
 		CreatedAt: c.CreatedAt,
-		Id:        openapitypes.UUID(c.Id),
+		Id:        c.Id,
 		Views:     views,
 	}
 }

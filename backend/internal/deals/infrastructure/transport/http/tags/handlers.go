@@ -47,7 +47,7 @@ func (h *Handlers) HandleDeleteAdminTag(w http.ResponseWriter, r *http.Request) 
 		Name: r.URL.Query().Get("name"),
 	}
 
-	err := h.offersService.DeleteTag(r.Context(), userID, string(params.Name))
+	err := h.offersService.DeleteTag(r.Context(), userID, params.Name)
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrInvalidTagName):
