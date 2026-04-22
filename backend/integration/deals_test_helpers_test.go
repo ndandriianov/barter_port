@@ -187,11 +187,48 @@ func mustGetOfferByID(t *testing.T, userID uuid.UUID, offerID uuid.UUID) types.O
 func mustGetOffers(t *testing.T, userID uuid.UUID, my *bool) types.ListOffersResponse {
 	t.Helper()
 
-	return mustGetOffersBySort(t, userID, "ByTime", my)
+	return mustGetOffersPage(t, userID, "ByTime", nil, 100, my)
 }
 
 func mustGetOffersBySort(t *testing.T, userID uuid.UUID, sort string, my *bool) types.ListOffersResponse {
-	return mustGetOffersBySortAndTags(t, userID, sort, my, nil, false)
+	return mustGetOffersPage(t, userID, sort, nil, 100, my)
+}
+
+func mustGetOffersPage(
+	t *testing.T,
+	userID uuid.UUID,
+	sort string,
+	cursor *types.OffersCursor,
+	limit int,
+	my *bool,
+) types.ListOffersResponse {
+	t.Helper()
+
+	values := url.Values{}
+	values.Set("sort", sort)
+	values.Set("cursor_limit", fmt.Sprintf("%d", limit))
+	if my != nil {
+		values.Set("my", fmt.Sprintf("%t", *my))
+	}
+	if cursor != nil {
+		values.Set("cursor_id", cursor.Id.String())
+		if cursor.CreatedAt != nil {
+			values.Set("cursor_created_at", cursor.CreatedAt.Format(time.RFC3339Nano))
+		}
+		if cursor.Views != nil {
+			values.Set("cursor_views", fmt.Sprintf("%d", *cursor.Views))
+		}
+	}
+
+	req := mustUserRequest(t, http.MethodGet, dealsURL()+"/offers?"+values.Encode(), userID, nil)
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var result types.ListOffersResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
+
+	return result
 }
 
 func mustGetOffersBySortAndTags(
@@ -305,6 +342,14 @@ func mustSetOfferHidden(t *testing.T, offerID uuid.UUID, hidden bool) {
 
 	pool := OpenDatabase(t, globalFixture, "deals_db")
 	_, err := pool.Exec(context.Background(), `UPDATE offers SET is_hidden = $2 WHERE id = $1`, offerID, hidden)
+	require.NoError(t, err)
+}
+
+func mustSetOfferCreatedAt(t *testing.T, offerID uuid.UUID, createdAt time.Time) {
+	t.Helper()
+
+	pool := OpenDatabase(t, globalFixture, "deals_db")
+	_, err := pool.Exec(context.Background(), `UPDATE offers SET created_at = $2 WHERE id = $1`, offerID, createdAt)
 	require.NoError(t, err)
 }
 

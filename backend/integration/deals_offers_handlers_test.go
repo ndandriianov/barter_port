@@ -7,6 +7,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
@@ -392,6 +393,28 @@ func TestGetOffersFiltersWithoutTags(t *testing.T) {
 	require.Equal(t, untagged.Id, result.Offers[0].Id)
 	require.Equal(t, userID, result.Offers[0].AuthorId)
 	require.Empty(t, result.Offers[0].Tags)
+}
+
+func TestGetOffersByTimeSupportsCursorPaginationWithinSameSecond(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	newerOfferID := mustCreateOffer(t, userID)
+	olderOfferID := mustCreateOffer(t, userID)
+
+	baseTime := time.Date(2026, time.April, 22, 12, 0, 0, 0, time.UTC)
+	mustSetOfferCreatedAt(t, newerOfferID, baseTime.Add(900*time.Millisecond))
+	mustSetOfferCreatedAt(t, olderOfferID, baseTime.Add(500*time.Millisecond))
+
+	firstPage := mustGetOffersPage(t, userID, "ByTime", nil, 1, nil)
+	require.Len(t, firstPage.Offers, 1)
+	require.Equal(t, newerOfferID, firstPage.Offers[0].Id)
+	require.NotNil(t, firstPage.NextCursor)
+
+	secondPage := mustGetOffersPage(t, userID, "ByTime", firstPage.NextCursor, 1, nil)
+	require.Len(t, secondPage.Offers, 1)
+	require.Equal(t, olderOfferID, secondPage.Offers[0].Id)
 }
 
 func TestGetSubscribedOffersUnauthorized(t *testing.T) {
