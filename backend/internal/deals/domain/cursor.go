@@ -59,7 +59,7 @@ func (c *UniversalCursor) ToDto() types.OffersCursor {
 
 	return types.OffersCursor{
 		CreatedAt: c.CreatedAt,
-		Id:        openapitypes.UUID{},
+		Id:        openapitypes.UUID(c.Id),
 		Views:     views,
 	}
 }

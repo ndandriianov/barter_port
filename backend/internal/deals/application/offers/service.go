@@ -199,6 +199,12 @@ func (s *Service) GetOffers(
 		if err != nil {
 			return nil, nil, err
 		}
+		if requesterID != nil {
+			offers, err = s.addFavoriteFlagToOffers(ctx, *requesterID, offers)
+			if err != nil {
+				return nil, nil, err
+			}
+		}
 
 		return offers, newUniversalCursor, nil
 
@@ -221,6 +227,12 @@ func (s *Service) GetOffers(
 		offers, err = s.addAuthorNameToOffers(ctx, offers)
 		if err != nil {
 			return nil, nil, err
+		}
+		if requesterID != nil {
+			offers, err = s.addFavoriteFlagToOffers(ctx, *requesterID, offers)
+			if err != nil {
+				return nil, nil, err
+			}
 		}
 
 		return offers, newUniversalCursor, nil
@@ -287,6 +299,10 @@ func (s *Service) GetSubscribedOffers(
 		if err != nil {
 			return nil, nil, err
 		}
+		offers, err = s.addFavoriteFlagToOffers(ctx, requesterID, offers)
+		if err != nil {
+			return nil, nil, err
+		}
 
 		return offers, newUniversalCursor, nil
 
@@ -307,6 +323,10 @@ func (s *Service) GetSubscribedOffers(
 		}
 
 		offers, err = s.addAuthorNameToOffers(ctx, offers)
+		if err != nil {
+			return nil, nil, err
+		}
+		offers, err = s.addFavoriteFlagToOffers(ctx, requesterID, offers)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -443,6 +463,77 @@ func (s *Service) addAuthorNameToOffers(ctx context.Context, offers []domain.Off
 	return offers, nil
 }
 
+func (s *Service) addAuthorNameToFavoritedOffers(ctx context.Context, offers []domain.FavoritedOffer) ([]domain.FavoritedOffer, error) {
+	if len(offers) == 0 {
+		return offers, nil
+	}
+
+	ids := make([]string, len(offers))
+	for i, offer := range offers {
+		ids[i] = offer.AuthorId.String()
+	}
+
+	response, err := s.usersClient.GetUsersWithInfo(ctx, &userspb.GetUsersWithInfoRequest{Ids: ids})
+	if err != nil {
+		return nil, fmt.Errorf("failed to get author names: %w", err)
+	}
+
+	for i, info := range response.Users {
+		if info == nil {
+			continue
+		}
+		if offers[i].AuthorId.String() == info.Id {
+			offers[i].AuthorName = &info.Name
+		}
+	}
+
+	return offers, nil
+}
+
+func (s *Service) addFavoriteFlagToOffers(ctx context.Context, userID uuid.UUID, offers []domain.Offer) ([]domain.Offer, error) {
+	if len(offers) == 0 {
+		return offers, nil
+	}
+
+	ids := make([]uuid.UUID, len(offers))
+	for i, offer := range offers {
+		ids[i] = offer.ID
+	}
+
+	favoriteIDs, err := s.repo.GetFavoriteOfferIDs(ctx, userID, ids)
+	if err != nil {
+		return nil, fmt.Errorf("get favorite offer ids: %w", err)
+	}
+
+	for i := range offers {
+		offers[i].IsFavorite = boolPtr(favoriteIDs[offers[i].ID])
+	}
+
+	return offers, nil
+}
+
+func (s *Service) ensureOfferVisible(ctx context.Context, offer *domain.Offer, requesterID *uuid.UUID) error {
+	if !offer.IsHidden {
+		return nil
+	}
+	if requesterID == nil {
+		return domain.ErrOfferNotFound
+	}
+	if offer.AuthorId == *requesterID {
+		return nil
+	}
+
+	isAdmin, err := s.adminChecker.IsAdmin(ctx, *requesterID)
+	if err != nil {
+		return fmt.Errorf("check admin: %w", err)
+	}
+	if !isAdmin {
+		return domain.ErrOfferNotFound
+	}
+
+	return nil
+}
+
 // ================================================================================
 // КОНЕЦ СЕКЦИИ получить список offers
 // ================================================================================
@@ -458,24 +549,20 @@ func (s *Service) GetOfferByID(ctx context.Context, id uuid.UUID, requesterID *u
 		return nil, err
 	}
 
-	if offer.IsHidden {
-		if requesterID == nil {
-			return nil, domain.ErrOfferNotFound
-		}
-		if offer.AuthorId != *requesterID {
-			isAdmin, adminErr := s.adminChecker.IsAdmin(ctx, *requesterID)
-			if adminErr != nil {
-				return nil, fmt.Errorf("check admin: %w", adminErr)
-			}
-			if !isAdmin {
-				return nil, domain.ErrOfferNotFound
-			}
-		}
+	if err := s.ensureOfferVisible(ctx, offer, requesterID); err != nil {
+		return nil, err
 	}
 
 	response, err := s.usersClient.GetUsersWithInfo(ctx, &userspb.GetUsersWithInfoRequest{Ids: []string{offer.AuthorId.String()}})
 	if err == nil && len(response.Users) > 0 && response.Users[0] != nil {
 		offer.AuthorName = &response.Users[0].Name
+	}
+	if requesterID != nil {
+		offersWithFavoriteFlag, favoriteErr := s.addFavoriteFlagToOffers(ctx, *requesterID, []domain.Offer{*offer})
+		if favoriteErr != nil {
+			return nil, favoriteErr
+		}
+		offer = &offersWithFavoriteFlag[0]
 	}
 
 	return offer, nil
@@ -487,6 +574,56 @@ func (s *Service) GetOfferByID(ctx context.Context, id uuid.UUID, requesterID *u
 //   - domain.ErrOfferNotFound
 func (s *Service) ViewOfferByID(ctx context.Context, id uuid.UUID) error {
 	return s.repo.ViewOffer(ctx, s.db, id)
+}
+
+func (s *Service) AddOfferToFavorites(ctx context.Context, userID uuid.UUID, offerID uuid.UUID) error {
+	offer, err := s.repo.GetOfferByID(ctx, offerID)
+	if err != nil {
+		return err
+	}
+	if err := s.ensureOfferVisible(ctx, offer, &userID); err != nil {
+		return err
+	}
+
+	return s.repo.AddOfferToFavorites(ctx, s.db, userID, offerID)
+}
+
+func (s *Service) RemoveOfferFromFavorites(ctx context.Context, userID uuid.UUID, offerID uuid.UUID) error {
+	return s.repo.RemoveOfferFromFavorites(ctx, s.db, userID, offerID)
+}
+
+func (s *Service) GetFavoriteOffers(
+	ctx context.Context,
+	userID uuid.UUID,
+	cursor *domain.FavoriteOffersCursor,
+	limit int,
+) ([]domain.FavoritedOffer, *domain.FavoriteOffersCursor, error) {
+	isAdmin, err := s.adminChecker.IsAdmin(ctx, userID)
+	if err != nil {
+		return nil, nil, fmt.Errorf("check admin: %w", err)
+	}
+
+	var offers []domain.FavoritedOffer
+	var nextCursor *domain.FavoriteOffersCursor
+	if cursor != nil {
+		offers, nextCursor, err = s.repo.GetFavoriteOffers(ctx, userID, *cursor, limit, isAdmin)
+	} else {
+		offers, nextCursor, err = s.repo.GetFavoriteOffersNoCursor(ctx, userID, limit, isAdmin)
+	}
+	if err != nil {
+		return nil, nil, err
+	}
+
+	offers, err = s.addAuthorNameToFavoritedOffers(ctx, offers)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for i := range offers {
+		offers[i].IsFavorite = boolPtr(true)
+	}
+
+	return offers, nextCursor, nil
 }
 
 // UpdateOffer updates an offer. Only the author can update it.
@@ -682,6 +819,10 @@ func extractTagFilter(tagFilter *[]string) ([]string, bool) {
 	result := make([]string, len(*tagFilter))
 	copy(result, *tagFilter)
 	return result, true
+}
+
+func boolPtr(v bool) *bool {
+	return &v
 }
 
 func (s *Service) cleanupUploadedPhotos(ctx context.Context, offerID uuid.UUID, positions []int) {

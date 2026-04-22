@@ -13,6 +13,7 @@ type Offer struct {
 	ID                  uuid.UUID         `db:"id"`
 	AuthorId            uuid.UUID         `db:"author_id"`
 	AuthorName          *string           `db:"-"`
+	IsFavorite          *bool             `db:"-"`
 	Name                string            `db:"name"`
 	Tags                []string          `db:"tags"`
 	PhotoIds            []uuid.UUID       `db:"photo_ids"`
@@ -39,7 +40,8 @@ func (i *Offer) ToDto() types.Offer {
 
 	var photoURLs *[]string
 	if len(i.PhotoUrls) > 0 {
-		photoURLs = new(append([]string(nil), i.PhotoUrls...))
+		copied := append([]string(nil), i.PhotoUrls...)
+		photoURLs = &copied
 	}
 
 	return types.Offer{
@@ -56,6 +58,7 @@ func (i *Offer) ToDto() types.Offer {
 		CreatedAt:           i.CreatedAt,
 		UpdatedAt:           i.UpdatedAt,
 		Views:               int64(i.Views),
+		IsFavorite:          i.IsFavorite,
 		IsHidden:            boolPtr(i.IsHidden),
 		ModificationBlocked: boolPtr(i.ModificationBlocked),
 	}
@@ -73,7 +76,8 @@ func (i *Offer) ToDTOWithInfo(info OfferInfo) types.OfferWithInfo {
 
 	var photoURLs *[]string
 	if len(i.PhotoUrls) > 0 {
-		photoURLs = new(append([]string(nil), i.PhotoUrls...))
+		copied := append([]string(nil), i.PhotoUrls...)
+		photoURLs = &copied
 	}
 
 	return types.OfferWithInfo{
@@ -83,6 +87,7 @@ func (i *Offer) ToDTOWithInfo(info OfferInfo) types.OfferWithInfo {
 		CreatedAt:           i.CreatedAt,
 		Description:         i.Description,
 		Id:                  i.ID,
+		IsFavorite:          i.IsFavorite,
 		IsHidden:            boolPtr(i.IsHidden),
 		ModificationBlocked: boolPtr(i.ModificationBlocked),
 		Name:                i.Name,
@@ -111,5 +116,5 @@ func (i *Offer) tagsToDTO() []types.TagName {
 }
 
 func boolPtr(v bool) *bool {
-	return new(v)
+	return &v
 }

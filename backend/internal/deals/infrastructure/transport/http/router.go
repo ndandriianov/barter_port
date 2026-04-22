@@ -5,6 +5,7 @@ import (
 	"barter-port/internal/deals/infrastructure/transport/http/deals"
 	draftsh "barter-port/internal/deals/infrastructure/transport/http/drafts"
 	failuresh "barter-port/internal/deals/infrastructure/transport/http/failures"
+	favouritesh "barter-port/internal/deals/infrastructure/transport/http/favourites"
 	joinsh "barter-port/internal/deals/infrastructure/transport/http/joins"
 	offerreports "barter-port/internal/deals/infrastructure/transport/http/offer-reports"
 	offergroupsh "barter-port/internal/deals/infrastructure/transport/http/offergroups"
@@ -27,6 +28,7 @@ func NewRouter(
 	logg *slog.Logger,
 	validator *validators.LocalJWT,
 	offersHandlers *offers.Handlers,
+	favouritesHandlers *favouritesh.Handlers,
 	offerGroupsHandlers *offergroupsh.Handlers,
 	draftsHandlers *draftsh.Handlers,
 	dealsHandlers *deals.Handlers,
@@ -42,6 +44,9 @@ func NewRouter(
 	}
 	if offersHandlers == nil {
 		log.Fatal("offers handlers are required")
+	}
+	if favouritesHandlers == nil {
+		log.Fatal("favourites handlers are required")
 	}
 	if offerGroupsHandlers == nil {
 		log.Fatal("offer groups handlers are required")
@@ -100,7 +105,10 @@ func NewRouter(
 		r.Route("/offers", func(r chi.Router) {
 			r.Post("/", offersHandlers.HandleCreateOffer)
 			r.Get("/", offersHandlers.HandleGetOffers)
+			r.Get("/favorites", favouritesHandlers.HandleListFavoriteOffers)
 			r.Get("/subscriptions", offersHandlers.HandleGetSubscribedOffers)
+			r.Put("/{offerId}/favorite", favouritesHandlers.HandleAddOfferToFavorites)
+			r.Delete("/{offerId}/favorite", favouritesHandlers.HandleRemoveOfferFromFavorites)
 			r.Get("/{offerId}", offersHandlers.HandleGetOfferByID)
 			r.Post("/{offerId}/view", offersHandlers.HandleViewOfferByID)
 			r.Patch("/{offerId}", offersHandlers.HandleUpdateOffer)

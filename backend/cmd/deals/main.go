@@ -29,6 +29,7 @@ import (
 	dealsh "barter-port/internal/deals/infrastructure/transport/http/deals"
 	draftsh "barter-port/internal/deals/infrastructure/transport/http/drafts"
 	failuresh "barter-port/internal/deals/infrastructure/transport/http/failures"
+	favouritesh "barter-port/internal/deals/infrastructure/transport/http/favourites"
 	joinsh "barter-port/internal/deals/infrastructure/transport/http/joins"
 	offerreportsh "barter-port/internal/deals/infrastructure/transport/http/offer-reports"
 	offergroupsh "barter-port/internal/deals/infrastructure/transport/http/offergroups"
@@ -213,7 +214,8 @@ func main() {
 	offerReportsHandlers := offerreportsh.NewHandlers(offerReportsService)
 	statisticsHandlers := statisticsh.NewHandlers(logg, statisticsService)
 	tagsHandlers := tagsh.NewHandlers(offersService)
-	router := transporthttp.NewRouter(logg, validator, offersHandlers, offerGroupsHandlers, draftsHandlers, dealsHandlers, failuresHandlers, joinsHandlers, reviewsHandlers, offerReportsHandlers, statisticsHandlers, tagsHandlers)
+	favouritesHandlers := favouritesh.NewHandlers(offersService)
+	router := transporthttp.NewRouter(logg, validator, offersHandlers, favouritesHandlers, offerGroupsHandlers, draftsHandlers, dealsHandlers, failuresHandlers, joinsHandlers, reviewsHandlers, offerReportsHandlers, statisticsHandlers, tagsHandlers)
 
 	port := bootstrap.InitPortStringFromConfig(cfg, 8080)
 	httpServer := &http.Server{

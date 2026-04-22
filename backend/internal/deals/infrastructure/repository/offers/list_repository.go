@@ -85,6 +85,28 @@ func offersAndPopularityCursor(offers []domain.Offer, err error) ([]domain.Offer
 	return offers, &nextCursor, nil
 }
 
+func favoriteOffersCursor(offer domain.FavoritedOffer) domain.FavoriteOffersCursor {
+	return domain.FavoriteOffersCursor{
+		FavoritedAt: offer.FavoritedAt,
+		Id:          offer.ID,
+	}
+}
+
+func offersAndFavoriteCursor(offers []domain.FavoritedOffer, err error) ([]domain.FavoritedOffer, *domain.FavoriteOffersCursor, error) {
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if len(offers) == 0 {
+		return offers, nil, nil
+	}
+
+	lastOffer := offers[len(offers)-1]
+	nextCursor := favoriteOffersCursor(lastOffer)
+
+	return offers, &nextCursor, nil
+}
+
 // ================================================================================
 // ПО ВРЕМЕНИ
 // ================================================================================
@@ -313,4 +335,83 @@ func (r *Repository) GetSubscribedOffersOrderByPopularityNoCursor(
 		LIMIT $1`
 
 	return offersAndPopularityCursor(repox.FetchStructs[domain.Offer](ctx, r.db, query, limit, authorIDs, isAdmin))
+}
+
+func (r *Repository) GetFavoriteOffers(
+	ctx context.Context,
+	userID uuid.UUID,
+	cursor domain.FavoriteOffersCursor,
+	limit int,
+	isAdmin bool,
+) ([]domain.FavoritedOffer, *domain.FavoriteOffersCursor, error) {
+	query := `
+		SELECT ` + rowsToSelect + `,
+		       fo.created_at AS favorited_at
+		FROM favorite_offers fo
+		JOIN offers ON offers.id = fo.offer_id
+		WHERE fo.user_id = $1
+		  AND (fo.created_at, fo.offer_id) < ($2, $3)
+		  AND (offers.is_hidden = FALSE OR offers.author_id = $1 OR $5)
+		ORDER BY fo.created_at DESC, fo.offer_id DESC
+		LIMIT $4`
+
+	return offersAndFavoriteCursor(r.scanFavoriteOffers(ctx, query, userID, cursor.FavoritedAt, cursor.Id, limit, isAdmin))
+}
+
+func (r *Repository) GetFavoriteOffersNoCursor(
+	ctx context.Context,
+	userID uuid.UUID,
+	limit int,
+	isAdmin bool,
+) ([]domain.FavoritedOffer, *domain.FavoriteOffersCursor, error) {
+	query := `
+		SELECT ` + rowsToSelect + `,
+		       fo.created_at AS favorited_at
+		FROM favorite_offers fo
+		JOIN offers ON offers.id = fo.offer_id
+		WHERE fo.user_id = $1
+		  AND (offers.is_hidden = FALSE OR offers.author_id = $1 OR $3)
+		ORDER BY fo.created_at DESC, fo.offer_id DESC
+		LIMIT $2`
+
+	return offersAndFavoriteCursor(r.scanFavoriteOffers(ctx, query, userID, limit, isAdmin))
+}
+
+func (r *Repository) scanFavoriteOffers(ctx context.Context, query string, args ...interface{}) ([]domain.FavoritedOffer, error) {
+	rows, err := r.db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("sql get favorite offers: %w", err)
+	}
+	defer rows.Close()
+
+	offers := make([]domain.FavoritedOffer, 0)
+	for rows.Next() {
+		var offer domain.FavoritedOffer
+		if err := rows.Scan(
+			&offer.ID,
+			&offer.AuthorId,
+			&offer.Name,
+			&offer.Type,
+			&offer.Action,
+			&offer.Description,
+			&offer.CreatedAt,
+			&offer.UpdatedAt,
+			&offer.Views,
+			&offer.Tags,
+			&offer.PhotoIds,
+			&offer.PhotoUrls,
+			&offer.IsHidden,
+			&offer.ModificationBlocked,
+			&offer.FavoritedAt,
+		); err != nil {
+			return nil, fmt.Errorf("scan favorite offer: %w", err)
+		}
+		offers = append(offers, offer)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterate favorite offers: %w", err)
+	}
+
+	return offers, nil
 }
