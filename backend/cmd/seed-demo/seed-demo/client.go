@@ -21,7 +21,10 @@ import (
 	"github.com/google/uuid"
 )
 
-const refreshCookieName = "refresh_token"
+const (
+	refreshCookieName        = "refresh_token"
+	mediaUploadRetryAttempts = 3
+)
 
 func (c *SeedClient) register(ctx context.Context, email, password string) (registerResponse, error) {
 	var respBody registerResponse
@@ -239,52 +242,54 @@ func (c *SeedClient) updateMe(ctx context.Context, token string, req usertypes.U
 }
 
 func (c *SeedClient) uploadMeAvatar(ctx context.Context, token string, avatarPath string) (usertypes.AvatarUploadResponse, error) {
-	var body bytes.Buffer
-	writer := multipart.NewWriter(&body)
+	return retryMediaUpload(ctx, c.PollInterval, mediaUploadRetryAttempts, func() (usertypes.AvatarUploadResponse, error) {
+		var body bytes.Buffer
+		writer := multipart.NewWriter(&body)
 
-	file, err := os.Open(avatarPath)
-	if err != nil {
-		return usertypes.AvatarUploadResponse{}, fmt.Errorf("open avatar %s: %w", avatarPath, err)
-	}
-	defer closeBody(file)
+		file, err := os.Open(avatarPath)
+		if err != nil {
+			return usertypes.AvatarUploadResponse{}, fmt.Errorf("open avatar %s: %w", avatarPath, err)
+		}
+		defer closeBody(file)
 
-	part, err := writer.CreateFormFile("file", filepath.Base(avatarPath))
-	if err != nil {
-		return usertypes.AvatarUploadResponse{}, fmt.Errorf("create multipart avatar field for %s: %w", avatarPath, err)
-	}
-	if _, err := io.Copy(part, file); err != nil {
-		return usertypes.AvatarUploadResponse{}, fmt.Errorf("write avatar %s: %w", avatarPath, err)
-	}
-	if err := writer.Close(); err != nil {
-		return usertypes.AvatarUploadResponse{}, fmt.Errorf("close avatar multipart writer: %w", err)
-	}
+		part, err := writer.CreateFormFile("file", filepath.Base(avatarPath))
+		if err != nil {
+			return usertypes.AvatarUploadResponse{}, fmt.Errorf("create multipart avatar field for %s: %w", avatarPath, err)
+		}
+		if _, err := io.Copy(part, file); err != nil {
+			return usertypes.AvatarUploadResponse{}, fmt.Errorf("write avatar %s: %w", avatarPath, err)
+		}
+		if err := writer.Close(); err != nil {
+			return usertypes.AvatarUploadResponse{}, fmt.Errorf("close avatar multipart writer: %w", err)
+		}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.BaseURL+"/users/me/avatar", &body)
-	if err != nil {
-		return usertypes.AvatarUploadResponse{}, fmt.Errorf("build request POST /users/me/avatar: %w", err)
-	}
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.BaseURL+"/users/me/avatar", &body)
+		if err != nil {
+			return usertypes.AvatarUploadResponse{}, fmt.Errorf("build request POST /users/me/avatar: %w", err)
+		}
 
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-	if token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
-	}
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+		if token != "" {
+			req.Header.Set("Authorization", "Bearer "+token)
+		}
 
-	resp, err := c.HttpClient.Do(req)
-	if err != nil {
-		return usertypes.AvatarUploadResponse{}, fmt.Errorf("perform request POST /users/me/avatar: %w", err)
-	}
-	defer closeBody(resp.Body)
+		resp, err := c.HttpClient.Do(req)
+		if err != nil {
+			return usertypes.AvatarUploadResponse{}, fmt.Errorf("perform request POST /users/me/avatar: %w", err)
+		}
+		defer closeBody(resp.Body)
 
-	if resp.StatusCode != http.StatusOK {
-		return usertypes.AvatarUploadResponse{}, responseError(resp, http.StatusOK)
-	}
+		if resp.StatusCode != http.StatusOK {
+			return usertypes.AvatarUploadResponse{}, responseError(resp, http.StatusOK)
+		}
 
-	var uploaded usertypes.AvatarUploadResponse
-	if err := json.NewDecoder(resp.Body).Decode(&uploaded); err != nil {
-		return usertypes.AvatarUploadResponse{}, fmt.Errorf("decode response POST /users/me/avatar: %w", err)
-	}
+		var uploaded usertypes.AvatarUploadResponse
+		if err := json.NewDecoder(resp.Body).Decode(&uploaded); err != nil {
+			return usertypes.AvatarUploadResponse{}, fmt.Errorf("decode response POST /users/me/avatar: %w", err)
+		}
 
-	return uploaded, nil
+		return uploaded, nil
+	})
 }
 
 func (c *SeedClient) getMe(ctx context.Context, token string) (usertypes.Me, error) {
@@ -401,63 +406,65 @@ func (c *SeedClient) createOfferJSON(ctx context.Context, token string, spec off
 }
 
 func (c *SeedClient) createOffer(ctx context.Context, token string, spec offerSpec, photoPath string) (dealtypes.Offer, error) {
-	var body bytes.Buffer
-	writer := multipart.NewWriter(&body)
+	return retryMediaUpload(ctx, c.PollInterval, mediaUploadRetryAttempts, func() (dealtypes.Offer, error) {
+		var body bytes.Buffer
+		writer := multipart.NewWriter(&body)
 
-	if err := writer.WriteField("name", spec.Name); err != nil {
-		return dealtypes.Offer{}, fmt.Errorf("write offer name: %w", err)
-	}
-	if err := writer.WriteField("description", spec.Description); err != nil {
-		return dealtypes.Offer{}, fmt.Errorf("write offer description: %w", err)
-	}
-	if err := writer.WriteField("type", string(spec.Type)); err != nil {
-		return dealtypes.Offer{}, fmt.Errorf("write offer type: %w", err)
-	}
-	if err := writer.WriteField("action", string(spec.Action)); err != nil {
-		return dealtypes.Offer{}, fmt.Errorf("write offer action: %w", err)
-	}
-	for _, tag := range spec.Tags {
-		if err := writer.WriteField("tags", tag); err != nil {
-			return dealtypes.Offer{}, fmt.Errorf("write offer tag: %w", err)
+		if err := writer.WriteField("name", spec.Name); err != nil {
+			return dealtypes.Offer{}, fmt.Errorf("write offer name: %w", err)
 		}
-	}
-
-	if photoPath != "" {
-		if err := writeOfferPhotoPart(writer, photoPath); err != nil {
-			return dealtypes.Offer{}, err
+		if err := writer.WriteField("description", spec.Description); err != nil {
+			return dealtypes.Offer{}, fmt.Errorf("write offer description: %w", err)
 		}
-	}
+		if err := writer.WriteField("type", string(spec.Type)); err != nil {
+			return dealtypes.Offer{}, fmt.Errorf("write offer type: %w", err)
+		}
+		if err := writer.WriteField("action", string(spec.Action)); err != nil {
+			return dealtypes.Offer{}, fmt.Errorf("write offer action: %w", err)
+		}
+		for _, tag := range spec.Tags {
+			if err := writer.WriteField("tags", string(tag)); err != nil {
+				return dealtypes.Offer{}, fmt.Errorf("write offer tag: %w", err)
+			}
+		}
 
-	if err := writer.Close(); err != nil {
-		return dealtypes.Offer{}, fmt.Errorf("close multipart writer: %w", err)
-	}
+		if photoPath != "" {
+			if err := writeOfferPhotoPart(writer, photoPath); err != nil {
+				return dealtypes.Offer{}, err
+			}
+		}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.BaseURL+"/offers", &body)
-	if err != nil {
-		return dealtypes.Offer{}, fmt.Errorf("build request POST /offers: %w", err)
-	}
+		if err := writer.Close(); err != nil {
+			return dealtypes.Offer{}, fmt.Errorf("close multipart writer: %w", err)
+		}
 
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-	if token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
-	}
+		req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.BaseURL+"/offers", &body)
+		if err != nil {
+			return dealtypes.Offer{}, fmt.Errorf("build request POST /offers: %w", err)
+		}
 
-	resp, err := c.HttpClient.Do(req)
-	if err != nil {
-		return dealtypes.Offer{}, fmt.Errorf("perform request POST /offers: %w", err)
-	}
-	defer closeBody(resp.Body)
+		req.Header.Set("Content-Type", writer.FormDataContentType())
+		if token != "" {
+			req.Header.Set("Authorization", "Bearer "+token)
+		}
 
-	if resp.StatusCode != http.StatusCreated {
-		return dealtypes.Offer{}, responseError(resp, http.StatusCreated)
-	}
+		resp, err := c.HttpClient.Do(req)
+		if err != nil {
+			return dealtypes.Offer{}, fmt.Errorf("perform request POST /offers: %w", err)
+		}
+		defer closeBody(resp.Body)
 
-	var offer dealtypes.Offer
-	if err := json.NewDecoder(resp.Body).Decode(&offer); err != nil {
-		return dealtypes.Offer{}, fmt.Errorf("decode response POST /offers: %w", err)
-	}
+		if resp.StatusCode != http.StatusCreated {
+			return dealtypes.Offer{}, responseError(resp, http.StatusCreated)
+		}
 
-	return offer, nil
+		var offer dealtypes.Offer
+		if err := json.NewDecoder(resp.Body).Decode(&offer); err != nil {
+			return dealtypes.Offer{}, fmt.Errorf("decode response POST /offers: %w", err)
+		}
+
+		return offer, nil
+	})
 }
 
 func writeOfferPhotoPart(writer *multipart.Writer, photoPath string) error {
@@ -1393,4 +1400,36 @@ func (e *httpStatusError) Error() string {
 func isMediaUploadFallbackable(err error) bool {
 	var statusErr *httpStatusError
 	return errors.As(err, &statusErr) && statusErr.StatusCode >= http.StatusInternalServerError
+}
+
+func retryMediaUpload[T any](ctx context.Context, delay time.Duration, attempts int, fn func() (T, error)) (T, error) {
+	var zero T
+	if attempts < 1 {
+		attempts = 1
+	}
+	if delay <= 0 {
+		delay = 500 * time.Millisecond
+	}
+
+	var lastErr error
+	for attempt := 1; attempt <= attempts; attempt++ {
+		result, err := fn()
+		if err == nil {
+			return result, nil
+		}
+		lastErr = err
+		if !isMediaUploadFallbackable(err) || attempt == attempts {
+			break
+		}
+
+		timer := time.NewTimer(delay)
+		select {
+		case <-ctx.Done():
+			timer.Stop()
+			return zero, ctx.Err()
+		case <-timer.C:
+		}
+	}
+
+	return zero, lastErr
 }
