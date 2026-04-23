@@ -2038,12 +2038,14 @@ paths:
           - администраторам.
 
         Поддерживаемые режимы сортировки:
-        - `created_at`: сначала новые объявления
-        - `popularity`: сначала самые просматриваемые объявления
+        - `ByTime`: сначала новые объявления
+        - `ByPopularity`: сначала самые просматриваемые объявления
+        - `ByDistance`: сначала ближайшие объявления к точке `user_lat` / `user_lon`
 
         Поля курсора зависят от выбранного режима сортировки:
-        - для `created_at`: используйте `cursor_created_at` + `cursor_id`
-        - для `popularity`: используйте `cursor_views` + `cursor_id`
+        - для `ByTime`: используйте `cursor_created_at` + `cursor_id`
+        - для `ByPopularity`: используйте `cursor_views` + `cursor_id`
+        - для `ByDistance`: используйте `cursor_distance` + `cursor_id`
 
         Фильтрация по тегам:
         - `tags`: вернуть объявления, содержащие **все** указанные теги;
@@ -2054,9 +2056,10 @@ paths:
         - поля `latitude` и `longitude` возвращаются в каждом объекте `offer` всегда,
           независимо от того, указал ли текущий пользователь свою точку;
         - если у объявления точка не указана, `latitude` и `longitude` равны `null`;
-        - `distanceMeters` возвращается только если у текущего пользователя сохранена текущая точка через users API,
-          у объявления указаны `latitude` и `longitude`, и объявление не принадлежит текущему пользователю.
-          Координаты пользователя берутся из gRPC запроса к users.
+        - при `sort=ByDistance` обязательны `user_lat` и `user_lon`; в этом режиме
+          `distanceMeters` возвращается для каждого объявления с координатами и считается от переданной точки;
+        - в остальных режимах `distanceMeters` возвращается только если у текущего пользователя сохранена текущая точка через users API
+          и у объявления указаны `latitude` и `longitude`.
       operationId: listOffers
       security:
         - bearerAuth: []
@@ -2073,9 +2076,12 @@ paths:
             type: boolean
         - $ref: '#/components/parameters/SortType'
         - $ref: '#/components/parameters/CursorCreatedAt'
+        - $ref: '#/components/parameters/CursorDistance'
         - $ref: '#/components/parameters/CursorViews'
         - $ref: '#/components/parameters/CursorId'
         - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/UserLat'
+        - $ref: '#/components/parameters/UserLon'
         - $ref: '#/components/parameters/OfferTagsFilter'
         - $ref: '#/components/parameters/WithoutTags'
       responses:
@@ -2195,7 +2201,11 @@ paths:
 
         Список сортируется по времени последнего обновления объявления.
 
-        Если у текущего пользователя сохранена текущая точка через users API,
+        Поддерживаются те же режимы сортировки, что и для общего списка объявлений.
+        Для `sort=ByDistance` обязательны `user_lat` и `user_lon`, а курсор строится по `cursor_distance` + `cursor_id`.
+
+        Если выбран `sort=ByDistance`, `distanceMeters` считается от переданной точки.
+        В остальных режимах, если у текущего пользователя сохранена текущая точка через users API,
         а у объявления указаны `latitude` и `longitude`,
         в объекте `offer` возвращается `distanceMeters` в метрах.
         Сами поля `latitude` и `longitude` возвращаются всегда.
@@ -2205,9 +2215,12 @@ paths:
       parameters:
         - $ref: '#/components/parameters/SortType'
         - $ref: '#/components/parameters/CursorCreatedAt'
+        - $ref: '#/components/parameters/CursorDistance'
         - $ref: '#/components/parameters/CursorViews'
         - $ref: '#/components/parameters/CursorId'
         - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/UserLat'
+        - $ref: '#/components/parameters/UserLon'
       responses:
         '200':
           description: Страница подписанных объявлений
@@ -4309,6 +4322,10 @@ components:
       required:
         - id
       properties:
+        distance:
+          type: number
+          format: double
+          example: 1542.42
         createdAt:
           type: string
           format: date-time
@@ -4846,6 +4863,7 @@ components:
       schema:
         type: string
         enum:
+          - ByDistance
           - ByTime
           - ByPopularity
     CursorCreatedAt:
@@ -4858,6 +4876,17 @@ components:
       schema:
         type: string
         format: date-time
+    CursorDistance:
+      name: cursor_distance
+      in: query
+      required: false
+      description: |
+        Расстояние до точки пользователя в курсоре, в метрах.
+        Используется вместе с `cursor_id`, когда `sort=ByDistance`.
+      schema:
+        type: number
+        format: double
+        minimum: 0
     CursorViews:
       name: cursor_views
       in: query
@@ -4888,6 +4917,26 @@ components:
         minimum: 1
         maximum: 100
         default: 10
+    UserLat:
+      name: user_lat
+      in: query
+      required: false
+      description: |
+        Широта точки пользователя, от которой считается расстояние.
+        Обязательна при `sort=ByDistance`.
+      schema:
+        type: number
+        format: double
+    UserLon:
+      name: user_lon
+      in: query
+      required: false
+      description: |
+        Долгота точки пользователя, от которой считается расстояние.
+        Обязательна при `sort=ByDistance`.
+      schema:
+        type: number
+        format: double
     OfferTagsFilter:
       name: tags
       in: query

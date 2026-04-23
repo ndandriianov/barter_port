@@ -33,14 +33,17 @@ export type FavoriteOffersCursor = z.Infer<typeof favoriteOffersCursorSchema>;
 export type FavoritedOffer = z.Infer<typeof favoritedOfferSchema>;
 export type ListOfferReportsResponse = z.Infer<typeof listOfferReportsResponseSchema>;
 
-export type SortType = "ByTime" | "ByPopularity";
+export type SortType = "ByTime" | "ByPopularity" | "ByDistance";
 
 export interface OffersListParams {
   sort: SortType;
+  cursor_distance?: number;
   cursor_created_at?: string;
   cursor_views?: number;
   cursor_id?: string;
   cursor_limit?: number;
+  user_lat?: number;
+  user_lon?: number;
 }
 
 export interface GetOffersParams extends OffersListParams {

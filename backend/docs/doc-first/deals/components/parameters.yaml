@@ -6,6 +6,7 @@ SortType:
   schema:
     type: string
     enum:
+      - ByDistance
       - ByTime
       - ByPopularity
 
@@ -42,6 +43,40 @@ CursorViews:
     type: integer
     format: int64
     minimum: 0
+
+CursorDistance:
+  name: cursor_distance
+  in: query
+  required: false
+  description: |
+    Расстояние до точки пользователя в курсоре, в метрах.
+    Используется вместе с `cursor_id`, когда `sort=ByDistance`.
+  schema:
+    type: number
+    format: double
+    minimum: 0
+
+UserLat:
+  name: user_lat
+  in: query
+  required: false
+  description: |
+    Широта точки пользователя, от которой считается расстояние.
+    Обязательна при `sort=ByDistance`.
+  schema:
+    type: number
+    format: double
+
+UserLon:
+  name: user_lon
+  in: query
+  required: false
+  description: |
+    Долгота точки пользователя, от которой считается расстояние.
+    Обязательна при `sort=ByDistance`.
+  schema:
+    type: number
+    format: double
 
 CursorId:
   name: cursor_id

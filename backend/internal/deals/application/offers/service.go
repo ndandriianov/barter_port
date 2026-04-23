@@ -172,6 +172,7 @@ func (s *Service) GetOffers(
 	authorID *uuid.UUID,
 	requesterID *uuid.UUID,
 	tagFilter *[]string,
+	requestLocation *domain.Location,
 ) ([]domain.Offer, *domain.UniversalCursor, error) {
 
 	isAdmin := false
@@ -250,6 +251,39 @@ func (s *Service) GetOffers(
 
 		return offers, newUniversalCursor, nil
 
+	case enums.SortTypeByDistance:
+		if requestLocation == nil {
+			return nil, nil, fmt.Errorf("distance sort requires request location")
+		}
+
+		distanceCursor, err := getDistanceCursor(cursor)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		offers, newDistanceCursor, err := s.getOffersByDistance(ctx, distanceCursor, limit, authorID, isAdmin, tagFilter, *requestLocation)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		var newUniversalCursor *domain.UniversalCursor
+		if newDistanceCursor != nil {
+			newUniversalCursor = newDistanceCursor.ToUniversalCursor()
+		}
+
+		offers, err = s.addAuthorNameToOffers(ctx, offers)
+		if err != nil {
+			return nil, nil, err
+		}
+		if requesterID != nil {
+			offers, err = s.addFavoriteFlagToOffers(ctx, *requesterID, offers)
+			if err != nil {
+				return nil, nil, err
+			}
+		}
+
+		return offers, newUniversalCursor, nil
+
 	default:
 		return nil, nil, fmt.Errorf("invalid sort type: %v", sortType)
 	}
@@ -261,6 +295,7 @@ func (s *Service) GetSubscribedOffers(
 	sortType enums.SortType,
 	cursor *domain.UniversalCursor,
 	limit int,
+	requestLocation *domain.Location,
 ) ([]domain.Offer, *domain.UniversalCursor, error) {
 	isAdmin, err := s.adminChecker.IsAdmin(ctx, requesterID)
 	if err != nil {
@@ -354,6 +389,37 @@ func (s *Service) GetSubscribedOffers(
 
 		return offers, newUniversalCursor, nil
 
+	case enums.SortTypeByDistance:
+		if requestLocation == nil {
+			return nil, nil, fmt.Errorf("distance sort requires request location")
+		}
+
+		distanceCursor, err := getDistanceCursor(cursor)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		offers, newDistanceCursor, err := s.getSubscribedOffersByDistance(ctx, distanceCursor, limit, authorIDs, isAdmin, *requestLocation)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		var newUniversalCursor *domain.UniversalCursor
+		if newDistanceCursor != nil {
+			newUniversalCursor = newDistanceCursor.ToUniversalCursor()
+		}
+
+		offers, err = s.addAuthorNameToOffers(ctx, offers)
+		if err != nil {
+			return nil, nil, err
+		}
+		offers, err = s.addFavoriteFlagToOffers(ctx, requesterID, offers)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return offers, newUniversalCursor, nil
+
 	default:
 		return nil, nil, fmt.Errorf("invalid sort type: %v", sortType)
 	}
@@ -415,6 +481,13 @@ func getPopularityCursor(cursor *domain.UniversalCursor) (*domain.PopularityCurs
 	return cursor.ToPopularityCursor()
 }
 
+func getDistanceCursor(cursor *domain.UniversalCursor) (*domain.DistanceCursor, error) {
+	if cursor == nil {
+		return nil, nil
+	}
+	return cursor.ToDistanceCursor()
+}
+
 func (s *Service) getOffersByPopularity(
 	ctx context.Context,
 	cursor *domain.PopularityCursor,
@@ -455,6 +528,50 @@ func (s *Service) getSubscribedOffersByPopularity(
 	}
 
 	return s.repo.GetSubscribedOffersOrderByPopularityNoCursor(ctx, limit, authorIDs, isAdmin)
+}
+
+func (s *Service) getOffersByDistance(
+	ctx context.Context,
+	cursor *domain.DistanceCursor,
+	limit int,
+	authorID *uuid.UUID,
+	isAdmin bool,
+	tagFilter *[]string,
+	location domain.Location,
+) ([]domain.Offer, *domain.DistanceCursor, error) {
+	tags, tagsFilterPresent := extractTagFilter(tagFilter)
+
+	switch {
+	case cursor != nil:
+		switch {
+		case authorID != nil:
+			return s.repo.GetMyOffersOrderByDistance(ctx, limit, *cursor, *authorID, location.Lat, location.Lon, tags, tagsFilterPresent)
+		default:
+			return s.repo.GetOffersOrderByDistance(ctx, limit, *cursor, isAdmin, location.Lat, location.Lon, tags, tagsFilterPresent)
+		}
+	default:
+		switch {
+		case authorID != nil:
+			return s.repo.GetMyOffersOrderByDistanceNoCursor(ctx, limit, *authorID, location.Lat, location.Lon, tags, tagsFilterPresent)
+		default:
+			return s.repo.GetOffersOrderByDistanceNoCursor(ctx, limit, isAdmin, location.Lat, location.Lon, tags, tagsFilterPresent)
+		}
+	}
+}
+
+func (s *Service) getSubscribedOffersByDistance(
+	ctx context.Context,
+	cursor *domain.DistanceCursor,
+	limit int,
+	authorIDs []uuid.UUID,
+	isAdmin bool,
+	location domain.Location,
+) ([]domain.Offer, *domain.DistanceCursor, error) {
+	if cursor != nil {
+		return s.repo.GetSubscribedOffersOrderByDistance(ctx, limit, *cursor, authorIDs, isAdmin, location.Lat, location.Lon)
+	}
+
+	return s.repo.GetSubscribedOffersOrderByDistanceNoCursor(ctx, limit, authorIDs, isAdmin, location.Lat, location.Lon)
 }
 
 // addDistanceToOffers populates DistanceMeters on each offer that has coordinates, using the

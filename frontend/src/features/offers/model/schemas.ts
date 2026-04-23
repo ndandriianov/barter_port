@@ -64,6 +64,7 @@ export const offerReportDetailsSchema = z.object({
 export const listOfferReportsResponseSchema = z.array(offerReportSchema);
 
 export const universalCursorSchema = z.object({
+  distance: z.number().nullish().transform((value) => value ?? null),
   id: z.string(),
   createdAt: z.string().nullable().optional(),
   views: z.number().nullable().optional(),

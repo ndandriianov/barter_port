@@ -153,6 +153,7 @@ func (e ReviewEligibilityReason) Valid() bool {
 
 // Defines values for SortType.
 const (
+	SortTypeByDistance   SortType = "ByDistance"
 	SortTypeByPopularity SortType = "ByPopularity"
 	SortTypeByTime       SortType = "ByTime"
 )
@@ -160,6 +161,8 @@ const (
 // Valid indicates whether the value is a known member of the SortType enum.
 func (e SortType) Valid() bool {
 	switch e {
+	case SortTypeByDistance:
+		return true
 	case SortTypeByPopularity:
 		return true
 	case SortTypeByTime:
@@ -171,6 +174,7 @@ func (e SortType) Valid() bool {
 
 // Defines values for ListOffersParamsSort.
 const (
+	ListOffersParamsSortByDistance   ListOffersParamsSort = "ByDistance"
 	ListOffersParamsSortByPopularity ListOffersParamsSort = "ByPopularity"
 	ListOffersParamsSortByTime       ListOffersParamsSort = "ByTime"
 )
@@ -178,6 +182,8 @@ const (
 // Valid indicates whether the value is a known member of the ListOffersParamsSort enum.
 func (e ListOffersParamsSort) Valid() bool {
 	switch e {
+	case ListOffersParamsSortByDistance:
+		return true
 	case ListOffersParamsSortByPopularity:
 		return true
 	case ListOffersParamsSortByTime:
@@ -189,6 +195,7 @@ func (e ListOffersParamsSort) Valid() bool {
 
 // Defines values for ListSubscribedOffersParamsSort.
 const (
+	ByDistance   ListSubscribedOffersParamsSort = "ByDistance"
 	ByPopularity ListSubscribedOffersParamsSort = "ByPopularity"
 	ByTime       ListSubscribedOffersParamsSort = "ByTime"
 )
@@ -196,6 +203,8 @@ const (
 // Valid indicates whether the value is a known member of the ListSubscribedOffersParamsSort enum.
 func (e ListSubscribedOffersParamsSort) Valid() bool {
 	switch e {
+	case ByDistance:
+		return true
 	case ByPopularity:
 		return true
 	case ByTime:
@@ -1021,6 +1030,7 @@ type OfferWithInfo struct {
 // OffersCursor Курсор для стабильной пагинации
 type OffersCursor struct {
 	CreatedAt *time.Time         `json:"createdAt,omitempty"`
+	Distance  *float64           `json:"distance,omitempty"`
 	Id        openapi_types.UUID `json:"id"`
 	Views     *int64             `json:"views,omitempty"`
 }
@@ -1279,6 +1289,9 @@ type VoteForFailureRequest struct {
 // CursorCreatedAt defines model for CursorCreatedAt.
 type CursorCreatedAt = time.Time
 
+// CursorDistance defines model for CursorDistance.
+type CursorDistance = float64
+
 // CursorFavoritedAt defines model for CursorFavoritedAt.
 type CursorFavoritedAt = time.Time
 
@@ -1296,6 +1309,12 @@ type OfferTagsFilter = []TagName
 
 // SortType defines model for SortType.
 type SortType string
+
+// UserLat defines model for UserLat.
+type UserLat = float64
+
+// UserLon defines model for UserLon.
+type UserLon = float64
 
 // WithoutTags defines model for WithoutTags.
 type WithoutTags = bool
@@ -1347,6 +1366,10 @@ type ListOffersParams struct {
 	// Используется вместе с `cursor_id`, когда `sort=created_at`.
 	CursorCreatedAt *CursorCreatedAt `form:"cursor_created_at,omitempty" json:"cursor_created_at,omitempty"`
 
+	// CursorDistance Расстояние до точки пользователя в курсоре, в метрах.
+	// Используется вместе с `cursor_id`, когда `sort=ByDistance`.
+	CursorDistance *CursorDistance `form:"cursor_distance,omitempty" json:"cursor_distance,omitempty"`
+
 	// CursorViews Количество просмотров в курсоре.
 	// Используется вместе с `cursor_id`, когда `sort=popularity`.
 	CursorViews *CursorViews `form:"cursor_views,omitempty" json:"cursor_views,omitempty"`
@@ -1356,6 +1379,14 @@ type ListOffersParams struct {
 
 	// CursorLimit Максимальное количество объявлений в ответе
 	CursorLimit *Limit `form:"cursor_limit,omitempty" json:"cursor_limit,omitempty"`
+
+	// UserLat Широта точки пользователя, от которой считается расстояние.
+	// Обязательна при `sort=ByDistance`.
+	UserLat *UserLat `form:"user_lat,omitempty" json:"user_lat,omitempty"`
+
+	// UserLon Долгота точки пользователя, от которой считается расстояние.
+	// Обязательна при `sort=ByDistance`.
+	UserLon *UserLon `form:"user_lon,omitempty" json:"user_lon,omitempty"`
 
 	// Tags Фильтр по тегам. Возвращаются объявления, содержащие **все** переданные теги.
 	// Повторяйте параметр в query:
@@ -1392,6 +1423,10 @@ type ListSubscribedOffersParams struct {
 	// Используется вместе с `cursor_id`, когда `sort=created_at`.
 	CursorCreatedAt *CursorCreatedAt `form:"cursor_created_at,omitempty" json:"cursor_created_at,omitempty"`
 
+	// CursorDistance Расстояние до точки пользователя в курсоре, в метрах.
+	// Используется вместе с `cursor_id`, когда `sort=ByDistance`.
+	CursorDistance *CursorDistance `form:"cursor_distance,omitempty" json:"cursor_distance,omitempty"`
+
 	// CursorViews Количество просмотров в курсоре.
 	// Используется вместе с `cursor_id`, когда `sort=popularity`.
 	CursorViews *CursorViews `form:"cursor_views,omitempty" json:"cursor_views,omitempty"`
@@ -1401,6 +1436,14 @@ type ListSubscribedOffersParams struct {
 
 	// CursorLimit Максимальное количество объявлений в ответе
 	CursorLimit *Limit `form:"cursor_limit,omitempty" json:"cursor_limit,omitempty"`
+
+	// UserLat Широта точки пользователя, от которой считается расстояние.
+	// Обязательна при `sort=ByDistance`.
+	UserLat *UserLat `form:"user_lat,omitempty" json:"user_lat,omitempty"`
+
+	// UserLon Долгота точки пользователя, от которой считается расстояние.
+	// Обязательна при `sort=ByDistance`.
+	UserLon *UserLon `form:"user_lon,omitempty" json:"user_lon,omitempty"`
 }
 
 // ListSubscribedOffersParamsSort defines parameters for ListSubscribedOffers.

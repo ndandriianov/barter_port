@@ -13,12 +13,14 @@ offers:
         - администраторам.
       
       Поддерживаемые режимы сортировки:
-      - `created_at`: сначала новые объявления
-      - `popularity`: сначала самые просматриваемые объявления
+      - `ByTime`: сначала новые объявления
+      - `ByPopularity`: сначала самые просматриваемые объявления
+      - `ByDistance`: сначала ближайшие объявления к точке `user_lat` / `user_lon`
       
       Поля курсора зависят от выбранного режима сортировки:
-      - для `created_at`: используйте `cursor_created_at` + `cursor_id`
-      - для `popularity`: используйте `cursor_views` + `cursor_id`
+      - для `ByTime`: используйте `cursor_created_at` + `cursor_id`
+      - для `ByPopularity`: используйте `cursor_views` + `cursor_id`
+      - для `ByDistance`: используйте `cursor_distance` + `cursor_id`
 
       Фильтрация по тегам:
       - `tags`: вернуть объявления, содержащие **все** указанные теги;
@@ -29,9 +31,10 @@ offers:
       - поля `latitude` и `longitude` возвращаются в каждом объекте `offer` всегда,
         независимо от того, указал ли текущий пользователь свою точку;
       - если у объявления точка не указана, `latitude` и `longitude` равны `null`;
-      - `distanceMeters` возвращается только если у текущего пользователя сохранена текущая точка через users API,
-        у объявления указаны `latitude` и `longitude`, и объявление не принадлежит текущему пользователю.
-        Координаты пользователя берутся из gRPC запроса к users.
+      - при `sort=ByDistance` обязательны `user_lat` и `user_lon`; в этом режиме
+        `distanceMeters` возвращается для каждого объявления с координатами и считается от переданной точки;
+      - в остальных режимах `distanceMeters` возвращается только если у текущего пользователя сохранена текущая точка через users API
+        и у объявления указаны `latitude` и `longitude`.
     operationId: listOffers
     security:
       - bearerAuth: [ ]
@@ -48,9 +51,12 @@ offers:
           type: boolean
       - $ref: '../components/parameters.yaml#/SortType'
       - $ref: '../components/parameters.yaml#/CursorCreatedAt'
+      - $ref: '../components/parameters.yaml#/CursorDistance'
       - $ref: '../components/parameters.yaml#/CursorViews'
       - $ref: '../components/parameters.yaml#/CursorId'
       - $ref: '../components/parameters.yaml#/Limit'
+      - $ref: '../components/parameters.yaml#/UserLat'
+      - $ref: '../components/parameters.yaml#/UserLon'
       - $ref: '../components/parameters.yaml#/OfferTagsFilter'
       - $ref: '../components/parameters.yaml#/WithoutTags'
     responses:
@@ -139,7 +145,11 @@ subscribedOffers:
 
       Список сортируется по времени последнего обновления объявления.
 
-      Если у текущего пользователя сохранена текущая точка через users API,
+      Поддерживаются те же режимы сортировки, что и для общего списка объявлений.
+      Для `sort=ByDistance` обязательны `user_lat` и `user_lon`, а курсор строится по `cursor_distance` + `cursor_id`.
+
+      Если выбран `sort=ByDistance`, `distanceMeters` считается от переданной точки.
+      В остальных режимах, если у текущего пользователя сохранена текущая точка через users API,
       а у объявления указаны `latitude` и `longitude`,
       в объекте `offer` возвращается `distanceMeters` в метрах.
       Сами поля `latitude` и `longitude` возвращаются всегда.
@@ -149,9 +159,12 @@ subscribedOffers:
     parameters:
       - $ref: '../components/parameters.yaml#/SortType'
       - $ref: '../components/parameters.yaml#/CursorCreatedAt'
+      - $ref: '../components/parameters.yaml#/CursorDistance'
       - $ref: '../components/parameters.yaml#/CursorViews'
       - $ref: '../components/parameters.yaml#/CursorId'
       - $ref: '../components/parameters.yaml#/Limit'
+      - $ref: '../components/parameters.yaml#/UserLat'
+      - $ref: '../components/parameters.yaml#/UserLon'
     responses:
       '200':
         description: Страница подписанных объявлений

@@ -5,6 +5,7 @@ import (
 	"barter-port/pkg/repox"
 	"context"
 	"fmt"
+	"math"
 
 	"github.com/google/uuid"
 )
@@ -81,6 +82,76 @@ func offersAndPopularityCursor(offers []domain.Offer, err error) ([]domain.Offer
 	return offers, new(popularityCursor(lastOffer)), nil
 }
 
+func distanceExpr(latParam, lonParam int) string {
+	return fmt.Sprintf(`
+		2 * 6371000 * asin(
+			sqrt(
+				power(sin(radians((offers.latitude - $%d) / 2)), 2) +
+				cos(radians($%d)) * cos(radians(offers.latitude)) *
+				power(sin(radians((offers.longitude - $%d) / 2)), 2)
+			)
+		)
+	`, latParam, latParam, lonParam)
+}
+
+func (r *Repository) scanDistanceOffers(ctx context.Context, query string, args ...interface{}) ([]domain.Offer, *domain.DistanceCursor, error) {
+	rows, err := r.db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, nil, fmt.Errorf("sql get distance offers: %w", err)
+	}
+	defer rows.Close()
+
+	offers := make([]domain.Offer, 0)
+	var nextCursor *domain.DistanceCursor
+
+	for rows.Next() {
+		var (
+			offer    domain.Offer
+			distance float64
+		)
+
+		if err := rows.Scan(
+			&offer.ID,
+			&offer.AuthorId,
+			&offer.Name,
+			&offer.Type,
+			&offer.Action,
+			&offer.Description,
+			&offer.CreatedAt,
+			&offer.UpdatedAt,
+			&offer.Views,
+			&offer.Tags,
+			&offer.PhotoIds,
+			&offer.PhotoUrls,
+			&offer.IsHidden,
+			&offer.ModificationBlocked,
+			&offer.Latitude,
+			&offer.Longitude,
+			&distance,
+		); err != nil {
+			return nil, nil, fmt.Errorf("scan distance offer: %w", err)
+		}
+
+		roundedDistance := int64(math.Round(distance))
+		offer.DistanceMeters = &roundedDistance
+		offers = append(offers, offer)
+		nextCursor = &domain.DistanceCursor{
+			Distance: distance,
+			Id:       offer.ID,
+		}
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, nil, fmt.Errorf("iterate distance offers: %w", err)
+	}
+
+	if len(offers) == 0 {
+		return offers, nil, nil
+	}
+
+	return offers, nextCursor, nil
+}
+
 func favoriteOffersCursor(offer domain.FavoritedOffer) domain.FavoriteOffersCursor {
 	return domain.FavoriteOffersCursor{
 		FavoritedAt: offer.FavoritedAt,
@@ -99,6 +170,175 @@ func offersAndFavoriteCursor(offers []domain.FavoritedOffer, err error) ([]domai
 
 	lastOffer := offers[len(offers)-1]
 	return offers, new(favoriteOffersCursor(lastOffer)), nil
+}
+
+// ================================================================================
+// ПО РАССТОЯНИЮ
+// ================================================================================
+
+func (r *Repository) GetOffersOrderByDistance(
+	ctx context.Context,
+	limit int,
+	cursor domain.DistanceCursor,
+	isAdmin bool,
+	userLat float64,
+	userLon float64,
+	tags []string,
+	tagsFilterPresent bool,
+) ([]domain.Offer, *domain.DistanceCursor, error) {
+	query := `
+		WITH filtered_offers AS (
+			SELECT ` + rowsToSelect + `,
+			       ` + distanceExpr(2, 3) + ` AS distance_cursor
+			FROM offers
+			WHERE offers.latitude IS NOT NULL
+			  AND offers.longitude IS NOT NULL
+			  AND (offers.is_hidden = FALSE OR $6)` + fmt.Sprintf(tagFilterClause, 8, 7, 7, 7, 7) + `
+		)
+		SELECT *
+		FROM filtered_offers
+		WHERE distance_cursor > $4
+		   OR (distance_cursor = $4 AND id > $5)
+		ORDER BY distance_cursor ASC, id ASC
+		LIMIT $1`
+
+	return r.scanDistanceOffers(ctx, query, limit, userLat, userLon, cursor.Distance, cursor.Id, isAdmin, tags, tagsFilterPresent)
+}
+
+func (r *Repository) GetOffersOrderByDistanceNoCursor(
+	ctx context.Context,
+	limit int,
+	isAdmin bool,
+	userLat float64,
+	userLon float64,
+	tags []string,
+	tagsFilterPresent bool,
+) ([]domain.Offer, *domain.DistanceCursor, error) {
+	query := `
+		WITH filtered_offers AS (
+			SELECT ` + rowsToSelect + `,
+			       ` + distanceExpr(2, 3) + ` AS distance_cursor
+			FROM offers
+			WHERE offers.latitude IS NOT NULL
+			  AND offers.longitude IS NOT NULL
+			  AND (offers.is_hidden = FALSE OR $4)` + fmt.Sprintf(tagFilterClause, 6, 5, 5, 5, 5) + `
+		)
+		SELECT *
+		FROM filtered_offers
+		ORDER BY distance_cursor ASC, id ASC
+		LIMIT $1`
+
+	return r.scanDistanceOffers(ctx, query, limit, userLat, userLon, isAdmin, tags, tagsFilterPresent)
+}
+
+func (r *Repository) GetMyOffersOrderByDistance(
+	ctx context.Context,
+	limit int,
+	cursor domain.DistanceCursor,
+	userID uuid.UUID,
+	userLat float64,
+	userLon float64,
+	tags []string,
+	tagsFilterPresent bool,
+) ([]domain.Offer, *domain.DistanceCursor, error) {
+	query := `
+		WITH filtered_offers AS (
+			SELECT ` + rowsToSelect + `,
+			       ` + distanceExpr(2, 3) + ` AS distance_cursor
+			FROM offers
+			WHERE offers.latitude IS NOT NULL
+			  AND offers.longitude IS NOT NULL
+			  AND offers.author_id = $6` + fmt.Sprintf(tagFilterClause, 8, 7, 7, 7, 7) + `
+		)
+		SELECT *
+		FROM filtered_offers
+		WHERE distance_cursor > $4
+		   OR (distance_cursor = $4 AND id > $5)
+		ORDER BY distance_cursor ASC, id ASC
+		LIMIT $1`
+
+	return r.scanDistanceOffers(ctx, query, limit, userLat, userLon, cursor.Distance, cursor.Id, userID, tags, tagsFilterPresent)
+}
+
+func (r *Repository) GetMyOffersOrderByDistanceNoCursor(
+	ctx context.Context,
+	limit int,
+	userID uuid.UUID,
+	userLat float64,
+	userLon float64,
+	tags []string,
+	tagsFilterPresent bool,
+) ([]domain.Offer, *domain.DistanceCursor, error) {
+	query := `
+		WITH filtered_offers AS (
+			SELECT ` + rowsToSelect + `,
+			       ` + distanceExpr(2, 3) + ` AS distance_cursor
+			FROM offers
+			WHERE offers.latitude IS NOT NULL
+			  AND offers.longitude IS NOT NULL
+			  AND offers.author_id = $4` + fmt.Sprintf(tagFilterClause, 6, 5, 5, 5, 5) + `
+		)
+		SELECT *
+		FROM filtered_offers
+		ORDER BY distance_cursor ASC, id ASC
+		LIMIT $1`
+
+	return r.scanDistanceOffers(ctx, query, limit, userLat, userLon, userID, tags, tagsFilterPresent)
+}
+
+func (r *Repository) GetSubscribedOffersOrderByDistance(
+	ctx context.Context,
+	limit int,
+	cursor domain.DistanceCursor,
+	authorIDs []uuid.UUID,
+	isAdmin bool,
+	userLat float64,
+	userLon float64,
+) ([]domain.Offer, *domain.DistanceCursor, error) {
+	query := `
+		WITH filtered_offers AS (
+			SELECT ` + rowsToSelect + `,
+			       ` + distanceExpr(2, 3) + ` AS distance_cursor
+			FROM offers
+			WHERE offers.latitude IS NOT NULL
+			  AND offers.longitude IS NOT NULL
+			  AND offers.author_id = ANY($6)
+			  AND (offers.is_hidden = FALSE OR $7)
+		)
+		SELECT *
+		FROM filtered_offers
+		WHERE distance_cursor > $4
+		   OR (distance_cursor = $4 AND id > $5)
+		ORDER BY distance_cursor ASC, id ASC
+		LIMIT $1`
+
+	return r.scanDistanceOffers(ctx, query, limit, userLat, userLon, cursor.Distance, cursor.Id, authorIDs, isAdmin)
+}
+
+func (r *Repository) GetSubscribedOffersOrderByDistanceNoCursor(
+	ctx context.Context,
+	limit int,
+	authorIDs []uuid.UUID,
+	isAdmin bool,
+	userLat float64,
+	userLon float64,
+) ([]domain.Offer, *domain.DistanceCursor, error) {
+	query := `
+		WITH filtered_offers AS (
+			SELECT ` + rowsToSelect + `,
+			       ` + distanceExpr(2, 3) + ` AS distance_cursor
+			FROM offers
+			WHERE offers.latitude IS NOT NULL
+			  AND offers.longitude IS NOT NULL
+			  AND offers.author_id = ANY($4)
+			  AND (offers.is_hidden = FALSE OR $5)
+		)
+		SELECT *
+		FROM filtered_offers
+		ORDER BY distance_cursor ASC, id ASC
+		LIMIT $1`
+
+	return r.scanDistanceOffers(ctx, query, limit, userLat, userLon, authorIDs, isAdmin)
 }
 
 // ================================================================================

@@ -413,6 +413,10 @@ OffersCursor:
   required:
     - id
   properties:
+    distance:
+      type: number
+      format: double
+      example: 1542.42
     createdAt:
       type: string
       format: date-time
