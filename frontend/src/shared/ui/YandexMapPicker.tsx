@@ -1,9 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-
-export interface LatLon {
-  lat: number;
-  lon: number;
-}
+import { DEFAULT_CENTER, loadYmaps, type LatLon } from "@/shared/ui/yandexMaps";
+export type { LatLon } from "@/shared/ui/yandexMaps";
 
 interface Props {
   value: LatLon | null;
@@ -11,34 +8,6 @@ interface Props {
   height?: string;
   /** Optional API key. Falls back to VITE_YANDEX_MAPS_API_KEY env variable. */
   apiKey?: string;
-}
-
-declare global {
-  interface Window {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ymaps?: any;
-    __ymapsPromise?: Promise<void>;
-  }
-}
-
-const DEFAULT_CENTER: [number, number] = [55.751244, 37.618423]; // Moscow
-
-function loadYmaps(apiKey: string): Promise<void> {
-  if (window.ymaps?.ready) return Promise.resolve();
-  if (window.__ymapsPromise) return window.__ymapsPromise;
-
-  window.__ymapsPromise = new Promise<void>((resolve, reject) => {
-    const script = document.createElement("script");
-    script.src = `https://api-maps.yandex.ru/2.1/?apikey=${apiKey}&lang=ru_RU`;
-    script.async = true;
-    script.onload = () => {
-      window.ymaps.ready(() => resolve());
-    };
-    script.onerror = () => reject(new Error("Не удалось загрузить Яндекс Карты"));
-    document.head.appendChild(script);
-  });
-
-  return window.__ymapsPromise;
 }
 
 export default function YandexMapPicker({ value, onChange, height = "300px", apiKey }: Props) {

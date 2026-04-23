@@ -7,6 +7,7 @@ import offersApi from "@/features/offers/api/offersApi";
 import usersApi from "@/features/users/api/usersApi";
 import useDraftOfferCounts from "@/features/deals/model/useDraftOfferCounts.ts";
 import reviewsApi from "@/features/reviews/api/reviewsApi.ts";
+import YandexMapReadonly from "@/shared/ui/YandexMapReadonly";
 import OfferCard from "@/widgets/offers/OfferCard";
 import RespondToOfferModal from "@/widgets/offers/RespondToOfferModal";
 import ReviewSummaryCard from "@/widgets/reviews/ReviewSummaryCard.tsx";
@@ -65,6 +66,9 @@ function OfferPage() {
 
   const canRespond = !!meData && offer.authorId !== meData.id;
   const displayedIsFavorite = favoriteOverride?.offerId === offer.id ? favoriteOverride.value : offer.isFavorite;
+  const offerLocation = offer.latitude != null && offer.longitude != null
+    ? { lat: offer.latitude, lon: offer.longitude }
+    : null;
   const displayedOffer = {
     ...offer,
     isFavorite: displayedIsFavorite,
@@ -155,6 +159,18 @@ function OfferPage() {
               </ImageListItem>
             ))}
           </ImageList>
+        </Box>
+      )}
+
+      {offerLocation && (
+        <Box mt={3}>
+          <Typography variant="h6" fontWeight={600} mb={1.5}>
+            Местоположение
+          </Typography>
+          <YandexMapReadonly value={offerLocation} height="260px" />
+          <Typography variant="caption" color="text.secondary" mt={0.5} display="block">
+            {offerLocation.lat.toFixed(6)}, {offerLocation.lon.toFixed(6)}
+          </Typography>
         </Box>
       )}
 
