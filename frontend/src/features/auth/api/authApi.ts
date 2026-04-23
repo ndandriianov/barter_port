@@ -48,6 +48,33 @@ const authApi = createApi({
         body: {token},
       }),
     }),
+
+    requestPasswordReset: builder.mutation<void, { email: string }>({
+      query: (body) => ({
+        url: "/auth/request-password-reset",
+        method: "POST",
+        body,
+      }),
+    }),
+
+    resetPassword: builder.mutation<void, { token: string; newPassword: string }>({
+      query: (body) => ({
+        url: "/auth/reset-password",
+        method: "POST",
+        body,
+      }),
+    }),
+
+    changePassword: builder.mutation<
+      void,
+      { oldEmail: string; oldPassword: string; newPassword: string }
+    >({
+      query: (body) => ({
+        url: "/auth/change-password",
+        method: "POST",
+        body,
+      }),
+    }),
   }),
 });
 

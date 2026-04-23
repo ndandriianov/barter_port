@@ -5,6 +5,18 @@ definitions:
       message:
         type: string
     type: object
+  infrastructure_transport_http.changePasswordReq:
+    properties:
+      newPassword:
+        example: new-password
+        type: string
+      oldEmail:
+        example: user@email.com
+        type: string
+      oldPassword:
+        example: old-password
+        type: string
+    type: object
   infrastructure_transport_http.credentialsReq:
     properties:
       email:
@@ -36,6 +48,21 @@ definitions:
       userId:
         type: string
     type: object
+  infrastructure_transport_http.requestPasswordResetReq:
+    properties:
+      email:
+        example: user@email.com
+        type: string
+    type: object
+  infrastructure_transport_http.resetPasswordReq:
+    properties:
+      newPassword:
+        example: new-password
+        type: string
+      token:
+        example: iT1VWZWO1apO2GGoXG1ahOKuHlo8WA6ESwA86WMOTiI
+        type: string
+    type: object
   infrastructure_transport_http.userCreationStatusResp:
     properties:
       status:
@@ -54,6 +81,42 @@ info:
   title: Barter Port API
   version: 1.0.0
 paths:
+  /auth/change-password:
+    post:
+      consumes:
+      - application/json
+      description: Changes the authenticated user's password after verifying old credentials
+      parameters:
+      - description: Change password request
+        in: body
+        name: changePasswordReq
+        required: true
+        schema:
+          $ref: '#/definitions/infrastructure_transport_http.changePasswordReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Password changed successfully
+        "400":
+          description: New password validation failed
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "403":
+          description: Old credentials are invalid or missing
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: Internal server error
+      security:
+      - BearerAuth: []
+      summary: Change password
+      tags:
+      - auth
   /auth/login:
     post:
       consumes:
@@ -173,6 +236,63 @@ paths:
         "500":
           description: Internal server error
       summary: Register a new user
+      tags:
+      - auth
+  /auth/request-password-reset:
+    post:
+      consumes:
+      - application/json
+      description: Sends a password reset link to the user's email if the account
+        exists
+      parameters:
+      - description: Password reset request
+        in: body
+        name: requestPasswordResetReq
+        required: true
+        schema:
+          $ref: '#/definitions/infrastructure_transport_http.requestPasswordResetReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Password reset email sent successfully
+        "400":
+          description: Invalid request or email
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: Internal server error
+      summary: Request password reset
+      tags:
+      - auth
+  /auth/reset-password:
+    post:
+      consumes:
+      - application/json
+      description: Sets a new password using a password reset token
+      parameters:
+      - description: Reset password request
+        in: body
+        name: resetPasswordReq
+        required: true
+        schema:
+          $ref: '#/definitions/infrastructure_transport_http.resetPasswordReq'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Password reset successfully
+        "400":
+          description: Invalid request, token or password
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "404":
+          description: User not found
+          schema:
+            $ref: '#/definitions/httpx.ErrorResponse'
+        "500":
+          description: Internal server error
+      summary: Reset password
       tags:
       - auth
   /auth/retry-send-verification-email:

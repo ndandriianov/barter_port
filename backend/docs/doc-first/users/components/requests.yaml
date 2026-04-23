@@ -7,6 +7,8 @@ UpdateUserRequest:
       $ref: './properties.yaml#/Bio'
     avatarUrl:
       $ref: './properties.yaml#/AvatarUrl'
+    phoneNumber:
+      $ref: './properties.yaml#/PhoneNumber'
 
 
 SubscribeRequest:

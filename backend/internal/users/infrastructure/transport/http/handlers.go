@@ -58,10 +58,11 @@ func (h *Handlers) HandleGetUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	httpx.WriteJSON(w, http.StatusOK, types.User{
-		Id:        u.Id,
-		Name:      u.Name,
-		Bio:       u.Bio,
-		AvatarUrl: u.AvatarURL,
+		Id:          u.Id,
+		Name:        u.Name,
+		Bio:         u.Bio,
+		AvatarUrl:   u.AvatarURL,
+		PhoneNumber: u.PhoneNumber,
 	})
 }
 
@@ -217,7 +218,7 @@ func (h *Handlers) HandleUpdateMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Name == nil && req.Bio == nil && req.AvatarUrl == nil {
+	if req.Name == nil && req.Bio == nil && req.AvatarUrl == nil && req.PhoneNumber == nil {
 		httpx.WriteErrorStr(w, http.StatusBadRequest, "empty update payload")
 		return
 	}
@@ -238,6 +239,13 @@ func (h *Handlers) HandleUpdateMe(w http.ResponseWriter, r *http.Request) {
 
 	if req.AvatarUrl != nil {
 		if err := h.userService.UpdateAvatarURL(r.Context(), userID, req.AvatarUrl); err != nil {
+			handleUpdateError(w, log, err, userID)
+			return
+		}
+	}
+
+	if req.PhoneNumber != nil {
+		if err := h.userService.UpdatePhoneNumber(r.Context(), userID, req.PhoneNumber); err != nil {
 			handleUpdateError(w, log, err, userID)
 			return
 		}
@@ -449,6 +457,9 @@ func handleUpdateError(w http.ResponseWriter, log *slog.Logger, err error, userI
 	if errors.Is(err, domain.ErrUserNotFound) {
 		updateErrLog.Info("user not found")
 		httpx.WriteEmptyError(w, http.StatusNotFound)
+	} else if errors.Is(err, domain.ErrInvalidPhoneNumber) {
+		updateErrLog.Info("invalid phone number")
+		httpx.WriteErrorStr(w, http.StatusBadRequest, err.Error())
 	} else {
 		updateErrLog.Error("failed to update user")
 		httpx.WriteEmptyError(w, http.StatusInternalServerError)
@@ -470,6 +481,7 @@ func (h *Handlers) getMe(ctx context.Context, userID uuid.UUID) (types.Me, error
 		Name:             me.Name,
 		Bio:              me.Bio,
 		AvatarUrl:        me.AvatarURL,
+		PhoneNumber:      me.PhoneNumber,
 		Email:            openapi_types.Email(me.Email), // TODO: конвертировать при отключенном bypass
 		CreatedAt:        me.CreatedAt,
 		IsAdmin:          me.IsAdmin,
@@ -501,10 +513,11 @@ func makeUsersResponse(users []domain.User) types.GetSubscriptionsResponse {
 	response := make(types.GetSubscriptionsResponse, 0, len(users))
 	for _, u := range users {
 		response = append(response, types.User{
-			Id:        u.Id,
-			Name:      u.Name,
-			Bio:       u.Bio,
-			AvatarUrl: u.AvatarURL,
+			Id:          u.Id,
+			Name:        u.Name,
+			Bio:         u.Bio,
+			AvatarUrl:   u.AvatarURL,
+			PhoneNumber: u.PhoneNumber,
 		})
 	}
 

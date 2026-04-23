@@ -9,6 +9,7 @@ export interface UpdateCurrentUserRequest {
   name?: string;
   bio?: string;
   avatarUrl?: string;
+  phoneNumber?: string;
 }
 
 export interface UploadCurrentUserAvatarResponse {

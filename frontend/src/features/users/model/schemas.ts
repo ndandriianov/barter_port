@@ -5,6 +5,7 @@ export const userSchema = z.object({
   name: z.string().optional(),
   bio: z.string().optional(),
   avatarUrl: z.string().optional(),
+  phoneNumber: z.string().optional(),
 });
 
 export const meSchema = userSchema.extend({

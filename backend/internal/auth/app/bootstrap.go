@@ -8,6 +8,7 @@ import (
 	authconsumer "barter-port/internal/auth/infrastructure/kafka/consumer"
 	authkafka "barter-port/internal/auth/infrastructure/kafka/producer"
 	"barter-port/internal/auth/infrastructure/repository/email_token"
+	"barter-port/internal/auth/infrastructure/repository/password_reset_token"
 	"barter-port/internal/auth/infrastructure/repository/refresh_token"
 	ucevent "barter-port/internal/auth/infrastructure/repository/uc-event"
 	ucoutbox "barter-port/internal/auth/infrastructure/repository/uc-outbox"
@@ -59,6 +60,7 @@ func (a *App) initServices(cfg bootstrap.Config) error {
 	ucEventRepo := ucevent.NewRepository()
 	ucResultInboxRepo := ucrinbox.NewRepository()
 	emailTokenRepo := email_token.NewRepository()
+	passwordResetTokenRepo := password_reset_token.NewRepository()
 	refreshTokenRepo := refresh_token.NewRepository()
 	outboxRepo := &ucoutbox.Repository{}
 
@@ -71,6 +73,8 @@ func (a *App) initServices(cfg bootstrap.Config) error {
 		userRepo,
 		ucEventRepo,
 		emailTokenRepo,
+		passwordResetTokenRepo,
+		refreshTokenRepo,
 		mailer,
 		infraLogger,
 		outboxRepo,

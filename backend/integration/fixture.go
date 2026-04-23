@@ -997,6 +997,7 @@ func RequireAuthTablesExist(t *testing.T, pool *pgxpool.Pool) {
 		t,
 		pool,
 		"email_tokens",
+		"password_reset_tokens",
 		"users",
 		"user_creation_outbox",
 		"user_creation_events",

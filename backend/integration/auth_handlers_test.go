@@ -26,6 +26,21 @@ type refreshTokenResponse struct {
 	AccessToken string `json:"access_token"`
 }
 
+type changePasswordRequest struct {
+	OldEmail    string `json:"oldEmail"`
+	OldPassword string `json:"oldPassword"`
+	NewPassword string `json:"newPassword"`
+}
+
+type requestPasswordResetRequest struct {
+	Email string `json:"email"`
+}
+
+type resetPasswordRequest struct {
+	Token       string `json:"token"`
+	NewPassword string `json:"newPassword"`
+}
+
 type authMeResponse struct {
 	UserID uuid.UUID `json:"userId"`
 }
@@ -305,6 +320,180 @@ func TestAuthLogoutWithoutCookie(t *testing.T) {
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 }
 
+func TestAuthChangePasswordSuccess(t *testing.T) {
+	t.Parallel()
+	dumpAuthLogs(t)
+
+	email := uniqueEmail("change-password")
+	oldPassword := "password123"
+	newPassword := "password456"
+	mustRegister(t, email, oldPassword)
+
+	accessToken := mustLoginAccessToken(t, email, oldPassword)
+
+	changePassword(t, accessToken, changePasswordRequest{
+		OldEmail:    email,
+		OldPassword: oldPassword,
+		NewPassword: newPassword,
+	}, http.StatusOK)
+
+	oldLoginResp := mustLogin(t, email, oldPassword)
+	defer func() { _ = oldLoginResp.Body.Close() }()
+	require.Equal(t, http.StatusUnauthorized, oldLoginResp.StatusCode)
+
+	newLoginResp := mustLogin(t, email, newPassword)
+	defer func() { _ = newLoginResp.Body.Close() }()
+	require.Equal(t, http.StatusOK, newLoginResp.StatusCode)
+}
+
+func TestAuthChangePasswordMissingOldCredentials(t *testing.T) {
+	t.Parallel()
+	dumpAuthLogs(t)
+
+	email := uniqueEmail("change-password-missing-old")
+	oldPassword := "password123"
+	mustRegister(t, email, oldPassword)
+
+	accessToken := mustLoginAccessToken(t, email, oldPassword)
+
+	resp := changePassword(t, accessToken, changePasswordRequest{
+		NewPassword: "password456",
+	}, http.StatusForbidden)
+	defer func() { _ = resp.Body.Close() }()
+
+	var errResp httpx.ErrorResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&errResp))
+	require.Equal(t, "old credentials are invalid", *errResp.Message)
+}
+
+func TestAuthChangePasswordWrongOldPassword(t *testing.T) {
+	t.Parallel()
+	dumpAuthLogs(t)
+
+	email := uniqueEmail("change-password-wrong-old")
+	oldPassword := "password123"
+	mustRegister(t, email, oldPassword)
+
+	accessToken := mustLoginAccessToken(t, email, oldPassword)
+
+	resp := changePassword(t, accessToken, changePasswordRequest{
+		OldEmail:    email,
+		OldPassword: "wrong-password",
+		NewPassword: "password456",
+	}, http.StatusForbidden)
+	defer func() { _ = resp.Body.Close() }()
+
+	var errResp httpx.ErrorResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&errResp))
+	require.Equal(t, "old credentials are invalid", *errResp.Message)
+}
+
+func TestAuthChangePasswordShortNewPassword(t *testing.T) {
+	t.Parallel()
+	dumpAuthLogs(t)
+
+	email := uniqueEmail("change-password-short-new")
+	oldPassword := "password123"
+	mustRegister(t, email, oldPassword)
+
+	accessToken := mustLoginAccessToken(t, email, oldPassword)
+
+	resp := changePassword(t, accessToken, changePasswordRequest{
+		OldEmail:    email,
+		OldPassword: oldPassword,
+		NewPassword: "123",
+	}, http.StatusBadRequest)
+	defer func() { _ = resp.Body.Close() }()
+
+	var errResp httpx.ErrorResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&errResp))
+	require.Equal(t, "password too short", *errResp.Message)
+
+	loginResp := mustLogin(t, email, oldPassword)
+	defer func() { _ = loginResp.Body.Close() }()
+	require.Equal(t, http.StatusOK, loginResp.StatusCode)
+}
+
+func TestAuthRequestPasswordResetSuccess(t *testing.T) {
+	t.Parallel()
+	dumpAuthLogs(t)
+
+	email := uniqueEmail("password-reset")
+	mustRegister(t, email, "password123")
+
+	resp := requestPasswordReset(t, requestPasswordResetRequest{Email: email}, http.StatusOK)
+	defer func() { _ = resp.Body.Close() }()
+
+	pool := OpenDatabase(t, globalFixture, AuthDBName)
+	var tokenCount int
+	err := pool.QueryRow(
+		globalFixture.Ctx,
+		`SELECT COUNT(*)
+		 FROM password_reset_tokens prt
+		 JOIN users u ON u.id = prt.user_id
+		 WHERE u.email = $1`,
+		email,
+	).Scan(&tokenCount)
+	require.NoError(t, err)
+	require.Equal(t, 1, tokenCount)
+
+	resp = requestPasswordReset(t, requestPasswordResetRequest{Email: email}, http.StatusOK)
+	defer func() { _ = resp.Body.Close() }()
+
+	err = pool.QueryRow(
+		globalFixture.Ctx,
+		`SELECT COUNT(*)
+		 FROM password_reset_tokens prt
+		 JOIN users u ON u.id = prt.user_id
+		 WHERE u.email = $1`,
+		email,
+	).Scan(&tokenCount)
+	require.NoError(t, err)
+	require.Equal(t, 1, tokenCount)
+}
+
+func TestAuthRequestPasswordResetInvalidEmail(t *testing.T) {
+	t.Parallel()
+	dumpAuthLogs(t)
+
+	resp := requestPasswordReset(t, requestPasswordResetRequest{Email: "not-an-email"}, http.StatusBadRequest)
+	defer func() { _ = resp.Body.Close() }()
+
+	var errResp httpx.ErrorResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&errResp))
+	require.Equal(t, "invalid email", *errResp.Message)
+}
+
+func TestAuthResetPasswordInvalidToken(t *testing.T) {
+	t.Parallel()
+	dumpAuthLogs(t)
+
+	resp := resetPasswordByToken(t, resetPasswordRequest{
+		Token:       "invalid-token",
+		NewPassword: "password456",
+	}, http.StatusBadRequest)
+	defer func() { _ = resp.Body.Close() }()
+
+	var errResp httpx.ErrorResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&errResp))
+	require.Equal(t, "invalid password reset token", *errResp.Message)
+}
+
+func TestAuthResetPasswordShortPassword(t *testing.T) {
+	t.Parallel()
+	dumpAuthLogs(t)
+
+	resp := resetPasswordByToken(t, resetPasswordRequest{
+		Token:       "invalid-token",
+		NewPassword: "123",
+	}, http.StatusBadRequest)
+	defer func() { _ = resp.Body.Close() }()
+
+	var errResp httpx.ErrorResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&errResp))
+	require.Equal(t, "password too short", *errResp.Message)
+}
+
 func TestAuthGetUserCreationStatus(t *testing.T) {
 	t.Parallel()
 	dumpAuthLogs(t)
@@ -388,6 +577,50 @@ func mustLoginAccessToken(t *testing.T, email, password string) string {
 	require.NotEmpty(t, login.AccessToken)
 
 	return login.AccessToken
+}
+
+func changePassword(t *testing.T, accessToken string, reqBody changePasswordRequest, expectedStatus int) *http.Response {
+	t.Helper()
+
+	payload, err := json.Marshal(reqBody)
+	require.NoError(t, err)
+
+	req, err := http.NewRequest(http.MethodPost, globalFixture.AuthURL+"/auth/change-password", bytes.NewReader(payload))
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+accessToken)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	require.Equal(t, expectedStatus, resp.StatusCode)
+
+	return resp
+}
+
+func requestPasswordReset(t *testing.T, reqBody requestPasswordResetRequest, expectedStatus int) *http.Response {
+	t.Helper()
+
+	payload, err := json.Marshal(reqBody)
+	require.NoError(t, err)
+
+	resp, err := http.Post(globalFixture.AuthURL+"/auth/request-password-reset", "application/json", bytes.NewReader(payload))
+	require.NoError(t, err)
+	require.Equal(t, expectedStatus, resp.StatusCode)
+
+	return resp
+}
+
+func resetPasswordByToken(t *testing.T, reqBody resetPasswordRequest, expectedStatus int) *http.Response {
+	t.Helper()
+
+	payload, err := json.Marshal(reqBody)
+	require.NoError(t, err)
+
+	resp, err := http.Post(globalFixture.AuthURL+"/auth/reset-password", "application/json", bytes.NewReader(payload))
+	require.NoError(t, err)
+	require.Equal(t, expectedStatus, resp.StatusCode)
+
+	return resp
 }
 
 func mustUserIDByCreds(t *testing.T, email, password string) uuid.UUID {

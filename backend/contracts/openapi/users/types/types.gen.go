@@ -80,12 +80,18 @@ type Me struct {
 	// Name User name
 	Name *Name `json:"name,omitempty"`
 
+	// PhoneNumber User phone number
+	PhoneNumber *PhoneNumber `json:"phoneNumber,omitempty"`
+
 	// ReputationPoints Current user reputation score including rewards and penalties
 	ReputationPoints ReputationPoints `json:"reputationPoints"`
 }
 
 // Name User name
 type Name = string
+
+// PhoneNumber User phone number
+type PhoneNumber = string
 
 // ReputationEvent defines model for ReputationEvent.
 type ReputationEvent struct {
@@ -134,6 +140,9 @@ type UpdateUserRequest struct {
 
 	// Name User name
 	Name *Name `json:"name,omitempty"`
+
+	// PhoneNumber User phone number
+	PhoneNumber *PhoneNumber `json:"phoneNumber,omitempty"`
 }
 
 // User defines model for User.
@@ -149,6 +158,9 @@ type User struct {
 
 	// Name User name
 	Name *Name `json:"name,omitempty"`
+
+	// PhoneNumber User phone number
+	PhoneNumber *PhoneNumber `json:"phoneNumber,omitempty"`
 }
 
 // UserId User ID

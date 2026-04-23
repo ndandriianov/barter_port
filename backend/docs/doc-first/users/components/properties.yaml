@@ -20,6 +20,12 @@ AvatarUrl:
   description: User avatar URL
   example: 'http://localhost:8333/avatars/user-123/avatar.jpg'
 
+PhoneNumber:
+  type: string
+  pattern: '^\\+7 \\(\\d{3}\\) \\d{3}-\\d{2}-\\d{2}$'
+  description: User phone number in format +7 (999) 123-45-67
+  example: '+7 (999) 123-45-67'
+
 ReputationPoints:
   type: integer
   description: Current user reputation score including rewards and penalties

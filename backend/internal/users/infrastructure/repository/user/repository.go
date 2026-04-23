@@ -46,7 +46,7 @@ func (r *Repository) AddUser(ctx context.Context, db db.DB, userID uuid.UUID) er
 //   - domain.ErrUserNotFound: Occurs if no user is found with the given id.
 func (r *Repository) GetUserById(ctx context.Context, id uuid.UUID) (*domain.User, error) {
 	query := `
-		SELECT id, name, bio, avatar_url
+		SELECT id, name, bio, avatar_url, phone_number
 		FROM users
 		WHERE id = $1
 	`
@@ -141,12 +141,34 @@ func (r *Repository) UpdateAvatarURL(ctx context.Context, id uuid.UUID, avatarUR
 	return nil
 }
 
+// UpdatePhoneNumber updates the phone number of a user.
+//
+// Errors:
+//   - domain.ErrUserNotFound: Occurs if no user is found with the given id.
+func (r *Repository) UpdatePhoneNumber(ctx context.Context, id uuid.UUID, phoneNumber *string) error {
+	query := `
+		UPDATE users
+		SET phone_number = $2
+		WHERE id = $1
+	`
+
+	tag, err := r.db.Exec(ctx, query, id, phoneNumber)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return domain.ErrUserNotFound
+	}
+
+	return nil
+}
+
 // ListUsers returns all users.
 //
 // No domain Errors
 func (r *Repository) ListUsers(ctx context.Context) ([]domain.User, error) {
 	query := `
-		SELECT id, name, bio, avatar_url
+		SELECT id, name, bio, avatar_url, phone_number
 		FROM users
 		ORDER BY id
 	`
@@ -270,7 +292,7 @@ func (r *Repository) IsSubscribed(ctx context.Context, subscriberID, targetUserI
 // No domain Errors
 func (r *Repository) GetSubscriptions(ctx context.Context, userID uuid.UUID) ([]domain.User, error) {
 	query := `
-		SELECT u.id, u.name, u.bio, u.avatar_url
+		SELECT u.id, u.name, u.bio, u.avatar_url, u.phone_number
 		FROM subscriptions s
 		JOIN users u ON u.id = s.target_user_id
 		WHERE s.subscriber_id = $1
@@ -295,7 +317,7 @@ func (r *Repository) GetSubscriptions(ctx context.Context, userID uuid.UUID) ([]
 // No domain Errors
 func (r *Repository) GetSubscribers(ctx context.Context, userID uuid.UUID) ([]domain.User, error) {
 	query := `
-		SELECT u.id, u.name, u.bio, u.avatar_url
+		SELECT u.id, u.name, u.bio, u.avatar_url, u.phone_number
 		FROM subscriptions s
 		JOIN users u ON u.id = s.subscriber_id
 		WHERE s.target_user_id = $1

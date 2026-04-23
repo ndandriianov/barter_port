@@ -24,12 +24,17 @@ import {
 } from "@mui/material";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import usersApi from "@/features/users/api/usersApi";
+import authApi from "@/features/auth/api/authApi";
 import { useAppDispatch } from "@/hooks/redux";
 import { performLogout } from "@/features/auth/model/logoutThunk";
 import { imageToAvatarDataUrl } from "@/shared/utils/imageToAvatarDataUrl.ts";
+import { getErrorMessage } from "@/shared/utils/getErrorMessage.ts";
+import { getStatusCode } from "@/shared/utils/getStatusCode.ts";
+import { formatPhoneNumber, formatPhoneNumberInput, isValidPhoneNumber } from "@/shared/utils/phoneNumber.ts";
 import type { User } from "@/features/users/model/types.ts";
 
 const MAX_AVATAR_FILE_SIZE = 5 * 1024 * 1024;
+const MIN_PASSWORD_LENGTH = 6;
 
 function ProfilePage() {
   const { data, isLoading, refetch } = usersApi.useGetCurrentUserQuery();
@@ -37,16 +42,26 @@ function ProfilePage() {
     usersApi.useUpdateCurrentUserMutation();
   const [uploadCurrentUserAvatar, { isLoading: isUploadingAvatar, error: uploadAvatarError }] =
     usersApi.useUploadCurrentUserAvatarMutation();
+  const [changePassword, { isLoading: isChangingPassword, error: changePasswordError }] =
+    authApi.useChangePasswordMutation();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const [draftName, setDraftName] = useState<string | null>(null);
   const [draftBio, setDraftBio] = useState<string | null>(null);
   const [draftAvatarUrl, setDraftAvatarUrl] = useState<string | null>(null);
+  const [draftPhoneNumber, setDraftPhoneNumber] = useState<string | null>(null);
   const [draftAvatarFile, setDraftAvatarFile] = useState<File | null>(null);
   const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
   const [isReputationDrawerOpen, setIsReputationDrawerOpen] = useState(false);
   const [subscriptionsDialogOpen, setSubscriptionsDialogOpen] = useState(false);
   const [subscribersDialogOpen, setSubscribersDialogOpen] = useState(false);
+  const [isChangePasswordDialogOpen, setIsChangePasswordDialogOpen] = useState(false);
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [changePasswordSuccess, setChangePasswordSuccess] = useState<string | null>(null);
+  const [changePasswordValidationError, setChangePasswordValidationError] = useState<string | null>(null);
   const {
     data: reputationEvents,
     isFetching: isReputationEventsLoading,
@@ -70,6 +85,7 @@ function ProfilePage() {
   const currentName = draftName ?? (data?.name ?? "");
   const currentBio = draftBio ?? (data?.bio ?? "");
   const currentAvatarUrl = draftAvatarUrl ?? (data?.avatarUrl ?? "");
+  const currentPhoneNumber = draftPhoneNumber ?? formatPhoneNumber(data?.phoneNumber) ?? "";
 
   const hasChanges = useMemo(() => {
     if (!data) {
@@ -79,14 +95,16 @@ function ProfilePage() {
     return (
       currentName !== (data.name ?? "") ||
       currentBio !== (data.bio ?? "") ||
-      currentAvatarUrl !== (data.avatarUrl ?? "")
+      currentAvatarUrl !== (data.avatarUrl ?? "") ||
+      currentPhoneNumber !== (data.phoneNumber ?? "")
     );
-  }, [currentAvatarUrl, currentBio, currentName, data]);
+  }, [currentAvatarUrl, currentBio, currentName, currentPhoneNumber, data]);
 
   const normalizedAvatarUrl = currentAvatarUrl.trim();
   const avatarPreviewUrl = normalizedAvatarUrl || undefined;
   const hasAvatarPreview = Boolean(avatarPreviewUrl);
   const isSubmitting = isSaving || isUploadingAvatar;
+  const isPasswordFormDirty = oldPassword !== "" || newPassword !== "" || confirmNewPassword !== "";
 
   const formatReputationDelta = (delta: number) => (delta > 0 ? `+${delta}` : `${delta}`);
 
@@ -111,6 +129,12 @@ function ProfilePage() {
   };
 
   const handleSave = async () => {
+    const normalizedPhoneNumber = currentPhoneNumber.trim();
+    if (normalizedPhoneNumber && !isValidPhoneNumber(normalizedPhoneNumber)) {
+      setPhoneError("Введите номер в формате +7 (999) 123-45-67.");
+      return;
+    }
+
     try {
       let nextAvatarUrl = normalizedAvatarUrl;
 
@@ -125,12 +149,15 @@ function ProfilePage() {
         name: currentName.trim(),
         bio: currentBio.trim(),
         avatarUrl: nextAvatarUrl,
+        phoneNumber: normalizedPhoneNumber,
       }).unwrap();
       // Drop local draft and rely on fresh server state after mutation invalidation.
       setDraftName(null);
       setDraftBio(null);
       setDraftAvatarUrl(null);
+      setDraftPhoneNumber(null);
       setDraftAvatarFile(null);
+      setPhoneError(null);
     } catch {
       // Error state is already exposed by RTK Query and rendered in UI.
     }
@@ -140,8 +167,68 @@ function ProfilePage() {
     setDraftName("");
     setDraftBio("");
     setDraftAvatarUrl("");
+    setDraftPhoneNumber("");
     setDraftAvatarFile(null);
     setAvatarError(null);
+    setPhoneError(null);
+  };
+
+  const resetChangePasswordState = () => {
+    setOldPassword("");
+    setNewPassword("");
+    setConfirmNewPassword("");
+    setChangePasswordSuccess(null);
+    setChangePasswordValidationError(null);
+  };
+
+  const handleOpenChangePasswordDialog = () => {
+    resetChangePasswordState();
+    setIsChangePasswordDialogOpen(true);
+  };
+
+  const handleCloseChangePasswordDialog = () => {
+    resetChangePasswordState();
+    setIsChangePasswordDialogOpen(false);
+  };
+
+  const handleChangePassword = async () => {
+    if (!data?.email) {
+      setChangePasswordValidationError("Не удалось определить email пользователя.");
+      return;
+    }
+
+    if (!oldPassword.trim()) {
+      setChangePasswordValidationError("Введите текущий пароль.");
+      return;
+    }
+
+    if (newPassword.length < MIN_PASSWORD_LENGTH) {
+      setChangePasswordValidationError(`Новый пароль должен быть не короче ${MIN_PASSWORD_LENGTH} символов.`);
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      setChangePasswordValidationError("Подтверждение пароля не совпадает.");
+      return;
+    }
+
+    setChangePasswordValidationError(null);
+    setChangePasswordSuccess(null);
+
+    try {
+      await changePassword({
+        oldEmail: data.email,
+        oldPassword,
+        newPassword,
+      }).unwrap();
+
+      setOldPassword("");
+      setNewPassword("");
+      setConfirmNewPassword("");
+      setChangePasswordSuccess("Пароль обновлен.");
+    } catch {
+      // RTK Query exposes error state that is rendered below.
+    }
   };
 
   const handleAvatarButtonClick = () => {
@@ -288,6 +375,12 @@ function ProfilePage() {
             </Box>
             <Box>
               <Typography variant="caption" color="text.secondary">
+                Телефон
+              </Typography>
+              <Typography variant="body2">{formatPhoneNumber(data.phoneNumber) || "Не указан"}</Typography>
+            </Box>
+            <Box>
+              <Typography variant="caption" color="text.secondary">
                 Зарегистрирован
               </Typography>
               <Typography variant="body2">
@@ -346,7 +439,20 @@ function ProfilePage() {
               fullWidth
               multiline
               minRows={3}
-              helperText="Чтобы удалить имя или bio, очистите поле и сохраните"
+              helperText="Чтобы удалить имя, bio или телефон, очистите поле и сохраните"
+            />
+            <TextField
+              label="Телефон"
+              type="tel"
+              value={currentPhoneNumber}
+              onChange={(event) => {
+                setDraftPhoneNumber(formatPhoneNumberInput(event.target.value));
+                setPhoneError(null);
+              }}
+              placeholder="+7 (999) 123-45-67"
+              error={Boolean(phoneError)}
+              helperText={phoneError || "Формат: +7 (999) 123-45-67"}
+              fullWidth
             />
           </Stack>
 
@@ -370,7 +476,7 @@ function ProfilePage() {
 
           {updateError && (
             <Alert severity="error" sx={{ mb: 2 }}>
-              Не удалось обновить профиль
+              {getErrorMessage(updateError) || "Не удалось обновить профиль"}
             </Alert>
           )}
 
@@ -390,6 +496,12 @@ function ProfilePage() {
             </Button>
             <Button variant="outlined" onClick={() => refetch()} disabled={isSubmitting}>
               Обновить
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={handleOpenChangePasswordDialog}
+            >
+              Сменить пароль
             </Button>
             <Button variant="outlined" onClick={() => setIsReputationDrawerOpen(true)}>
               История рейтинга
@@ -488,6 +600,88 @@ function ProfilePage() {
           )}
         </Box>
       </Drawer>
+
+      <Dialog
+        open={isChangePasswordDialogOpen}
+        onClose={handleCloseChangePasswordDialog}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Смена пароля</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            <TextField
+              label="Текущий пароль"
+              type="password"
+              value={oldPassword}
+              onChange={(event) => {
+                setOldPassword(event.target.value);
+                setChangePasswordValidationError(null);
+                setChangePasswordSuccess(null);
+              }}
+              fullWidth
+            />
+            <TextField
+              label="Новый пароль"
+              type="password"
+              value={newPassword}
+              onChange={(event) => {
+                setNewPassword(event.target.value);
+                setChangePasswordValidationError(null);
+                setChangePasswordSuccess(null);
+              }}
+              helperText={`Минимум ${MIN_PASSWORD_LENGTH} символов`}
+              fullWidth
+            />
+            <TextField
+              label="Подтвердите новый пароль"
+              type="password"
+              value={confirmNewPassword}
+              onChange={(event) => {
+                setConfirmNewPassword(event.target.value);
+                setChangePasswordValidationError(null);
+                setChangePasswordSuccess(null);
+              }}
+              fullWidth
+            />
+
+            {changePasswordValidationError && (
+              <Alert severity="error">
+                {changePasswordValidationError}
+              </Alert>
+            )}
+
+            {changePasswordError && !changePasswordValidationError && (
+              <Alert severity="error">
+                {getStatusCode(changePasswordError) === 403
+                  ? "Текущий пароль указан неверно."
+                  : getStatusCode(changePasswordError) === 400
+                    ? getErrorMessage(changePasswordError) ?? "Новый пароль не прошел валидацию."
+                    : getErrorMessage(changePasswordError) ?? "Не удалось изменить пароль."}
+              </Alert>
+            )}
+
+            {changePasswordSuccess && (
+              <Alert severity="success">
+                {changePasswordSuccess}
+              </Alert>
+            )}
+
+            <Box display="flex" gap={2} justifyContent="flex-end" flexWrap="wrap">
+              <Button variant="text" onClick={handleCloseChangePasswordDialog}>
+                Закрыть
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handleChangePassword}
+                disabled={!isPasswordFormDirty || isChangingPassword}
+              >
+                Сохранить пароль
+              </Button>
+            </Box>
+          </Stack>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={subscriptionsDialogOpen}

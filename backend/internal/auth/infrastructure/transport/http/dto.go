@@ -13,11 +13,26 @@ type registerResp struct {
 }
 
 type verifyEmailReq struct {
-	Token string `json:"token" example:"iT1VWZWO1apO2GGoXG1ahOKuHlo8WA6ESwA86WMOTiI""`
+	Token string `json:"token" example:"iT1VWZWO1apO2GGoXG1ahOKuHlo8WA6ESwA86WMOTiI"`
 }
 
 type loginResp struct {
 	AccessToken string `json:"accessToken"`
+}
+
+type requestPasswordResetReq struct {
+	Email string `json:"email" example:"user@email.com"`
+}
+
+type resetPasswordReq struct {
+	Token       string `json:"token" example:"iT1VWZWO1apO2GGoXG1ahOKuHlo8WA6ESwA86WMOTiI"`
+	NewPassword string `json:"newPassword" example:"new-password"`
+}
+
+type changePasswordReq struct {
+	OldEmail    string `json:"oldEmail" example:"user@email.com"`
+	OldPassword string `json:"oldPassword" example:"old-password"`
+	NewPassword string `json:"newPassword" example:"new-password"`
 }
 
 type refreshResponse struct {
