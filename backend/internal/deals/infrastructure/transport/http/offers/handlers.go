@@ -146,6 +146,16 @@ func decodeCreateOfferMultipartRequest(w http.ResponseWriter, r *http.Request) (
 		}
 		req.Tags = &tags
 	}
+	if raw := r.FormValue("latitude"); raw != "" {
+		if v, err := strconv.ParseFloat(raw, 64); err == nil {
+			req.Latitude = &v
+		}
+	}
+	if raw := r.FormValue("longitude"); raw != "" {
+		if v, err := strconv.ParseFloat(raw, 64); err == nil {
+			req.Longitude = &v
+		}
+	}
 
 	fileHeaders := r.MultipartForm.File["photos"]
 	if len(fileHeaders) > maxOfferPhotoCount {
@@ -299,7 +309,12 @@ func (h *Handlers) HandleUpdateOffer(w http.ResponseWriter, r *http.Request) {
 	if r.MultipartForm != nil {
 		defer func() { _ = r.MultipartForm.RemoveAll() }()
 	}
-	hasLocationUpdate := req.Latitude != nil || req.Longitude != nil
+	var multipartHasLat, multipartHasLon bool
+	if r.MultipartForm != nil {
+		_, multipartHasLat = r.MultipartForm.Value["latitude"]
+		_, multipartHasLon = r.MultipartForm.Value["longitude"]
+	}
+	hasLocationUpdate := req.Latitude != nil || req.Longitude != nil || multipartHasLat || multipartHasLon
 	if req.Name == nil && req.Description == nil && req.Type == nil && req.Action == nil && req.Tags == nil &&
 		(req.DeletePhotoIds == nil || len(*req.DeletePhotoIds) == 0) && len(photos) == 0 && !hasLocationUpdate {
 		httpx.WriteEmptyError(w, http.StatusBadRequest)
@@ -426,6 +441,18 @@ func decodeUpdateOfferMultipartRequest(w http.ResponseWriter, r *http.Request) (
 			deletePhotoIDs = append(deletePhotoIDs, photoID)
 		}
 		req.DeletePhotoIds = &deletePhotoIDs
+	}
+	if raw, ok := firstMultipartValue(values, "latitude"); ok && raw != "" {
+		if v, err := strconv.ParseFloat(raw, 64); err == nil {
+			lat := types.Latitude(v)
+			req.Latitude = &lat
+		}
+	}
+	if raw, ok := firstMultipartValue(values, "longitude"); ok && raw != "" {
+		if v, err := strconv.ParseFloat(raw, 64); err == nil {
+			lon := types.Longitude(v)
+			req.Longitude = &lon
+		}
 	}
 
 	fileHeaders := r.MultipartForm.File["photos"]
