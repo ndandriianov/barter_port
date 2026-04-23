@@ -42,7 +42,7 @@ mailer:
 
 admin:
   email: "admin@barterport.com"
-  password: "admin"
+  password: "admin123"
 
 storage:
   endpoint: "http://localhost:8333"

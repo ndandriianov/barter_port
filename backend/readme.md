@@ -86,14 +86,18 @@ Demo-аккаунты:
 Если задан `SEED_PASSWORD`, seed использует его для этих же аккаунтов.
 
 Для работы модерационных сценариев (жалобы на офферы, разрешение провалов сделок) seed логинится как администратор.
-По умолчанию используются кредs из `config/common.yaml` (`admin@barterport.com` / `admin`).
+По умолчанию используются кредs из `config/common.yaml` (`admin@barterport.com` / `admin123`).
 Переопределить можно через `SEED_ADMIN_EMAIL` и `SEED_ADMIN_PASSWORD`.
 
 По умолчанию команда ходит в `http://localhost:80`, то есть ожидает поднятый app-контур через `caddy`.
-Для локального сценария требуется `MAILER_BYPASS=true`, иначе обычная клиентская регистрация не сможет залогиниться без подтверждения почты.
+Seed теперь проходит обычный auth flow: после регистрации ждёт письмо в `smtp4dev`, достаёт token подтверждения, подтверждает email и только потом логинится.
+По умолчанию для перехвата писем используется `http://localhost:5005` (`smtp4dev` из `docker-compose.yml`), поэтому `MAILER_BYPASS=true` больше не нужен.
 
 Полезные переменные:
 - `SEED_BASE_URL`
+- `SEED_SMTP4DEV_URL`
+- `SEED_SMTP4DEV_USER`
+- `SEED_SMTP4DEV_PASSWORD`
 - `SEED_PASSWORD`
 - `SEED_ADMIN_EMAIL`
 - `SEED_ADMIN_PASSWORD`

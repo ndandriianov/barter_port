@@ -99,9 +99,9 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 	eva := &users[4]
 	fedor := &users[5]
 
-	adminToken, err := client.login(ctx, cfg.AdminEmail, cfg.AdminPassword)
+	adminToken, err := client.ensureAdminToken(ctx, cfg.AdminEmail, cfg.AdminPassword)
 	if err != nil {
-		return nil, fmt.Errorf("login as admin: %w", err)
+		return nil, fmt.Errorf("ensure admin session: %w", err)
 	}
 
 	// ── Auth lifecycle ───────────────────────────────────────────────────────

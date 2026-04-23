@@ -25,7 +25,10 @@ func main() {
 	defer cancel()
 
 	client := &seed_demo.SeedClient{
-		BaseURL: strings.TrimRight(cfg.BaseURL, "/"),
+		BaseURL:      strings.TrimRight(cfg.BaseURL, "/"),
+		SMTP4DevURL:  strings.TrimRight(cfg.SMTP4DevURL, "/"),
+		SMTP4DevUser: cfg.SMTP4DevUser,
+		SMTP4DevPass: cfg.SMTP4DevPass,
 		HttpClient: &http.Client{
 			Timeout: 15 * time.Second,
 		},
