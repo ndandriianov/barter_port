@@ -212,7 +212,7 @@ func NewFixture(t *testing.T, opts FixtureOptions) *Fixture {
 		req.Env = serviceEnv()
 		req.Env["CONFIG_SERVICE"] = "/app/config/auth.yaml"
 		req.Env["JWT_REFRESH_SECRET"] = testJWTRefreshSecret
-		req.Env["MAILER_BYPASS"] = "true" // TODO: в проде надо false
+		req.Env["MAILER_BYPASS"] = "false" // TODO: в проде надо false
 		f.Auth = startContainer(ctx, t, req)
 		f.AuthURL = containerBaseURL(ctx, t, f.Auth, authHTTPPort)
 	}

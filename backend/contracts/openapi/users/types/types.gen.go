@@ -69,7 +69,7 @@ type Me struct {
 	CreatedAt time.Time `json:"createdAt"`
 
 	// Email User email
-	Email string `json:"email"`
+	Email openapi_types.Email `json:"email"`
 
 	// Id User ID
 	Id UserId `json:"id"`

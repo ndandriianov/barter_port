@@ -10,6 +10,9 @@ import (
 
 type SeedClient struct {
 	BaseURL      string
+	SMTP4DevURL  string
+	SMTP4DevUser string
+	SMTP4DevPass string
 	HttpClient   *http.Client
 	PollInterval time.Duration
 }
@@ -30,6 +33,10 @@ type registerResponse struct {
 
 type loginResponse struct {
 	AccessToken string `json:"accessToken"`
+}
+
+type verifyEmailRequest struct {
+	Token string `json:"token"`
 }
 
 type refreshResponse struct {

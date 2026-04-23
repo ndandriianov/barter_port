@@ -60,10 +60,20 @@ test-integration-clean:
 swagger-auth:
 	bash ./scripts/generate-swagger-auth.sh
 
+POSTGRES_CONTAINER_NAME := barter-port-postgres
+POSTGRES_HOST ?= 127.0.0.1
+POSTGRES_PORT ?= 5432
+
 infra-up:
 	docker compose --profile infra up -d
 	@echo "Waiting for Postgres to become ready..."
-	@until docker compose exec -T db pg_isready -U postgres -d postgres >/dev/null 2>&1; do sleep 1; done
+	@until [ "$$(docker inspect --format '{{.State.Health.Status}}' $(POSTGRES_CONTAINER_NAME) 2>/dev/null)" = "healthy" ]; do sleep 1; done
+	@until out=$$(migrate -path migrations/auth -database "postgres://postgres:$${DB_PASSWORD:-postgres}@$(POSTGRES_HOST):$(POSTGRES_PORT)/auth_db?sslmode=disable" version 2>&1); do \
+		case "$$out" in \
+			*"no migration"*) break ;; \
+			*) sleep 1 ;; \
+		esac; \
+	done
 	$(MAKE) migrate-up
 
 infra-up-wo-migrate:
@@ -98,7 +108,7 @@ seed-demo:
 create-migration:
 	migrate create -ext sql -dir migrations/$(db) -seq $(name)
 
-db_url = postgres://postgres:$${DB_PASSWORD:-postgres}@localhost:5432/$(1)?sslmode=disable
+db_url = postgres://postgres:$${DB_PASSWORD:-postgres}@$(POSTGRES_HOST):$(POSTGRES_PORT)/$(1)?sslmode=disable
 
 define reset_and_migrate
 	@echo "Resetting $(1)..."
@@ -117,10 +127,10 @@ define reset_and_migrate
 endef
 
 migrate-up:
-	migrate -path migrations/auth -database "postgres://postgres:$${DB_PASSWORD:-postgres}@localhost:5432/auth_db?sslmode=disable" up
-	migrate -path migrations/users -database "postgres://postgres:$${DB_PASSWORD:-postgres}@localhost:5432/users_db?sslmode=disable" up
-	migrate -path migrations/deals -database "postgres://postgres:$${DB_PASSWORD:-postgres}@localhost:5432/deals_db?sslmode=disable" up
-	migrate -path migrations/chats -database "postgres://postgres:$${DB_PASSWORD:-postgres}@localhost:5432/chats_db?sslmode=disable" up
+	migrate -path migrations/auth -database "postgres://postgres:$${DB_PASSWORD:-postgres}@$(POSTGRES_HOST):$(POSTGRES_PORT)/auth_db?sslmode=disable" up
+	migrate -path migrations/users -database "postgres://postgres:$${DB_PASSWORD:-postgres}@$(POSTGRES_HOST):$(POSTGRES_PORT)/users_db?sslmode=disable" up
+	migrate -path migrations/deals -database "postgres://postgres:$${DB_PASSWORD:-postgres}@$(POSTGRES_HOST):$(POSTGRES_PORT)/deals_db?sslmode=disable" up
+	migrate -path migrations/chats -database "postgres://postgres:$${DB_PASSWORD:-postgres}@$(POSTGRES_HOST):$(POSTGRES_PORT)/chats_db?sslmode=disable" up
 
 migrate-reset-all:
 	$(call reset_and_migrate,auth_db,auth)

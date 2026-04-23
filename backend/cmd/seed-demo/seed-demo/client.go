@@ -38,9 +38,39 @@ func (c *SeedClient) register(ctx context.Context, email, password string) (regi
 	return respBody, nil
 }
 
+func (c *SeedClient) retrySendVerificationEmail(ctx context.Context, email, password string) error {
+	return c.doJSON(ctx, http.MethodPost, "/auth/retry-send-verification-email", "", registerRequest{
+		Email:    email,
+		Password: password,
+	}, nil, http.StatusOK)
+}
+
+func (c *SeedClient) verifyEmail(ctx context.Context, token string) error {
+	return c.doJSON(ctx, http.MethodPost, "/auth/verify-email", "", verifyEmailRequest{
+		Token: token,
+	}, nil, http.StatusOK)
+}
+
 func (c *SeedClient) ensureUser(ctx context.Context, email, password string) (registerResponse, string, error) {
+	lastSeenID := uuid.Nil
+	if c.smtp4devConfigured() {
+		inboxLastSeenID, inboxErr := c.waitForLatestSMTP4DevMessageID(ctx)
+		if inboxErr != nil {
+			return registerResponse{}, "", fmt.Errorf("prepare smtp4dev checkpoint: %w", inboxErr)
+		}
+		lastSeenID = inboxLastSeenID
+	}
+
 	registered, err := c.register(ctx, email, password)
 	if err == nil {
+		tokenValue, err := c.waitForVerificationTokenFromEmail(ctx, email, lastSeenID)
+		if err != nil {
+			return registerResponse{}, "", err
+		}
+		if err := c.verifyEmail(ctx, tokenValue); err != nil {
+			return registerResponse{}, "", fmt.Errorf("verify email %s: %w", email, err)
+		}
+
 		if err := c.waitForAuthProvisioning(ctx, registered.UserID); err != nil {
 			return registerResponse{}, "", err
 		}
@@ -62,6 +92,23 @@ func (c *SeedClient) ensureUser(ctx context.Context, email, password string) (re
 	}
 
 	token, err := c.login(ctx, email, password)
+	if err != nil && strings.Contains(strings.ToLower(err.Error()), "email not verified") {
+		lastSeenID, inboxErr := c.waitForLatestSMTP4DevMessageID(ctx)
+		if inboxErr != nil {
+			return registerResponse{}, "", fmt.Errorf("prepare smtp4dev checkpoint: %w", inboxErr)
+		}
+		if err := c.retrySendVerificationEmail(ctx, email, password); err != nil {
+			return registerResponse{}, "", fmt.Errorf("retry verification email for %s: %w", email, err)
+		}
+		tokenValue, err := c.waitForVerificationTokenFromEmail(ctx, email, lastSeenID)
+		if err != nil {
+			return registerResponse{}, "", err
+		}
+		if err := c.verifyEmail(ctx, tokenValue); err != nil {
+			return registerResponse{}, "", fmt.Errorf("verify email %s: %w", email, err)
+		}
+		token, err = c.login(ctx, email, password)
+	}
 	if err != nil {
 		return registerResponse{}, "", err
 	}
@@ -77,8 +124,82 @@ func (c *SeedClient) ensureUser(ctx context.Context, email, password string) (re
 
 	return registerResponse{
 		UserID: me.Id,
-		Email:  me.Email,
+		Email:  string(me.Email),
 	}, token, nil
+}
+
+func (c *SeedClient) ensureAdminToken(ctx context.Context, email, password string) (string, error) {
+	token, err := c.login(ctx, email, password)
+	if err == nil {
+		return token, nil
+	}
+
+	lowerErr := strings.ToLower(err.Error())
+	if strings.Contains(lowerErr, "email not verified") {
+		lastSeenID, inboxErr := c.waitForLatestSMTP4DevMessageID(ctx)
+		if inboxErr != nil {
+			return "", fmt.Errorf("prepare smtp4dev checkpoint for admin: %w", inboxErr)
+		}
+		if err := c.retrySendVerificationEmail(ctx, email, password); err != nil {
+			return "", fmt.Errorf("retry verification email for admin %s: %w", email, err)
+		}
+		tokenValue, err := c.waitForVerificationTokenFromEmail(ctx, email, lastSeenID)
+		if err != nil {
+			return "", err
+		}
+		if err := c.verifyEmail(ctx, tokenValue); err != nil {
+			return "", fmt.Errorf("verify admin email %s: %w", email, err)
+		}
+
+		token, err = c.login(ctx, email, password)
+		if err != nil {
+			return "", err
+		}
+		return token, nil
+	}
+
+	if !strings.Contains(lowerErr, "invalid credentials") {
+		return "", err
+	}
+
+	lastSeenID := uuid.Nil
+	if c.smtp4devConfigured() {
+		inboxLastSeenID, inboxErr := c.waitForLatestSMTP4DevMessageID(ctx)
+		if inboxErr != nil {
+			return "", fmt.Errorf("prepare smtp4dev checkpoint for admin: %w", inboxErr)
+		}
+		lastSeenID = inboxLastSeenID
+	}
+
+	registered, registerErr := c.register(ctx, email, password)
+	if registerErr == nil {
+		tokenValue, err := c.waitForVerificationTokenFromEmail(ctx, email, lastSeenID)
+		if err != nil {
+			return "", err
+		}
+		if err := c.verifyEmail(ctx, tokenValue); err != nil {
+			return "", fmt.Errorf("verify admin email %s: %w", email, err)
+		}
+		if err := c.waitForAuthProvisioning(ctx, registered.UserID); err != nil {
+			return "", err
+		}
+
+		token, err := c.login(ctx, email, password)
+		if err != nil {
+			return "", err
+		}
+		return token, nil
+	}
+
+	if strings.Contains(strings.ToLower(registerErr.Error()), "email already in use") {
+		return "", fmt.Errorf("admin account %s already exists with a different password; set SEED_ADMIN_PASSWORD to the real password or run reseed-demo", email)
+	}
+
+	if strings.Contains(strings.ToLower(registerErr.Error()), "password too short") {
+		return "", fmt.Errorf("admin account %s is not accessible with the provided password, and fallback registration is impossible because the password is shorter than the public auth minimum; set SEED_ADMIN_PASSWORD to the real password or use a 6+ character admin password in config/common.yaml for fresh environments", email)
+	}
+
+	return "", fmt.Errorf("ensure admin %s: login failed with %v; register fallback failed with %w", email, err, registerErr)
 }
 
 func (c *SeedClient) waitForAuthProvisioning(ctx context.Context, userID uuid.UUID) error {
