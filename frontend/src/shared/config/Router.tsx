@@ -4,6 +4,7 @@ import AuthLayout from "@/widgets/layout/AuthLayout";
 import LoginPage from "@/pages/auth/LoginPage";
 import RegisterPage from "@/pages/auth/RegisterPage";
 import VerifyEmailPage from "@/pages/auth/VerifyEmailPage";
+import ResetPasswordPage from "@/pages/auth/ResetPasswordPage.tsx";
 import AdminPage from "@/pages/admin/AdminPage";
 import AdminOfferReportsPage from "@/pages/admin/AdminOfferReportsPage.tsx";
 import AdminOfferReportDetailsPage from "@/pages/admin/AdminOfferReportDetailsPage.tsx";
@@ -36,6 +37,7 @@ function AppRouter() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           <Route path="/verify-email" element={<VerifyEmailPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
         </Route>
 
         <Route element={<AppLayout />}>

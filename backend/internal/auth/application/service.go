@@ -22,12 +22,15 @@ import (
 )
 
 const (
-	bcryptCost          = 12
-	minPasswordLength   = 6
-	tokenLength         = 32
-	tokenExpirationTime = 24 * time.Hour
-	tokenUrlPath        = "/verify-email?token="
-	subject             = "Confirm your email"
+	bcryptCost                   = 12
+	minPasswordLength            = 6
+	tokenLength                  = 32
+	verifyEmailTokenExpiration   = 24 * time.Hour
+	passwordResetTokenExpiration = 2 * time.Hour
+	verifyEmailTokenURLPath      = "/verify-email?token="
+	passwordResetTokenURLPath    = "/reset-password?token="
+	verifyEmailSubject           = "Confirm your email"
+	passwordResetSubject         = "Reset your password"
 )
 
 type UserRepo interface {
@@ -38,10 +41,21 @@ type UserRepo interface {
 	UpdatePasswordHash(ctx context.Context, exec db.DB, userID uuid.UUID, passwordHash string) error
 }
 
-type TokenRepo interface {
+type EmailTokenRepo interface {
 	Save(ctx context.Context, exec db.DB, t domain.EmailVerificationToken) error
 	GetByHashForUpdate(ctx context.Context, exec db.DB, tokenHash string) (domain.EmailVerificationToken, error)
 	MarkUsed(ctx context.Context, exec db.DB, tokenHash string) error
+	DeleteAllForUser(ctx context.Context, exec db.DB, userID uuid.UUID) error
+}
+
+type PasswordResetTokenRepo interface {
+	Save(ctx context.Context, exec db.DB, t domain.PasswordResetToken) error
+	GetByHashForUpdate(ctx context.Context, exec db.DB, tokenHash string) (domain.PasswordResetToken, error)
+	MarkUsed(ctx context.Context, exec db.DB, tokenHash string) error
+	DeleteAllForUser(ctx context.Context, exec db.DB, userID uuid.UUID) error
+}
+
+type RefreshTokenRepo interface {
 	DeleteAllForUser(ctx context.Context, exec db.DB, userID uuid.UUID) error
 }
 
@@ -59,7 +73,9 @@ type Service struct {
 	db              *pgxpool.Pool
 	users           UserRepo
 	ucEventRepo     UserCreationEventRepository
-	tokens          TokenRepo
+	emailTokens     EmailTokenRepo
+	passwordTokens  PasswordResetTokenRepo
+	refreshTokens   RefreshTokenRepo
 	mailer          Mailer
 	logger          *slog.Logger
 	outbox          *ucoutbox.Repository
@@ -74,7 +90,9 @@ func NewService(
 	db *pgxpool.Pool,
 	users UserRepo,
 	ucEventRepo UserCreationEventRepository,
-	tokens TokenRepo,
+	emailTokens EmailTokenRepo,
+	passwordTokens PasswordResetTokenRepo,
+	refreshTokens RefreshTokenRepo,
 	mailer Mailer,
 	logger *slog.Logger,
 	outbox *ucoutbox.Repository,
@@ -92,7 +110,9 @@ func NewService(
 		db:              db,
 		users:           users,
 		ucEventRepo:     ucEventRepo,
-		tokens:          tokens,
+		emailTokens:     emailTokens,
+		passwordTokens:  passwordTokens,
+		refreshTokens:   refreshTokens,
 		mailer:          mailer,
 		logger:          logger,
 		outbox:          outbox,
@@ -164,9 +184,9 @@ func (s *Service) Register(ctx context.Context, email, password string) (Registe
 		}
 
 		tokenHash := getHashFromToken(rawToken)
-		t := domain.NewEmailVerificationToken(tokenHash, u.ID, time.Now().Add(tokenExpirationTime))
+		t := domain.NewEmailVerificationToken(tokenHash, u.ID, time.Now().Add(verifyEmailTokenExpiration))
 
-		if err = s.tokens.Save(ctx, tx, t); err != nil {
+		if err = s.emailTokens.Save(ctx, tx, t); err != nil {
 			return fmt.Errorf("failed to save email_token: %w", err)
 		}
 
@@ -176,7 +196,7 @@ func (s *Service) Register(ctx context.Context, email, password string) (Registe
 		return RegisterResult{}, err
 	}
 
-	if err = s.mailer.Send(u.Email, subject, s.getEmailBody(rawToken)); err != nil {
+	if err = s.mailer.Send(u.Email, verifyEmailSubject, s.getVerifyEmailBody(rawToken)); err != nil {
 		log.Warn("failed to send email", slog.Any("error", err))
 	}
 
@@ -256,14 +276,14 @@ func (s *Service) RetrySendVerificationEmail(ctx context.Context, email, passwor
 	}
 
 	tokenHash := getHashFromToken(rawToken)
-	t := domain.NewEmailVerificationToken(tokenHash, u.ID, time.Now().Add(tokenExpirationTime))
+	t := domain.NewEmailVerificationToken(tokenHash, u.ID, time.Now().Add(verifyEmailTokenExpiration))
 
 	return db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
-		if err = s.tokens.Save(ctx, tx, t); err != nil {
+		if err = s.emailTokens.Save(ctx, tx, t); err != nil {
 			return fmt.Errorf("failed to save email_token: %w", err)
 		}
 
-		if err = s.mailer.Send(u.Email, subject, s.getEmailBody(rawToken)); err != nil {
+		if err = s.mailer.Send(u.Email, verifyEmailSubject, s.getVerifyEmailBody(rawToken)); err != nil {
 			return fmt.Errorf("failed to send email: %w", err)
 		}
 
@@ -290,7 +310,7 @@ func (s *Service) VerifyEmail(ctx context.Context, rawToken string) error {
 	}
 
 	err = db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
-		t, err := s.tokens.GetByHashForUpdate(ctx, tx, tokenHash)
+		t, err := s.emailTokens.GetByHashForUpdate(ctx, tx, tokenHash)
 		if err != nil {
 			if errors.Is(err, domain.ErrTokenNotFound) {
 				return domain.ErrInvalidEmailToken
@@ -323,7 +343,7 @@ func (s *Service) VerifyEmail(ctx context.Context, rawToken string) error {
 			log.Debug("email already verified", slog.Any("user", t.UserID))
 		}
 
-		if err = s.tokens.MarkUsed(ctx, tx, tokenHash); err != nil {
+		if err = s.emailTokens.MarkUsed(ctx, tx, tokenHash); err != nil {
 			return fmt.Errorf("failed to mark used email_token as used: %w", err)
 		}
 
@@ -430,6 +450,112 @@ func (s *Service) Login(ctx context.Context, email, password string) (uuid.UUID,
 	return u.ID, nil
 }
 
+// RequestPasswordReset generates a password reset token and sends a recovery link to the user's email.
+//
+// It returns the following domain errors:
+//   - domain.ErrInvalidEmail
+//
+// All other errors are treated as internal and returned wrapped.
+func (s *Service) RequestPasswordReset(ctx context.Context, email string) error {
+	email = strings.TrimSpace(strings.ToLower(email))
+	if !s.re.MatchString(email) {
+		return domain.ErrInvalidEmail
+	}
+
+	u, err := s.users.GetByEmail(ctx, s.db, email)
+	if err != nil {
+		if errors.Is(err, domain.ErrUserNotFound) {
+			return nil
+		}
+		return fmt.Errorf("failed to get user by email: %w", err)
+	}
+
+	rawToken, err := generateToken(tokenLength)
+	if err != nil {
+		return fmt.Errorf("failed to generate password reset token: %w", err)
+	}
+
+	tokenHash := getHashFromToken(rawToken)
+	t := domain.NewPasswordResetToken(tokenHash, u.ID, time.Now().Add(passwordResetTokenExpiration))
+
+	err = db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
+		if err := s.passwordTokens.DeleteAllForUser(ctx, tx, u.ID); err != nil {
+			return fmt.Errorf("failed to delete previous password reset tokens: %w", err)
+		}
+
+		if err := s.passwordTokens.Save(ctx, tx, t); err != nil {
+			return fmt.Errorf("failed to save password reset token: %w", err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+
+	if err := s.mailer.Send(u.Email, passwordResetSubject, s.getPasswordResetEmailBody(rawToken)); err != nil {
+		return fmt.Errorf("failed to send password reset email: %w", err)
+	}
+
+	return nil
+}
+
+// ResetPassword validates a password reset token and replaces the user's password.
+//
+// It returns the following domain errors:
+//   - domain.ErrPasswordTooShort
+//   - domain.ErrInvalidPasswordResetToken
+//   - domain.ErrPasswordResetTokenExpired
+//   - domain.ErrUserNotFound
+//
+// All other errors are treated as internal and returned wrapped.
+func (s *Service) ResetPassword(ctx context.Context, rawToken, newPassword string) error {
+	if err := s.validatePassword(newPassword); err != nil {
+		return err
+	}
+
+	tokenHash, err := getHashFromRawTokenWithError(rawToken, domain.ErrInvalidPasswordResetToken)
+	if err != nil {
+		return fmt.Errorf("cannot get hash from raw password reset token: %w", err)
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcryptCost)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	return db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
+		t, err := s.passwordTokens.GetByHashForUpdate(ctx, tx, tokenHash)
+		if err != nil {
+			if errors.Is(err, domain.ErrTokenNotFound) {
+				return domain.ErrInvalidPasswordResetToken
+			}
+			return fmt.Errorf("failed to get password reset token by hash: %w", err)
+		}
+
+		if t.Used {
+			return domain.ErrInvalidPasswordResetToken
+		}
+		if time.Now().After(t.ExpiresAt) {
+			return domain.ErrPasswordResetTokenExpired
+		}
+
+		if err := s.users.UpdatePasswordHash(ctx, tx, t.UserID, string(hash)); err != nil {
+			return fmt.Errorf("failed to update password hash: %w", err)
+		}
+
+		if err := s.refreshTokens.DeleteAllForUser(ctx, tx, t.UserID); err != nil {
+			return fmt.Errorf("failed to delete refresh tokens for user: %w", err)
+		}
+
+		if err := s.passwordTokens.MarkUsed(ctx, tx, tokenHash); err != nil {
+			return fmt.Errorf("failed to mark password reset token as used: %w", err)
+		}
+
+		return nil
+	})
+}
+
 // ChangePassword updates the authenticated user's password after re-checking the old credentials.
 //
 // It returns the following domain errors:
@@ -470,6 +596,10 @@ func (s *Service) ChangePassword(ctx context.Context, userID uuid.UUID, oldEmail
 
 	if err := s.users.UpdatePasswordHash(ctx, s.db, userID, string(hash)); err != nil {
 		return fmt.Errorf("failed to update password hash: %w", err)
+	}
+
+	if err := s.refreshTokens.DeleteAllForUser(ctx, s.db, userID); err != nil {
+		return fmt.Errorf("failed to delete refresh tokens for user: %w", err)
 	}
 
 	return nil

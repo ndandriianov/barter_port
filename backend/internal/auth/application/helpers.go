@@ -24,12 +24,16 @@ func sha256Hex(s string) string {
 	return hex.EncodeToString(h[:])
 }
 
-func getHashFromRawToken(rawToken string) (string, error) {
+func getHashFromRawTokenWithError(rawToken string, emptyErr error) (string, error) {
 	trimmedToken := strings.TrimSpace(rawToken)
 	if trimmedToken == "" {
-		return "", domain.ErrInvalidEmailToken
+		return "", emptyErr
 	}
 	return sha256Hex(rawToken), nil
+}
+
+func getHashFromRawToken(rawToken string) (string, error) {
+	return getHashFromRawTokenWithError(rawToken, domain.ErrInvalidEmailToken)
 }
 
 func getHashFromToken(token string) string {
@@ -57,13 +61,27 @@ func (s *Service) validatePassword(password string) error {
 // --- EMAIL VERIFICATION ---
 
 func (s *Service) getVerifyURL(token string) string {
-	return s.frontendBaseURL + tokenUrlPath + token
+	return s.frontendBaseURL + verifyEmailTokenURLPath + token
 }
 
-func (s *Service) getEmailBody(token string) string {
+func (s *Service) getVerifyEmailBody(token string) string {
 	body := "Hello!\n\n" +
 		"Please confirm your email by clicking the link:\n\n" +
 		s.getVerifyURL(token) + "\n\n" +
 		"If you didn't register, ignore this email."
+	return body
+}
+
+// --- PASSWORD RESET ---
+
+func (s *Service) getPasswordResetURL(token string) string {
+	return s.frontendBaseURL + passwordResetTokenURLPath + token
+}
+
+func (s *Service) getPasswordResetEmailBody(token string) string {
+	body := "Hello!\n\n" +
+		"To reset your password, click the link below:\n\n" +
+		s.getPasswordResetURL(token) + "\n\n" +
+		"If you didn't request a password reset, ignore this email."
 	return body
 }

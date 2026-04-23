@@ -5,11 +5,348 @@
             "description": "",
             "item": [
                 {
+                    "name": "change-password",
+                    "description": "",
+                    "item": [
+                        {
+                            "id": "91449b06-cd55-489b-b528-60c75f99d989",
+                            "name": "Change password",
+                            "request": {
+                                "name": "Change password",
+                                "description": {
+                                    "content": "Changes the authenticated user's password after verifying old credentials",
+                                    "type": "text/plain"
+                                },
+                                "url": {
+                                    "path": [
+                                        "auth",
+                                        "change-password"
+                                    ],
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "query": [],
+                                    "variable": []
+                                },
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "method": "POST",
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"newPassword\": \"<string>\",\n  \"oldEmail\": \"<string>\",\n  \"oldPassword\": \"<string>\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "headerFamily": "json",
+                                            "language": "json"
+                                        }
+                                    }
+                                },
+                                "auth": {
+                                    "type": "apikey",
+                                    "apikey": [
+                                        {
+                                            "key": "key",
+                                            "value": "Authorization"
+                                        },
+                                        {
+                                            "key": "value",
+                                            "value": "{{apiKey}}"
+                                        },
+                                        {
+                                            "key": "in",
+                                            "value": "header"
+                                        }
+                                    ]
+                                }
+                            },
+                            "response": [
+                                {
+                                    "id": "d6a7e5d8-3c1b-442a-9641-df192125fd15",
+                                    "name": "Password changed successfully",
+                                    "originalRequest": {
+                                        "url": {
+                                            "path": [
+                                                "auth",
+                                                "change-password"
+                                            ],
+                                            "host": [
+                                                "{{baseUrl}}"
+                                            ],
+                                            "query": [],
+                                            "variable": []
+                                        },
+                                        "header": [
+                                            {
+                                                "key": "Content-Type",
+                                                "value": "application/json"
+                                            },
+                                            {
+                                                "description": {
+                                                    "content": "Added as a part of security scheme: apikey",
+                                                    "type": "text/plain"
+                                                },
+                                                "key": "Authorization",
+                                                "value": "<API Key>"
+                                            }
+                                        ],
+                                        "method": "POST",
+                                        "body": {
+                                            "mode": "raw",
+                                            "raw": "{\n  \"newPassword\": \"<string>\",\n  \"oldEmail\": \"<string>\",\n  \"oldPassword\": \"<string>\"\n}",
+                                            "options": {
+                                                "raw": {
+                                                    "headerFamily": "json",
+                                                    "language": "json"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "status": "OK",
+                                    "code": 200,
+                                    "header": [],
+                                    "cookie": [],
+                                    "_postman_previewlanguage": "text"
+                                },
+                                {
+                                    "id": "1a42c9c5-8065-44ac-8604-3f84ee1bf81b",
+                                    "name": "New password validation failed",
+                                    "originalRequest": {
+                                        "url": {
+                                            "path": [
+                                                "auth",
+                                                "change-password"
+                                            ],
+                                            "host": [
+                                                "{{baseUrl}}"
+                                            ],
+                                            "query": [],
+                                            "variable": []
+                                        },
+                                        "header": [
+                                            {
+                                                "key": "Content-Type",
+                                                "value": "application/json"
+                                            },
+                                            {
+                                                "key": "Accept",
+                                                "value": "application/json"
+                                            },
+                                            {
+                                                "description": {
+                                                    "content": "Added as a part of security scheme: apikey",
+                                                    "type": "text/plain"
+                                                },
+                                                "key": "Authorization",
+                                                "value": "<API Key>"
+                                            }
+                                        ],
+                                        "method": "POST",
+                                        "body": {
+                                            "mode": "raw",
+                                            "raw": "{\n  \"newPassword\": \"<string>\",\n  \"oldEmail\": \"<string>\",\n  \"oldPassword\": \"<string>\"\n}",
+                                            "options": {
+                                                "raw": {
+                                                    "headerFamily": "json",
+                                                    "language": "json"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "status": "Bad Request",
+                                    "code": 400,
+                                    "header": [
+                                        {
+                                            "key": "Content-Type",
+                                            "value": "application/json"
+                                        }
+                                    ],
+                                    "body": "{\n  \"message\": \"<string>\"\n}",
+                                    "cookie": [],
+                                    "_postman_previewlanguage": "json"
+                                },
+                                {
+                                    "id": "f06829a2-d5e4-4063-94f5-8eb515417540",
+                                    "name": "Old credentials are invalid or missing",
+                                    "originalRequest": {
+                                        "url": {
+                                            "path": [
+                                                "auth",
+                                                "change-password"
+                                            ],
+                                            "host": [
+                                                "{{baseUrl}}"
+                                            ],
+                                            "query": [],
+                                            "variable": []
+                                        },
+                                        "header": [
+                                            {
+                                                "key": "Content-Type",
+                                                "value": "application/json"
+                                            },
+                                            {
+                                                "key": "Accept",
+                                                "value": "application/json"
+                                            },
+                                            {
+                                                "description": {
+                                                    "content": "Added as a part of security scheme: apikey",
+                                                    "type": "text/plain"
+                                                },
+                                                "key": "Authorization",
+                                                "value": "<API Key>"
+                                            }
+                                        ],
+                                        "method": "POST",
+                                        "body": {
+                                            "mode": "raw",
+                                            "raw": "{\n  \"newPassword\": \"<string>\",\n  \"oldEmail\": \"<string>\",\n  \"oldPassword\": \"<string>\"\n}",
+                                            "options": {
+                                                "raw": {
+                                                    "headerFamily": "json",
+                                                    "language": "json"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "status": "Forbidden",
+                                    "code": 403,
+                                    "header": [
+                                        {
+                                            "key": "Content-Type",
+                                            "value": "application/json"
+                                        }
+                                    ],
+                                    "body": "{\n  \"message\": \"<string>\"\n}",
+                                    "cookie": [],
+                                    "_postman_previewlanguage": "json"
+                                },
+                                {
+                                    "id": "0e8afdc8-9f68-4325-8d8f-ab09de1fd340",
+                                    "name": "User not found",
+                                    "originalRequest": {
+                                        "url": {
+                                            "path": [
+                                                "auth",
+                                                "change-password"
+                                            ],
+                                            "host": [
+                                                "{{baseUrl}}"
+                                            ],
+                                            "query": [],
+                                            "variable": []
+                                        },
+                                        "header": [
+                                            {
+                                                "key": "Content-Type",
+                                                "value": "application/json"
+                                            },
+                                            {
+                                                "key": "Accept",
+                                                "value": "application/json"
+                                            },
+                                            {
+                                                "description": {
+                                                    "content": "Added as a part of security scheme: apikey",
+                                                    "type": "text/plain"
+                                                },
+                                                "key": "Authorization",
+                                                "value": "<API Key>"
+                                            }
+                                        ],
+                                        "method": "POST",
+                                        "body": {
+                                            "mode": "raw",
+                                            "raw": "{\n  \"newPassword\": \"<string>\",\n  \"oldEmail\": \"<string>\",\n  \"oldPassword\": \"<string>\"\n}",
+                                            "options": {
+                                                "raw": {
+                                                    "headerFamily": "json",
+                                                    "language": "json"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "status": "Not Found",
+                                    "code": 404,
+                                    "header": [
+                                        {
+                                            "key": "Content-Type",
+                                            "value": "application/json"
+                                        }
+                                    ],
+                                    "body": "{\n  \"message\": \"<string>\"\n}",
+                                    "cookie": [],
+                                    "_postman_previewlanguage": "json"
+                                },
+                                {
+                                    "id": "fa128fa1-26a7-4e05-bb71-69b5895f1f72",
+                                    "name": "Internal server error",
+                                    "originalRequest": {
+                                        "url": {
+                                            "path": [
+                                                "auth",
+                                                "change-password"
+                                            ],
+                                            "host": [
+                                                "{{baseUrl}}"
+                                            ],
+                                            "query": [],
+                                            "variable": []
+                                        },
+                                        "header": [
+                                            {
+                                                "key": "Content-Type",
+                                                "value": "application/json"
+                                            },
+                                            {
+                                                "description": {
+                                                    "content": "Added as a part of security scheme: apikey",
+                                                    "type": "text/plain"
+                                                },
+                                                "key": "Authorization",
+                                                "value": "<API Key>"
+                                            }
+                                        ],
+                                        "method": "POST",
+                                        "body": {
+                                            "mode": "raw",
+                                            "raw": "{\n  \"newPassword\": \"<string>\",\n  \"oldEmail\": \"<string>\",\n  \"oldPassword\": \"<string>\"\n}",
+                                            "options": {
+                                                "raw": {
+                                                    "headerFamily": "json",
+                                                    "language": "json"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "status": "Internal Server Error",
+                                    "code": 500,
+                                    "header": [],
+                                    "cookie": [],
+                                    "_postman_previewlanguage": "text"
+                                }
+                            ],
+                            "event": [],
+                            "protocolProfileBehavior": {
+                                "disableBodyPruning": true
+                            }
+                        }
+                    ]
+                },
+                {
                     "name": "login",
                     "description": "",
                     "item": [
                         {
-                            "id": "b629d856-63e3-4d12-9792-d878c4dc1a74",
+                            "id": "ed89b206-7195-4833-9022-5e4422b4f492",
                             "name": "Login user",
                             "request": {
                                 "name": "Login user",
@@ -53,7 +390,7 @@
                             },
                             "response": [
                                 {
-                                    "id": "d240d141-5330-4ee5-a300-21252d03ae2a",
+                                    "id": "57668335-3892-4599-a2c7-4f942a63bb26",
                                     "name": "OK",
                                     "originalRequest": {
                                         "url": {
@@ -102,7 +439,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "9698f880-54e5-4431-937a-2e025c402a8e",
+                                    "id": "373fc430-51cc-4af6-acd0-a4eb0db410f5",
                                     "name": "Invalid request or credentialsReq",
                                     "originalRequest": {
                                         "url": {
@@ -151,7 +488,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "3bba9311-7722-4145-b347-076a4bb09046",
+                                    "id": "1dbf2ccf-2e44-4001-9014-142d79126b31",
                                     "name": "Incorrect password",
                                     "originalRequest": {
                                         "url": {
@@ -200,7 +537,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "62b8b627-a018-4f56-9b0e-c4f83c56576d",
+                                    "id": "fc401602-86f0-420d-8091-e12264338163",
                                     "name": "Email not verified",
                                     "originalRequest": {
                                         "url": {
@@ -249,7 +586,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "84fee982-cc99-4f34-b894-bf32333b028c",
+                                    "id": "f007485b-8694-4a85-bdaf-bae3d438eaa9",
                                     "name": "Internal server error",
                                     "originalRequest": {
                                         "url": {
@@ -300,7 +637,7 @@
                     "description": "",
                     "item": [
                         {
-                            "id": "a30d30b3-7374-40c6-8b75-0451240c0d2c",
+                            "id": "83508650-5590-4ff6-9a8f-bc81abe1a966",
                             "name": "Logout user",
                             "request": {
                                 "name": "Logout user",
@@ -325,7 +662,7 @@
                             },
                             "response": [
                                 {
-                                    "id": "6f9f5688-932d-42ca-85e5-7c3a65fdf19a",
+                                    "id": "bda778cc-a90e-498e-9321-accc246cd5bd",
                                     "name": "Logout successful",
                                     "originalRequest": {
                                         "url": {
@@ -349,7 +686,7 @@
                                     "_postman_previewlanguage": "text"
                                 },
                                 {
-                                    "id": "c0d80071-6c98-4410-aa8c-56bd7dfe4c57",
+                                    "id": "ab2b43d3-e0cb-4288-bb34-35b7ef620a67",
                                     "name": "Internal server error",
                                     "originalRequest": {
                                         "url": {
@@ -385,7 +722,7 @@
                     "description": "",
                     "item": [
                         {
-                            "id": "3f0c234f-0ed7-4bc8-84a5-2daf439a597e",
+                            "id": "9a65ce14-6375-43f9-a270-4d6842b10a7a",
                             "name": "Get user info",
                             "request": {
                                 "name": "Get user info",
@@ -432,7 +769,7 @@
                             },
                             "response": [
                                 {
-                                    "id": "2724154b-4bff-4523-95ab-f3a2b9655498",
+                                    "id": "27452c84-0461-44c1-81ed-fc739d2bdbb2",
                                     "name": "OK",
                                     "originalRequest": {
                                         "url": {
@@ -476,7 +813,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "a4a8cafe-0e84-49bd-b5fa-fdc20ab19fa3",
+                                    "id": "f22f2ca6-7022-479d-b086-72ed78cfab42",
                                     "name": "Internal server error",
                                     "originalRequest": {
                                         "url": {
@@ -522,7 +859,7 @@
                     "description": "",
                     "item": [
                         {
-                            "id": "1a337234-d522-4d89-85eb-2921a7a9bd01",
+                            "id": "92ff2483-cb8b-4648-9a12-44822cf18e1b",
                             "name": "Refresh tokens",
                             "request": {
                                 "name": "Refresh tokens",
@@ -562,7 +899,7 @@
                             },
                             "response": [
                                 {
-                                    "id": "a9752e69-4ffc-4c00-8732-fb36810e18d2",
+                                    "id": "dbacdeb9-069f-4f2a-bb8e-fe5ac7e47b20",
                                     "name": "OK",
                                     "originalRequest": {
                                         "url": {
@@ -607,7 +944,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "b0b13dc6-4ced-4b49-9f81-735e72dbad4e",
+                                    "id": "5e845ebb-5e75-46ff-a2ec-08be35d6b1f7",
                                     "name": "Unauthorized or invalid token",
                                     "originalRequest": {
                                         "url": {
@@ -652,7 +989,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "d6999326-a027-400f-b430-766c7e32fcc6",
+                                    "id": "aff2daba-0398-4c35-9b92-a2103a9ed285",
                                     "name": "Internal server error",
                                     "originalRequest": {
                                         "url": {
@@ -699,7 +1036,7 @@
                     "description": "",
                     "item": [
                         {
-                            "id": "3e91fa76-7edc-4fd8-9261-f2d645685fe6",
+                            "id": "bbc24bed-2592-4b8c-b671-6413e60a952b",
                             "name": "Register a new user",
                             "request": {
                                 "name": "Register a new user",
@@ -743,7 +1080,7 @@
                             },
                             "response": [
                                 {
-                                    "id": "baf7df62-9f46-47db-9bd5-b1625d53f161",
+                                    "id": "b0f662f0-ba69-4bc3-a975-1fd99b3920b8",
                                     "name": "OK",
                                     "originalRequest": {
                                         "url": {
@@ -792,7 +1129,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "5a603fe8-8a6f-4ffb-af6b-77e9d070902f",
+                                    "id": "3fb27802-fcd7-42e9-8bf3-90c700d09819",
                                     "name": "Invalid request",
                                     "originalRequest": {
                                         "url": {
@@ -841,7 +1178,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "a285b964-a40a-47ad-96e4-07eb9c7a390a",
+                                    "id": "1cdf9140-2a22-43e1-a148-2e68902735f7",
                                     "name": "Internal server error",
                                     "originalRequest": {
                                         "url": {
@@ -888,11 +1225,426 @@
                     ]
                 },
                 {
+                    "name": "request-password-reset",
+                    "description": "",
+                    "item": [
+                        {
+                            "id": "252c878a-0b7b-47b4-a9dc-ed7ab8634c8b",
+                            "name": "Request password reset",
+                            "request": {
+                                "name": "Request password reset",
+                                "description": {
+                                    "content": "Sends a password reset link to the user's email if the account exists",
+                                    "type": "text/plain"
+                                },
+                                "url": {
+                                    "path": [
+                                        "auth",
+                                        "request-password-reset"
+                                    ],
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "query": [],
+                                    "variable": []
+                                },
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "method": "POST",
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"email\": \"<string>\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "headerFamily": "json",
+                                            "language": "json"
+                                        }
+                                    }
+                                },
+                                "auth": null
+                            },
+                            "response": [
+                                {
+                                    "id": "efc94b0f-6419-4678-a32c-b0d200d9b4ef",
+                                    "name": "Password reset email sent successfully",
+                                    "originalRequest": {
+                                        "url": {
+                                            "path": [
+                                                "auth",
+                                                "request-password-reset"
+                                            ],
+                                            "host": [
+                                                "{{baseUrl}}"
+                                            ],
+                                            "query": [],
+                                            "variable": []
+                                        },
+                                        "header": [
+                                            {
+                                                "key": "Content-Type",
+                                                "value": "application/json"
+                                            }
+                                        ],
+                                        "method": "POST",
+                                        "body": {
+                                            "mode": "raw",
+                                            "raw": "{\n  \"email\": \"<string>\"\n}",
+                                            "options": {
+                                                "raw": {
+                                                    "headerFamily": "json",
+                                                    "language": "json"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "status": "OK",
+                                    "code": 200,
+                                    "header": [],
+                                    "cookie": [],
+                                    "_postman_previewlanguage": "text"
+                                },
+                                {
+                                    "id": "3edd7599-e53d-4298-8d9c-80b12d9f5f1e",
+                                    "name": "Invalid request or email",
+                                    "originalRequest": {
+                                        "url": {
+                                            "path": [
+                                                "auth",
+                                                "request-password-reset"
+                                            ],
+                                            "host": [
+                                                "{{baseUrl}}"
+                                            ],
+                                            "query": [],
+                                            "variable": []
+                                        },
+                                        "header": [
+                                            {
+                                                "key": "Content-Type",
+                                                "value": "application/json"
+                                            },
+                                            {
+                                                "key": "Accept",
+                                                "value": "application/json"
+                                            }
+                                        ],
+                                        "method": "POST",
+                                        "body": {
+                                            "mode": "raw",
+                                            "raw": "{\n  \"email\": \"<string>\"\n}",
+                                            "options": {
+                                                "raw": {
+                                                    "headerFamily": "json",
+                                                    "language": "json"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "status": "Bad Request",
+                                    "code": 400,
+                                    "header": [
+                                        {
+                                            "key": "Content-Type",
+                                            "value": "application/json"
+                                        }
+                                    ],
+                                    "body": "{\n  \"message\": \"<string>\"\n}",
+                                    "cookie": [],
+                                    "_postman_previewlanguage": "json"
+                                },
+                                {
+                                    "id": "b3f1c08d-a641-41a0-9d94-366aa7a63c8f",
+                                    "name": "Internal server error",
+                                    "originalRequest": {
+                                        "url": {
+                                            "path": [
+                                                "auth",
+                                                "request-password-reset"
+                                            ],
+                                            "host": [
+                                                "{{baseUrl}}"
+                                            ],
+                                            "query": [],
+                                            "variable": []
+                                        },
+                                        "header": [
+                                            {
+                                                "key": "Content-Type",
+                                                "value": "application/json"
+                                            }
+                                        ],
+                                        "method": "POST",
+                                        "body": {
+                                            "mode": "raw",
+                                            "raw": "{\n  \"email\": \"<string>\"\n}",
+                                            "options": {
+                                                "raw": {
+                                                    "headerFamily": "json",
+                                                    "language": "json"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "status": "Internal Server Error",
+                                    "code": 500,
+                                    "header": [],
+                                    "cookie": [],
+                                    "_postman_previewlanguage": "text"
+                                }
+                            ],
+                            "event": [],
+                            "protocolProfileBehavior": {
+                                "disableBodyPruning": true
+                            }
+                        }
+                    ]
+                },
+                {
+                    "name": "reset-password",
+                    "description": "",
+                    "item": [
+                        {
+                            "id": "f2709331-0736-4990-9d11-ce1f33ee8f9a",
+                            "name": "Reset password",
+                            "request": {
+                                "name": "Reset password",
+                                "description": {
+                                    "content": "Sets a new password using a password reset token",
+                                    "type": "text/plain"
+                                },
+                                "url": {
+                                    "path": [
+                                        "auth",
+                                        "reset-password"
+                                    ],
+                                    "host": [
+                                        "{{baseUrl}}"
+                                    ],
+                                    "query": [],
+                                    "variable": []
+                                },
+                                "header": [
+                                    {
+                                        "key": "Content-Type",
+                                        "value": "application/json"
+                                    },
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "method": "POST",
+                                "body": {
+                                    "mode": "raw",
+                                    "raw": "{\n  \"newPassword\": \"<string>\",\n  \"token\": \"<string>\"\n}",
+                                    "options": {
+                                        "raw": {
+                                            "headerFamily": "json",
+                                            "language": "json"
+                                        }
+                                    }
+                                },
+                                "auth": null
+                            },
+                            "response": [
+                                {
+                                    "id": "1eef9bdf-2c05-4a71-b32f-df6626322602",
+                                    "name": "Password reset successfully",
+                                    "originalRequest": {
+                                        "url": {
+                                            "path": [
+                                                "auth",
+                                                "reset-password"
+                                            ],
+                                            "host": [
+                                                "{{baseUrl}}"
+                                            ],
+                                            "query": [],
+                                            "variable": []
+                                        },
+                                        "header": [
+                                            {
+                                                "key": "Content-Type",
+                                                "value": "application/json"
+                                            }
+                                        ],
+                                        "method": "POST",
+                                        "body": {
+                                            "mode": "raw",
+                                            "raw": "{\n  \"newPassword\": \"<string>\",\n  \"token\": \"<string>\"\n}",
+                                            "options": {
+                                                "raw": {
+                                                    "headerFamily": "json",
+                                                    "language": "json"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "status": "OK",
+                                    "code": 200,
+                                    "header": [],
+                                    "cookie": [],
+                                    "_postman_previewlanguage": "text"
+                                },
+                                {
+                                    "id": "7391c9e9-54f3-4b8e-8e2f-fe9905a0ab5b",
+                                    "name": "Invalid request, token or password",
+                                    "originalRequest": {
+                                        "url": {
+                                            "path": [
+                                                "auth",
+                                                "reset-password"
+                                            ],
+                                            "host": [
+                                                "{{baseUrl}}"
+                                            ],
+                                            "query": [],
+                                            "variable": []
+                                        },
+                                        "header": [
+                                            {
+                                                "key": "Content-Type",
+                                                "value": "application/json"
+                                            },
+                                            {
+                                                "key": "Accept",
+                                                "value": "application/json"
+                                            }
+                                        ],
+                                        "method": "POST",
+                                        "body": {
+                                            "mode": "raw",
+                                            "raw": "{\n  \"newPassword\": \"<string>\",\n  \"token\": \"<string>\"\n}",
+                                            "options": {
+                                                "raw": {
+                                                    "headerFamily": "json",
+                                                    "language": "json"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "status": "Bad Request",
+                                    "code": 400,
+                                    "header": [
+                                        {
+                                            "key": "Content-Type",
+                                            "value": "application/json"
+                                        }
+                                    ],
+                                    "body": "{\n  \"message\": \"<string>\"\n}",
+                                    "cookie": [],
+                                    "_postman_previewlanguage": "json"
+                                },
+                                {
+                                    "id": "835b170a-3183-4895-ae01-0bc2171cdaf4",
+                                    "name": "User not found",
+                                    "originalRequest": {
+                                        "url": {
+                                            "path": [
+                                                "auth",
+                                                "reset-password"
+                                            ],
+                                            "host": [
+                                                "{{baseUrl}}"
+                                            ],
+                                            "query": [],
+                                            "variable": []
+                                        },
+                                        "header": [
+                                            {
+                                                "key": "Content-Type",
+                                                "value": "application/json"
+                                            },
+                                            {
+                                                "key": "Accept",
+                                                "value": "application/json"
+                                            }
+                                        ],
+                                        "method": "POST",
+                                        "body": {
+                                            "mode": "raw",
+                                            "raw": "{\n  \"newPassword\": \"<string>\",\n  \"token\": \"<string>\"\n}",
+                                            "options": {
+                                                "raw": {
+                                                    "headerFamily": "json",
+                                                    "language": "json"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "status": "Not Found",
+                                    "code": 404,
+                                    "header": [
+                                        {
+                                            "key": "Content-Type",
+                                            "value": "application/json"
+                                        }
+                                    ],
+                                    "body": "{\n  \"message\": \"<string>\"\n}",
+                                    "cookie": [],
+                                    "_postman_previewlanguage": "json"
+                                },
+                                {
+                                    "id": "f1ef3de1-06e5-4d6c-a7c4-7ce324974e6a",
+                                    "name": "Internal server error",
+                                    "originalRequest": {
+                                        "url": {
+                                            "path": [
+                                                "auth",
+                                                "reset-password"
+                                            ],
+                                            "host": [
+                                                "{{baseUrl}}"
+                                            ],
+                                            "query": [],
+                                            "variable": []
+                                        },
+                                        "header": [
+                                            {
+                                                "key": "Content-Type",
+                                                "value": "application/json"
+                                            }
+                                        ],
+                                        "method": "POST",
+                                        "body": {
+                                            "mode": "raw",
+                                            "raw": "{\n  \"newPassword\": \"<string>\",\n  \"token\": \"<string>\"\n}",
+                                            "options": {
+                                                "raw": {
+                                                    "headerFamily": "json",
+                                                    "language": "json"
+                                                }
+                                            }
+                                        }
+                                    },
+                                    "status": "Internal Server Error",
+                                    "code": 500,
+                                    "header": [],
+                                    "cookie": [],
+                                    "_postman_previewlanguage": "text"
+                                }
+                            ],
+                            "event": [],
+                            "protocolProfileBehavior": {
+                                "disableBodyPruning": true
+                            }
+                        }
+                    ]
+                },
+                {
                     "name": "retry-send-verification-email",
                     "description": "",
                     "item": [
                         {
-                            "id": "ed1eb643-cfd6-4649-bd6f-a6bd9b957254",
+                            "id": "d06da887-9e10-42aa-b506-df6c6687ec9a",
                             "name": "Retry sending verification email",
                             "request": {
                                 "name": "Retry sending verification email",
@@ -936,7 +1688,7 @@
                             },
                             "response": [
                                 {
-                                    "id": "ced32730-317e-4796-a36e-3203624f1285",
+                                    "id": "810424a7-fd2e-46bf-8b8e-f884533a40da",
                                     "name": "Verification email sent successfully",
                                     "originalRequest": {
                                         "url": {
@@ -975,7 +1727,7 @@
                                     "_postman_previewlanguage": "text"
                                 },
                                 {
-                                    "id": "c15b0d74-21fe-4a74-bebb-3e03c38a1a04",
+                                    "id": "c9077fc8-3bf5-4dcb-ab5b-a95d9039be33",
                                     "name": "Invalid request",
                                     "originalRequest": {
                                         "url": {
@@ -1024,7 +1776,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "fcd0f0d2-1b78-41db-b4f8-5b300914dedf",
+                                    "id": "43131c9e-bde9-45b6-9581-e7b25292732c",
                                     "name": "Unauthorized",
                                     "originalRequest": {
                                         "url": {
@@ -1073,7 +1825,7 @@
                                     "_postman_previewlanguage": "json"
                                 },
                                 {
-                                    "id": "6714efc3-a5b2-4e93-bcc5-2098a8adaae5",
+                                    "id": "ea51ae3c-fb5c-4203-9ed0-5302cd8a00fa",
                                     "name": "Internal server error",
                                     "originalRequest": {
                                         "url": {
@@ -1128,7 +1880,7 @@
                             "description": "",
                             "item": [
                                 {
-                                    "id": "9e12a506-8d03-4158-b49b-2726a621d69c",
+                                    "id": "521c0ad9-57c9-4c52-8ba4-0c9f30de94eb",
                                     "name": "Get user creation status",
                                     "request": {
                                         "name": "Get user creation status",
@@ -1171,7 +1923,7 @@
                                     },
                                     "response": [
                                         {
-                                            "id": "de34ee3c-9cc8-4bca-96ed-8229711cb906",
+                                            "id": "2282f86d-6732-4058-8731-35b9562593f7",
                                             "name": "OK",
                                             "originalRequest": {
                                                 "url": {
@@ -1219,7 +1971,7 @@
                                             "_postman_previewlanguage": "json"
                                         },
                                         {
-                                            "id": "b72e8151-5fa6-4312-bc25-ed54460fa699",
+                                            "id": "25ff47b9-e608-4b31-a2b9-84a93d3b5d53",
                                             "name": "Invalid user ID",
                                             "originalRequest": {
                                                 "url": {
@@ -1267,7 +2019,7 @@
                                             "_postman_previewlanguage": "json"
                                         },
                                         {
-                                            "id": "4ed593ee-9f76-4ac4-8861-0c971e81de9b",
+                                            "id": "593662ab-9c8e-41de-a0ea-5e6a49fd3a51",
                                             "name": "User creation event not found",
                                             "originalRequest": {
                                                 "url": {
@@ -1315,7 +2067,7 @@
                                             "_postman_previewlanguage": "json"
                                         },
                                         {
-                                            "id": "a0328f9b-16fe-4bbd-a48b-d413d4bb0290",
+                                            "id": "86e9fdbb-f181-4c10-bd45-8a87700a534a",
                                             "name": "Internal server error",
                                             "originalRequest": {
                                                 "url": {
@@ -1365,7 +2117,7 @@
                     "description": "",
                     "item": [
                         {
-                            "id": "e8259c5e-fb57-4c0f-8757-3a935a87b08f",
+                            "id": "020e5e56-6751-4b9f-90bb-1953311d987f",
                             "name": "Verify email",
                             "request": {
                                 "name": "Verify email",
@@ -1409,7 +2161,7 @@
                             },
                             "response": [
                                 {
-                                    "id": "9824617d-9a11-45cf-ad38-6170ef679ed9",
+                                    "id": "d7f7be36-cc03-471b-ac32-06c0675cecf1",
                                     "name": "status: ok",
                                     "originalRequest": {
                                         "url": {
@@ -1448,7 +2200,7 @@
                                     "_postman_previewlanguage": "text"
                                 },
                                 {
-                                    "id": "3691d07d-7f8f-4c4d-a1e6-401c5d742ac6",
+                                    "id": "a0c47363-8b97-4499-8422-82297e227e5e",
                                     "name": "Invalid request or token",
                                     "originalRequest": {
                                         "url": {
@@ -1497,7 +2249,7 @@
                                     "_postman_previewlanguage": "text"
                                 },
                                 {
-                                    "id": "97314ce0-e3ef-4d52-a062-d96565249d4d",
+                                    "id": "192437b4-13af-473c-886c-0482252d739f",
                                     "name": "User not found",
                                     "originalRequest": {
                                         "url": {
@@ -1546,7 +2298,7 @@
                                     "_postman_previewlanguage": "text"
                                 },
                                 {
-                                    "id": "2af2aed3-95f2-49f6-b74d-581a562b1a68",
+                                    "id": "bab9d925-ea38-4c5e-8fe0-cd47820bdcf3",
                                     "name": "Internal server error",
                                     "originalRequest": {
                                         "url": {
@@ -1603,7 +2355,7 @@
         }
     ],
     "info": {
-        "_postman_id": "51072975-a3c2-4912-b7c3-f1091a1051b6",
+        "_postman_id": "2894b357-aada-4cee-9c82-3a56a1085b20",
         "name": "Barter Port API",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
         "description": {

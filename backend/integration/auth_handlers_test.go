@@ -32,6 +32,15 @@ type changePasswordRequest struct {
 	NewPassword string `json:"newPassword"`
 }
 
+type requestPasswordResetRequest struct {
+	Email string `json:"email"`
+}
+
+type resetPasswordRequest struct {
+	Token       string `json:"token"`
+	NewPassword string `json:"newPassword"`
+}
+
 type authMeResponse struct {
 	UserID uuid.UUID `json:"userId"`
 }
@@ -405,6 +414,86 @@ func TestAuthChangePasswordShortNewPassword(t *testing.T) {
 	require.Equal(t, http.StatusOK, loginResp.StatusCode)
 }
 
+func TestAuthRequestPasswordResetSuccess(t *testing.T) {
+	t.Parallel()
+	dumpAuthLogs(t)
+
+	email := uniqueEmail("password-reset")
+	mustRegister(t, email, "password123")
+
+	resp := requestPasswordReset(t, requestPasswordResetRequest{Email: email}, http.StatusOK)
+	defer func() { _ = resp.Body.Close() }()
+
+	pool := OpenDatabase(t, globalFixture, AuthDBName)
+	var tokenCount int
+	err := pool.QueryRow(
+		globalFixture.Ctx,
+		`SELECT COUNT(*)
+		 FROM password_reset_tokens prt
+		 JOIN users u ON u.id = prt.user_id
+		 WHERE u.email = $1`,
+		email,
+	).Scan(&tokenCount)
+	require.NoError(t, err)
+	require.Equal(t, 1, tokenCount)
+
+	resp = requestPasswordReset(t, requestPasswordResetRequest{Email: email}, http.StatusOK)
+	defer func() { _ = resp.Body.Close() }()
+
+	err = pool.QueryRow(
+		globalFixture.Ctx,
+		`SELECT COUNT(*)
+		 FROM password_reset_tokens prt
+		 JOIN users u ON u.id = prt.user_id
+		 WHERE u.email = $1`,
+		email,
+	).Scan(&tokenCount)
+	require.NoError(t, err)
+	require.Equal(t, 1, tokenCount)
+}
+
+func TestAuthRequestPasswordResetInvalidEmail(t *testing.T) {
+	t.Parallel()
+	dumpAuthLogs(t)
+
+	resp := requestPasswordReset(t, requestPasswordResetRequest{Email: "not-an-email"}, http.StatusBadRequest)
+	defer func() { _ = resp.Body.Close() }()
+
+	var errResp httpx.ErrorResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&errResp))
+	require.Equal(t, "invalid email", *errResp.Message)
+}
+
+func TestAuthResetPasswordInvalidToken(t *testing.T) {
+	t.Parallel()
+	dumpAuthLogs(t)
+
+	resp := resetPasswordByToken(t, resetPasswordRequest{
+		Token:       "invalid-token",
+		NewPassword: "password456",
+	}, http.StatusBadRequest)
+	defer func() { _ = resp.Body.Close() }()
+
+	var errResp httpx.ErrorResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&errResp))
+	require.Equal(t, "invalid password reset token", *errResp.Message)
+}
+
+func TestAuthResetPasswordShortPassword(t *testing.T) {
+	t.Parallel()
+	dumpAuthLogs(t)
+
+	resp := resetPasswordByToken(t, resetPasswordRequest{
+		Token:       "invalid-token",
+		NewPassword: "123",
+	}, http.StatusBadRequest)
+	defer func() { _ = resp.Body.Close() }()
+
+	var errResp httpx.ErrorResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&errResp))
+	require.Equal(t, "password too short", *errResp.Message)
+}
+
 func TestAuthGetUserCreationStatus(t *testing.T) {
 	t.Parallel()
 	dumpAuthLogs(t)
@@ -502,6 +591,32 @@ func changePassword(t *testing.T, accessToken string, reqBody changePasswordRequ
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	require.Equal(t, expectedStatus, resp.StatusCode)
+
+	return resp
+}
+
+func requestPasswordReset(t *testing.T, reqBody requestPasswordResetRequest, expectedStatus int) *http.Response {
+	t.Helper()
+
+	payload, err := json.Marshal(reqBody)
+	require.NoError(t, err)
+
+	resp, err := http.Post(globalFixture.AuthURL+"/auth/request-password-reset", "application/json", bytes.NewReader(payload))
+	require.NoError(t, err)
+	require.Equal(t, expectedStatus, resp.StatusCode)
+
+	return resp
+}
+
+func resetPasswordByToken(t *testing.T, reqBody resetPasswordRequest, expectedStatus int) *http.Response {
+	t.Helper()
+
+	payload, err := json.Marshal(reqBody)
+	require.NoError(t, err)
+
+	resp, err := http.Post(globalFixture.AuthURL+"/auth/reset-password", "application/json", bytes.NewReader(payload))
 	require.NoError(t, err)
 	require.Equal(t, expectedStatus, resp.StatusCode)
 
