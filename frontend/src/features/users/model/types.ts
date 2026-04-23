@@ -10,6 +10,8 @@ export interface UpdateCurrentUserRequest {
   bio?: string;
   avatarUrl?: string;
   phoneNumber?: string;
+  currentLatitude?: number | null;
+  currentLongitude?: number | null;
 }
 
 export interface UploadCurrentUserAvatarResponse {

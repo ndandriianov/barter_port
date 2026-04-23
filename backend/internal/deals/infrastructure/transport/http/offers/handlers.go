@@ -83,7 +83,7 @@ func (h *Handlers) HandleCreateOffer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	offer, err := h.offerService.CreateOffer(r.Context(), userID, req.Name, itemType, action, req.Description, tags, photos)
+	offer, err := h.offerService.CreateOffer(r.Context(), userID, req.Name, itemType, action, req.Description, tags, photos, req.Latitude, req.Longitude)
 	if err != nil {
 		if errors.Is(err, domain.ErrInvalidOfferName) {
 			log.Warn("invalid offer name", slog.Any("error", err))
@@ -299,8 +299,9 @@ func (h *Handlers) HandleUpdateOffer(w http.ResponseWriter, r *http.Request) {
 	if r.MultipartForm != nil {
 		defer func() { _ = r.MultipartForm.RemoveAll() }()
 	}
+	hasLocationUpdate := req.Latitude != nil || req.Longitude != nil
 	if req.Name == nil && req.Description == nil && req.Type == nil && req.Action == nil && req.Tags == nil &&
-		(req.DeletePhotoIds == nil || len(*req.DeletePhotoIds) == 0) && len(photos) == 0 {
+		(req.DeletePhotoIds == nil || len(*req.DeletePhotoIds) == 0) && len(photos) == 0 && !hasLocationUpdate {
 		httpx.WriteEmptyError(w, http.StatusBadRequest)
 		return
 	}
@@ -339,6 +340,12 @@ func (h *Handlers) HandleUpdateOffer(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		patch.Action = &action
+	}
+
+	if hasLocationUpdate {
+		patch.UpdateLocation = true
+		patch.Latitude = req.Latitude
+		patch.Longitude = req.Longitude
 	}
 
 	offer, err := h.offerService.UpdateOffer(r.Context(), userID, offerID, patch, photos)

@@ -85,6 +85,10 @@ func (c *testUsersClient) ListSubscriptions(context.Context, *userspb.ListSubscr
 	return nil, errors.New("not implemented")
 }
 
+func (c *testUsersClient) GetUserLocation(context.Context, *userspb.GetUserLocationRequest, ...grpc.CallOption) (*userspb.GetUserLocationResponse, error) {
+	return nil, errors.New("not implemented")
+}
+
 func TestCreateChat_CheckSubscriptionSuccess(t *testing.T) {
 	requesterID := uuid.New()
 	targetID := uuid.New()

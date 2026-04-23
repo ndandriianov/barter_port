@@ -20,6 +20,8 @@ type UsersRepository interface {
 	UpdateBio(ctx context.Context, id uuid.UUID, bio *string) error
 	UpdateAvatarURL(ctx context.Context, id uuid.UUID, avatarURL *string) error
 	UpdatePhoneNumber(ctx context.Context, id uuid.UUID, phoneNumber *string) error
+	UpdateLocation(ctx context.Context, id uuid.UUID, latitude, longitude *float64) error
+	GetLocation(ctx context.Context, id uuid.UUID) (*float64, *float64, error)
 	GetNamesForUserIDs(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]*string, error)
 	ListUsers(ctx context.Context) ([]domain.User, error)
 	Subscribe(ctx context.Context, subscriberID, targetUserID uuid.UUID) error
@@ -46,6 +48,8 @@ type Me struct {
 	Bio              *string
 	AvatarURL        *string
 	PhoneNumber      *string
+	CurrentLatitude  *float64
+	CurrentLongitude *float64
 	Email            string
 	CreatedAt        time.Time
 	IsAdmin          bool
@@ -97,6 +101,8 @@ func (s *Service) GetMe(ctx context.Context, id uuid.UUID) (Me, error) {
 		Bio:              u.Bio,
 		AvatarURL:        u.AvatarURL,
 		PhoneNumber:      u.PhoneNumber,
+		CurrentLatitude:  u.CurrentLatitude,
+		CurrentLongitude: u.CurrentLongitude,
 		Email:            authMe.GetEmail(),
 		CreatedAt:        createdAt,
 		IsAdmin:          authMe.GetIsAdmin(),
@@ -196,6 +202,23 @@ func (s *Service) ListUsers(ctx context.Context) ([]domain.User, error) {
 		return nil, fmt.Errorf("repository.ListUsers: %w", err)
 	}
 	return users, nil
+}
+
+// UpdateLocation saves or clears the current geolocation of a user.
+// Pass nil for both lat and lon to clear the stored location.
+//
+// Errors:
+//   - domain.ErrUserNotFound: Occurs if no user is found with the given id.
+func (s *Service) UpdateLocation(ctx context.Context, id uuid.UUID, latitude, longitude *float64) error {
+	return s.repository.UpdateLocation(ctx, id, latitude, longitude)
+}
+
+// GetLocation returns the current geolocation of a user.
+//
+// Errors:
+//   - domain.ErrUserNotFound: Occurs if no user is found with the given id.
+func (s *Service) GetLocation(ctx context.Context, id uuid.UUID) (*float64, *float64, error) {
+	return s.repository.GetLocation(ctx, id)
 }
 
 func normalizeOptionalString(value *string) *string {

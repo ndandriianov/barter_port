@@ -197,6 +197,14 @@ function OfferCard({
           </Box>
         </Box>
 
+        {offer.distanceMeters != null && (
+          <Typography variant="caption" color="text.secondary" mt={0.5} display="block">
+            {offer.distanceMeters >= 1000
+              ? `${(offer.distanceMeters / 1000).toFixed(1)} км`
+              : `${offer.distanceMeters} м`} от вас
+          </Typography>
+        )}
+
         {(offerHref || (draftsHref && draftCount > 0)) && (
           <Box display="flex" gap={1} flexWrap="wrap" mt={2}>
             {offerHref && (

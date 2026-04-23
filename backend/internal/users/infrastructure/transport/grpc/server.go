@@ -126,6 +126,27 @@ func (s *Server) CheckSubscription(ctx context.Context, request *userspb.CheckSu
 	}, nil
 }
 
+func (s *Server) GetUserLocation(ctx context.Context, request *userspb.GetUserLocationRequest) (*userspb.GetUserLocationResponse, error) {
+	userID, err := uuid.Parse(request.GetUserId())
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse user id %s: %w", request.GetUserId(), err)
+	}
+
+	lat, lon, err := s.usersService.GetLocation(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user location: %w", err)
+	}
+
+	resp := &userspb.GetUserLocationResponse{}
+	if lat != nil {
+		resp.Latitude = lat
+	}
+	if lon != nil {
+		resp.Longitude = lon
+	}
+	return resp, nil
+}
+
 func (s *Server) ListSubscriptions(ctx context.Context, request *userspb.ListSubscriptionsRequest) (*userspb.ListSubscriptionsResponse, error) {
 	if request == nil {
 		return &userspb.ListSubscriptionsResponse{}, fmt.Errorf("request is nil")

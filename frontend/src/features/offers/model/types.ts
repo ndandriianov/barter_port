@@ -68,6 +68,8 @@ export interface CreateOfferRequest {
   type: OfferType;
   tags?: string[];
   photos?: File[];
+  latitude?: number;
+  longitude?: number;
 }
 
 export interface UpdateOfferRequest {
@@ -78,6 +80,8 @@ export interface UpdateOfferRequest {
   tags?: string[];
   photos?: File[];
   deletePhotoIds?: string[];
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 export interface CreateOfferReportRequest {

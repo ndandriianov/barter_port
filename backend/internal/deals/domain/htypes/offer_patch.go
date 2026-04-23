@@ -13,4 +13,8 @@ type OfferPatch struct {
 	Action         *enums.OfferAction
 	Tags           *[]string
 	DeletePhotoIds []uuid.UUID
+	// UpdateLocation=true means the location fields should be applied (even if both are nil = clear).
+	UpdateLocation bool
+	Latitude       *float64
+	Longitude      *float64
 }

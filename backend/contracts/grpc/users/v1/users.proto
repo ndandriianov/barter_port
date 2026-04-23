@@ -17,6 +17,8 @@ service UsersService {
     rpc CheckSubscription (CheckSubscriptionRequest) returns (CheckSubscriptionResponse);
 
     rpc ListSubscriptions (ListSubscriptionsRequest) returns (ListSubscriptionsResponse);
+
+    rpc GetUserLocation (GetUserLocationRequest) returns (GetUserLocationResponse);
 }
 
 // GetUsersWithInfo
@@ -67,4 +69,14 @@ message ListSubscriptionsRequest {
 
 message ListSubscriptionsResponse {
     repeated UserInfo subscriptions = 1;
+}
+
+// GetUserLocation
+message GetUserLocationRequest {
+    string user_id = 1;
+}
+
+message GetUserLocationResponse {
+    optional double latitude  = 1;
+    optional double longitude = 2;
 }

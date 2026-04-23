@@ -20,6 +20,9 @@ export const offerSchema = z.object({
   isHidden: z.boolean().nullish().transform((value) => value ?? false),
   isFavorite: z.boolean().nullish().transform((value) => value ?? false),
   modificationBlocked: z.boolean().nullish().transform((value) => value ?? false),
+  latitude: z.number().nullish().transform((v) => v ?? null),
+  longitude: z.number().nullish().transform((v) => v ?? null),
+  distanceMeters: z.number().int().nullish().transform((v) => v ?? null),
 });
 
 export const offerReportStatusSchema = z.enum(["Pending", "Accepted", "Rejected"]);

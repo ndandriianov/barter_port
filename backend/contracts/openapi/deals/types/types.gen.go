@@ -296,7 +296,15 @@ type CreateOfferRequest struct {
 	// Action Whether the user offers or requests something
 	Action      OfferAction `json:"action"`
 	Description string      `json:"description"`
-	Name        string      `json:"name"`
+
+	// Latitude Широта точки объявления.
+	// Должна передаваться вместе с `longitude`.
+	Latitude *Latitude `json:"latitude,omitempty"`
+
+	// Longitude Долгота точки объявления.
+	// Должна передаваться вместе с `latitude`.
+	Longitude *Longitude `json:"longitude,omitempty"`
+	Name      string     `json:"name"`
 
 	// Photos Необязательные фотографии объявления.
 	// Каждая фотография передается отдельным бинарным файлом в `multipart/form-data`.
@@ -454,6 +462,14 @@ type FavoritedOffer struct {
 	// Description Подробное описание объявления
 	Description string `json:"description"`
 
+	// DistanceMeters Расстояние по прямой от текущей точки пользователя до точки объявления, в метрах.
+	// Возвращается только если:
+	// - у текущего пользователя сохранены `currentLatitude` и `currentLongitude`;
+	// - у объявления указаны `latitude` и `longitude`;
+	// - объявление не принадлежит текущему пользователю.
+	// Иначе поле равно `null`.
+	DistanceMeters *int64 `json:"distanceMeters,omitempty"`
+
 	// FavoritedAt Временная метка добавления объявления в избранное
 	FavoritedAt time.Time `json:"favoritedAt"`
 
@@ -467,6 +483,16 @@ type FavoritedOffer struct {
 	// IsHidden Признак того, что объявление скрыто модератором.
 	// Скрытые объявления видны только автору объявления и администратору.
 	IsHidden *bool `json:"isHidden,omitempty"`
+
+	// Latitude Широта точки объявления.
+	// Поле присутствует в ответах с `offer` вне зависимости от того, кто вызвал GET.
+	// `null`, если автор не указал точку на карте.
+	Latitude *Latitude `json:"latitude,omitempty"`
+
+	// Longitude Долгота точки объявления.
+	// Поле присутствует в ответах с `offer` вне зависимости от того, кто вызвал GET.
+	// `null`, если автор не указал точку на карте.
+	Longitude *Longitude `json:"longitude,omitempty"`
 
 	// ModificationBlocked Признак того, что объявление временно заблокировано для редактирования из-за pending-жалобы.
 	ModificationBlocked *bool `json:"modificationBlocked,omitempty"`
@@ -620,6 +646,9 @@ type Item struct {
 // ItemType Type of barter item
 type ItemType string
 
+// Latitude Широта в градусах WGS84.
+type Latitude = float64
+
 // ListFavoriteOffersResponse defines model for ListFavoriteOffersResponse.
 type ListFavoriteOffersResponse struct {
 	// NextCursor Курсор для получения следующей страницы; `null`, если следующей страницы нет
@@ -646,6 +675,9 @@ type ListOffersResponse struct {
 
 // ListTagsResponse defines model for ListTagsResponse.
 type ListTagsResponse = []TagName
+
+// Longitude Долгота в градусах WGS84.
+type Longitude = float64
 
 // ModeratorResolutionForFailureRequest defines model for ModeratorResolutionForFailureRequest.
 type ModeratorResolutionForFailureRequest struct {
@@ -748,6 +780,14 @@ type Offer struct {
 	// Description Подробное описание объявления
 	Description string `json:"description"`
 
+	// DistanceMeters Расстояние по прямой от текущей точки пользователя до точки объявления, в метрах.
+	// Возвращается только если:
+	// - у текущего пользователя сохранены `currentLatitude` и `currentLongitude`;
+	// - у объявления указаны `latitude` и `longitude`;
+	// - объявление не принадлежит текущему пользователю.
+	// Иначе поле равно `null`.
+	DistanceMeters *int64 `json:"distanceMeters,omitempty"`
+
 	// Id Уникальный идентификатор объявления
 	Id openapi_types.UUID `json:"id"`
 
@@ -758,6 +798,16 @@ type Offer struct {
 	// IsHidden Признак того, что объявление скрыто модератором.
 	// Скрытые объявления видны только автору объявления и администратору.
 	IsHidden *bool `json:"isHidden,omitempty"`
+
+	// Latitude Широта точки объявления.
+	// Поле присутствует в ответах с `offer` вне зависимости от того, кто вызвал GET.
+	// `null`, если автор не указал точку на карте.
+	Latitude *Latitude `json:"latitude,omitempty"`
+
+	// Longitude Долгота точки объявления.
+	// Поле присутствует в ответах с `offer` вне зависимости от того, кто вызвал GET.
+	// `null`, если автор не указал точку на карте.
+	Longitude *Longitude `json:"longitude,omitempty"`
 
 	// ModificationBlocked Признак того, что объявление временно заблокировано для редактирования из-за pending-жалобы.
 	ModificationBlocked *bool `json:"modificationBlocked,omitempty"`
@@ -908,6 +958,14 @@ type OfferWithInfo struct {
 	// Description Подробное описание объявления
 	Description string `json:"description"`
 
+	// DistanceMeters Расстояние по прямой от текущей точки пользователя до точки объявления, в метрах.
+	// Возвращается только если:
+	// - у текущего пользователя сохранены `currentLatitude` и `currentLongitude`;
+	// - у объявления указаны `latitude` и `longitude`;
+	// - объявление не принадлежит текущему пользователю.
+	// Иначе поле равно `null`.
+	DistanceMeters *int64 `json:"distanceMeters,omitempty"`
+
 	// Id Уникальный идентификатор объявления
 	Id openapi_types.UUID `json:"id"`
 
@@ -918,6 +976,16 @@ type OfferWithInfo struct {
 	// IsHidden Признак того, что объявление скрыто модератором.
 	// Скрытые объявления видны только автору объявления и администратору.
 	IsHidden *bool `json:"isHidden,omitempty"`
+
+	// Latitude Широта точки объявления.
+	// Поле присутствует в ответах с `offer` вне зависимости от того, кто вызвал GET.
+	// `null`, если автор не указал точку на карте.
+	Latitude *Latitude `json:"latitude,omitempty"`
+
+	// Longitude Долгота точки объявления.
+	// Поле присутствует в ответах с `offer` вне зависимости от того, кто вызвал GET.
+	// `null`, если автор не указал точку на карте.
+	Longitude *Longitude `json:"longitude,omitempty"`
 
 	// ModificationBlocked Признак того, что объявление временно заблокировано для редактирования из-за pending-жалобы.
 	ModificationBlocked *bool `json:"modificationBlocked,omitempty"`
@@ -1154,7 +1222,17 @@ type UpdateOfferRequest struct {
 	// Порядок остальных фотографий сохраняется, новые добавляются в конец.
 	DeletePhotoIds *[]openapi_types.UUID `json:"deletePhotoIds,omitempty"`
 	Description    *string               `json:"description,omitempty"`
-	Name           *string               `json:"name,omitempty"`
+
+	// Latitude Новая широта точки объявления.
+	// Если передано вместе с `longitude`, координаты объявления обновляются.
+	// Если передано `null` вместе с `longitude: null`, точка объявления удаляется.
+	Latitude *Latitude `json:"latitude,omitempty"`
+
+	// Longitude Новая долгота точки объявления.
+	// Если передано вместе с `latitude`, координаты объявления обновляются.
+	// Если передано `null` вместе с `latitude: null`, точка объявления удаляется.
+	Longitude *Longitude `json:"longitude,omitempty"`
+	Name      *string    `json:"name,omitempty"`
 
 	// Photos Новые фотографии объявления.
 	// Каждая фотография передается отдельным бинарным файлом в `multipart/form-data`

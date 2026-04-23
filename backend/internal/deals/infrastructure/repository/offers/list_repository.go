@@ -14,7 +14,7 @@ const rowsToSelect = `
 	COALESCE((SELECT array_agg(ot.tag_name ORDER BY ot.tag_name) FROM offer_tags ot WHERE ot.offer_id = offers.id), '{}'::text[]) AS tags,
 	COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
 	COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
-	offers.is_hidden, offers.modification_blocked`
+	offers.is_hidden, offers.modification_blocked, offers.latitude, offers.longitude`
 
 const tagFilterClause = `
 	AND (
@@ -396,6 +396,8 @@ func (r *Repository) scanFavoriteOffers(ctx context.Context, query string, args 
 			&offer.PhotoUrls,
 			&offer.IsHidden,
 			&offer.ModificationBlocked,
+			&offer.Latitude,
+			&offer.Longitude,
 			&offer.FavoritedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan favorite offer: %w", err)

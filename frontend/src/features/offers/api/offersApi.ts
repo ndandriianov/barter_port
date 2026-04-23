@@ -103,7 +103,7 @@ const offersApi = createApi({
     }),
 
     createOffer: builder.mutation<void, CreateOfferRequest>({
-      query: ({ photos = [], tags = [], ...body }) => {
+      query: ({ photos = [], tags = [], latitude, longitude, ...body }) => {
         if (photos.length === 0) {
           return {
             url: "/offers",
@@ -111,6 +111,8 @@ const offersApi = createApi({
             body: {
               ...body,
               tags: tags.length > 0 ? tags : undefined,
+              latitude,
+              longitude,
             },
           };
         }
@@ -123,6 +125,8 @@ const offersApi = createApi({
         for (const tag of tags) {
           formData.append("tags", tag);
         }
+        if (latitude !== undefined) formData.append("latitude", String(latitude));
+        if (longitude !== undefined) formData.append("longitude", String(longitude));
 
         for (const photo of photos) {
           formData.append("photos", photo);
@@ -176,6 +180,12 @@ const offersApi = createApi({
         }
         for (const photo of body.photos ?? []) {
           formData.append("photos", photo);
+        }
+        if (body.latitude !== undefined) {
+          formData.append("latitude", body.latitude === null ? "" : String(body.latitude));
+        }
+        if (body.longitude !== undefined) {
+          formData.append("longitude", body.longitude === null ? "" : String(body.longitude));
         }
 
         return {

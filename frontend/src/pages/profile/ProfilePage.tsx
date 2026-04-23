@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from "react";
 import { skipToken } from "@reduxjs/toolkit/query";
 import { Link as RouterLink, useNavigate } from "react-router-dom";
+import YandexMapPicker, { type LatLon } from "@/shared/ui/YandexMapPicker";
 import {
   Alert,
   Avatar,
@@ -51,6 +52,7 @@ function ProfilePage() {
   const [draftAvatarUrl, setDraftAvatarUrl] = useState<string | null>(null);
   const [draftPhoneNumber, setDraftPhoneNumber] = useState<string | null>(null);
   const [draftAvatarFile, setDraftAvatarFile] = useState<File | null>(null);
+  const [draftLocation, setDraftLocation] = useState<LatLon | null | undefined>(undefined);
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [phoneError, setPhoneError] = useState<string | null>(null);
   const [isReputationDrawerOpen, setIsReputationDrawerOpen] = useState(false);
@@ -86,19 +88,33 @@ function ProfilePage() {
   const currentBio = draftBio ?? (data?.bio ?? "");
   const currentAvatarUrl = draftAvatarUrl ?? (data?.avatarUrl ?? "");
   const currentPhoneNumber = draftPhoneNumber ?? formatPhoneNumber(data?.phoneNumber) ?? "";
+  const currentLocation: LatLon | null = draftLocation !== undefined
+    ? draftLocation
+    : (data?.currentLatitude != null && data?.currentLongitude != null
+        ? { lat: data.currentLatitude, lon: data.currentLongitude }
+        : null);
 
   const hasChanges = useMemo(() => {
     if (!data) {
       return false;
     }
 
+    const serverLat = data.currentLatitude;
+    const serverLon = data.currentLongitude;
+    const locationChanged = draftLocation !== undefined && (
+      draftLocation === null
+        ? serverLat != null || serverLon != null
+        : draftLocation.lat !== serverLat || draftLocation.lon !== serverLon
+    );
+
     return (
       currentName !== (data.name ?? "") ||
       currentBio !== (data.bio ?? "") ||
       currentAvatarUrl !== (data.avatarUrl ?? "") ||
-      currentPhoneNumber !== (data.phoneNumber ?? "")
+      currentPhoneNumber !== (data.phoneNumber ?? "") ||
+      locationChanged
     );
-  }, [currentAvatarUrl, currentBio, currentName, currentPhoneNumber, data]);
+  }, [currentAvatarUrl, currentBio, currentName, currentPhoneNumber, data, draftLocation]);
 
   const normalizedAvatarUrl = currentAvatarUrl.trim();
   const avatarPreviewUrl = normalizedAvatarUrl || undefined;
@@ -150,13 +166,15 @@ function ProfilePage() {
         bio: currentBio.trim(),
         avatarUrl: nextAvatarUrl,
         phoneNumber: normalizedPhoneNumber,
+        currentLatitude: draftLocation !== undefined ? (draftLocation?.lat ?? null) : undefined,
+        currentLongitude: draftLocation !== undefined ? (draftLocation?.lon ?? null) : undefined,
       }).unwrap();
-      // Drop local draft and rely on fresh server state after mutation invalidation.
       setDraftName(null);
       setDraftBio(null);
       setDraftAvatarUrl(null);
       setDraftPhoneNumber(null);
       setDraftAvatarFile(null);
+      setDraftLocation(undefined);
       setPhoneError(null);
     } catch {
       // Error state is already exposed by RTK Query and rendered in UI.
@@ -169,6 +187,7 @@ function ProfilePage() {
     setDraftAvatarUrl("");
     setDraftPhoneNumber("");
     setDraftAvatarFile(null);
+    setDraftLocation(undefined);
     setAvatarError(null);
     setPhoneError(null);
   };
@@ -454,6 +473,21 @@ function ProfilePage() {
               helperText={phoneError || "Формат: +7 (999) 123-45-67"}
               fullWidth
             />
+            <Box>
+              <Typography variant="subtitle2" mb={1}>
+                Моё местоположение (необязательно)
+              </Typography>
+              <YandexMapPicker
+                value={currentLocation}
+                onChange={(v) => setDraftLocation(v)}
+                height="260px"
+              />
+              {currentLocation && (
+                <Typography variant="caption" color="text.secondary" mt={0.5} display="block">
+                  {currentLocation.lat.toFixed(6)}, {currentLocation.lon.toFixed(6)}
+                </Typography>
+              )}
+            </Box>
           </Stack>
 
           {avatarError && (

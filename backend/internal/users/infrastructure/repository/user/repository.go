@@ -46,7 +46,7 @@ func (r *Repository) AddUser(ctx context.Context, db db.DB, userID uuid.UUID) er
 //   - domain.ErrUserNotFound: Occurs if no user is found with the given id.
 func (r *Repository) GetUserById(ctx context.Context, id uuid.UUID) (*domain.User, error) {
 	query := `
-		SELECT id, name, bio, avatar_url, phone_number
+		SELECT id, name, bio, avatar_url, phone_number, current_latitude, current_longitude
 		FROM users
 		WHERE id = $1
 	`
@@ -168,7 +168,7 @@ func (r *Repository) UpdatePhoneNumber(ctx context.Context, id uuid.UUID, phoneN
 // No domain Errors
 func (r *Repository) ListUsers(ctx context.Context) ([]domain.User, error) {
 	query := `
-		SELECT id, name, bio, avatar_url, phone_number
+		SELECT id, name, bio, avatar_url, phone_number, current_latitude, current_longitude
 		FROM users
 		ORDER BY id
 	`
@@ -292,7 +292,7 @@ func (r *Repository) IsSubscribed(ctx context.Context, subscriberID, targetUserI
 // No domain Errors
 func (r *Repository) GetSubscriptions(ctx context.Context, userID uuid.UUID) ([]domain.User, error) {
 	query := `
-		SELECT u.id, u.name, u.bio, u.avatar_url, u.phone_number
+		SELECT u.id, u.name, u.bio, u.avatar_url, u.phone_number, u.current_latitude, u.current_longitude
 		FROM subscriptions s
 		JOIN users u ON u.id = s.target_user_id
 		WHERE s.subscriber_id = $1
@@ -317,7 +317,7 @@ func (r *Repository) GetSubscriptions(ctx context.Context, userID uuid.UUID) ([]
 // No domain Errors
 func (r *Repository) GetSubscribers(ctx context.Context, userID uuid.UUID) ([]domain.User, error) {
 	query := `
-		SELECT u.id, u.name, u.bio, u.avatar_url, u.phone_number
+		SELECT u.id, u.name, u.bio, u.avatar_url, u.phone_number, u.current_latitude, u.current_longitude
 		FROM subscriptions s
 		JOIN users u ON u.id = s.subscriber_id
 		WHERE s.target_user_id = $1
@@ -335,6 +335,45 @@ func (r *Repository) GetSubscribers(ctx context.Context, userID uuid.UUID) ([]do
 		return nil, fmt.Errorf("collect: %w", err)
 	}
 	return users, nil
+}
+
+// UpdateLocation updates the current geolocation of a user. Pass nil to clear both fields.
+//
+// Errors:
+//   - domain.ErrUserNotFound: Occurs if no user is found with the given id.
+func (r *Repository) UpdateLocation(ctx context.Context, id uuid.UUID, latitude, longitude *float64) error {
+	query := `
+		UPDATE users
+		SET current_latitude = $2, current_longitude = $3
+		WHERE id = $1
+	`
+
+	tag, err := r.db.Exec(ctx, query, id, latitude, longitude)
+	if err != nil {
+		return err
+	}
+	if tag.RowsAffected() == 0 {
+		return domain.ErrUserNotFound
+	}
+	return nil
+}
+
+// GetLocation returns the current geolocation of a user.
+//
+// Errors:
+//   - domain.ErrUserNotFound: Occurs if no user is found with the given id.
+func (r *Repository) GetLocation(ctx context.Context, id uuid.UUID) (*float64, *float64, error) {
+	var lat, lon *float64
+	err := r.db.QueryRow(ctx,
+		`SELECT current_latitude, current_longitude FROM users WHERE id = $1`, id,
+	).Scan(&lat, &lon)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil, domain.ErrUserNotFound
+		}
+		return nil, nil, err
+	}
+	return lat, lon, nil
 }
 
 func isForeignKeyViolation(err error) bool {
