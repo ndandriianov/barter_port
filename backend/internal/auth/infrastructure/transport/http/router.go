@@ -45,6 +45,7 @@ func NewRouter(logger *slog.Logger, validator *validators.LocalJWT, h *Handlers)
 
 		r.Group(func(r chi.Router) {
 			r.Use(authkit.Middleware(logger, validator, nil))
+			r.Post("/change-password", h.ChangePassword)
 			r.Get("/me", h.Me)
 		})
 	})

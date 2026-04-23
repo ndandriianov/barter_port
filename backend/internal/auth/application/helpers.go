@@ -42,9 +42,15 @@ func (s *Service) validateCredentials(email, password string) error {
 	if !s.re.MatchString(email) {
 		return domain.ErrInvalidEmail
 	}
+
+	return s.validatePassword(password)
+}
+
+func (s *Service) validatePassword(password string) error {
 	if len(password) < minPasswordLength {
 		return domain.ErrPasswordTooShort
 	}
+
 	return nil
 }
 

@@ -20,6 +20,12 @@ type loginResp struct {
 	AccessToken string `json:"accessToken"`
 }
 
+type changePasswordReq struct {
+	OldEmail    string `json:"oldEmail" example:"user@email.com"`
+	OldPassword string `json:"oldPassword" example:"old-password"`
+	NewPassword string `json:"newPassword" example:"new-password"`
+}
+
 type refreshResponse struct {
 	AccessToken string `json:"access_token"`
 }

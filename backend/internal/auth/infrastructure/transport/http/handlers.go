@@ -470,6 +470,66 @@ type meResp struct {
 	UserID uuid.UUID `json:"userId"`
 }
 
+// ChangePassword godoc
+// @Security BearerAuth
+// @Summary Change password
+// @Description Changes the authenticated user's password after verifying old credentials
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param changePasswordReq body changePasswordReq true "Change password request"
+// @Success 200 "Password changed successfully"
+// @Failure 400 {object} httpx.ErrorResponse "New password validation failed"
+// @Failure 403 {object} httpx.ErrorResponse "Old credentials are invalid or missing"
+// @Failure 404 {object} httpx.ErrorResponse "User not found"
+// @Failure 500 "Internal server error"
+// @Router /auth/change-password [post]
+func (h *Handlers) ChangePassword(w http.ResponseWriter, r *http.Request) {
+	requestID := middleware.GetReqID(r.Context())
+	logger := h.logger.With(slog.String("request_id", requestID))
+	logger.Info("handling change password request")
+
+	userID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		logger.Error("failed to fetch principal for password change")
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		return
+	}
+
+	var req changePasswordReq
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		logger.Warn("error decoding request", slog.Any("error", err))
+		httpx.WriteError(w, http.StatusBadRequest, httpx.ErrCannotDecodeRequestBody)
+		return
+	}
+
+	if err := h.authService.ChangePassword(r.Context(), userID, req.OldEmail, req.OldPassword, req.NewPassword); err != nil {
+		switch {
+		case errors.Is(err, domain.ErrPasswordTooShort):
+			logger.Info("new password too short", slog.String("user_id", userID.String()))
+			httpx.WriteError(w, http.StatusBadRequest, domain.ErrPasswordTooShort)
+
+		case errors.Is(err, domain.ErrInvalidOldCredentials):
+			logger.Info("invalid old credentials in password change", slog.String("user_id", userID.String()))
+			httpx.WriteError(w, http.StatusForbidden, domain.ErrInvalidOldCredentials)
+
+		case errors.Is(err, domain.ErrUserNotFound):
+			logger.Info("user not found in password change", slog.String("user_id", userID.String()))
+			httpx.WriteError(w, http.StatusNotFound, domain.ErrUserNotFound)
+
+		default:
+			logger.Error("unexpected error in change password request",
+				slog.String("user_id", userID.String()),
+				slog.Any("error", err),
+			)
+			httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+}
+
 // Me godoc
 // @Security BearerAuth
 // @Summary Get user info

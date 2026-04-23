@@ -35,6 +35,7 @@ type UserRepo interface {
 	GetByEmail(ctx context.Context, exec db.DB, email string) (domain.User, error)
 	GetByID(ctx context.Context, exec db.DB, id uuid.UUID) (domain.User, error)
 	VerifyEmailIfNotVerified(ctx context.Context, exec db.DB, userID uuid.UUID) (changed bool, err error)
+	UpdatePasswordHash(ctx context.Context, exec db.DB, userID uuid.UUID, passwordHash string) error
 }
 
 type TokenRepo interface {
@@ -427,6 +428,51 @@ func (s *Service) Login(ctx context.Context, email, password string) (uuid.UUID,
 	}
 
 	return u.ID, nil
+}
+
+// ChangePassword updates the authenticated user's password after re-checking the old credentials.
+//
+// It returns the following domain errors:
+//   - domain.ErrInvalidOldCredentials
+//   - domain.ErrPasswordTooShort
+//   - domain.ErrUserNotFound
+//
+// All other errors are treated as internal and returned wrapped.
+func (s *Service) ChangePassword(ctx context.Context, userID uuid.UUID, oldEmail, oldPassword, newPassword string) error {
+	oldEmail = strings.TrimSpace(strings.ToLower(oldEmail))
+
+	if oldEmail == "" || strings.TrimSpace(oldPassword) == "" {
+		return domain.ErrInvalidOldCredentials
+	}
+
+	if err := s.validatePassword(newPassword); err != nil {
+		return err
+	}
+
+	u, err := s.verifyCredentials(ctx, oldEmail, oldPassword)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrInvalidCredentials), errors.Is(err, domain.ErrIncorrectPassword):
+			return domain.ErrInvalidOldCredentials
+		default:
+			return fmt.Errorf("failed to verify old credentials: %w", err)
+		}
+	}
+
+	if u.ID != userID {
+		return domain.ErrInvalidOldCredentials
+	}
+
+	hash, err := bcrypt.GenerateFromPassword([]byte(newPassword), bcryptCost)
+	if err != nil {
+		return fmt.Errorf("failed to hash password: %w", err)
+	}
+
+	if err := s.users.UpdatePasswordHash(ctx, s.db, userID, string(hash)); err != nil {
+		return fmt.Errorf("failed to update password hash: %w", err)
+	}
+
+	return nil
 }
 
 func (s *Service) verifyCredentials(ctx context.Context, email, password string) (domain.User, error) {

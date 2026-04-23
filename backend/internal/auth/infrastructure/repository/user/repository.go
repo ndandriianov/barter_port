@@ -127,3 +127,26 @@ func (r *Repository) VerifyEmailIfNotVerified(ctx context.Context, exec db.DB, u
 
 	return changed, nil
 }
+
+// UpdatePasswordHash updates the password hash for the user.
+//
+// Errors:
+//   - domain.ErrUserNotFound: Occurs if no user is found with the given userID.
+func (r *Repository) UpdatePasswordHash(ctx context.Context, exec db.DB, userID uuid.UUID, passwordHash string) error {
+	query := `
+		UPDATE users
+		SET password_hash = $2
+		WHERE id = $1
+	`
+
+	tag, err := exec.Exec(ctx, query, userID, passwordHash)
+	if err != nil {
+		return err
+	}
+
+	if tag.RowsAffected() == 0 {
+		return domain.ErrUserNotFound
+	}
+
+	return nil
+}

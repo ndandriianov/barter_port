@@ -3,9 +3,10 @@ package domain
 import "errors"
 
 var (
-	ErrInvalidEmail      = errors.New("invalid email")
-	ErrPasswordTooShort  = errors.New("password too short")
-	ErrEmailAlreadyInUse = errors.New("email already in use")
+	ErrInvalidEmail          = errors.New("invalid email")
+	ErrPasswordTooShort      = errors.New("password too short")
+	ErrEmailAlreadyInUse     = errors.New("email already in use")
+	ErrInvalidOldCredentials = errors.New("old credentials are invalid")
 
 	ErrInvalidEmailToken  = errors.New("invalid email_token")
 	ErrEmailTokenExpired  = errors.New("email_token expired")

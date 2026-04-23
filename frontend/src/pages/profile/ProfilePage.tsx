@@ -24,12 +24,16 @@ import {
 } from "@mui/material";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import usersApi from "@/features/users/api/usersApi";
+import authApi from "@/features/auth/api/authApi";
 import { useAppDispatch } from "@/hooks/redux";
 import { performLogout } from "@/features/auth/model/logoutThunk";
 import { imageToAvatarDataUrl } from "@/shared/utils/imageToAvatarDataUrl.ts";
+import { getErrorMessage } from "@/shared/utils/getErrorMessage.ts";
+import { getStatusCode } from "@/shared/utils/getStatusCode.ts";
 import type { User } from "@/features/users/model/types.ts";
 
 const MAX_AVATAR_FILE_SIZE = 5 * 1024 * 1024;
+const MIN_PASSWORD_LENGTH = 6;
 
 function ProfilePage() {
   const { data, isLoading, refetch } = usersApi.useGetCurrentUserQuery();
@@ -37,6 +41,8 @@ function ProfilePage() {
     usersApi.useUpdateCurrentUserMutation();
   const [uploadCurrentUserAvatar, { isLoading: isUploadingAvatar, error: uploadAvatarError }] =
     usersApi.useUploadCurrentUserAvatarMutation();
+  const [changePassword, { isLoading: isChangingPassword, error: changePasswordError }] =
+    authApi.useChangePasswordMutation();
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const [draftName, setDraftName] = useState<string | null>(null);
@@ -47,6 +53,11 @@ function ProfilePage() {
   const [isReputationDrawerOpen, setIsReputationDrawerOpen] = useState(false);
   const [subscriptionsDialogOpen, setSubscriptionsDialogOpen] = useState(false);
   const [subscribersDialogOpen, setSubscribersDialogOpen] = useState(false);
+  const [oldPassword, setOldPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [changePasswordSuccess, setChangePasswordSuccess] = useState<string | null>(null);
+  const [changePasswordValidationError, setChangePasswordValidationError] = useState<string | null>(null);
   const {
     data: reputationEvents,
     isFetching: isReputationEventsLoading,
@@ -87,6 +98,7 @@ function ProfilePage() {
   const avatarPreviewUrl = normalizedAvatarUrl || undefined;
   const hasAvatarPreview = Boolean(avatarPreviewUrl);
   const isSubmitting = isSaving || isUploadingAvatar;
+  const isPasswordFormDirty = oldPassword !== "" || newPassword !== "" || confirmNewPassword !== "";
 
   const formatReputationDelta = (delta: number) => (delta > 0 ? `+${delta}` : `${delta}`);
 
@@ -142,6 +154,46 @@ function ProfilePage() {
     setDraftAvatarUrl("");
     setDraftAvatarFile(null);
     setAvatarError(null);
+  };
+
+  const handleChangePassword = async () => {
+    if (!data?.email) {
+      setChangePasswordValidationError("Не удалось определить email пользователя.");
+      return;
+    }
+
+    if (!oldPassword.trim()) {
+      setChangePasswordValidationError("Введите текущий пароль.");
+      return;
+    }
+
+    if (newPassword.length < MIN_PASSWORD_LENGTH) {
+      setChangePasswordValidationError(`Новый пароль должен быть не короче ${MIN_PASSWORD_LENGTH} символов.`);
+      return;
+    }
+
+    if (newPassword !== confirmNewPassword) {
+      setChangePasswordValidationError("Подтверждение пароля не совпадает.");
+      return;
+    }
+
+    setChangePasswordValidationError(null);
+    setChangePasswordSuccess(null);
+
+    try {
+      await changePassword({
+        oldEmail: data.email,
+        oldPassword,
+        newPassword,
+      }).unwrap();
+
+      setOldPassword("");
+      setNewPassword("");
+      setConfirmNewPassword("");
+      setChangePasswordSuccess("Пароль обновлен.");
+    } catch {
+      // RTK Query exposes error state that is rendered below.
+    }
   };
 
   const handleAvatarButtonClick = () => {
@@ -374,6 +426,70 @@ function ProfilePage() {
             </Alert>
           )}
 
+          <Divider sx={{ my: 3 }} />
+
+          <Stack spacing={2} mb={3}>
+            <Typography variant="h6" fontWeight={700}>
+              Смена пароля
+            </Typography>
+            <TextField
+              label="Текущий пароль"
+              type="password"
+              value={oldPassword}
+              onChange={(event) => {
+                setOldPassword(event.target.value);
+                setChangePasswordValidationError(null);
+                setChangePasswordSuccess(null);
+              }}
+              fullWidth
+            />
+            <TextField
+              label="Новый пароль"
+              type="password"
+              value={newPassword}
+              onChange={(event) => {
+                setNewPassword(event.target.value);
+                setChangePasswordValidationError(null);
+                setChangePasswordSuccess(null);
+              }}
+              helperText={`Минимум ${MIN_PASSWORD_LENGTH} символов`}
+              fullWidth
+            />
+            <TextField
+              label="Подтвердите новый пароль"
+              type="password"
+              value={confirmNewPassword}
+              onChange={(event) => {
+                setConfirmNewPassword(event.target.value);
+                setChangePasswordValidationError(null);
+                setChangePasswordSuccess(null);
+              }}
+              fullWidth
+            />
+          </Stack>
+
+          {changePasswordValidationError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {changePasswordValidationError}
+            </Alert>
+          )}
+
+          {changePasswordError && !changePasswordValidationError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {getStatusCode(changePasswordError) === 403
+                ? "Текущий пароль указан неверно."
+                : getStatusCode(changePasswordError) === 400
+                  ? getErrorMessage(changePasswordError) ?? "Новый пароль не прошел валидацию."
+                  : getErrorMessage(changePasswordError) ?? "Не удалось изменить пароль."}
+            </Alert>
+          )}
+
+          {changePasswordSuccess && (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              {changePasswordSuccess}
+            </Alert>
+          )}
+
           <Box display="flex" gap={2} flexWrap="wrap">
             <Button
               variant="contained"
@@ -390,6 +506,13 @@ function ProfilePage() {
             </Button>
             <Button variant="outlined" onClick={() => refetch()} disabled={isSubmitting}>
               Обновить
+            </Button>
+            <Button
+              variant="outlined"
+              onClick={handleChangePassword}
+              disabled={!isPasswordFormDirty || isChangingPassword}
+            >
+              Сменить пароль
             </Button>
             <Button variant="outlined" onClick={() => setIsReputationDrawerOpen(true)}>
               История рейтинга
