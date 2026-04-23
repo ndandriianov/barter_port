@@ -473,7 +473,35 @@ func (s *Service) addDistanceToOffers(ctx context.Context, requesterID uuid.UUID
 
 	for i := range offers {
 		o := &offers[i]
-		if o.Latitude == nil || o.Longitude == nil || o.AuthorId == requesterID {
+		if o.Latitude == nil || o.Longitude == nil {
+			continue
+		}
+		d := geo.HaversineDistance(userLat, userLon, *o.Latitude, *o.Longitude)
+		o.DistanceMeters = &d
+	}
+
+	return offers, nil
+}
+
+func (s *Service) addDistanceToFavoritedOffers(
+	ctx context.Context,
+	requesterID uuid.UUID,
+	offers []domain.FavoritedOffer,
+) ([]domain.FavoritedOffer, error) {
+	resp, err := s.usersClient.GetUserLocation(ctx, &userspb.GetUserLocationRequest{UserId: requesterID.String()})
+	if err != nil {
+		return offers, nil // best-effort: no distance if gRPC fails
+	}
+	if resp.Latitude == nil || resp.Longitude == nil {
+		return offers, nil
+	}
+
+	userLat := resp.GetLatitude()
+	userLon := resp.GetLongitude()
+
+	for i := range offers {
+		o := &offers[i]
+		if o.Latitude == nil || o.Longitude == nil {
 			continue
 		}
 		d := geo.HaversineDistance(userLat, userLon, *o.Latitude, *o.Longitude)
@@ -674,6 +702,11 @@ func (s *Service) GetFavoriteOffers(
 
 	for i := range offers {
 		offers[i].IsFavorite = new(true)
+	}
+
+	offers, err = s.addDistanceToFavoritedOffers(ctx, userID, offers)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	return offers, nextCursor, nil

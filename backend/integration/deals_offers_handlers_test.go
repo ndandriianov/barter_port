@@ -13,6 +13,67 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestOffersIncludeDistanceWhenViewerAndOfferHaveLocations(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	author := mustRegisterDealsUser(t)
+	viewer := mustRegisterDealsUser(t)
+	mustUpdateCurrentUserLocation(t, viewer.UserID, 55.751244, 37.618423)
+
+	lat := 55.761244
+	lon := 37.628423
+	offer := mustCreateOfferDetails(t, author.UserID, types.CreateOfferRequest{
+		Name:        "Offer with geo",
+		Description: "Near viewer",
+		Type:        types.Good,
+		Action:      types.Give,
+		Latitude:    &lat,
+		Longitude:   &lon,
+	})
+
+	list := mustGetOffers(t, viewer.UserID, nil)
+
+	var listed *types.Offer
+	for i := range list.Offers {
+		if list.Offers[i].Id == offer.Id {
+			listed = &list.Offers[i]
+			break
+		}
+	}
+
+	require.NotNil(t, listed)
+	require.NotNil(t, listed.DistanceMeters)
+	require.Greater(t, *listed.DistanceMeters, int64(0))
+
+	fetched := mustGetOfferByID(t, viewer.UserID, offer.Id)
+	require.NotNil(t, fetched.DistanceMeters)
+	require.Equal(t, *listed.DistanceMeters, *fetched.DistanceMeters)
+}
+
+func TestOwnOfferIncludesDistanceWhenUserHasLocation(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	user := mustRegisterDealsUser(t)
+	mustUpdateCurrentUserLocation(t, user.UserID, 55.751244, 37.618423)
+
+	lat := 55.761244
+	lon := 37.628423
+	offer := mustCreateOfferDetails(t, user.UserID, types.CreateOfferRequest{
+		Name:        "Own offer with geo",
+		Description: "Distance should be returned for own offer too",
+		Type:        types.Good,
+		Action:      types.Give,
+		Latitude:    &lat,
+		Longitude:   &lon,
+	})
+
+	fetched := mustGetOfferByID(t, user.UserID, offer.Id)
+	require.NotNil(t, fetched.DistanceMeters)
+	require.Greater(t, *fetched.DistanceMeters, int64(0))
+}
+
 func TestCreateOfferSuccess(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)

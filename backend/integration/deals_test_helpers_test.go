@@ -2,6 +2,7 @@ package integration
 
 import (
 	"barter-port/contracts/openapi/deals/types"
+	usertypes "barter-port/contracts/openapi/users/types"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -370,6 +371,20 @@ func mustViewOfferByID(t *testing.T, userID uuid.UUID, offerID uuid.UUID) {
 	t.Helper()
 
 	req := mustUserRequest(t, http.MethodPost, dealsURL()+"/offers/"+offerID.String()+"/view", userID, nil)
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+func mustUpdateCurrentUserLocation(t *testing.T, userID uuid.UUID, latitude, longitude float64) {
+	t.Helper()
+
+	req := mustUserRequest(t, http.MethodPatch, usersURL()+"/users/me", userID, mustJSONBody(t, usertypes.UpdateUserRequest{
+		CurrentLatitude:  &latitude,
+		CurrentLongitude: &longitude,
+	}))
+	req.Header.Set("Content-Type", "application/json")
+
 	resp := mustDo(t, req)
 	defer func() { _ = resp.Body.Close() }()
 	require.Equal(t, http.StatusOK, resp.StatusCode)
