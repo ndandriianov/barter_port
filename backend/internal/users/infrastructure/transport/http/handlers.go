@@ -457,6 +457,9 @@ func handleUpdateError(w http.ResponseWriter, log *slog.Logger, err error, userI
 	if errors.Is(err, domain.ErrUserNotFound) {
 		updateErrLog.Info("user not found")
 		httpx.WriteEmptyError(w, http.StatusNotFound)
+	} else if errors.Is(err, domain.ErrInvalidPhoneNumber) {
+		updateErrLog.Info("invalid phone number")
+		httpx.WriteErrorStr(w, http.StatusBadRequest, err.Error())
 	} else {
 		updateErrLog.Error("failed to update user")
 		httpx.WriteEmptyError(w, http.StatusInternalServerError)

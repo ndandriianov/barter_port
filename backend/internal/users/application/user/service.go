@@ -5,6 +5,7 @@ import (
 	"barter-port/internal/users/domain"
 	"errors"
 	"fmt"
+	"regexp"
 	"time"
 
 	"github.com/google/uuid"
@@ -30,6 +31,8 @@ type UsersRepository interface {
 
 var ErrAuthClientNotConfigured = errors.New("auth grpc client is not configured")
 var ErrAvatarStorageNotConfigured = errors.New("avatar storage is not configured")
+
+var phoneNumberRegexp = regexp.MustCompile(`^\+7 \(\d{3}\) \d{3}-\d{2}-\d{2}$`)
 
 type AvatarStorage interface {
 	UploadAvatar(ctx context.Context, userID uuid.UUID, contentType string, content []byte) (string, error)
@@ -154,7 +157,12 @@ func (s *Service) UpdateAvatarURL(ctx context.Context, id uuid.UUID, avatarURL *
 // Errors:
 //   - domain.ErrUserNotFound: Occurs if no user is found with the given id.
 func (s *Service) UpdatePhoneNumber(ctx context.Context, id uuid.UUID, phoneNumber *string) error {
-	return s.repository.UpdatePhoneNumber(ctx, id, normalizeOptionalString(phoneNumber))
+	normalizedPhoneNumber := normalizeOptionalString(phoneNumber)
+	if normalizedPhoneNumber != nil && !phoneNumberRegexp.MatchString(*normalizedPhoneNumber) {
+		return domain.ErrInvalidPhoneNumber
+	}
+
+	return s.repository.UpdatePhoneNumber(ctx, id, normalizedPhoneNumber)
 }
 
 func (s *Service) UploadAvatar(ctx context.Context, id uuid.UUID, contentType string, content []byte) (string, error) {

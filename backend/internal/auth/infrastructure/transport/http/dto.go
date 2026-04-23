@@ -13,7 +13,7 @@ type registerResp struct {
 }
 
 type verifyEmailReq struct {
-	Token string `json:"token" example:"iT1VWZWO1apO2GGoXG1ahOKuHlo8WA6ESwA86WMOTiI""`
+	Token string `json:"token" example:"iT1VWZWO1apO2GGoXG1ahOKuHlo8WA6ESwA86WMOTiI"`
 }
 
 type loginResp struct {

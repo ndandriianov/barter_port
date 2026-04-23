@@ -22,6 +22,7 @@ import {
 } from "@mui/material";
 import PersonOutlineIcon from "@mui/icons-material/PersonOutline";
 import usersApi from "@/features/users/api/usersApi.ts";
+import { formatPhoneNumber } from "@/shared/utils/phoneNumber.ts";
 import type { User } from "@/features/users/model/types.ts";
 
 function UserPage() {
@@ -101,7 +102,7 @@ function UserPage() {
   const displayName = user.name?.trim() || "Имя не указано";
   const bio = user.bio?.trim();
   const avatarUrl = user.avatarUrl?.trim() || "";
-  const phoneNumber = user.phoneNumber?.trim();
+  const phoneNumber = formatPhoneNumber(user.phoneNumber);
   const subscriptionsCount = userSubscriptions?.length ?? 0;
   const subscribersCount = subscribers?.length ?? 0;
 

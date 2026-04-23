@@ -30,6 +30,7 @@ import { performLogout } from "@/features/auth/model/logoutThunk";
 import { imageToAvatarDataUrl } from "@/shared/utils/imageToAvatarDataUrl.ts";
 import { getErrorMessage } from "@/shared/utils/getErrorMessage.ts";
 import { getStatusCode } from "@/shared/utils/getStatusCode.ts";
+import { formatPhoneNumber, formatPhoneNumberInput, isValidPhoneNumber } from "@/shared/utils/phoneNumber.ts";
 import type { User } from "@/features/users/model/types.ts";
 
 const MAX_AVATAR_FILE_SIZE = 5 * 1024 * 1024;
@@ -51,6 +52,7 @@ function ProfilePage() {
   const [draftPhoneNumber, setDraftPhoneNumber] = useState<string | null>(null);
   const [draftAvatarFile, setDraftAvatarFile] = useState<File | null>(null);
   const [avatarError, setAvatarError] = useState<string | null>(null);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
   const [isReputationDrawerOpen, setIsReputationDrawerOpen] = useState(false);
   const [subscriptionsDialogOpen, setSubscriptionsDialogOpen] = useState(false);
   const [subscribersDialogOpen, setSubscribersDialogOpen] = useState(false);
@@ -83,7 +85,7 @@ function ProfilePage() {
   const currentName = draftName ?? (data?.name ?? "");
   const currentBio = draftBio ?? (data?.bio ?? "");
   const currentAvatarUrl = draftAvatarUrl ?? (data?.avatarUrl ?? "");
-  const currentPhoneNumber = draftPhoneNumber ?? (data?.phoneNumber ?? "");
+  const currentPhoneNumber = draftPhoneNumber ?? formatPhoneNumber(data?.phoneNumber) ?? "";
 
   const hasChanges = useMemo(() => {
     if (!data) {
@@ -127,6 +129,12 @@ function ProfilePage() {
   };
 
   const handleSave = async () => {
+    const normalizedPhoneNumber = currentPhoneNumber.trim();
+    if (normalizedPhoneNumber && !isValidPhoneNumber(normalizedPhoneNumber)) {
+      setPhoneError("Введите номер в формате +7 (999) 123-45-67.");
+      return;
+    }
+
     try {
       let nextAvatarUrl = normalizedAvatarUrl;
 
@@ -141,7 +149,7 @@ function ProfilePage() {
         name: currentName.trim(),
         bio: currentBio.trim(),
         avatarUrl: nextAvatarUrl,
-        phoneNumber: currentPhoneNumber.trim(),
+        phoneNumber: normalizedPhoneNumber,
       }).unwrap();
       // Drop local draft and rely on fresh server state after mutation invalidation.
       setDraftName(null);
@@ -149,6 +157,7 @@ function ProfilePage() {
       setDraftAvatarUrl(null);
       setDraftPhoneNumber(null);
       setDraftAvatarFile(null);
+      setPhoneError(null);
     } catch {
       // Error state is already exposed by RTK Query and rendered in UI.
     }
@@ -161,6 +170,7 @@ function ProfilePage() {
     setDraftPhoneNumber("");
     setDraftAvatarFile(null);
     setAvatarError(null);
+    setPhoneError(null);
   };
 
   const resetChangePasswordState = () => {
@@ -367,7 +377,7 @@ function ProfilePage() {
               <Typography variant="caption" color="text.secondary">
                 Телефон
               </Typography>
-              <Typography variant="body2">{data.phoneNumber?.trim() || "Не указан"}</Typography>
+              <Typography variant="body2">{formatPhoneNumber(data.phoneNumber) || "Не указан"}</Typography>
             </Box>
             <Box>
               <Typography variant="caption" color="text.secondary">
@@ -435,8 +445,13 @@ function ProfilePage() {
               label="Телефон"
               type="tel"
               value={currentPhoneNumber}
-              onChange={(event) => setDraftPhoneNumber(event.target.value)}
-              placeholder="+79991234567"
+              onChange={(event) => {
+                setDraftPhoneNumber(formatPhoneNumberInput(event.target.value));
+                setPhoneError(null);
+              }}
+              placeholder="+7 (999) 123-45-67"
+              error={Boolean(phoneError)}
+              helperText={phoneError || "Формат: +7 (999) 123-45-67"}
               fullWidth
             />
           </Stack>
@@ -461,7 +476,7 @@ function ProfilePage() {
 
           {updateError && (
             <Alert severity="error" sx={{ mb: 2 }}>
-              Не удалось обновить профиль
+              {getErrorMessage(updateError) || "Не удалось обновить профиль"}
             </Alert>
           )}
 

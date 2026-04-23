@@ -198,7 +198,7 @@ func TestUsersUpdateMeAndGetUser(t *testing.T) {
 	waitForUsersProjection(t, fixture, registered.UserID)
 
 	accessToken := mustAccessToken(t, registered.UserID)
-	updateBody := []byte(`{"name":"Nick","bio":"barter enthusiast","avatarUrl":"http://localhost:8333/avatars/user-1/avatar.jpg","phoneNumber":"+79991234567"}`)
+	updateBody := []byte(`{"name":"Nick","bio":"barter enthusiast","avatarUrl":"http://localhost:8333/avatars/user-1/avatar.jpg","phoneNumber":"+7 (999) 123-45-67"}`)
 
 	req, err := http.NewRequest(http.MethodPatch, fixture.UsersURL+"/users/me", bytes.NewReader(updateBody))
 	require.NoError(t, err)
@@ -222,7 +222,7 @@ func TestUsersUpdateMeAndGetUser(t *testing.T) {
 	require.NotNil(t, me.AvatarUrl)
 	require.Equal(t, "http://localhost:8333/avatars/user-1/avatar.jpg", *me.AvatarUrl)
 	require.NotNil(t, me.PhoneNumber)
-	require.Equal(t, "+79991234567", *me.PhoneNumber)
+	require.Equal(t, "+7 (999) 123-45-67", *me.PhoneNumber)
 
 	getReq, err := http.NewRequest(http.MethodGet, fixture.UsersURL+"/users/"+registered.UserID.String(), nil)
 	require.NoError(t, err)
@@ -246,7 +246,7 @@ func TestUsersUpdateMeAndGetUser(t *testing.T) {
 	require.NotNil(t, user.AvatarUrl)
 	require.Equal(t, "http://localhost:8333/avatars/user-1/avatar.jpg", *user.AvatarUrl)
 	require.NotNil(t, user.PhoneNumber)
-	require.Equal(t, "+79991234567", *user.PhoneNumber)
+	require.Equal(t, "+7 (999) 123-45-67", *user.PhoneNumber)
 }
 
 func TestUsersUpdateAvatarOnlyAndClear(t *testing.T) {
@@ -305,7 +305,7 @@ func TestUsersUpdatePhoneNumberOnlyAndClear(t *testing.T) {
 
 	accessToken := mustAccessToken(t, registered.UserID)
 
-	setReq, err := http.NewRequest(http.MethodPatch, fixture.UsersURL+"/users/me", bytes.NewReader([]byte(`{"phoneNumber":"+79990001122"}`)))
+	setReq, err := http.NewRequest(http.MethodPatch, fixture.UsersURL+"/users/me", bytes.NewReader([]byte(`{"phoneNumber":"+7 (999) 000-11-22"}`)))
 	require.NoError(t, err)
 	setReq.Header.Set("Authorization", "Bearer "+accessToken)
 	setReq.Header.Set("Content-Type", "application/json")
@@ -321,7 +321,7 @@ func TestUsersUpdatePhoneNumberOnlyAndClear(t *testing.T) {
 	var afterSet usertypes.Me
 	require.NoError(t, json.NewDecoder(setResp.Body).Decode(&afterSet))
 	require.NotNil(t, afterSet.PhoneNumber)
-	require.Equal(t, "+79990001122", *afterSet.PhoneNumber)
+	require.Equal(t, "+7 (999) 000-11-22", *afterSet.PhoneNumber)
 
 	getReq, err := http.NewRequest(http.MethodGet, fixture.UsersURL+"/users/"+registered.UserID.String(), nil)
 	require.NoError(t, err)
@@ -338,7 +338,7 @@ func TestUsersUpdatePhoneNumberOnlyAndClear(t *testing.T) {
 	var afterSetUser usertypes.User
 	require.NoError(t, json.NewDecoder(getResp.Body).Decode(&afterSetUser))
 	require.NotNil(t, afterSetUser.PhoneNumber)
-	require.Equal(t, "+79990001122", *afterSetUser.PhoneNumber)
+	require.Equal(t, "+7 (999) 000-11-22", *afterSetUser.PhoneNumber)
 
 	clearReq, err := http.NewRequest(http.MethodPatch, fixture.UsersURL+"/users/me", bytes.NewReader([]byte(`{"phoneNumber":""}`)))
 	require.NoError(t, err)
@@ -372,6 +372,33 @@ func TestUsersUpdatePhoneNumberOnlyAndClear(t *testing.T) {
 	var afterClearUser usertypes.User
 	require.NoError(t, json.NewDecoder(getAfterClearResp.Body).Decode(&afterClearUser))
 	require.Nil(t, afterClearUser.PhoneNumber)
+}
+
+func TestUsersUpdatePhoneNumberRejectsInvalidFormat(t *testing.T) {
+	t.Parallel()
+
+	fixture := globalFixture
+
+	registered := registerAuthUser(t, fixture)
+	waitForUsersProjection(t, fixture, registered.UserID)
+
+	req, err := http.NewRequest(http.MethodPatch, fixture.UsersURL+"/users/me", bytes.NewReader([]byte(`{"phoneNumber":"+79990001122"}`)))
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, registered.UserID))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_ = resp.Body.Close()
+	})
+
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	var apiErr usertypes.ErrorResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&apiErr))
+	require.NotNil(t, apiErr.Message)
+	require.Equal(t, "phone number must be in format +7 (999) 123-45-67", *apiErr.Message)
 }
 
 func TestUsersUpdateMeRejectsEmptyPayload(t *testing.T) {
