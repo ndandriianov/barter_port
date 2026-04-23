@@ -16,6 +16,20 @@ var (
 	offerPhotoIndexErr  error
 )
 
+func resolveUserAvatarPath(userKey string) (string, error) {
+	dir, err := avatarResourcesDir()
+	if err != nil {
+		return "", err
+	}
+
+	path := filepath.Join(dir, userKey+".png")
+	if _, err := os.Stat(path); err != nil {
+		return "", fmt.Errorf("stat avatar %s: %w", path, err)
+	}
+
+	return path, nil
+}
+
 func resolveOfferPhotoPath(userKey string, spec offerSpec) (string, error) {
 	if spec.SkipPhoto {
 		return "", nil
@@ -66,12 +80,20 @@ func loadOfferPhotoIndex() (map[string]string, error) {
 }
 
 func offerResourcesDir() (string, error) {
+	return resourcesSubdir("offers")
+}
+
+func avatarResourcesDir() (string, error) {
+	return resourcesSubdir("avatars")
+}
+
+func resourcesSubdir(name string) (string, error) {
 	_, filename, _, ok := runtime.Caller(0)
 	if !ok {
 		return "", fmt.Errorf("resolve seed-demo source path")
 	}
 
-	dir := filepath.Clean(filepath.Join(filepath.Dir(filename), "..", "resources", "offers"))
+	dir := filepath.Clean(filepath.Join(filepath.Dir(filename), "..", "resources", name))
 	if _, err := os.Stat(dir); err != nil {
 		return "", fmt.Errorf("stat resources dir %s: %w", dir, err)
 	}

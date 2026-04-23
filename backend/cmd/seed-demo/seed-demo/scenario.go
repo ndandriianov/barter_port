@@ -11,6 +11,8 @@ import (
 )
 
 func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSummary, error) {
+	warnings := make([]string, 0)
+
 	users := []seededUser{
 		{
 			Key:      "alice",
@@ -18,7 +20,6 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 			Bio:      "Меняю декор для дома, книги и комнатные растения.",
 			Email:    "alice.demo@barterport.local",
 			Password: cfg.Password,
-			Avatar:   cfg.AvatarBaseURL + "/alice.png",
 		},
 		{
 			Key:      "bob",
@@ -26,7 +27,6 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 			Bio:      "Обмениваю велоаксессуары, инструменты и вещи для поездок.",
 			Email:    "bob.demo@barterport.local",
 			Password: cfg.Password,
-			Avatar:   cfg.AvatarBaseURL + "/bob.png",
 		},
 		{
 			Key:      "clara",
@@ -34,7 +34,6 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 			Bio:      "Предлагаю занятия по английскому и ищу настольные игры.",
 			Email:    "clara.demo@barterport.local",
 			Password: cfg.Password,
-			Avatar:   cfg.AvatarBaseURL + "/clara.png",
 		},
 		{
 			Key:      "dan",
@@ -42,7 +41,6 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 			Bio:      "Люблю ремонтировать мелкую технику и обменивать хобби-товары.",
 			Email:    "dan.demo@barterport.local",
 			Password: cfg.Password,
-			Avatar:   cfg.AvatarBaseURL + "/dan.png",
 		},
 		{
 			Key:      "eva",
@@ -50,7 +48,6 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 			Bio:      "Увлекаюсь акварелью и меняю художественные материалы.",
 			Email:    "eva.demo@barterport.local",
 			Password: cfg.Password,
-			Avatar:   cfg.AvatarBaseURL + "/eva.png",
 		},
 		{
 			Key:      "fedor",
@@ -58,7 +55,6 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 			Bio:      "Собираю виниловые пластинки и советскую электронику.",
 			Email:    "fedor.demo@barterport.local",
 			Password: cfg.Password,
-			Avatar:   cfg.AvatarBaseURL + "/fedor.png",
 		},
 	}
 
@@ -71,10 +67,26 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 		users[i].UserID = registered.UserID
 		users[i].Token = token
 
+		avatarPath, err := resolveUserAvatarPath(users[i].Key)
+		if err != nil {
+			return nil, fmt.Errorf("resolve avatar for %s: %w", users[i].Key, err)
+		}
+
+		var avatarURL *usertypes.AvatarUrl
+		uploadedAvatar, err := client.uploadMeAvatar(ctx, token, avatarPath)
+		if err != nil {
+			if !isMediaUploadFallbackable(err) {
+				return nil, fmt.Errorf("upload avatar for %s: %w", users[i].Key, err)
+			}
+			warnings = append(warnings, fmt.Sprintf("avatar skipped for %s: %v", users[i].Key, err))
+		} else {
+			avatarURL = new(uploadedAvatar.AvatarUrl)
+		}
+
 		if _, err := client.updateMe(ctx, token, usertypes.UpdateUserRequest{
 			Name:      new(users[i].Name),
 			Bio:       new(users[i].Bio),
-			AvatarUrl: new(users[i].Avatar),
+			AvatarUrl: avatarURL,
 		}); err != nil {
 			return nil, fmt.Errorf("update profile for %s: %w", users[i].Key, err)
 		}
@@ -114,7 +126,7 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 
 	// ── Offers ───────────────────────────────────────────────────────────────
 
-	aliceOffers, err := client.createOffers(ctx, alice, []offerSpec{
+	aliceOffers, offerWarnings, err := client.createOffersWithWarnings(ctx, alice, []offerSpec{
 		{
 			Key:         "lamp",
 			Name:        "Винтажная лампа",
@@ -159,8 +171,9 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 	if err != nil {
 		return nil, fmt.Errorf("create Alice offers: %w", err)
 	}
+	warnings = append(warnings, offerWarnings...)
 
-	bobOffers, err := client.createOffers(ctx, bob, []offerSpec{
+	bobOffers, offerWarnings, err := client.createOffersWithWarnings(ctx, bob, []offerSpec{
 		{
 			Key:         "bike-bag",
 			Name:        "Велосипедная сумка",
@@ -198,8 +211,9 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 	if err != nil {
 		return nil, fmt.Errorf("create Bob offers: %w", err)
 	}
+	warnings = append(warnings, offerWarnings...)
 
-	claraOffers, err := client.createOffers(ctx, clara, []offerSpec{
+	claraOffers, offerWarnings, err := client.createOffersWithWarnings(ctx, clara, []offerSpec{
 		{
 			Key:         "english-session",
 			Name:        "Разговорный английский",
@@ -220,8 +234,9 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 	if err != nil {
 		return nil, fmt.Errorf("create Clara offers: %w", err)
 	}
+	warnings = append(warnings, offerWarnings...)
 
-	danOffers, err := client.createOffers(ctx, dan, []offerSpec{
+	danOffers, offerWarnings, err := client.createOffersWithWarnings(ctx, dan, []offerSpec{
 		{
 			Key:         "repair",
 			Name:        "Мелкий ремонт техники",
@@ -242,8 +257,9 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 	if err != nil {
 		return nil, fmt.Errorf("create Dan offers: %w", err)
 	}
+	warnings = append(warnings, offerWarnings...)
 
-	evaOffers, err := client.createOffers(ctx, eva, []offerSpec{
+	evaOffers, offerWarnings, err := client.createOffersWithWarnings(ctx, eva, []offerSpec{
 		{
 			Key:         "watercolors",
 			Name:        "Акварельные краски",
@@ -289,8 +305,9 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 	if err != nil {
 		return nil, fmt.Errorf("create Eva offers: %w", err)
 	}
+	warnings = append(warnings, offerWarnings...)
 
-	fedorOffers, err := client.createOffers(ctx, fedor, []offerSpec{
+	fedorOffers, offerWarnings, err := client.createOffersWithWarnings(ctx, fedor, []offerSpec{
 		{
 			Key:          "vinyl-player",
 			Name:         "Виниловый проигрыватель",
@@ -331,6 +348,7 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 	if err != nil {
 		return nil, fmt.Errorf("create Fedor offers: %w", err)
 	}
+	warnings = append(warnings, offerWarnings...)
 
 	if _, err := client.updateOffer(ctx, alice.Token, aliceOffers["plant-consulting"], dealtypes.UpdateOfferRequest{
 		Description: new("Помогу с подбором ухода, пересадкой и базовой диагностикой домашних растений."),
@@ -339,7 +357,7 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 		return nil, fmt.Errorf("update Alice plant consulting offer: %w", err)
 	}
 
-	tempOfferIDs, err := client.createOffers(ctx, eva, []offerSpec{
+	tempOfferIDs, offerWarnings, err := client.createOffersWithWarnings(ctx, eva, []offerSpec{
 		{
 			Key:         "cleanup-tag",
 			Name:        "Временный оффер для чистки тега",
@@ -353,6 +371,7 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 	if err != nil {
 		return nil, fmt.Errorf("create temp cleanup offer: %w", err)
 	}
+	warnings = append(warnings, offerWarnings...)
 
 	if err := client.deleteTag(ctx, adminToken, "времятег"); err != nil {
 		return nil, fmt.Errorf("delete admin tag: %w", err)
@@ -1092,6 +1111,8 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 	}
 
 	summary := &SeedSummary{
+		Warnings: warnings,
+
 		OfferGroupID:      offerGroupID,
 		OfferGroupDraftID: offerGroupDraftID,
 		MultiUnitGroupID:  multiUnitGroupID,

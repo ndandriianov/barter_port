@@ -238,6 +238,55 @@ func (c *SeedClient) updateMe(ctx context.Context, token string, req usertypes.U
 	return body, nil
 }
 
+func (c *SeedClient) uploadMeAvatar(ctx context.Context, token string, avatarPath string) (usertypes.AvatarUploadResponse, error) {
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+
+	file, err := os.Open(avatarPath)
+	if err != nil {
+		return usertypes.AvatarUploadResponse{}, fmt.Errorf("open avatar %s: %w", avatarPath, err)
+	}
+	defer closeBody(file)
+
+	part, err := writer.CreateFormFile("file", filepath.Base(avatarPath))
+	if err != nil {
+		return usertypes.AvatarUploadResponse{}, fmt.Errorf("create multipart avatar field for %s: %w", avatarPath, err)
+	}
+	if _, err := io.Copy(part, file); err != nil {
+		return usertypes.AvatarUploadResponse{}, fmt.Errorf("write avatar %s: %w", avatarPath, err)
+	}
+	if err := writer.Close(); err != nil {
+		return usertypes.AvatarUploadResponse{}, fmt.Errorf("close avatar multipart writer: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.BaseURL+"/users/me/avatar", &body)
+	if err != nil {
+		return usertypes.AvatarUploadResponse{}, fmt.Errorf("build request POST /users/me/avatar: %w", err)
+	}
+
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+
+	resp, err := c.HttpClient.Do(req)
+	if err != nil {
+		return usertypes.AvatarUploadResponse{}, fmt.Errorf("perform request POST /users/me/avatar: %w", err)
+	}
+	defer closeBody(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
+		return usertypes.AvatarUploadResponse{}, responseError(resp, http.StatusOK)
+	}
+
+	var uploaded usertypes.AvatarUploadResponse
+	if err := json.NewDecoder(resp.Body).Decode(&uploaded); err != nil {
+		return usertypes.AvatarUploadResponse{}, fmt.Errorf("decode response POST /users/me/avatar: %w", err)
+	}
+
+	return uploaded, nil
+}
+
 func (c *SeedClient) getMe(ctx context.Context, token string) (usertypes.Me, error) {
 	var body usertypes.Me
 	if err := c.doJSON(ctx, http.MethodGet, "/users/me", token, nil, &body, http.StatusOK); err != nil {
@@ -304,22 +353,51 @@ func (c *SeedClient) listSubscribersByUser(ctx context.Context, token string, us
 }
 
 func (c *SeedClient) createOffers(ctx context.Context, user *seededUser, specs []offerSpec) (map[string]uuid.UUID, error) {
+	result, _, err := c.createOffersWithWarnings(ctx, user, specs)
+	return result, err
+}
+
+func (c *SeedClient) createOffersWithWarnings(ctx context.Context, user *seededUser, specs []offerSpec) (map[string]uuid.UUID, []string, error) {
 	result := make(map[string]uuid.UUID, len(specs))
+	warnings := make([]string, 0)
 	for _, spec := range specs {
 		photoPath, err := resolveOfferPhotoPath(user.Key, spec)
 		if err != nil {
-			return nil, fmt.Errorf("resolve photo for offer %s for %s: %w", spec.Key, user.Key, err)
+			return nil, nil, fmt.Errorf("resolve photo for offer %s for %s: %w", spec.Key, user.Key, err)
 		}
 
 		offer, err := c.createOffer(ctx, user.Token, spec, photoPath)
+		if err != nil && photoPath != "" && isMediaUploadFallbackable(err) {
+			warnings = append(warnings, fmt.Sprintf("offer photo skipped for %s/%s: %v", user.Key, spec.Key, err))
+			offer, err = c.createOfferJSON(ctx, user.Token, spec)
+		}
 		if err != nil {
-			return nil, fmt.Errorf("create offer %s for %s: %w", spec.Key, user.Key, err)
+			return nil, nil, fmt.Errorf("create offer %s for %s: %w", spec.Key, user.Key, err)
 		}
 
 		result[spec.Key] = offer.Id
 	}
 
-	return result, nil
+	return result, warnings, nil
+}
+
+func (c *SeedClient) createOfferJSON(ctx context.Context, token string, spec offerSpec) (dealtypes.Offer, error) {
+	req := dealtypes.CreateOfferRequest{
+		Name:        spec.Name,
+		Description: spec.Description,
+		Type:        spec.Type,
+		Action:      spec.Action,
+	}
+	if len(spec.Tags) > 0 {
+		req.Tags = &spec.Tags
+	}
+
+	var offer dealtypes.Offer
+	if err := c.doJSON(ctx, http.MethodPost, "/offers", token, req, &offer, http.StatusCreated); err != nil {
+		return dealtypes.Offer{}, err
+	}
+
+	return offer, nil
 }
 
 func (c *SeedClient) createOffer(ctx context.Context, token string, spec offerSpec, photoPath string) (dealtypes.Offer, error) {
@@ -1295,5 +1373,24 @@ func responseError(resp *http.Response, expectedStatuses ...int) error {
 		message = *errBody.Message
 	}
 
-	return fmt.Errorf("unexpected status %d, expected %v: %s", resp.StatusCode, expectedStatuses, message)
+	return &httpStatusError{
+		StatusCode:       resp.StatusCode,
+		ExpectedStatuses: append([]int(nil), expectedStatuses...),
+		Message:          message,
+	}
+}
+
+type httpStatusError struct {
+	StatusCode       int
+	ExpectedStatuses []int
+	Message          string
+}
+
+func (e *httpStatusError) Error() string {
+	return fmt.Sprintf("unexpected status %d, expected %v: %s", e.StatusCode, e.ExpectedStatuses, e.Message)
+}
+
+func isMediaUploadFallbackable(err error) bool {
+	var statusErr *httpStatusError
+	return errors.As(err, &statusErr) && statusErr.StatusCode >= http.StatusInternalServerError
 }

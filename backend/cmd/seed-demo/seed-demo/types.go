@@ -67,7 +67,6 @@ type seededUser struct {
 	Bio      string
 	Email    string
 	Password string
-	Avatar   string
 	UserID   uuid.UUID
 	Token    string
 }
@@ -84,7 +83,8 @@ type offerSpec struct {
 }
 
 type SeedSummary struct {
-	Users []seededUserSummary `json:"users"`
+	Users    []seededUserSummary `json:"users"`
+	Warnings []string            `json:"warnings,omitempty"`
 
 	OfferGroupID      uuid.UUID `json:"offerGroupId"`
 	OfferGroupDraftID uuid.UUID `json:"offerGroupDraftId"`
