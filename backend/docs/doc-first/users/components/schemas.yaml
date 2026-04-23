@@ -29,6 +29,8 @@ Me:
       $ref: './properties.yaml#/Bio'
     avatarUrl:
       $ref: './properties.yaml#/AvatarUrl'
+    phoneNumber:
+      $ref: './properties.yaml#/PhoneNumber'
     reputationPoints:
       $ref: './properties.yaml#/ReputationPoints'
 
@@ -53,6 +55,8 @@ User:
       $ref: './properties.yaml#/Bio'
     avatarUrl:
       $ref: './properties.yaml#/AvatarUrl'
+    phoneNumber:
+      $ref: './properties.yaml#/PhoneNumber'
 
 
 ReputationEvent:

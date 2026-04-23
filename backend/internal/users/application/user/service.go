@@ -18,6 +18,7 @@ type UsersRepository interface {
 	UpdateName(ctx context.Context, id uuid.UUID, name string) error
 	UpdateBio(ctx context.Context, id uuid.UUID, bio *string) error
 	UpdateAvatarURL(ctx context.Context, id uuid.UUID, avatarURL *string) error
+	UpdatePhoneNumber(ctx context.Context, id uuid.UUID, phoneNumber *string) error
 	GetNamesForUserIDs(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]*string, error)
 	ListUsers(ctx context.Context) ([]domain.User, error)
 	Subscribe(ctx context.Context, subscriberID, targetUserID uuid.UUID) error
@@ -41,6 +42,7 @@ type Me struct {
 	Name             *string
 	Bio              *string
 	AvatarURL        *string
+	PhoneNumber      *string
 	Email            string
 	CreatedAt        time.Time
 	IsAdmin          bool
@@ -91,6 +93,7 @@ func (s *Service) GetMe(ctx context.Context, id uuid.UUID) (Me, error) {
 		Name:             u.Name,
 		Bio:              u.Bio,
 		AvatarURL:        u.AvatarURL,
+		PhoneNumber:      u.PhoneNumber,
 		Email:            authMe.GetEmail(),
 		CreatedAt:        createdAt,
 		IsAdmin:          authMe.GetIsAdmin(),
@@ -144,6 +147,14 @@ func (s *Service) UpdateAvatarURL(ctx context.Context, id uuid.UUID, avatarURL *
 	}
 
 	return nil
+}
+
+// UpdatePhoneNumber updates the phone number of a user. Empty string clears the stored phone number.
+//
+// Errors:
+//   - domain.ErrUserNotFound: Occurs if no user is found with the given id.
+func (s *Service) UpdatePhoneNumber(ctx context.Context, id uuid.UUID, phoneNumber *string) error {
+	return s.repository.UpdatePhoneNumber(ctx, id, normalizeOptionalString(phoneNumber))
 }
 
 func (s *Service) UploadAvatar(ctx context.Context, id uuid.UUID, contentType string, content []byte) (string, error) {
