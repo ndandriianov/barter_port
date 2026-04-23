@@ -53,6 +53,7 @@ function ProfilePage() {
   const [isReputationDrawerOpen, setIsReputationDrawerOpen] = useState(false);
   const [subscriptionsDialogOpen, setSubscriptionsDialogOpen] = useState(false);
   const [subscribersDialogOpen, setSubscribersDialogOpen] = useState(false);
+  const [isChangePasswordDialogOpen, setIsChangePasswordDialogOpen] = useState(false);
   const [oldPassword, setOldPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
@@ -154,6 +155,24 @@ function ProfilePage() {
     setDraftAvatarUrl("");
     setDraftAvatarFile(null);
     setAvatarError(null);
+  };
+
+  const resetChangePasswordState = () => {
+    setOldPassword("");
+    setNewPassword("");
+    setConfirmNewPassword("");
+    setChangePasswordSuccess(null);
+    setChangePasswordValidationError(null);
+  };
+
+  const handleOpenChangePasswordDialog = () => {
+    resetChangePasswordState();
+    setIsChangePasswordDialogOpen(true);
+  };
+
+  const handleCloseChangePasswordDialog = () => {
+    resetChangePasswordState();
+    setIsChangePasswordDialogOpen(false);
   };
 
   const handleChangePassword = async () => {
@@ -426,70 +445,6 @@ function ProfilePage() {
             </Alert>
           )}
 
-          <Divider sx={{ my: 3 }} />
-
-          <Stack spacing={2} mb={3}>
-            <Typography variant="h6" fontWeight={700}>
-              Смена пароля
-            </Typography>
-            <TextField
-              label="Текущий пароль"
-              type="password"
-              value={oldPassword}
-              onChange={(event) => {
-                setOldPassword(event.target.value);
-                setChangePasswordValidationError(null);
-                setChangePasswordSuccess(null);
-              }}
-              fullWidth
-            />
-            <TextField
-              label="Новый пароль"
-              type="password"
-              value={newPassword}
-              onChange={(event) => {
-                setNewPassword(event.target.value);
-                setChangePasswordValidationError(null);
-                setChangePasswordSuccess(null);
-              }}
-              helperText={`Минимум ${MIN_PASSWORD_LENGTH} символов`}
-              fullWidth
-            />
-            <TextField
-              label="Подтвердите новый пароль"
-              type="password"
-              value={confirmNewPassword}
-              onChange={(event) => {
-                setConfirmNewPassword(event.target.value);
-                setChangePasswordValidationError(null);
-                setChangePasswordSuccess(null);
-              }}
-              fullWidth
-            />
-          </Stack>
-
-          {changePasswordValidationError && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {changePasswordValidationError}
-            </Alert>
-          )}
-
-          {changePasswordError && !changePasswordValidationError && (
-            <Alert severity="error" sx={{ mb: 2 }}>
-              {getStatusCode(changePasswordError) === 403
-                ? "Текущий пароль указан неверно."
-                : getStatusCode(changePasswordError) === 400
-                  ? getErrorMessage(changePasswordError) ?? "Новый пароль не прошел валидацию."
-                  : getErrorMessage(changePasswordError) ?? "Не удалось изменить пароль."}
-            </Alert>
-          )}
-
-          {changePasswordSuccess && (
-            <Alert severity="success" sx={{ mb: 2 }}>
-              {changePasswordSuccess}
-            </Alert>
-          )}
-
           <Box display="flex" gap={2} flexWrap="wrap">
             <Button
               variant="contained"
@@ -509,8 +464,7 @@ function ProfilePage() {
             </Button>
             <Button
               variant="outlined"
-              onClick={handleChangePassword}
-              disabled={!isPasswordFormDirty || isChangingPassword}
+              onClick={handleOpenChangePasswordDialog}
             >
               Сменить пароль
             </Button>
@@ -611,6 +565,88 @@ function ProfilePage() {
           )}
         </Box>
       </Drawer>
+
+      <Dialog
+        open={isChangePasswordDialogOpen}
+        onClose={handleCloseChangePasswordDialog}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Смена пароля</DialogTitle>
+        <DialogContent>
+          <Stack spacing={2} sx={{ pt: 1 }}>
+            <TextField
+              label="Текущий пароль"
+              type="password"
+              value={oldPassword}
+              onChange={(event) => {
+                setOldPassword(event.target.value);
+                setChangePasswordValidationError(null);
+                setChangePasswordSuccess(null);
+              }}
+              fullWidth
+            />
+            <TextField
+              label="Новый пароль"
+              type="password"
+              value={newPassword}
+              onChange={(event) => {
+                setNewPassword(event.target.value);
+                setChangePasswordValidationError(null);
+                setChangePasswordSuccess(null);
+              }}
+              helperText={`Минимум ${MIN_PASSWORD_LENGTH} символов`}
+              fullWidth
+            />
+            <TextField
+              label="Подтвердите новый пароль"
+              type="password"
+              value={confirmNewPassword}
+              onChange={(event) => {
+                setConfirmNewPassword(event.target.value);
+                setChangePasswordValidationError(null);
+                setChangePasswordSuccess(null);
+              }}
+              fullWidth
+            />
+
+            {changePasswordValidationError && (
+              <Alert severity="error">
+                {changePasswordValidationError}
+              </Alert>
+            )}
+
+            {changePasswordError && !changePasswordValidationError && (
+              <Alert severity="error">
+                {getStatusCode(changePasswordError) === 403
+                  ? "Текущий пароль указан неверно."
+                  : getStatusCode(changePasswordError) === 400
+                    ? getErrorMessage(changePasswordError) ?? "Новый пароль не прошел валидацию."
+                    : getErrorMessage(changePasswordError) ?? "Не удалось изменить пароль."}
+              </Alert>
+            )}
+
+            {changePasswordSuccess && (
+              <Alert severity="success">
+                {changePasswordSuccess}
+              </Alert>
+            )}
+
+            <Box display="flex" gap={2} justifyContent="flex-end" flexWrap="wrap">
+              <Button variant="text" onClick={handleCloseChangePasswordDialog}>
+                Закрыть
+              </Button>
+              <Button
+                variant="contained"
+                onClick={handleChangePassword}
+                disabled={!isPasswordFormDirty || isChangingPassword}
+              >
+                Сохранить пароль
+              </Button>
+            </Box>
+          </Stack>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={subscriptionsDialogOpen}
