@@ -176,9 +176,14 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
   });
   const { data: currentUser } = usersApi.useGetCurrentUserQuery();
   const { countsByOfferId } = useDraftOfferCounts({ enabled: isMyOffers });
-  const currentLocation = currentUser?.currentLatitude != null && currentUser.currentLongitude != null
-    ? { lat: currentUser.currentLatitude, lon: currentUser.currentLongitude }
-    : null;
+  const currentLocation = useMemo(
+    () => (
+      currentUser?.currentLatitude != null && currentUser.currentLongitude != null
+        ? { lat: currentUser.currentLatitude, lon: currentUser.currentLongitude }
+        : null
+    ),
+    [currentUser?.currentLatitude, currentUser?.currentLongitude],
+  );
   const parsedTags = useMemo(() => parseOfferTagsInput(tagsInput), [tagsInput]);
   const suggestedTags = useMemo(
     () => existingTags.filter((tag) => !parsedTags.includes(tag)).slice(0, 10),
