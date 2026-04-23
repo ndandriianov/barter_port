@@ -339,6 +339,8 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
     void loadOffersPage(null, null, true);
   }, [loadOffersPage]);
 
+  const hasNextCursor = nextCursor !== null || nextFavoriteCursor !== null;
+
   useEffect(() => {
     if (offers.length === 0) {
       return;
@@ -375,7 +377,7 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
     observer.observe(sentinelNode);
 
     return () => observer.disconnect();
-  }, [loadOffersPage, offers.length]);
+  }, [loadOffersPage, offers.length, isInitialLoading, hasNextCursor]);
 
   if (isInitialLoading && !hasLoadedOnce) {
     return (
