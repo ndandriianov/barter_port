@@ -73,12 +73,14 @@ type seededUser struct {
 }
 
 type offerSpec struct {
-	Key         string
-	Name        string
-	Description string
-	Type        dealtypes.ItemType
-	Action      dealtypes.OfferAction
-	Tags        []dealtypes.TagName
+	Key          string
+	Name         string
+	Description  string
+	Type         dealtypes.ItemType
+	Action       dealtypes.OfferAction
+	Tags         []dealtypes.TagName
+	PhotoAliases []string
+	SkipPhoto    bool
 }
 
 type SeedSummary struct {

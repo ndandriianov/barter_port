@@ -10,8 +10,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
+	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -303,18 +306,13 @@ func (c *SeedClient) listSubscribersByUser(ctx context.Context, token string, us
 func (c *SeedClient) createOffers(ctx context.Context, user *seededUser, specs []offerSpec) (map[string]uuid.UUID, error) {
 	result := make(map[string]uuid.UUID, len(specs))
 	for _, spec := range specs {
-		req := dealtypes.CreateOfferRequest{
-			Name:        spec.Name,
-			Description: spec.Description,
-			Type:        spec.Type,
-			Action:      spec.Action,
-		}
-		if len(spec.Tags) > 0 {
-			req.Tags = &spec.Tags
+		photoPath, err := resolveOfferPhotoPath(user.Key, spec)
+		if err != nil {
+			return nil, fmt.Errorf("resolve photo for offer %s for %s: %w", spec.Key, user.Key, err)
 		}
 
-		var offer dealtypes.Offer
-		if err := c.doJSON(ctx, http.MethodPost, "/offers", user.Token, req, &offer, http.StatusCreated); err != nil {
+		offer, err := c.createOffer(ctx, user.Token, spec, photoPath)
+		if err != nil {
 			return nil, fmt.Errorf("create offer %s for %s: %w", spec.Key, user.Key, err)
 		}
 
@@ -322,6 +320,85 @@ func (c *SeedClient) createOffers(ctx context.Context, user *seededUser, specs [
 	}
 
 	return result, nil
+}
+
+func (c *SeedClient) createOffer(ctx context.Context, token string, spec offerSpec, photoPath string) (dealtypes.Offer, error) {
+	var body bytes.Buffer
+	writer := multipart.NewWriter(&body)
+
+	if err := writer.WriteField("name", spec.Name); err != nil {
+		return dealtypes.Offer{}, fmt.Errorf("write offer name: %w", err)
+	}
+	if err := writer.WriteField("description", spec.Description); err != nil {
+		return dealtypes.Offer{}, fmt.Errorf("write offer description: %w", err)
+	}
+	if err := writer.WriteField("type", string(spec.Type)); err != nil {
+		return dealtypes.Offer{}, fmt.Errorf("write offer type: %w", err)
+	}
+	if err := writer.WriteField("action", string(spec.Action)); err != nil {
+		return dealtypes.Offer{}, fmt.Errorf("write offer action: %w", err)
+	}
+	for _, tag := range spec.Tags {
+		if err := writer.WriteField("tags", tag); err != nil {
+			return dealtypes.Offer{}, fmt.Errorf("write offer tag: %w", err)
+		}
+	}
+
+	if photoPath != "" {
+		if err := writeOfferPhotoPart(writer, photoPath); err != nil {
+			return dealtypes.Offer{}, err
+		}
+	}
+
+	if err := writer.Close(); err != nil {
+		return dealtypes.Offer{}, fmt.Errorf("close multipart writer: %w", err)
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.BaseURL+"/offers", &body)
+	if err != nil {
+		return dealtypes.Offer{}, fmt.Errorf("build request POST /offers: %w", err)
+	}
+
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+
+	resp, err := c.HttpClient.Do(req)
+	if err != nil {
+		return dealtypes.Offer{}, fmt.Errorf("perform request POST /offers: %w", err)
+	}
+	defer closeBody(resp.Body)
+
+	if resp.StatusCode != http.StatusCreated {
+		return dealtypes.Offer{}, responseError(resp, http.StatusCreated)
+	}
+
+	var offer dealtypes.Offer
+	if err := json.NewDecoder(resp.Body).Decode(&offer); err != nil {
+		return dealtypes.Offer{}, fmt.Errorf("decode response POST /offers: %w", err)
+	}
+
+	return offer, nil
+}
+
+func writeOfferPhotoPart(writer *multipart.Writer, photoPath string) error {
+	file, err := os.Open(photoPath)
+	if err != nil {
+		return fmt.Errorf("open offer photo %s: %w", photoPath, err)
+	}
+	defer closeBody(file)
+
+	part, err := writer.CreateFormFile("photos", filepath.Base(photoPath))
+	if err != nil {
+		return fmt.Errorf("create multipart photo field for %s: %w", photoPath, err)
+	}
+
+	if _, err := io.Copy(part, file); err != nil {
+		return fmt.Errorf("write offer photo %s: %w", photoPath, err)
+	}
+
+	return nil
 }
 
 func (c *SeedClient) listOffers(ctx context.Context, token string, query url.Values) (dealtypes.ListOffersResponse, error) {
