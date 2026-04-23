@@ -71,7 +71,7 @@ func offerResourcesDir() (string, error) {
 		return "", fmt.Errorf("resolve seed-demo source path")
 	}
 
-	dir := filepath.Clean(filepath.Join(filepath.Dir(filename), "..", "resources"))
+	dir := filepath.Clean(filepath.Join(filepath.Dir(filename), "..", "resources", "offers"))
 	if _, err := os.Stat(dir); err != nil {
 		return "", fmt.Errorf("stat resources dir %s: %w", dir, err)
 	}
