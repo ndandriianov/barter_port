@@ -91,6 +91,7 @@ func TestUsersGetMe(t *testing.T) {
 	require.Nil(t, me.Name)
 	require.Nil(t, me.Bio)
 	require.Nil(t, me.AvatarUrl)
+	require.Nil(t, me.PhoneNumber)
 	require.False(t, me.CreatedAt.IsZero())
 }
 
@@ -197,7 +198,7 @@ func TestUsersUpdateMeAndGetUser(t *testing.T) {
 	waitForUsersProjection(t, fixture, registered.UserID)
 
 	accessToken := mustAccessToken(t, registered.UserID)
-	updateBody := []byte(`{"name":"Nick","bio":"barter enthusiast","avatarUrl":"http://localhost:8333/avatars/user-1/avatar.jpg"}`)
+	updateBody := []byte(`{"name":"Nick","bio":"barter enthusiast","avatarUrl":"http://localhost:8333/avatars/user-1/avatar.jpg","phoneNumber":"+79991234567"}`)
 
 	req, err := http.NewRequest(http.MethodPatch, fixture.UsersURL+"/users/me", bytes.NewReader(updateBody))
 	require.NoError(t, err)
@@ -220,6 +221,8 @@ func TestUsersUpdateMeAndGetUser(t *testing.T) {
 	require.Equal(t, "barter enthusiast", *me.Bio)
 	require.NotNil(t, me.AvatarUrl)
 	require.Equal(t, "http://localhost:8333/avatars/user-1/avatar.jpg", *me.AvatarUrl)
+	require.NotNil(t, me.PhoneNumber)
+	require.Equal(t, "+79991234567", *me.PhoneNumber)
 
 	getReq, err := http.NewRequest(http.MethodGet, fixture.UsersURL+"/users/"+registered.UserID.String(), nil)
 	require.NoError(t, err)
@@ -242,6 +245,8 @@ func TestUsersUpdateMeAndGetUser(t *testing.T) {
 	require.Equal(t, "barter enthusiast", *user.Bio)
 	require.NotNil(t, user.AvatarUrl)
 	require.Equal(t, "http://localhost:8333/avatars/user-1/avatar.jpg", *user.AvatarUrl)
+	require.NotNil(t, user.PhoneNumber)
+	require.Equal(t, "+79991234567", *user.PhoneNumber)
 }
 
 func TestUsersUpdateAvatarOnlyAndClear(t *testing.T) {
@@ -288,6 +293,85 @@ func TestUsersUpdateAvatarOnlyAndClear(t *testing.T) {
 	var afterClear usertypes.Me
 	require.NoError(t, json.NewDecoder(clearResp.Body).Decode(&afterClear))
 	require.Nil(t, afterClear.AvatarUrl)
+}
+
+func TestUsersUpdatePhoneNumberOnlyAndClear(t *testing.T) {
+	t.Parallel()
+
+	fixture := globalFixture
+
+	registered := registerAuthUser(t, fixture)
+	waitForUsersProjection(t, fixture, registered.UserID)
+
+	accessToken := mustAccessToken(t, registered.UserID)
+
+	setReq, err := http.NewRequest(http.MethodPatch, fixture.UsersURL+"/users/me", bytes.NewReader([]byte(`{"phoneNumber":"+79990001122"}`)))
+	require.NoError(t, err)
+	setReq.Header.Set("Authorization", "Bearer "+accessToken)
+	setReq.Header.Set("Content-Type", "application/json")
+
+	setResp, err := http.DefaultClient.Do(setReq)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_ = setResp.Body.Close()
+	})
+
+	require.Equal(t, http.StatusOK, setResp.StatusCode)
+
+	var afterSet usertypes.Me
+	require.NoError(t, json.NewDecoder(setResp.Body).Decode(&afterSet))
+	require.NotNil(t, afterSet.PhoneNumber)
+	require.Equal(t, "+79990001122", *afterSet.PhoneNumber)
+
+	getReq, err := http.NewRequest(http.MethodGet, fixture.UsersURL+"/users/"+registered.UserID.String(), nil)
+	require.NoError(t, err)
+	getReq.Header.Set("Authorization", "Bearer "+accessToken)
+
+	getResp, err := http.DefaultClient.Do(getReq)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_ = getResp.Body.Close()
+	})
+
+	require.Equal(t, http.StatusOK, getResp.StatusCode)
+
+	var afterSetUser usertypes.User
+	require.NoError(t, json.NewDecoder(getResp.Body).Decode(&afterSetUser))
+	require.NotNil(t, afterSetUser.PhoneNumber)
+	require.Equal(t, "+79990001122", *afterSetUser.PhoneNumber)
+
+	clearReq, err := http.NewRequest(http.MethodPatch, fixture.UsersURL+"/users/me", bytes.NewReader([]byte(`{"phoneNumber":""}`)))
+	require.NoError(t, err)
+	clearReq.Header.Set("Authorization", "Bearer "+accessToken)
+	clearReq.Header.Set("Content-Type", "application/json")
+
+	clearResp, err := http.DefaultClient.Do(clearReq)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_ = clearResp.Body.Close()
+	})
+
+	require.Equal(t, http.StatusOK, clearResp.StatusCode)
+
+	var afterClear usertypes.Me
+	require.NoError(t, json.NewDecoder(clearResp.Body).Decode(&afterClear))
+	require.Nil(t, afterClear.PhoneNumber)
+
+	getAfterClearReq, err := http.NewRequest(http.MethodGet, fixture.UsersURL+"/users/"+registered.UserID.String(), nil)
+	require.NoError(t, err)
+	getAfterClearReq.Header.Set("Authorization", "Bearer "+accessToken)
+
+	getAfterClearResp, err := http.DefaultClient.Do(getAfterClearReq)
+	require.NoError(t, err)
+	t.Cleanup(func() {
+		_ = getAfterClearResp.Body.Close()
+	})
+
+	require.Equal(t, http.StatusOK, getAfterClearResp.StatusCode)
+
+	var afterClearUser usertypes.User
+	require.NoError(t, json.NewDecoder(getAfterClearResp.Body).Decode(&afterClearUser))
+	require.Nil(t, afterClearUser.PhoneNumber)
 }
 
 func TestUsersUpdateMeRejectsEmptyPayload(t *testing.T) {

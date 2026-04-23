@@ -48,6 +48,7 @@ function ProfilePage() {
   const [draftName, setDraftName] = useState<string | null>(null);
   const [draftBio, setDraftBio] = useState<string | null>(null);
   const [draftAvatarUrl, setDraftAvatarUrl] = useState<string | null>(null);
+  const [draftPhoneNumber, setDraftPhoneNumber] = useState<string | null>(null);
   const [draftAvatarFile, setDraftAvatarFile] = useState<File | null>(null);
   const [avatarError, setAvatarError] = useState<string | null>(null);
   const [isReputationDrawerOpen, setIsReputationDrawerOpen] = useState(false);
@@ -82,6 +83,7 @@ function ProfilePage() {
   const currentName = draftName ?? (data?.name ?? "");
   const currentBio = draftBio ?? (data?.bio ?? "");
   const currentAvatarUrl = draftAvatarUrl ?? (data?.avatarUrl ?? "");
+  const currentPhoneNumber = draftPhoneNumber ?? (data?.phoneNumber ?? "");
 
   const hasChanges = useMemo(() => {
     if (!data) {
@@ -91,9 +93,10 @@ function ProfilePage() {
     return (
       currentName !== (data.name ?? "") ||
       currentBio !== (data.bio ?? "") ||
-      currentAvatarUrl !== (data.avatarUrl ?? "")
+      currentAvatarUrl !== (data.avatarUrl ?? "") ||
+      currentPhoneNumber !== (data.phoneNumber ?? "")
     );
-  }, [currentAvatarUrl, currentBio, currentName, data]);
+  }, [currentAvatarUrl, currentBio, currentName, currentPhoneNumber, data]);
 
   const normalizedAvatarUrl = currentAvatarUrl.trim();
   const avatarPreviewUrl = normalizedAvatarUrl || undefined;
@@ -138,11 +141,13 @@ function ProfilePage() {
         name: currentName.trim(),
         bio: currentBio.trim(),
         avatarUrl: nextAvatarUrl,
+        phoneNumber: currentPhoneNumber.trim(),
       }).unwrap();
       // Drop local draft and rely on fresh server state after mutation invalidation.
       setDraftName(null);
       setDraftBio(null);
       setDraftAvatarUrl(null);
+      setDraftPhoneNumber(null);
       setDraftAvatarFile(null);
     } catch {
       // Error state is already exposed by RTK Query and rendered in UI.
@@ -153,6 +158,7 @@ function ProfilePage() {
     setDraftName("");
     setDraftBio("");
     setDraftAvatarUrl("");
+    setDraftPhoneNumber("");
     setDraftAvatarFile(null);
     setAvatarError(null);
   };
@@ -359,6 +365,12 @@ function ProfilePage() {
             </Box>
             <Box>
               <Typography variant="caption" color="text.secondary">
+                Телефон
+              </Typography>
+              <Typography variant="body2">{data.phoneNumber?.trim() || "Не указан"}</Typography>
+            </Box>
+            <Box>
+              <Typography variant="caption" color="text.secondary">
                 Зарегистрирован
               </Typography>
               <Typography variant="body2">
@@ -417,7 +429,15 @@ function ProfilePage() {
               fullWidth
               multiline
               minRows={3}
-              helperText="Чтобы удалить имя или bio, очистите поле и сохраните"
+              helperText="Чтобы удалить имя, bio или телефон, очистите поле и сохраните"
+            />
+            <TextField
+              label="Телефон"
+              type="tel"
+              value={currentPhoneNumber}
+              onChange={(event) => setDraftPhoneNumber(event.target.value)}
+              placeholder="+79991234567"
+              fullWidth
             />
           </Stack>
 

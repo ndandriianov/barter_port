@@ -101,6 +101,7 @@ function UserPage() {
   const displayName = user.name?.trim() || "Имя не указано";
   const bio = user.bio?.trim();
   const avatarUrl = user.avatarUrl?.trim() || "";
+  const phoneNumber = user.phoneNumber?.trim();
   const subscriptionsCount = userSubscriptions?.length ?? 0;
   const subscribersCount = subscribers?.length ?? 0;
 
@@ -182,6 +183,14 @@ function UserPage() {
           </Box>
 
           <Stack spacing={1.5} mb={3}>
+            <Box>
+              <Typography variant="caption" color="text.secondary">
+                Телефон
+              </Typography>
+              <Typography variant="body2">
+                {phoneNumber || "Пользователь не указал номер телефона."}
+              </Typography>
+            </Box>
             <Box>
               <Typography variant="caption" color="text.secondary">
                 О пользователе
