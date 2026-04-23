@@ -87,7 +87,7 @@ func TestUsersGetMe(t *testing.T) {
 	var me usertypes.Me
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&me))
 	require.Equal(t, registered.UserID, me.Id)
-	require.Equal(t, registered.Email, me.Email)
+	require.Equal(t, registered.Email, string(me.Email))
 	require.Nil(t, me.Name)
 	require.Nil(t, me.Bio)
 	require.Nil(t, me.AvatarUrl)
