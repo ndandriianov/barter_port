@@ -214,6 +214,34 @@ Offer:
       items:
         type: string
         format: uri
+    latitude:
+      allOf:
+        - $ref: '#/Latitude'
+      nullable: true
+      description: |
+        Широта точки объявления.
+        Поле присутствует в ответах с `offer` вне зависимости от того, кто вызвал GET.
+        `null`, если автор не указал точку на карте.
+    longitude:
+      allOf:
+        - $ref: '#/Longitude'
+      nullable: true
+      description: |
+        Долгота точки объявления.
+        Поле присутствует в ответах с `offer` вне зависимости от того, кто вызвал GET.
+        `null`, если автор не указал точку на карте.
+    distanceMeters:
+      type: integer
+      format: int64
+      minimum: 0
+      nullable: true
+      description: |
+        Расстояние по прямой от текущей точки пользователя до точки объявления, в метрах.
+        Возвращается только если:
+        - у текущего пользователя сохранены `currentLatitude` и `currentLongitude`;
+        - у объявления указаны `latitude` и `longitude`;
+        - объявление не принадлежит текущему пользователю.
+        Иначе поле равно `null`.
 
 
 FavoritedOffer:
@@ -254,6 +282,24 @@ OfferAction:
   enum:
     - give
     - take
+
+
+Latitude:
+  type: number
+  format: double
+  minimum: -90
+  maximum: 90
+  description: Широта в градусах WGS84.
+  example: 55.751244
+
+
+Longitude:
+  type: number
+  format: double
+  minimum: -180
+  maximum: 180
+  description: Долгота в градусах WGS84.
+  example: 37.618423
 
 
 OfferReportStatus:

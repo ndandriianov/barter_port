@@ -30,3 +30,19 @@ ReputationPoints:
   type: integer
   description: Current user reputation score including rewards and penalties
   example: -10
+
+Latitude:
+  type: number
+  format: double
+  minimum: -90
+  maximum: 90
+  description: Широта в градусах WGS84
+  example: 55.751244
+
+Longitude:
+  type: number
+  format: double
+  minimum: -180
+  maximum: 180
+  description: Долгота в градусах WGS84
+  example: 37.618423

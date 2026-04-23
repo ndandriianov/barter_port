@@ -9,6 +9,22 @@ UpdateUserRequest:
       $ref: './properties.yaml#/AvatarUrl'
     phoneNumber:
       $ref: './properties.yaml#/PhoneNumber'
+    currentLatitude:
+      allOf:
+        - $ref: './properties.yaml#/Latitude'
+      nullable: true
+      description: |
+        Новая текущая широта пользователя.
+        Если передано вместе с `currentLongitude`, текущая точка пользователя обновляется.
+        Если передано `null` вместе с `currentLongitude: null`, текущая точка пользователя удаляется.
+    currentLongitude:
+      allOf:
+        - $ref: './properties.yaml#/Longitude'
+      nullable: true
+      description: |
+        Новая текущая долгота пользователя.
+        Если передано вместе с `currentLatitude`, текущая точка пользователя обновляется.
+        Если передано `null` вместе с `currentLatitude: null`, текущая точка пользователя удаляется.
 
 
 SubscribeRequest:
