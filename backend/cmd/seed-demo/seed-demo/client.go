@@ -77,7 +77,7 @@ func (c *SeedClient) ensureUser(ctx context.Context, email, password string) (re
 
 	return registerResponse{
 		UserID: me.Id,
-		Email:  me.Email,
+		Email:  string(me.Email),
 	}, token, nil
 }
 

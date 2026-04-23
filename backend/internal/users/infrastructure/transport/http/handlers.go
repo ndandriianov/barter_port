@@ -17,6 +17,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
+	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
 const maxAvatarUploadSize = 5 * 1024 * 1024
@@ -469,7 +470,7 @@ func (h *Handlers) getMe(ctx context.Context, userID uuid.UUID) (types.Me, error
 		Name:             me.Name,
 		Bio:              me.Bio,
 		AvatarUrl:        me.AvatarURL,
-		Email:            me.Email, // TODO: конвертировать при отключенном bypass
+		Email:            openapi_types.Email(me.Email), // TODO: конвертировать при отключенном bypass
 		CreatedAt:        me.CreatedAt,
 		IsAdmin:          me.IsAdmin,
 		ReputationPoints: me.ReputationPoints,
