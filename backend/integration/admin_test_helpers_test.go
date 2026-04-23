@@ -10,7 +10,7 @@ import (
 
 const (
 	adminEmail    = "admin@barterport.com"
-	adminPassword = "admin"
+	adminPassword = "admin123"
 )
 
 func mustAdminAccessToken(t *testing.T) string {
