@@ -16,27 +16,29 @@ interface Props {
 declare global {
   interface Window {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ymaps3?: any;
-    __ymaps3Promise?: Promise<void>;
+    ymaps?: any;
+    __ymapsPromise?: Promise<void>;
   }
 }
 
 const DEFAULT_CENTER: [number, number] = [55.751244, 37.618423]; // Moscow
 
 function loadYmaps(apiKey: string): Promise<void> {
-  if (window.ymaps3) return Promise.resolve();
-  if (window.__ymaps3Promise) return window.__ymaps3Promise;
+  if (window.ymaps?.ready) return Promise.resolve();
+  if (window.__ymapsPromise) return window.__ymapsPromise;
 
-  window.__ymaps3Promise = new Promise<void>((resolve, reject) => {
+  window.__ymapsPromise = new Promise<void>((resolve, reject) => {
     const script = document.createElement("script");
-    script.src = `https://api-maps.yandex.ru/3.0/?apikey=${apiKey}&lang=ru_RU`;
+    script.src = `https://api-maps.yandex.ru/2.1/?apikey=${apiKey}&lang=ru_RU`;
     script.async = true;
-    script.onload = () => resolve();
-    script.onerror = () => reject(new Error("Failed to load Yandex Maps API"));
+    script.onload = () => {
+      window.ymaps.ready(() => resolve());
+    };
+    script.onerror = () => reject(new Error("Не удалось загрузить Яндекс Карты"));
     document.head.appendChild(script);
   });
 
-  return window.__ymaps3Promise;
+  return window.__ymapsPromise;
 }
 
 export default function YandexMapPicker({ value, onChange, height = "300px", apiKey }: Props) {
@@ -57,68 +59,45 @@ export default function YandexMapPicker({ value, onChange, height = "300px", api
     let cancelled = false;
 
     loadYmaps(resolvedApiKey)
-      .then(async () => {
+      .then(() => {
         if (cancelled || !containerRef.current) return;
 
-        const ymaps3 = window.ymaps3!;
-        await ymaps3.ready;
-
-        if (cancelled || !containerRef.current) return;
-
-        const { YMap, YMapDefaultSchemeLayer, YMapDefaultFeaturesLayer, YMapMarker } = ymaps3;
-
+        const ymaps = window.ymaps;
         const center: [number, number] = value ? [value.lat, value.lon] : DEFAULT_CENTER;
 
-        const map = new YMap(containerRef.current, {
-          location: { center, zoom: value ? 14 : 10 },
+        const map = new ymaps.Map(containerRef.current, {
+          center,
+          zoom: value ? 14 : 10,
+          controls: ["zoomControl", "fullscreenControl"],
         });
-
-        map.addChild(new YMapDefaultSchemeLayer({}));
-        map.addChild(new YMapDefaultFeaturesLayer({}));
 
         mapRef.current = map;
 
-        // Place initial marker
         if (value) {
-          const el = createMarkerElement();
-          const marker = new YMapMarker({ coordinates: [value.lat, value.lon] }, el);
-          map.addChild(marker);
-          markerRef.current = marker;
+          const placemark = new ymaps.Placemark([value.lat, value.lon], {}, { preset: "islands#redDotIcon" });
+          map.geoObjects.add(placemark);
+          markerRef.current = placemark;
         }
 
-        map.addChild({
-          // Pseudo-listener layer for click events
-          onUpdate() {},
-          onAttach() {},
-          onDetach() {},
-        });
-
-        containerRef.current.addEventListener("click", (e: MouseEvent) => {
-          const rect = containerRef.current!.getBoundingClientRect();
-          const px = e.clientX - rect.left;
-          const py = e.clientY - rect.top;
+        map.events.add("click", (e: unknown) => {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const coords = (mapRef.current as any).unproject([px, py]);
-          if (!coords) return;
-
+          const coords: [number, number] = (e as any).get("coords");
           const [lat, lon] = coords;
           onChange({ lat, lon });
 
           if (markerRef.current) {
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            (mapRef.current as any).removeChild(markerRef.current);
+            (mapRef.current as any).geoObjects.remove(markerRef.current);
           }
-          const el = createMarkerElement();
+          const placemark = new ymaps.Placemark([lat, lon], {}, { preset: "islands#redDotIcon" });
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const marker = new (ymaps3 as any).YMapMarker({ coordinates: [lat, lon] }, el);
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          (mapRef.current as any).addChild(marker);
-          markerRef.current = marker;
+          (mapRef.current as any).geoObjects.add(placemark);
+          markerRef.current = placemark;
         });
 
         setLoaded(true);
       })
-      .catch((err) => {
+      .catch((err: Error) => {
         if (!cancelled) setError(err.message);
       });
 
@@ -126,40 +105,40 @@ export default function YandexMapPicker({ value, onChange, height = "300px", api
       cancelled = true;
       if (mapRef.current) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (mapRef.current as any).destroy?.();
+        (mapRef.current as any).destroy();
         mapRef.current = null;
+        markerRef.current = null;
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resolvedApiKey]);
 
-  // Keep marker in sync when value changes externally
+  // Sync marker when value changes externally
   useEffect(() => {
     if (!loaded || !mapRef.current) return;
-    const ymaps3 = window.ymaps3;
-    if (!ymaps3) return;
+    const ymaps = window.ymaps;
+    if (!ymaps) return;
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const map = mapRef.current as any;
 
     if (markerRef.current) {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (mapRef.current as any).removeChild(markerRef.current);
+      map.geoObjects.remove(markerRef.current);
       markerRef.current = null;
     }
 
     if (value) {
-      const el = createMarkerElement();
-      const marker = new ymaps3.YMapMarker({ coordinates: [value.lat, value.lon] }, el);
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (mapRef.current as any).addChild(marker);
-      markerRef.current = marker;
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      (mapRef.current as any).setLocation({ center: [value.lat, value.lon], zoom: 14, duration: 300 });
+      const placemark = new ymaps.Placemark([value.lat, value.lon], {}, { preset: "islands#redDotIcon" });
+      map.geoObjects.add(placemark);
+      markerRef.current = placemark;
+      map.setCenter([value.lat, value.lon], 14, { duration: 300 });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [value?.lat, value?.lon, loaded]);
 
   if (error) {
     return (
-      <div style={{ height, display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid #ccc", borderRadius: 8, color: "red", fontSize: 14 }}>
+      <div style={{ height, display: "flex", alignItems: "center", justifyContent: "center", border: "1px solid #ccc", borderRadius: 8, color: "red", fontSize: 14, padding: 16, textAlign: "center" }}>
         {error}
       </div>
     );
@@ -194,10 +173,4 @@ export default function YandexMapPicker({ value, onChange, height = "300px", api
       )}
     </div>
   );
-}
-
-function createMarkerElement(): HTMLElement {
-  const el = document.createElement("div");
-  el.style.cssText = "width:20px;height:20px;background:#e74c3c;border-radius:50%;border:3px solid white;box-shadow:0 2px 6px rgba(0,0,0,0.4);cursor:pointer;transform:translate(-50%,-50%)";
-  return el;
 }
