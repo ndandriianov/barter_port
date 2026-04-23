@@ -32,6 +32,10 @@ type loginResponse struct {
 	AccessToken string `json:"accessToken"`
 }
 
+type refreshResponse struct {
+	AccessToken string `json:"access_token"`
+}
+
 type offerGroupRequest struct {
 	Name        *string                 `json:"name,omitempty"`
 	Description *string                 `json:"description,omitempty"`
@@ -63,21 +67,24 @@ type seededUser struct {
 	Bio      string
 	Email    string
 	Password string
-	Avatar   string
 	UserID   uuid.UUID
 	Token    string
 }
 
 type offerSpec struct {
-	Key         string
-	Name        string
-	Description string
-	Type        dealtypes.ItemType
-	Action      dealtypes.OfferAction
+	Key          string
+	Name         string
+	Description  string
+	Type         dealtypes.ItemType
+	Action       dealtypes.OfferAction
+	Tags         []dealtypes.TagName
+	PhotoAliases []string
+	SkipPhoto    bool
 }
 
 type SeedSummary struct {
-	Users []seededUserSummary `json:"users"`
+	Users    []seededUserSummary `json:"users"`
+	Warnings []string            `json:"warnings,omitempty"`
 
 	OfferGroupID      uuid.UUID `json:"offerGroupId"`
 	OfferGroupDraftID uuid.UUID `json:"offerGroupDraftId"`

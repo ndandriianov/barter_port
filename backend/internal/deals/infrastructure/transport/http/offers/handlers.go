@@ -721,20 +721,21 @@ func newUniversalCursorFromParams(createdAt *types.CursorCreatedAt, views *types
 		return nil, nil
 	}
 
-	var createdAtStr string
+	if id == nil {
+		return nil, domain.ErrInvalidId
+	}
+
+	cursor := &domain.UniversalCursor{
+		Id: *id,
+	}
 	if createdAt != nil {
-		createdAtStr = (*createdAt).Format(time.RFC3339)
+		createdAtValue := time.Time(*createdAt)
+		cursor.CreatedAt = &createdAtValue
 	}
-
-	var viewsStr string
 	if views != nil {
-		viewsStr = strconv.FormatInt(*views, 10)
+		viewsValue := int(*views)
+		cursor.Views = &viewsValue
 	}
 
-	var idStr string
-	if id != nil {
-		idStr = (*id).String()
-	}
-
-	return domain.NewUniversalCursor(createdAtStr, viewsStr, idStr)
+	return cursor, nil
 }
