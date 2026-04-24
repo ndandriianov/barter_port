@@ -12,10 +12,11 @@ import (
 )
 
 type offerGroupResponse struct {
-	Id          uuid.UUID                `json:"id"`
-	Name        string                   `json:"name"`
-	Description *string                  `json:"description"`
-	Units       []offerGroupUnitResponse `json:"units"`
+	Id              uuid.UUID                `json:"id"`
+	Name            string                   `json:"name"`
+	Description     *string                  `json:"description"`
+	DraftDealsCount *int                     `json:"draftDealsCount,omitempty"`
+	Units           []offerGroupUnitResponse `json:"units"`
 }
 
 type offerGroupUnitResponse struct {
@@ -69,6 +70,8 @@ func TestCreateOfferGroupSuccess(t *testing.T) {
 	require.Equal(t, "Велосипед и Шлем, Ремонт", group.Name)
 	require.NotNil(t, group.Description)
 	require.Equal(t, description, *group.Description)
+	require.NotNil(t, group.DraftDealsCount)
+	require.Equal(t, 0, *group.DraftDealsCount)
 	require.Len(t, group.Units, 2)
 	require.Len(t, group.Units[0].Offers, 2)
 	require.Len(t, group.Units[1].Offers, 1)
@@ -161,6 +164,8 @@ func TestGetOfferGroupByIDSuccess(t *testing.T) {
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&item))
 	require.Equal(t, group.Id, item.Id)
 	require.Equal(t, group.Name, item.Name)
+	require.NotNil(t, item.DraftDealsCount)
+	require.Equal(t, 0, *item.DraftDealsCount)
 }
 
 func TestCreateDraftFromOfferGroupSuccess(t *testing.T) {
@@ -211,6 +216,8 @@ func TestCreateDraftFromOfferGroupSuccess(t *testing.T) {
 	var draft types.Draft
 	require.NoError(t, json.NewDecoder(draftResp.Body).Decode(&draft))
 	require.Equal(t, responderID, draft.AuthorId)
+	require.NotNil(t, draft.OfferGroupId)
+	require.Equal(t, group.Id, uuid.UUID(*draft.OfferGroupId))
 	require.Len(t, draft.Offers, 3)
 
 	got := map[uuid.UUID]int{}
@@ -375,6 +382,100 @@ func TestCreateDraftFromOfferGroupInvalidSelectionReturnsBadRequest(t *testing.T
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&apiErr))
 	require.NotNil(t, apiErr.Message)
 	require.Equal(t, domain.ErrInvalidOfferGroupSelect.Error(), *apiErr.Message)
+}
+
+func TestOfferGroupDraftDealsCountVisibleOnlyToOwner(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	ownerID := uuid.New()
+	foreignUserID := uuid.New()
+	responderID := uuid.New()
+
+	offerA := mustCreateOfferWithAction(t, ownerID, types.Give)
+	offerB := mustCreateOfferWithAction(t, ownerID, types.Give)
+	responderOffer := mustCreateOfferWithAction(t, responderID, types.Give)
+
+	group := mustCreateOfferGroup(t, ownerID, map[string]any{
+		"units": []map[string]any{
+			{
+				"offers": []map[string]any{
+					{"offerId": offerA.String()},
+				},
+			},
+			{
+				"offers": []map[string]any{
+					{"offerId": offerB.String()},
+				},
+			},
+		},
+	})
+
+	req := mustUserRequest(t, http.MethodPost, dealsURL()+"/offer-groups/"+group.Id.String()+"/drafts", responderID, mustJSONBody(t, map[string]any{
+		"selectedOfferIds": []string{offerA.String(), offerB.String()},
+		"responderOfferId": responderOffer.String(),
+	}))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusCreated, resp.StatusCode)
+
+	ownerListReq := mustUserRequest(t, http.MethodGet, dealsURL()+"/offer-groups", ownerID, nil)
+	ownerListResp := mustDo(t, ownerListReq)
+	defer func() { _ = ownerListResp.Body.Close() }()
+	require.Equal(t, http.StatusOK, ownerListResp.StatusCode)
+
+	var ownerItems []offerGroupResponse
+	require.NoError(t, json.NewDecoder(ownerListResp.Body).Decode(&ownerItems))
+
+	var ownerGroup *offerGroupResponse
+	for i := range ownerItems {
+		if ownerItems[i].Id == group.Id {
+			ownerGroup = &ownerItems[i]
+			break
+		}
+	}
+	require.NotNil(t, ownerGroup)
+	require.NotNil(t, ownerGroup.DraftDealsCount)
+	require.Equal(t, 1, *ownerGroup.DraftDealsCount)
+
+	foreignListReq := mustUserRequest(t, http.MethodGet, dealsURL()+"/offer-groups", foreignUserID, nil)
+	foreignListResp := mustDo(t, foreignListReq)
+	defer func() { _ = foreignListResp.Body.Close() }()
+	require.Equal(t, http.StatusOK, foreignListResp.StatusCode)
+
+	var foreignItems []offerGroupResponse
+	require.NoError(t, json.NewDecoder(foreignListResp.Body).Decode(&foreignItems))
+
+	var foreignGroup *offerGroupResponse
+	for i := range foreignItems {
+		if foreignItems[i].Id == group.Id {
+			foreignGroup = &foreignItems[i]
+			break
+		}
+	}
+	require.NotNil(t, foreignGroup)
+	require.Nil(t, foreignGroup.DraftDealsCount)
+
+	ownerGetReq := mustUserRequest(t, http.MethodGet, dealsURL()+"/offer-groups/"+group.Id.String(), ownerID, nil)
+	ownerGetResp := mustDo(t, ownerGetReq)
+	defer func() { _ = ownerGetResp.Body.Close() }()
+	require.Equal(t, http.StatusOK, ownerGetResp.StatusCode)
+
+	var ownerItem offerGroupResponse
+	require.NoError(t, json.NewDecoder(ownerGetResp.Body).Decode(&ownerItem))
+	require.NotNil(t, ownerItem.DraftDealsCount)
+	require.Equal(t, 1, *ownerItem.DraftDealsCount)
+
+	foreignGetReq := mustUserRequest(t, http.MethodGet, dealsURL()+"/offer-groups/"+group.Id.String(), foreignUserID, nil)
+	foreignGetResp := mustDo(t, foreignGetReq)
+	defer func() { _ = foreignGetResp.Body.Close() }()
+	require.Equal(t, http.StatusOK, foreignGetResp.StatusCode)
+
+	var foreignItem offerGroupResponse
+	require.NoError(t, json.NewDecoder(foreignGetResp.Body).Decode(&foreignItem))
+	require.Nil(t, foreignItem.DraftDealsCount)
 }
 
 func mustCreateOfferGroup(t *testing.T, userID uuid.UUID, body map[string]any) offerGroupResponse {

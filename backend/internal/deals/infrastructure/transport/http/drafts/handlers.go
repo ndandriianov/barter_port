@@ -64,7 +64,7 @@ func (h *Handlers) CreateDraft(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	id, err := h.dealsService.CreateDraft(r.Context(), authorID, req.Name, req.Description, offers)
+	id, err := h.dealsService.CreateDraft(r.Context(), authorID, req.Name, req.Description, offers, nil)
 	if err != nil {
 		if errors.Is(err, domain.ErrNoOffers) {
 			log.Warn("no offers in request")

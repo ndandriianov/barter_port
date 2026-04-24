@@ -414,6 +414,10 @@ type Draft struct {
 	// Name Название черновой сделки
 	Name *string `json:"name,omitempty"`
 
+	// OfferGroupId Идентификатор `offer_group`, из которого был создан этот `draft deal`.
+	// Для черновиков, созданных напрямую через `/deals/drafts`, поле равно `null`.
+	OfferGroupId *openapi_types.UUID `json:"offerGroupId,omitempty"`
+
 	// Offers Список объявлений, включённых в черновую сделку
 	Offers []OfferWithInfo `json:"offers"`
 
@@ -859,6 +863,12 @@ type OfferAction string
 type OfferGroup struct {
 	// Description Описание композитного объявления
 	Description *string `json:"description,omitempty"`
+
+	// DraftDealsCount Количество `draft deals`, созданных из этого `offer_group`.
+	// Поле возвращается только в выдаче своих `offer_groups`;
+	// для чужих `offer_groups` поле отсутствует.
+	// Один черновик считается ровно один раз.
+	DraftDealsCount *int `json:"draftDealsCount,omitempty"`
 
 	// Id Уникальный идентификатор композитного объявления
 	Id openapi_types.UUID `json:"id"`

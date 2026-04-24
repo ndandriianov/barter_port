@@ -8,10 +8,11 @@ import (
 )
 
 type offerGroupResponse struct {
-	Id          uuid.UUID                `json:"id"`
-	Name        string                   `json:"name"`
-	Description *string                  `json:"description,omitempty"`
-	Units       []offerGroupUnitResponse `json:"units"`
+	Id              uuid.UUID                `json:"id"`
+	Name            string                   `json:"name"`
+	Description     *string                  `json:"description,omitempty"`
+	DraftDealsCount *int                     `json:"draftDealsCount,omitempty"`
+	Units           []offerGroupUnitResponse `json:"units"`
 }
 
 type offerGroupUnitResponse struct {
@@ -34,10 +35,11 @@ func mapOfferGroupToDTO(item domain.OfferGroup) offerGroupResponse {
 	}
 
 	return offerGroupResponse{
-		Id:          item.ID,
-		Name:        item.Name,
-		Description: item.Description,
-		Units:       units,
+		Id:              item.ID,
+		Name:            item.Name,
+		Description:     item.Description,
+		DraftDealsCount: item.DraftDealsCount,
+		Units:           units,
 	}
 }
 

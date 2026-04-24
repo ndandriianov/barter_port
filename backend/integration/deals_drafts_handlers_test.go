@@ -266,6 +266,7 @@ func TestGetDraftByIDWithOffers(t *testing.T) {
 	require.Equal(t, draftID, draft.Id)
 	require.Len(t, draft.Offers, 1)
 	require.Equal(t, offerID, draft.Offers[0].Id)
+	require.Nil(t, draft.OfferGroupId)
 }
 
 func TestGetDraftByIDNotFound(t *testing.T) {

@@ -3,10 +3,11 @@ package domain
 import "github.com/google/uuid"
 
 type OfferGroup struct {
-	ID          uuid.UUID
-	Name        string
-	Description *string
-	Units       []OfferGroupUnit
+	ID              uuid.UUID
+	Name            string
+	Description     *string
+	DraftDealsCount *int
+	Units           []OfferGroupUnit
 }
 
 type OfferGroupUnit struct {
