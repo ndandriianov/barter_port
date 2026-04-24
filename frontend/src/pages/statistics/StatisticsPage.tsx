@@ -7,9 +7,12 @@ import {
   CircularProgress,
   Divider,
   Grid,
+  Stack,
   Typography,
 } from "@mui/material";
+import { Link as RouterLink } from "react-router-dom";
 import statisticsApi from "@/features/statistics/api/statisticsApi";
+import { appRoutes } from "@/shared/config/appRoutes.ts";
 import ProfileSectionShell from "@/widgets/profile/ProfileSectionShell.tsx";
 
 function StatCard({
@@ -144,35 +147,53 @@ function StatisticsPage() {
 
           <Grid size={{ xs: 12, sm: 6 }}>
             <SectionCard title="Жалобы">
-              <Grid container spacing={2}>
-                <Grid size={{ xs: 6 }}>
-                  <StatCard label="Подано мной" value={data.reports.filedByMe} />
+              <Stack spacing={2.5}>
+                <Grid container spacing={2}>
+                  <Grid size={{ xs: 6 }}>
+                    <StatCard label="Подано мной" value={data.reports.filedByMe} />
+                  </Grid>
+                  <Grid size={{ xs: 6 }}>
+                    <StatCard
+                      label="На мои объявления"
+                      value={data.reports.onMyOffers.total}
+                      color={data.reports.onMyOffers.total > 0 ? "warning.main" : undefined}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 4 }}>
+                    <StatCard
+                      label="На модерации"
+                      value={data.reports.onMyOffers.pending}
+                      color={data.reports.onMyOffers.pending > 0 ? "warning.main" : undefined}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 4 }}>
+                    <StatCard
+                      label="Принято"
+                      value={data.reports.onMyOffers.accepted}
+                      color={data.reports.onMyOffers.accepted > 0 ? "error.main" : undefined}
+                    />
+                  </Grid>
+                  <Grid size={{ xs: 4 }}>
+                    <StatCard label="Отклонено" value={data.reports.onMyOffers.rejected} />
+                  </Grid>
                 </Grid>
-                <Grid size={{ xs: 6 }}>
-                  <StatCard
-                    label="На мои объявления"
-                    value={data.reports.onMyOffers.total}
-                    color={data.reports.onMyOffers.total > 0 ? "warning.main" : undefined}
-                  />
-                </Grid>
-                <Grid size={{ xs: 4 }}>
-                  <StatCard
-                    label="На модерации"
-                    value={data.reports.onMyOffers.pending}
-                    color={data.reports.onMyOffers.pending > 0 ? "warning.main" : undefined}
-                  />
-                </Grid>
-                <Grid size={{ xs: 4 }}>
-                  <StatCard
-                    label="Принято"
-                    value={data.reports.onMyOffers.accepted}
-                    color={data.reports.onMyOffers.accepted > 0 ? "error.main" : undefined}
-                  />
-                </Grid>
-                <Grid size={{ xs: 4 }}>
-                  <StatCard label="Отклонено" value={data.reports.onMyOffers.rejected} />
-                </Grid>
-              </Grid>
+
+                <Alert severity="info">
+                  Подробно можно открыть только жалобы на ваши объявления. Для жалоб, которые подали вы сами,
+                  backend сейчас отдаёт только счётчик `filedByMe`, без отдельного списка.
+                </Alert>
+
+                <Box display="flex" gap={1.5} flexWrap="wrap">
+                  <Button
+                    component={RouterLink}
+                    to={appRoutes.market.myPublicationModeration}
+                    variant="outlined"
+                    color="warning"
+                  >
+                    Открыть жалобы на мои объявления
+                  </Button>
+                </Box>
+              </Stack>
             </SectionCard>
           </Grid>
         </Grid>
