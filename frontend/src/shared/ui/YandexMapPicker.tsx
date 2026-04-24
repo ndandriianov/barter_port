@@ -14,14 +14,17 @@ export default function YandexMapPicker({ value, onChange, height = "300px", api
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<unknown>(null);
   const markerRef = useRef<unknown>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [runtimeError, setRuntimeError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
 
   const resolvedApiKey = apiKey ?? import.meta.env.VITE_YANDEX_MAPS_API_KEY ?? "";
+  const configError = resolvedApiKey
+    ? null
+    : "Яндекс Карты: API-ключ не задан (VITE_YANDEX_MAPS_API_KEY)";
+  const error = configError ?? runtimeError;
 
   useEffect(() => {
-    if (!resolvedApiKey) {
-      setError("Яндекс Карты: API-ключ не задан (VITE_YANDEX_MAPS_API_KEY)");
+    if (configError) {
       return;
     }
 
@@ -67,7 +70,7 @@ export default function YandexMapPicker({ value, onChange, height = "300px", api
         setLoaded(true);
       })
       .catch((err: Error) => {
-        if (!cancelled) setError(err.message);
+        if (!cancelled) setRuntimeError(err.message);
       });
 
     return () => {
@@ -80,7 +83,7 @@ export default function YandexMapPicker({ value, onChange, height = "300px", api
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resolvedApiKey]);
+  }, [configError, resolvedApiKey]);
 
   // Sync marker when value changes externally
   useEffect(() => {

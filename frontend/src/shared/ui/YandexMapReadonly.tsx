@@ -12,14 +12,17 @@ export default function YandexMapReadonly({ value, height = "300px", apiKey }: P
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<unknown>(null);
   const markerRef = useRef<unknown>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [runtimeError, setRuntimeError] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
 
   const resolvedApiKey = apiKey ?? import.meta.env.VITE_YANDEX_MAPS_API_KEY ?? "";
+  const configError = resolvedApiKey
+    ? null
+    : "Яндекс Карты: API-ключ не задан (VITE_YANDEX_MAPS_API_KEY)";
+  const error = configError ?? runtimeError;
 
   useEffect(() => {
-    if (!resolvedApiKey) {
-      setError("Яндекс Карты: API-ключ не задан (VITE_YANDEX_MAPS_API_KEY)");
+    if (configError) {
       return;
     }
 
@@ -44,7 +47,7 @@ export default function YandexMapReadonly({ value, height = "300px", apiKey }: P
         setLoaded(true);
       })
       .catch((err: Error) => {
-        if (!cancelled) setError(err.message);
+        if (!cancelled) setRuntimeError(err.message);
       });
 
     return () => {
@@ -56,7 +59,7 @@ export default function YandexMapReadonly({ value, height = "300px", apiKey }: P
         markerRef.current = null;
       }
     };
-  }, [resolvedApiKey]);
+  }, [configError, resolvedApiKey]);
 
   useEffect(() => {
     if (!loaded || !mapRef.current) return;
