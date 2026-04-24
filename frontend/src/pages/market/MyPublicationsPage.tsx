@@ -35,10 +35,6 @@ function MyPublicationsPage() {
         <Typography variant="h4" fontWeight={800} mb={1}>
           Управление собственными материалами
         </Typography>
-        <Typography variant="body1" color="text.secondary" maxWidth={840}>
-          Свои обычные объявления, свои сценарии обмена и сигналы модерации больше не разбросаны по меню.
-          Это одна рабочая зона для ваших публикаций.
-        </Typography>
       </Box>
 
       <Grid container spacing={2.5}>
@@ -47,7 +43,7 @@ function MyPublicationsPage() {
             to={appRoutes.market.myPublicationOffers}
             icon={<Inventory2OutlinedIcon />}
             title="Мои объявления"
-            description="Редактирование, удаление и контроль draft-активности по вашим обычным публикациям."
+            description="Редактирование, удаление и отклики по моим публикациям."
             badge={isOffersLoading ? "..." : myOffers.length}
             accent="primary"
           />

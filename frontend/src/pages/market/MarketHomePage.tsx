@@ -60,8 +60,8 @@ function MarketHomePage() {
           <SectionEntryCard
             to={appRoutes.market.catalog}
             icon={<GridViewOutlinedIcon />}
-            title="Найти объявления"
-            description="Обычный каталог, лента подписок и избранное в одном discovery-потоке."
+            title="Объявления"
+            description="Все, подписки, избранное"
             accent="primary"
           />
         </Grid>
@@ -69,8 +69,8 @@ function MarketHomePage() {
           <SectionEntryCard
             to={appRoutes.market.exchangeGroups}
             icon={<ViewInArOutlinedIcon />}
-            title="Сценарии обмена"
-            description="Композитные предложения больше не живут отдельным продуктом и открываются как часть рынка."
+            title="Группы объявлений"
+            description="Откликнуться сразу на несколько объявлений"
             accent="secondary"
           />
         </Grid>
@@ -79,7 +79,7 @@ function MarketHomePage() {
             to={appRoutes.market.myPublications}
             icon={<Inventory2OutlinedIcon />}
             title="Мои публикации"
-            description="Свои объявления, свои группы и модерационные ограничения собраны в одном месте."
+            description="Мои объявления, мои группы и жалобы на мои объявления"
             accent="info"
           />
         </Grid>
