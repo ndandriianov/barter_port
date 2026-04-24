@@ -5,7 +5,6 @@ import FavoriteBorderOutlinedIcon from "@mui/icons-material/FavoriteBorderOutlin
 import FavoriteRoundedIcon from "@mui/icons-material/FavoriteRounded";
 import offersApi from "@/features/offers/api/offersApi";
 import usersApi from "@/features/users/api/usersApi";
-import useDraftOfferCounts from "@/features/deals/model/useDraftOfferCounts.ts";
 import reviewsApi from "@/features/reviews/api/reviewsApi.ts";
 import YandexMapReadonly from "@/shared/ui/YandexMapReadonly";
 import OfferCard from "@/widgets/offers/OfferCard";
@@ -37,7 +36,6 @@ function OfferPage() {
   const isAdmin = meData?.isAdmin === true;
   const isOwnOffer = !!meData && !!offer && offer.authorId === meData.id;
   const isFavoriteActionLoading = isAddingToFavorites || isRemovingFromFavorites;
-  const { countsByOfferId } = useDraftOfferCounts({ enabled: isOwnOffer });
 
   useEffect(() => {
     if (!offer || !meData || offer.authorId === meData.id || viewedOfferIdsRef.current.has(offer.id)) {
@@ -126,9 +124,9 @@ function OfferPage() {
         offer={displayedOffer}
         onFavoriteChange={handleFavoriteChange}
         showModerationState={isOwnOffer || isAdmin}
-        draftCount={isOwnOffer ? (countsByOfferId[offer.id] ?? 0) : 0}
+        draftCount={isOwnOffer ? offer.draftsCount : 0}
         draftsHref={
-          isOwnOffer && (countsByOfferId[offer.id] ?? 0) > 0
+          isOwnOffer && offer.draftsCount > 0
             ? `/deals/drafts?offerId=${offer.id}`
             : undefined
         }

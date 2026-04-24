@@ -30,7 +30,6 @@ import type {
   UniversalCursor,
 } from "@/features/offers/model/types";
 import { normalizeOfferTags, parseOfferTagsInput } from "@/features/offers/model/tagUtils.ts";
-import useDraftOfferCounts from "@/features/deals/model/useDraftOfferCounts.ts";
 import OfferCard from "@/widgets/offers/OfferCard";
 
 interface OffersListWidgetProps {
@@ -175,7 +174,6 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
     skip: isSubscribedOffers || isFavoriteOffers,
   });
   const { data: currentUser } = usersApi.useGetCurrentUserQuery();
-  const { countsByOfferId } = useDraftOfferCounts({ enabled: isMyOffers });
   const currentLocation = useMemo(
     () => (
       currentUser?.currentLatitude != null && currentUser.currentLongitude != null
@@ -536,10 +534,10 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
                   onFavoriteChange={handleFavoriteChange}
                   showRating
                   showModerationState={isMyOffers || currentUser?.isAdmin === true}
-                  draftCount={isMyOffers ? (countsByOfferId[offer.id] ?? 0) : 0}
+                  draftCount={isMyOffers ? offer.draftsCount : 0}
                   offerHref={`/offers/${offer.id}`}
                   draftsHref={
-                    isMyOffers && (countsByOfferId[offer.id] ?? 0) > 0
+                    isMyOffers && offer.draftsCount > 0
                       ? `/deals/drafts?offerId=${offer.id}`
                       : undefined
                   }
