@@ -5,6 +5,7 @@ import { Link as RouterLink } from "react-router-dom";
 import type { OfferGroup } from "@/features/offer-groups/model/types.ts";
 import usersApi from "@/features/users/api/usersApi.ts";
 import {
+  formatOfferGroupDraftDealsCount,
   getOfferGroupOwnerId,
   getOfferGroupOwnerName,
   getOfferGroupVariantCount,
@@ -45,6 +46,14 @@ function OfferGroupCard({ offerGroup, href }: OfferGroupCardProps) {
             color="info"
             variant="outlined"
           />
+          {offerGroup.draftDealsCount != null && (
+            <Chip
+              label={formatOfferGroupDraftDealsCount(offerGroup.draftDealsCount)}
+              size="small"
+              color="warning"
+              variant="outlined"
+            />
+          )}
         </Box>
 
         <Box>

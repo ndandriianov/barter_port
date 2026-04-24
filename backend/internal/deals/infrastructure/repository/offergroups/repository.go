@@ -6,6 +6,7 @@ import (
 	"barter-port/pkg/db"
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -61,11 +62,11 @@ func (r *Repository) CreateOfferGroup(
 }
 
 func (r *Repository) GetOfferGroupByID(ctx context.Context, id uuid.UUID, currentUserID uuid.UUID) (domain.OfferGroup, error) {
-	return r.getOfferGroups(ctx, r.db, &id, currentUserID)
+	return r.getOfferGroups(ctx, r.db, &id, currentUserID, true, false)
 }
 
-func (r *Repository) ListOfferGroups(ctx context.Context, currentUserID uuid.UUID) ([]domain.OfferGroup, error) {
-	return r.listOfferGroups(ctx, r.db, nil, currentUserID)
+func (r *Repository) ListOfferGroups(ctx context.Context, currentUserID uuid.UUID, onlyMine bool) ([]domain.OfferGroup, error) {
+	return r.listOfferGroups(ctx, r.db, nil, currentUserID, onlyMine, onlyMine)
 }
 
 func (r *Repository) getOfferGroups(
@@ -73,8 +74,10 @@ func (r *Repository) getOfferGroups(
 	exec db.DB,
 	filterID *uuid.UUID,
 	currentUserID uuid.UUID,
+	includeDraftDealsCount bool,
+	onlyMine bool,
 ) (domain.OfferGroup, error) {
-	groups, err := r.listOfferGroups(ctx, exec, filterID, currentUserID)
+	groups, err := r.listOfferGroups(ctx, exec, filterID, currentUserID, includeDraftDealsCount, onlyMine)
 	if err != nil {
 		return domain.OfferGroup{}, err
 	}
@@ -89,6 +92,8 @@ func (r *Repository) listOfferGroups(
 	exec db.DB,
 	filterID *uuid.UUID,
 	currentUserID uuid.UUID,
+	includeDraftDealsCount bool,
+	onlyMine bool,
 ) ([]domain.OfferGroup, error) {
 	query := `
 		WITH offer_group_owners AS (
@@ -117,7 +122,7 @@ func (r *Repository) listOfferGroups(
 			og.name,
 			og.description,
 			CASE
-				WHEN ogo.owner_id = $1 THEN COALESCE(ogdc.draft_deals_count, 0)
+				WHEN $2 AND ogo.owner_id = $1 THEN COALESCE(ogdc.draft_deals_count, 0)
 				ELSE NULL
 			END AS draft_deals_count,
 			ogu.id,
@@ -139,11 +144,20 @@ func (r *Repository) listOfferGroups(
 		LEFT JOIN offers o ON o.id = uo.offer_id
 	`
 
-	args := make([]any, 0, 2)
+	args := make([]any, 0, 3)
 	args = append(args, currentUserID)
+	args = append(args, includeDraftDealsCount)
+
+	conditions := make([]string, 0, 2)
+	if onlyMine {
+		conditions = append(conditions, "ogo.owner_id = $1")
+	}
 	if filterID != nil {
-		query += ` WHERE og.id = $2`
 		args = append(args, *filterID)
+		conditions = append(conditions, fmt.Sprintf("og.id = $%d", len(args)))
+	}
+	if len(conditions) > 0 {
+		query += ` WHERE ` + strings.Join(conditions, ` AND `)
 	}
 
 	query += ` ORDER BY og.id, ogu.position NULLS LAST, uo.position NULLS LAST, o.id`

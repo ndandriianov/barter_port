@@ -104,6 +104,7 @@ func TestListOfferGroupsReturnsCreatedGroup(t *testing.T) {
 	for _, item := range items {
 		if item.Id == group.Id {
 			found = true
+			require.Nil(t, item.DraftDealsCount)
 			break
 		}
 	}
@@ -138,6 +139,23 @@ func TestCreateOfferGroupWithMixedActionsInUnitReturnsBadRequest(t *testing.T) {
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&apiErr))
 	require.NotNil(t, apiErr.Message)
 	require.Equal(t, domain.ErrMixedOfferActionsInUnit.Error(), *apiErr.Message)
+}
+
+func TestListOfferGroupsWithInvalidMyReturnsBadRequest(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+
+	req := mustUserRequest(t, http.MethodGet, dealsURL()+"/offer-groups?my=wrong", userID, nil)
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+
+	var apiErr types.ErrorResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&apiErr))
+	require.NotNil(t, apiErr.Message)
+	require.Equal(t, "invalid my filter", *apiErr.Message)
 }
 
 func TestGetOfferGroupByIDSuccess(t *testing.T) {
@@ -384,7 +402,7 @@ func TestCreateDraftFromOfferGroupInvalidSelectionReturnsBadRequest(t *testing.T
 	require.Equal(t, domain.ErrInvalidOfferGroupSelect.Error(), *apiErr.Message)
 }
 
-func TestOfferGroupDraftDealsCountVisibleOnlyToOwner(t *testing.T) {
+func TestListOfferGroupsWithMyReturnsOnlyOwnGroupsAndDraftDealsCount(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)
 
@@ -394,9 +412,10 @@ func TestOfferGroupDraftDealsCountVisibleOnlyToOwner(t *testing.T) {
 
 	offerA := mustCreateOfferWithAction(t, ownerID, types.Give)
 	offerB := mustCreateOfferWithAction(t, ownerID, types.Give)
+	foreignOffer := mustCreateOfferWithAction(t, foreignUserID, types.Give)
 	responderOffer := mustCreateOfferWithAction(t, responderID, types.Give)
 
-	group := mustCreateOfferGroup(t, ownerID, map[string]any{
+	ownerGroupID := mustCreateOfferGroup(t, ownerID, map[string]any{
 		"units": []map[string]any{
 			{
 				"offers": []map[string]any{
@@ -410,8 +429,17 @@ func TestOfferGroupDraftDealsCountVisibleOnlyToOwner(t *testing.T) {
 			},
 		},
 	})
+	foreignGroupID := mustCreateOfferGroup(t, foreignUserID, map[string]any{
+		"units": []map[string]any{
+			{
+				"offers": []map[string]any{
+					{"offerId": foreignOffer.String()},
+				},
+			},
+		},
+	})
 
-	req := mustUserRequest(t, http.MethodPost, dealsURL()+"/offer-groups/"+group.Id.String()+"/drafts", responderID, mustJSONBody(t, map[string]any{
+	req := mustUserRequest(t, http.MethodPost, dealsURL()+"/offer-groups/"+ownerGroupID.Id.String()+"/drafts", responderID, mustJSONBody(t, map[string]any{
 		"selectedOfferIds": []string{offerA.String(), offerB.String()},
 		"responderOfferId": responderOffer.String(),
 	}))
@@ -431,34 +459,53 @@ func TestOfferGroupDraftDealsCountVisibleOnlyToOwner(t *testing.T) {
 
 	var ownerGroup *offerGroupResponse
 	for i := range ownerItems {
-		if ownerItems[i].Id == group.Id {
+		if ownerItems[i].Id == ownerGroupID.Id {
 			ownerGroup = &ownerItems[i]
 			break
 		}
 	}
 	require.NotNil(t, ownerGroup)
-	require.NotNil(t, ownerGroup.DraftDealsCount)
-	require.Equal(t, 1, *ownerGroup.DraftDealsCount)
+	require.Nil(t, ownerGroup.DraftDealsCount)
 
-	foreignListReq := mustUserRequest(t, http.MethodGet, dealsURL()+"/offer-groups", foreignUserID, nil)
-	foreignListResp := mustDo(t, foreignListReq)
-	defer func() { _ = foreignListResp.Body.Close() }()
-	require.Equal(t, http.StatusOK, foreignListResp.StatusCode)
+	ownerListMyReq := mustUserRequest(t, http.MethodGet, dealsURL()+"/offer-groups?my=true", ownerID, nil)
+	ownerListMyResp := mustDo(t, ownerListMyReq)
+	defer func() { _ = ownerListMyResp.Body.Close() }()
+	require.Equal(t, http.StatusOK, ownerListMyResp.StatusCode)
 
-	var foreignItems []offerGroupResponse
-	require.NoError(t, json.NewDecoder(foreignListResp.Body).Decode(&foreignItems))
+	var ownerMyItems []offerGroupResponse
+	require.NoError(t, json.NewDecoder(ownerListMyResp.Body).Decode(&ownerMyItems))
+	require.Len(t, ownerMyItems, 1)
+	require.Equal(t, ownerGroupID.Id, ownerMyItems[0].Id)
+	require.NotNil(t, ownerMyItems[0].DraftDealsCount)
+	require.Equal(t, 1, *ownerMyItems[0].DraftDealsCount)
 
-	var foreignGroup *offerGroupResponse
-	for i := range foreignItems {
-		if foreignItems[i].Id == group.Id {
-			foreignGroup = &foreignItems[i]
-			break
+	ownerListMyFalseReq := mustUserRequest(t, http.MethodGet, dealsURL()+"/offer-groups?my=false", ownerID, nil)
+	ownerListMyFalseResp := mustDo(t, ownerListMyFalseReq)
+	defer func() { _ = ownerListMyFalseResp.Body.Close() }()
+	require.Equal(t, http.StatusOK, ownerListMyFalseResp.StatusCode)
+
+	var ownerMyFalseItems []offerGroupResponse
+	require.NoError(t, json.NewDecoder(ownerListMyFalseResp.Body).Decode(&ownerMyFalseItems))
+	require.GreaterOrEqual(t, len(ownerMyFalseItems), 2)
+	for _, item := range ownerMyFalseItems {
+		if item.Id == ownerGroupID.Id {
+			require.Nil(t, item.DraftDealsCount)
 		}
 	}
-	require.NotNil(t, foreignGroup)
-	require.Nil(t, foreignGroup.DraftDealsCount)
 
-	ownerGetReq := mustUserRequest(t, http.MethodGet, dealsURL()+"/offer-groups/"+group.Id.String(), ownerID, nil)
+	foreignListMyReq := mustUserRequest(t, http.MethodGet, dealsURL()+"/offer-groups?my=true", foreignUserID, nil)
+	foreignListMyResp := mustDo(t, foreignListMyReq)
+	defer func() { _ = foreignListMyResp.Body.Close() }()
+	require.Equal(t, http.StatusOK, foreignListMyResp.StatusCode)
+
+	var foreignMyItems []offerGroupResponse
+	require.NoError(t, json.NewDecoder(foreignListMyResp.Body).Decode(&foreignMyItems))
+	require.Len(t, foreignMyItems, 1)
+	require.Equal(t, foreignGroupID.Id, foreignMyItems[0].Id)
+	require.NotNil(t, foreignMyItems[0].DraftDealsCount)
+	require.Equal(t, 0, *foreignMyItems[0].DraftDealsCount)
+
+	ownerGetReq := mustUserRequest(t, http.MethodGet, dealsURL()+"/offer-groups/"+ownerGroupID.Id.String(), ownerID, nil)
 	ownerGetResp := mustDo(t, ownerGetReq)
 	defer func() { _ = ownerGetResp.Body.Close() }()
 	require.Equal(t, http.StatusOK, ownerGetResp.StatusCode)
@@ -468,7 +515,7 @@ func TestOfferGroupDraftDealsCountVisibleOnlyToOwner(t *testing.T) {
 	require.NotNil(t, ownerItem.DraftDealsCount)
 	require.Equal(t, 1, *ownerItem.DraftDealsCount)
 
-	foreignGetReq := mustUserRequest(t, http.MethodGet, dealsURL()+"/offer-groups/"+group.Id.String(), foreignUserID, nil)
+	foreignGetReq := mustUserRequest(t, http.MethodGet, dealsURL()+"/offer-groups/"+ownerGroupID.Id.String(), foreignUserID, nil)
 	foreignGetResp := mustDo(t, foreignGetReq)
 	defer func() { _ = foreignGetResp.Body.Close() }()
 	require.Equal(t, http.StatusOK, foreignGetResp.StatusCode)

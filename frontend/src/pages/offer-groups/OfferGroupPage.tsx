@@ -14,6 +14,7 @@ import {
 import usersApi from "@/features/users/api/usersApi.ts";
 import offerGroupsApi from "@/features/offer-groups/api/offerGroupsApi.ts";
 import {
+  formatOfferGroupDraftDealsCount,
   getOfferGroupOwnerId,
   getOfferGroupOwnerName,
   getOfferGroupUniformAction,
@@ -90,6 +91,13 @@ function OfferGroupPage() {
             color="info"
             variant="outlined"
           />
+          {offerGroup.draftDealsCount != null && (
+            <Chip
+              label={formatOfferGroupDraftDealsCount(offerGroup.draftDealsCount)}
+              color="warning"
+              variant="outlined"
+            />
+          )}
         </Box>
       </Box>
 

@@ -96,8 +96,8 @@ func (s *Service) CreateOfferGroup(
 	return s.GetOfferGroupByID(ctx, groupID, userID)
 }
 
-func (s *Service) ListOfferGroups(ctx context.Context, userID uuid.UUID) ([]domain.OfferGroup, error) {
-	items, err := s.repo.ListOfferGroups(ctx, userID)
+func (s *Service) ListOfferGroups(ctx context.Context, userID uuid.UUID, onlyMine bool) ([]domain.OfferGroup, error) {
+	items, err := s.repo.ListOfferGroups(ctx, userID, onlyMine)
 	if err != nil {
 		return nil, err
 	}

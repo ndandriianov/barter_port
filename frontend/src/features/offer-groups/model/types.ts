@@ -15,6 +15,10 @@ export type ListOfferGroupsResponse = z.Infer<typeof listOfferGroupsResponseSche
 export type CreateOfferGroupResponse = z.Infer<typeof createOfferGroupResponseSchema>;
 export type CreateOfferGroupDraftResponse = z.Infer<typeof createOfferGroupDraftResponseSchema>;
 
+export interface GetOfferGroupsParams {
+  my?: boolean;
+}
+
 export interface CreateOfferGroupRequest {
   name?: string;
   description?: string;
