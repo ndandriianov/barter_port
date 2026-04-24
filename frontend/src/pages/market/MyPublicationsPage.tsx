@@ -1,0 +1,87 @@
+import { useMemo } from "react";
+import { Alert, Box, Grid, Stack, Typography } from "@mui/material";
+import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
+import ReportProblemOutlinedIcon from "@mui/icons-material/ReportProblemOutlined";
+import ViewInArOutlinedIcon from "@mui/icons-material/ViewInArOutlined";
+import offersApi from "@/features/offers/api/offersApi.ts";
+import offerGroupsApi from "@/features/offer-groups/api/offerGroupsApi.ts";
+import usersApi from "@/features/users/api/usersApi.ts";
+import { getOfferGroupOwnerId } from "@/features/offer-groups/model/utils.ts";
+import SectionEntryCard from "@/shared/ui/SectionEntryCard.tsx";
+import { appRoutes } from "@/shared/config/appRoutes.ts";
+
+function MyPublicationsPage() {
+  const { data: me } = usersApi.useGetCurrentUserQuery();
+  const { data: offersData, isLoading: isOffersLoading } = offersApi.useGetOffersQuery({
+    sort: "ByTime",
+    my: true,
+    cursor_limit: 100,
+  });
+  const { data: groups = [], isLoading: isGroupsLoading } = offerGroupsApi.useGetOfferGroupsQuery();
+
+  const myGroupsCount = useMemo(
+    () => groups.filter((group) => getOfferGroupOwnerId(group) === me?.id).length,
+    [groups, me?.id],
+  );
+  const myOffers = offersData?.offers ?? [];
+  const moderationCount = myOffers.filter((offer) => offer.isHidden || offer.modificationBlocked).length;
+
+  return (
+    <Stack spacing={3.5}>
+      <Box>
+        <Typography variant="overline" color="info.main">
+          Объявления / Мои публикации
+        </Typography>
+        <Typography variant="h4" fontWeight={800} mb={1}>
+          Управление собственными материалами
+        </Typography>
+        <Typography variant="body1" color="text.secondary" maxWidth={840}>
+          Свои обычные объявления, свои сценарии обмена и сигналы модерации больше не разбросаны по меню.
+          Это одна рабочая зона для ваших публикаций.
+        </Typography>
+      </Box>
+
+      <Grid container spacing={2.5}>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <SectionEntryCard
+            to={appRoutes.market.myPublicationOffers}
+            icon={<Inventory2OutlinedIcon />}
+            title="Мои объявления"
+            description="Редактирование, удаление и контроль draft-активности по вашим обычным публикациям."
+            badge={isOffersLoading ? "..." : myOffers.length}
+            accent="primary"
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <SectionEntryCard
+            to={appRoutes.market.myPublicationGroups}
+            icon={<ViewInArOutlinedIcon />}
+            title="Мои группы"
+            description="Ваши composite offer-group сценарии обмена в отдельном подрежиме без top-level дублирования."
+            badge={isGroupsLoading ? "..." : myGroupsCount}
+            accent="secondary"
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 4 }}>
+          <SectionEntryCard
+            to={appRoutes.market.myPublicationModeration}
+            icon={<ReportProblemOutlinedIcon />}
+            title="На модерации"
+            description="История жалоб и ограничения по объявлениям, где уже есть блокировки или скрытие."
+            badge={isOffersLoading ? "..." : moderationCount}
+            accent="warning"
+          />
+        </Grid>
+      </Grid>
+
+      {moderationCount > 0 && (
+        <Alert severity="warning">
+          У части ваших публикаций есть модерационные ограничения. Откройте раздел «На модерации»,
+          чтобы увидеть жалобы, скрытие или блокировку изменений.
+        </Alert>
+      )}
+    </Stack>
+  );
+}
+
+export default MyPublicationsPage;

@@ -48,11 +48,19 @@ interface DealsListProps {
   statusFilter: DealsStatusFilter;
   onAvailableStatusTabsChange?: (tabs: DealsStatusFilter[]) => void;
   onStatusCountsChange?: (counts: DealsStatusCounts) => void;
+  allowedStatuses?: DealStatus[];
+  defaultMyOnly?: boolean;
 }
 
-function DealsList({ statusFilter, onAvailableStatusTabsChange, onStatusCountsChange }: DealsListProps) {
+function DealsList({
+  statusFilter,
+  onAvailableStatusTabsChange,
+  onStatusCountsChange,
+  allowedStatuses,
+  defaultMyOnly = false,
+}: DealsListProps) {
   const dispatch = useAppDispatch();
-  const [myOnly, setMyOnly] = useState(false);
+  const [myOnly, setMyOnly] = useState(defaultMyOnly);
 
   const { data, isLoading, isFetching, error, refetch } = dealsApi.useGetDealsQuery({
     my: myOnly || undefined,
@@ -100,9 +108,12 @@ function DealsList({ statusFilter, onAvailableStatusTabsChange, onStatusCountsCh
       },
     );
 
-    const filteredDeals = statusFilter === "all"
+    const filteredByStatus = statusFilter === "all"
       ? (data ?? [])
       : (data ?? []).filter((deal) => deal.status === statusFilter);
+    const filteredDeals = allowedStatuses
+      ? filteredByStatus.filter((deal) => allowedStatuses.includes(deal.status))
+      : filteredByStatus;
 
     filteredDeals.forEach((deal) => {
       groups[deal.status].push(deal);
@@ -111,7 +122,7 @@ function DealsList({ statusFilter, onAvailableStatusTabsChange, onStatusCountsCh
     return dealStatusOrder
       .map((status) => ({ status, deals: groups[status] }))
       .filter((group) => group.deals.length > 0);
-  }, [data, statusFilter]);
+  }, [allowedStatuses, data, statusFilter]);
 
   const filteredDealsCount = useMemo(
     () => groupedDeals.reduce((sum, group) => sum + group.deals.length, 0),
@@ -126,13 +137,13 @@ function DealsList({ statusFilter, onAvailableStatusTabsChange, onStatusCountsCh
     const tabs: DealsStatusFilter[] = ["all"];
 
     dealStatusOrder.forEach((status) => {
-      if (data.some((deal) => deal.status === status)) {
+      if ((!allowedStatuses || allowedStatuses.includes(status)) && data.some((deal) => deal.status === status)) {
         tabs.push(status);
       }
     });
 
     return tabs;
-  }, [data]);
+  }, [allowedStatuses, data]);
 
   const statusCounts = useMemo<DealsStatusCounts>(() => {
     if (!data || data.length === 0) {

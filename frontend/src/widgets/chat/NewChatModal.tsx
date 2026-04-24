@@ -1,4 +1,14 @@
 import { useMemo, useState } from "react";
+import {
+  Alert,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  MenuItem,
+  TextField,
+} from "@mui/material";
 import type { FetchBaseQueryError } from "@reduxjs/toolkit/query";
 import type { SerializedError } from "@reduxjs/toolkit";
 import chatsApi from "@/features/chats/api/chatsApi.ts";
@@ -64,82 +74,51 @@ function NewChatModal({ onClose, onCreated }: Props) {
   }
 
   return (
-    <div style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.4)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 }}>
-      <div style={{ background: "#fff", borderRadius: 8, padding: 24, minWidth: 320 }}>
-        <h3 style={{ marginTop: 0 }}>Новый чат</h3>
+    <Dialog open onClose={onClose} fullWidth maxWidth="xs">
+      <DialogTitle>Новый чат</DialogTitle>
+      <DialogContent sx={{ display: "flex", flexDirection: "column", gap: 2, pt: 1 }}>
+        <TextField
+          select
+          label="Пользователь"
+          value={selected}
+          onChange={(e) => {
+            if (error) {
+              reset();
+            }
+            setSelected(e.target.value);
+          }}
+          disabled={isLoading}
+        >
+          <MenuItem value="">Выберите пользователя</MenuItem>
+          {users.map((u) => (
+            <MenuItem key={u.id} value={u.id}>
+              {u.name || u.id}
+            </MenuItem>
+          ))}
+        </TextField>
 
-        {isLoading ? (
-          <p>Загрузка...</p>
-        ) : (
-          <select
-            value={selected}
-            onChange={(e) => {
-              if (error) {
-                reset();
-              }
-              setSelected(e.target.value);
-            }}
-            style={{ width: "100%", padding: "8px", marginBottom: 16, borderRadius: 4, border: "1px solid #ccc" }}
-          >
-            <option value="">Выберите пользователя</option>
-            {users.map((u) => (
-              <option key={u.id} value={u.id}>
-                {u.name || u.id}
-              </option>
-            ))}
-          </select>
-        )}
-
-        {error && (
-          <div
-            style={{
-              marginBottom: 16,
-              padding: "10px 12px",
-              borderRadius: 4,
-              border: "1px solid #f5c2c7",
-              background: "#f8d7da",
-              color: "#842029",
-            }}
-          >
-            {getCreateChatErrorMessage(error)}
-          </div>
-        )}
+        {error && <Alert severity="error">{getCreateChatErrorMessage(error)}</Alert>}
 
         {existingDirectChat && (
-          <div
-            style={{
-              marginBottom: 16,
-              padding: "10px 12px",
-              borderRadius: 4,
-              border: "1px solid #b6d4fe",
-              background: "#cfe2ff",
-              color: "#084298",
-            }}
-          >
-            Чат с этим пользователем уже существует. Будет открыт существующий чат.
-          </div>
+          <Alert severity="info">
+            Чат с этим пользователем уже существует. Будет открыт существующий диалог.
+          </Alert>
         )}
-
-        <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }}>
-          <button
-            onClick={() => {
-              reset();
-              onClose();
-            }}
-            style={{ padding: "8px 16px", borderRadius: 4, border: "1px solid #ccc", cursor: "pointer", background: "#f5f5f5" }}
-          >
-            Отмена
-          </button>
-          <button
-            onClick={handleCreate}
-            disabled={!selected || isCreating}
-            style={{ padding: "8px 16px", borderRadius: 4, border: "none", cursor: "pointer", background: "#1976d2", color: "#fff" }}
-          >
-            {isCreating ? "Создание..." : existingDirectChat ? "Открыть чат" : "Создать"}
-          </button>
-        </div>
-      </div>
-    </div>
+      </DialogContent>
+      <DialogActions>
+        <Button
+          onClick={() => {
+            reset();
+            onClose();
+          }}
+        >
+          Отмена
+        </Button>
+        <Button onClick={handleCreate} disabled={!selected || isCreating} variant="contained">
+          {isCreating ? "Создание..." : existingDirectChat ? "Открыть чат" : "Создать"}
+        </Button>
+      </DialogActions>
+    </Dialog>
   );
 }
 

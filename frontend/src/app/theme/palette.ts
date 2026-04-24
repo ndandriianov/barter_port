@@ -2,27 +2,38 @@ import type { PaletteOptions } from "@mui/material";
 
 const palette: PaletteOptions = {
   primary: {
-    main: "#1976d2",
-    light: "#42a5f5",
-    dark: "#1565c0",
+    main: "#0f766e",
+    light: "#2fa296",
+    dark: "#0b4f4a",
+    contrastText: "#f7f8f4",
   },
   secondary: {
-    main: "#f57c00",
-    light: "#ffb74d",
-    dark: "#e65100",
+    main: "#c26d1f",
+    light: "#e09048",
+    dark: "#8b4911",
+    contrastText: "#fff7ed",
+  },
+  info: {
+    main: "#0e7490",
+    light: "#38bdf8",
+    dark: "#155e75",
   },
   error: {
-    main: "#d32f2f",
+    main: "#c2410c",
   },
   warning: {
-    main: "#ed6c02",
+    main: "#ea580c",
   },
   success: {
-    main: "#2e7d32",
+    main: "#15803d",
   },
   background: {
-    default: "#f5f5f5",
+    default: "#f4efe6",
     paper: "#ffffff",
+  },
+  text: {
+    primary: "#17212b",
+    secondary: "#5f6b76",
   },
 };
 
