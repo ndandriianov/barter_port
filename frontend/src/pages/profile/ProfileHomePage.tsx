@@ -35,19 +35,19 @@ function ProfileHomePage() {
         </Grid>
         <Grid size={{ xs: 12, md: 6, xl: 4 }}>
           <SectionEntryCard
-            to={`${appRoutes.profile.account}#reputation`}
+            to={appRoutes.profile.reputation}
             icon={<WorkspacePremiumOutlinedIcon />}
             title="Репутация"
-            description="Текущие баллы и история событий репутации, открываемые из карточки профиля."
+            description="Текущие баллы, summary по источникам и отдельная история событий репутации."
             accent="secondary"
           />
         </Grid>
         <Grid size={{ xs: 12, md: 6, xl: 4 }}>
           <SectionEntryCard
-            to={`${appRoutes.profile.account}#subscriptions`}
+            to={appRoutes.profile.networkSubscriptions}
             icon={<ConnectWithoutContactOutlinedIcon />}
             title="Подписки"
-            description="Подписки и подписчики как социальный граф, влияющий на direct chat."
+            description="Подписки и подписчики как отдельный social subflow, влияющий на direct chat."
             accent="info"
           />
         </Grid>

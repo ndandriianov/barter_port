@@ -47,6 +47,11 @@ export const appRoutes = {
   profile: {
     home: "/app/profile",
     account: "/app/profile/account",
+    accountPassword: "/app/profile/account/password",
+    reputation: "/app/profile/reputation",
+    reputationHistory: "/app/profile/reputation/history",
+    networkSubscriptions: "/app/profile/network/subscriptions",
+    networkSubscribers: "/app/profile/network/subscribers",
     reviewsMine: "/app/profile/reviews",
     reviewsAboutMe: "/app/profile/reviews/about-me",
     statistics: "/app/profile/statistics",

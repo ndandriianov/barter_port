@@ -19,6 +19,10 @@ import ModerationHomePage from "@/pages/admin/ModerationHomePage.tsx";
 import FailureModerationPage from "@/pages/admin/FailureModerationPage.tsx";
 import ProfilePage from "@/pages/profile/ProfilePage";
 import ProfileHomePage from "@/pages/profile/ProfileHomePage.tsx";
+import ProfilePasswordPage from "@/pages/profile/ProfilePasswordPage.tsx";
+import ProfileReputationPage from "@/pages/profile/ProfileReputationPage.tsx";
+import ProfileNetworkPage from "@/pages/profile/ProfileNetworkPage.tsx";
+import ProfileReviewsPage from "@/pages/profile/ProfileReviewsPage.tsx";
 import CreateOfferPage from "@/pages/offers/CreateOfferPage";
 import EditOfferPage from "@/pages/offers/EditOfferPage";
 import OffersListPage from "@/pages/offers/OffersListPage";
@@ -250,28 +254,27 @@ function AppRouter() {
 
           <Route path={appRoutes.profile.home} element={<ProfileHomePage />} />
           <Route path={appRoutes.profile.account} element={<ProfilePage />} />
+          <Route path={appRoutes.profile.accountPassword} element={<ProfilePasswordPage />} />
+          <Route path={appRoutes.profile.reputation} element={<ProfileReputationPage />} />
+          <Route path={appRoutes.profile.reputationHistory} element={<ProfileReputationPage historyMode />} />
+          <Route
+            path={appRoutes.profile.networkSubscriptions}
+            element={<ProfileNetworkPage mode="subscriptions" />}
+          />
+          <Route
+            path={appRoutes.profile.networkSubscribers}
+            element={<ProfileNetworkPage mode="subscribers" />}
+          />
           <Route
             path={appRoutes.profile.reviewsMine}
             element={
-              <ReviewsPage
-                forcedTab="mine"
-                hideTabs
-                hideBackButton
-                title="Мои отзывы"
-                description="Личная история опубликованных отзывов без смешивания с очередью действий."
-              />
+              <ProfileReviewsPage mode="mine" />
             }
           />
           <Route
             path={appRoutes.profile.reviewsAboutMe}
             element={
-              <ReviewsPage
-                forcedTab="about-me"
-                hideTabs
-                hideBackButton
-                title="Отзывы обо мне"
-                description="Как другие участники оценивают вас как поставщика в завершённых сделках."
-              />
+              <ProfileReviewsPage mode="about-me" />
             }
           />
           <Route path={appRoutes.profile.statistics} element={<StatisticsPage />} />

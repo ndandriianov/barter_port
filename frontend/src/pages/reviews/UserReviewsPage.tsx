@@ -4,6 +4,7 @@ import reviewsApi from "@/features/reviews/api/reviewsApi.ts";
 import usersApi from "@/features/users/api/usersApi.ts";
 import ReviewCard from "@/widgets/reviews/ReviewCard.tsx";
 import ReviewSummaryCard from "@/widgets/reviews/ReviewSummaryCard.tsx";
+import { appRoutes } from "@/shared/config/appRoutes.ts";
 
 function UserReviewsPage() {
   const {userId} = useParams<{ userId: string }>();
@@ -49,7 +50,7 @@ function UserReviewsPage() {
       <Button
         size="small"
         variant="text"
-        onClick={() => window.history.length > 1 ? navigate(-1) : navigate(isCurrentUser ? "/reviews?tab=about-me" : "/reviews")}
+        onClick={() => window.history.length > 1 ? navigate(-1) : navigate(isCurrentUser ? appRoutes.profile.reviewsAboutMe : appRoutes.profile.reviewsMine)}
         sx={{ mb: 2 }}
       >
         ← Назад
@@ -67,11 +68,11 @@ function UserReviewsPage() {
 
         <Box display="flex" gap={1} flexWrap="wrap">
           {isCurrentUser && (
-            <Button component={RouterLink} to="/reviews?tab=mine" variant="outlined">
+            <Button component={RouterLink} to={appRoutes.profile.reviewsMine} variant="outlined">
               Мои отзывы
             </Button>
           )}
-          <Button component={RouterLink} to="/reviews?tab=available" variant="text">
+          <Button component={RouterLink} to={appRoutes.deals.reviews} variant="text">
             Доступные отзывы
           </Button>
         </Box>
