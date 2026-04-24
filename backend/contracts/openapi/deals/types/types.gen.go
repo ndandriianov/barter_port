@@ -479,6 +479,9 @@ type FavoritedOffer struct {
 	// Иначе поле равно `null`.
 	DistanceMeters *int64 `json:"distanceMeters,omitempty"`
 
+	// DraftsCount Количество черновых сделок, в которых участвует объявление. Возвращается только для авторов объявления.
+	DraftsCount *int `json:"draftsCount,omitempty"`
+
 	// FavoritedAt Временная метка добавления объявления в избранное
 	FavoritedAt time.Time `json:"favoritedAt"`
 
@@ -797,6 +800,9 @@ type Offer struct {
 	// Иначе поле равно `null`.
 	DistanceMeters *int64 `json:"distanceMeters,omitempty"`
 
+	// DraftsCount Количество черновых сделок, в которых участвует объявление. Возвращается только для авторов объявления.
+	DraftsCount *int `json:"draftsCount,omitempty"`
+
 	// Id Уникальный идентификатор объявления
 	Id openapi_types.UUID `json:"id"`
 
@@ -974,6 +980,9 @@ type OfferWithInfo struct {
 	// - объявление не принадлежит текущему пользователю.
 	// Иначе поле равно `null`.
 	DistanceMeters *int64 `json:"distanceMeters,omitempty"`
+
+	// DraftsCount Количество черновых сделок, в которых участвует объявление. Возвращается только для авторов объявления.
+	DraftsCount *int `json:"draftsCount,omitempty"`
 
 	// Id Уникальный идентификатор объявления
 	Id openapi_types.UUID `json:"id"`
