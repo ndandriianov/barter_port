@@ -20,6 +20,13 @@ Draft:
     description:
       type: string
       description: Подробное описание черновой сделки
+    offerGroupId:
+      type: string
+      format: uuid
+      nullable: true
+      description: |
+        Идентификатор `offer_group`, из которого был создан этот `draft deal`.
+        Для черновиков, созданных напрямую через `/deals/drafts`, поле равно `null`.
     createdAt:
       type: string
       format: date-time
@@ -57,6 +64,14 @@ OfferGroup:
     description:
       type: string
       description: Описание композитного объявления
+    draftDealsCount:
+      type: integer
+      minimum: 0
+      description: |
+        Количество `draft deals`, созданных из этого `offer_group`.
+        Поле возвращается только в выдаче своих `offer_groups`;
+        для чужих `offer_groups` поле отсутствует.
+        Один черновик считается ровно один раз.
     units:
       type: array
       description: |

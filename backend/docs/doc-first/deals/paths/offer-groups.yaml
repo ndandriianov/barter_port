@@ -12,6 +12,9 @@ offerGroups:
       - список `units`
       - список `offers` внутри каждого `unit`
 
+      Поле `draftDealsCount` возвращается только если пользователь запрашивает
+      свои `offer_groups`. Для чужих `offer_groups` это поле отсутствует.
+
       Endpoint является альтернативой `GET /offers` для композитных объявлений
       и не заменяет существующий список обычных объявлений.
     operationId: listOfferGroups
@@ -125,6 +128,9 @@ offerGroupById:
 
       Этот endpoint нужен клиенту, чтобы пользователь мог выбрать конкретный `offer`
       из каждой OR-группы перед созданием `draft deal`.
+
+      Поле `draftDealsCount` возвращается только если запрошенный `offer_group`
+      принадлежит текущему пользователю. Для чужого `offer_group` это поле отсутствует.
     operationId: getOfferGroupById
     security:
       - bearerAuth: [ ]
@@ -190,6 +196,7 @@ offerGroupDrafts:
       Каждый выбранный `offer` и `responderOfferId` попадает в `draft deal` с `quantity = 1`.
 
       После успешной валидации сервер формирует обычный `draft deal`,
+      записывает в него `offerGroupId`, равный `{offerGroupId}`,
       после чего продолжает работать существующая логика подтверждения,
       отмены и превращения черновика в `deal`.
 

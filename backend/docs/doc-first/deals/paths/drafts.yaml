@@ -103,6 +103,11 @@ dealsDraftsById:
     tags:
       - drafts
     summary: Получить черновой договор по его ID
+    description: |
+      Возвращает `draft deal`.
+
+      Если черновик был создан через `/offer-groups/{offerGroupId}/drafts`,
+      в ответе заполняется `offerGroupId`.
     operationId: getDraftDealById
     security:
       - bearerAuth: [ ]
