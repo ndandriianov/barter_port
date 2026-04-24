@@ -470,3 +470,22 @@ func (r *Repository) DeleteDraft(ctx context.Context, exec db.DB, id uuid.UUID) 
 
 	return nil
 }
+
+// ================================================================================
+// GetDraftsCountForOfferID
+// ================================================================================
+
+func (r *Repository) GetDraftsCountForOfferID(ctx context.Context, exec db.DB, offerID uuid.UUID) (int, error) {
+	query := `
+		SELECT COUNT(*)
+		FROM draft_deal_offers
+		WHERE offer_id = $1;`
+
+	var count int
+	err := exec.QueryRow(ctx, query, offerID).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("sql get drafts count for offer: %w", err)
+	}
+
+	return count, nil
+}

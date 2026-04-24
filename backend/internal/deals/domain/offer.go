@@ -29,6 +29,7 @@ type Offer struct {
 	Views               int               `db:"views"`
 	IsHidden            bool              `db:"is_hidden"`
 	ModificationBlocked bool              `db:"modification_blocked"`
+	DraftsCount         *int              `db:"-"`
 }
 
 func (i *Offer) ToDto() types.Offer {
@@ -66,6 +67,7 @@ func (i *Offer) ToDto() types.Offer {
 		IsFavorite:          i.IsFavorite,
 		IsHidden:            new(i.IsHidden),
 		ModificationBlocked: new(i.ModificationBlocked),
+		DraftsCount:         i.DraftsCount,
 	}
 }
 
@@ -106,6 +108,7 @@ func (i *Offer) ToDTOWithInfo(info OfferInfo) types.OfferWithInfo {
 		UpdatedAt:           i.UpdatedAt,
 		Views:               int64(i.Views),
 		Confirmed:           info.Confirmed,
+		DraftsCount:         i.DraftsCount,
 	}
 }
 
