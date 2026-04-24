@@ -4,6 +4,7 @@ import (
 	"barter-port/contracts/openapi/deals/types"
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"mime/multipart"
 	"net/http"
 	"testing"
@@ -12,6 +13,67 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 )
+
+func TestOffersIncludeDistanceWhenViewerAndOfferHaveLocations(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	author := mustRegisterDealsUser(t)
+	viewer := mustRegisterDealsUser(t)
+	mustUpdateCurrentUserLocation(t, viewer.UserID, 55.751244, 37.618423)
+
+	lat := 55.761244
+	lon := 37.628423
+	offer := mustCreateOfferDetails(t, author.UserID, types.CreateOfferRequest{
+		Name:        "Offer with geo",
+		Description: "Near viewer",
+		Type:        types.Good,
+		Action:      types.Give,
+		Latitude:    &lat,
+		Longitude:   &lon,
+	})
+
+	list := mustGetOffers(t, viewer.UserID, nil)
+
+	var listed *types.Offer
+	for i := range list.Offers {
+		if list.Offers[i].Id == offer.Id {
+			listed = &list.Offers[i]
+			break
+		}
+	}
+
+	require.NotNil(t, listed)
+	require.NotNil(t, listed.DistanceMeters)
+	require.Greater(t, *listed.DistanceMeters, int64(0))
+
+	fetched := mustGetOfferByID(t, viewer.UserID, offer.Id)
+	require.NotNil(t, fetched.DistanceMeters)
+	require.Equal(t, *listed.DistanceMeters, *fetched.DistanceMeters)
+}
+
+func TestOwnOfferIncludesDistanceWhenUserHasLocation(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	user := mustRegisterDealsUser(t)
+	mustUpdateCurrentUserLocation(t, user.UserID, 55.751244, 37.618423)
+
+	lat := 55.761244
+	lon := 37.628423
+	offer := mustCreateOfferDetails(t, user.UserID, types.CreateOfferRequest{
+		Name:        "Own offer with geo",
+		Description: "Distance should be returned for own offer too",
+		Type:        types.Good,
+		Action:      types.Give,
+		Latitude:    &lat,
+		Longitude:   &lon,
+	})
+
+	fetched := mustGetOfferByID(t, user.UserID, offer.Id)
+	require.NotNil(t, fetched.DistanceMeters)
+	require.Greater(t, *fetched.DistanceMeters, int64(0))
+}
 
 func TestCreateOfferSuccess(t *testing.T) {
 	t.Parallel()
@@ -251,6 +313,179 @@ func TestGetOffersInvalidSortReturnsBadRequest(t *testing.T) {
 	resp := mustDo(t, req)
 	defer func() { _ = resp.Body.Close() }()
 	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestGetOffersByDistanceRequiresUserCoordinates(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	req := mustUserRequest(t, http.MethodGet, dealsURL()+"/offers?sort=ByDistance", userID, nil)
+
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestGetOffersByDistanceSortsAscending(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	user := mustRegisterDealsUser(t)
+	myOffersOnly := true
+
+	nearLat := 55.751500
+	nearLon := 37.618500
+	mediumLat := 55.760000
+	mediumLon := 37.630000
+	farLat := 55.800000
+	farLon := 37.700000
+
+	nearOffer := mustCreateOfferDetails(t, user.UserID, types.CreateOfferRequest{
+		Name:        "Near",
+		Description: "Near offer",
+		Type:        types.Good,
+		Action:      types.Give,
+		Latitude:    &nearLat,
+		Longitude:   &nearLon,
+	})
+	mediumOffer := mustCreateOfferDetails(t, user.UserID, types.CreateOfferRequest{
+		Name:        "Medium",
+		Description: "Medium offer",
+		Type:        types.Good,
+		Action:      types.Give,
+		Latitude:    &mediumLat,
+		Longitude:   &mediumLon,
+	})
+	farOffer := mustCreateOfferDetails(t, user.UserID, types.CreateOfferRequest{
+		Name:        "Far",
+		Description: "Far offer",
+		Type:        types.Good,
+		Action:      types.Give,
+		Latitude:    &farLat,
+		Longitude:   &farLon,
+	})
+
+	result := mustGetOffersByDistancePage(t, user.UserID, 55.751244, 37.618423, nil, 100, &myOffersOnly)
+	require.Len(t, result.Offers, 3)
+	require.Equal(t, nearOffer.Id, result.Offers[0].Id)
+	require.Equal(t, mediumOffer.Id, result.Offers[1].Id)
+	require.Equal(t, farOffer.Id, result.Offers[2].Id)
+	require.NotNil(t, result.Offers[0].DistanceMeters)
+	require.NotNil(t, result.Offers[1].DistanceMeters)
+	require.NotNil(t, result.Offers[2].DistanceMeters)
+}
+
+func TestGetOffersByDistanceUsesIdAsTieBreaker(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	user := mustRegisterDealsUser(t)
+	myOffersOnly := true
+
+	lat := 55.760000
+	lon := 37.630000
+	firstOffer := mustCreateOfferDetails(t, user.UserID, types.CreateOfferRequest{
+		Name:        "Same distance 1",
+		Description: "Same distance",
+		Type:        types.Good,
+		Action:      types.Give,
+		Latitude:    &lat,
+		Longitude:   &lon,
+	})
+	secondOffer := mustCreateOfferDetails(t, user.UserID, types.CreateOfferRequest{
+		Name:        "Same distance 2",
+		Description: "Same distance",
+		Type:        types.Good,
+		Action:      types.Give,
+		Latitude:    &lat,
+		Longitude:   &lon,
+	})
+
+	result := mustGetOffersByDistancePage(t, user.UserID, 55.751244, 37.618423, nil, 100, &myOffersOnly)
+	require.Len(t, result.Offers, 2)
+
+	expectedFirst := firstOffer.Id
+	expectedSecond := secondOffer.Id
+	if expectedSecond.String() < expectedFirst.String() {
+		expectedFirst, expectedSecond = expectedSecond, expectedFirst
+	}
+
+	require.Equal(t, expectedFirst, result.Offers[0].Id)
+	require.Equal(t, expectedSecond, result.Offers[1].Id)
+}
+
+func TestGetOffersByDistanceSupportsCursorPagination(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	user := mustRegisterDealsUser(t)
+	myOffersOnly := true
+
+	coords := []struct {
+		lat float64
+		lon float64
+	}{
+		{55.751500, 37.618500},
+		{55.760000, 37.630000},
+		{55.800000, 37.700000},
+	}
+
+	for index, coord := range coords {
+		offer := mustCreateOfferDetails(t, user.UserID, types.CreateOfferRequest{
+			Name:        fmt.Sprintf("distance-%d", index),
+			Description: "Offer for distance pagination",
+			Type:        types.Good,
+			Action:      types.Give,
+			Latitude:    &coord.lat,
+			Longitude:   &coord.lon,
+		})
+		_ = offer
+	}
+
+	firstPage := mustGetOffersByDistancePage(t, user.UserID, 55.751244, 37.618423, nil, 2, &myOffersOnly)
+	require.Len(t, firstPage.Offers, 2)
+	require.NotNil(t, firstPage.NextCursor)
+	require.NotNil(t, firstPage.NextCursor.Distance)
+
+	secondPage := mustGetOffersByDistancePage(t, user.UserID, 55.751244, 37.618423, firstPage.NextCursor, 2, &myOffersOnly)
+	require.Len(t, secondPage.Offers, 1)
+
+	seen := map[uuid.UUID]struct{}{}
+	for _, offer := range firstPage.Offers {
+		seen[offer.Id] = struct{}{}
+	}
+	for _, offer := range secondPage.Offers {
+		_, exists := seen[offer.Id]
+		require.False(t, exists)
+		seen[offer.Id] = struct{}{}
+	}
+	require.Len(t, seen, 3)
+}
+
+func TestGetOffersByDistanceSkipsOffersWithoutCoordinates(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	user := mustRegisterDealsUser(t)
+	myOffersOnly := true
+
+	lat := 55.751500
+	lon := 37.618500
+	withCoords := mustCreateOfferDetails(t, user.UserID, types.CreateOfferRequest{
+		Name:        "With coords",
+		Description: "Has location",
+		Type:        types.Good,
+		Action:      types.Give,
+		Latitude:    &lat,
+		Longitude:   &lon,
+	})
+	withoutCoords := mustCreateOffer(t, user.UserID)
+
+	result := mustGetOffersByDistancePage(t, user.UserID, 55.751244, 37.618423, nil, 100, &myOffersOnly)
+	require.Len(t, result.Offers, 1)
+	require.Equal(t, withCoords.Id, result.Offers[0].Id)
+	require.NotEqual(t, withoutCoords, result.Offers[0].Id)
 }
 
 func TestGetOffersMyDefaultFalseIncludesOtherUsersOffers(t *testing.T) {

@@ -9,11 +9,11 @@ import (
 	"strings"
 )
 
-const _SortTypeName = "ByTimeByPopularity"
+const _SortTypeName = "ByTimeByPopularityByDistance"
 
-var _SortTypeIndex = [...]uint8{0, 6, 18}
+var _SortTypeIndex = [...]uint8{0, 6, 18, 28}
 
-const _SortTypeLowerName = "bytimebypopularity"
+const _SortTypeLowerName = "bytimebypopularitybydistance"
 
 func (i SortType) String() string {
 	if i < 0 || i >= SortType(len(_SortTypeIndex)-1) {
@@ -28,20 +28,24 @@ func _SortTypeNoOp() {
 	var x [1]struct{}
 	_ = x[SortTypeByTime-(0)]
 	_ = x[SortTypeByPopularity-(1)]
+	_ = x[SortTypeByDistance-(2)]
 }
 
-var _SortTypeValues = []SortType{SortTypeByTime, SortTypeByPopularity}
+var _SortTypeValues = []SortType{SortTypeByTime, SortTypeByPopularity, SortTypeByDistance}
 
 var _SortTypeNameToValueMap = map[string]SortType{
-	_SortTypeName[0:6]:       SortTypeByTime,
-	_SortTypeLowerName[0:6]:  SortTypeByTime,
-	_SortTypeName[6:18]:      SortTypeByPopularity,
-	_SortTypeLowerName[6:18]: SortTypeByPopularity,
+	_SortTypeName[0:6]:        SortTypeByTime,
+	_SortTypeLowerName[0:6]:   SortTypeByTime,
+	_SortTypeName[6:18]:       SortTypeByPopularity,
+	_SortTypeLowerName[6:18]:  SortTypeByPopularity,
+	_SortTypeName[18:28]:      SortTypeByDistance,
+	_SortTypeLowerName[18:28]: SortTypeByDistance,
 }
 
 var _SortTypeNames = []string{
 	_SortTypeName[0:6],
 	_SortTypeName[6:18],
+	_SortTypeName[18:28],
 }
 
 // SortTypeString retrieves an enum value from the enum constants string name.

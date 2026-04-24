@@ -19,6 +19,7 @@ import offersApi from "@/features/offers/api/offersApi";
 import type { Offer, OfferAction, OfferType } from "@/features/offers/model/types";
 import { normalizeOfferTags, parseOfferTagsInput } from "@/features/offers/model/tagUtils.ts";
 import { getErrorMessage } from "@/shared/utils/getErrorMessage.ts";
+import YandexMapPicker, { type LatLon } from "@/shared/ui/YandexMapPicker";
 
 const MAX_PHOTO_COUNT = 10;
 const MAX_PHOTO_SIZE = 5 * 1024 * 1024;
@@ -38,6 +39,11 @@ function CreateOfferForm({ mode = "create", offer }: CreateOfferFormProps) {
   const [action, setAction] = useState<OfferAction>(offer?.action ?? "give");
   const [type, setType] = useState<OfferType>(offer?.type ?? "good");
   const [tagsInput, setTagsInput] = useState((offer?.tags ?? []).join(", "));
+  const [location, setLocation] = useState<LatLon | null>(
+    offer?.latitude != null && offer?.longitude != null
+      ? { lat: offer.latitude, lon: offer.longitude }
+      : null,
+  );
   const [photos, setPhotos] = useState<File[]>([]);
   const [deletedPhotoIds, setDeletedPhotoIds] = useState<string[]>([]);
   const [photoError, setPhotoError] = useState<string | null>(null);
@@ -83,13 +89,24 @@ function CreateOfferForm({ mode = "create", offer }: CreateOfferFormProps) {
           tags: parsedTags,
           deletePhotoIds: deletedPhotoIds.length > 0 ? deletedPhotoIds : undefined,
           photos,
+          latitude: location?.lat ?? null,
+          longitude: location?.lon ?? null,
         },
       }).unwrap();
       navigate(`/offers/${offer.id}`);
       return;
     }
 
-    await createOffer({ name, description, action, type, tags: parsedTags, photos }).unwrap();
+    await createOffer({
+      name,
+      description,
+      action,
+      type,
+      tags: parsedTags,
+      photos,
+      latitude: location?.lat,
+      longitude: location?.lon,
+    }).unwrap();
     navigate("/offers");
   };
 
@@ -342,6 +359,18 @@ function CreateOfferForm({ mode = "create", offer }: CreateOfferFormProps) {
         )}
 
         {photoError && <FormHelperText error>{photoError}</FormHelperText>}
+      </Box>
+
+      <Box>
+        <Typography variant="subtitle2" mb={1}>
+          Местоположение (необязательно)
+        </Typography>
+        <YandexMapPicker value={location} onChange={setLocation} height="260px" />
+        {location && (
+          <Typography variant="caption" color="text.secondary" mt={0.5} display="block">
+            {location.lat.toFixed(6)}, {location.lon.toFixed(6)}
+          </Typography>
+        )}
       </Box>
 
       {mutationState.error && <Alert severity="error">{errorMessage}</Alert>}

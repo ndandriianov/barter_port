@@ -29,11 +29,11 @@ func NewRepository(db *pgxpool.Pool) *Repository {
 // Returns an error if the insertion fails.
 func (r *Repository) AddOffer(ctx context.Context, exec db.DB, offer domain.Offer) error {
 	query := `
-		INSERT INTO offers (id, author_id, name, type, action, description, created_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7)
+		INSERT INTO offers (id, author_id, name, type, action, description, created_at, latitude, longitude)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 	`
 
-	_, err := exec.Exec(ctx, query, offer.ID, offer.AuthorId, offer.Name, offer.Type.String(), offer.Action.String(), offer.Description, offer.CreatedAt)
+	_, err := exec.Exec(ctx, query, offer.ID, offer.AuthorId, offer.Name, offer.Type.String(), offer.Action.String(), offer.Description, offer.CreatedAt, offer.Latitude, offer.Longitude)
 	return err
 }
 
@@ -234,7 +234,9 @@ func (r *Repository) GetOffersByIDs(ctx context.Context, exec db.DB, ids []uuid.
 			COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = o.id), '{}'::uuid[]) AS photo_ids,
 			COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = o.id), '{}'::text[]) AS photo_urls,
 			o.is_hidden,
-			o.modification_blocked
+			o.modification_blocked,
+			o.latitude,
+			o.longitude
 		FROM unnest($1::uuid[]) WITH ORDINALITY u(id, ord)
 		JOIN offers o ON o.id = u.id
 		ORDER BY u.ord`
@@ -263,6 +265,8 @@ func (r *Repository) GetOffersByIDs(ctx context.Context, exec db.DB, ids []uuid.
 			&item.PhotoUrls,
 			&item.IsHidden,
 			&item.ModificationBlocked,
+			&item.Latitude,
+			&item.Longitude,
 		); err != nil {
 			return nil, fmt.Errorf("scan offer: %w", err)
 		}
@@ -294,7 +298,7 @@ func (r *Repository) GetOffer(ctx context.Context, exec db.DB, id uuid.UUID) (*d
 		       COALESCE((SELECT array_agg(ot.tag_name ORDER BY ot.tag_name) FROM offer_tags ot WHERE ot.offer_id = offers.id), '{}'::text[]) AS tags,
 		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
 		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
-		       is_hidden, modification_blocked
+		       is_hidden, modification_blocked, latitude, longitude
 		FROM offers
 		WHERE id = $1`
 
@@ -314,6 +318,8 @@ func (r *Repository) GetOffer(ctx context.Context, exec db.DB, id uuid.UUID) (*d
 		&offer.PhotoUrls,
 		&offer.IsHidden,
 		&offer.ModificationBlocked,
+		&offer.Latitude,
+		&offer.Longitude,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -369,6 +375,8 @@ func (r *Repository) UpdateOffer(
 		    description = COALESCE($4, description),
 		    type        = COALESCE($5, type),
 		    action      = COALESCE($6, action),
+		    latitude    = CASE WHEN $7 THEN $8 ELSE latitude END,
+		    longitude   = CASE WHEN $7 THEN $9 ELSE longitude END,
 		    updated_at  = NOW()
 		WHERE id = $1
 		  AND author_id = $2
@@ -376,10 +384,11 @@ func (r *Repository) UpdateOffer(
 		          COALESCE((SELECT array_agg(ot.tag_name ORDER BY ot.tag_name) FROM offer_tags ot WHERE ot.offer_id = offers.id), '{}'::text[]) AS tags,
 		          COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
 		          COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
-		          is_hidden, modification_blocked`
+		          is_hidden, modification_blocked, latitude, longitude`
 
 	var offer domain.Offer
-	err := exec.QueryRow(ctx, query, offerID, userID, patch.Name, patch.Description, itemType, action).Scan(
+	err := exec.QueryRow(ctx, query, offerID, userID, patch.Name, patch.Description, itemType, action,
+		patch.UpdateLocation, patch.Latitude, patch.Longitude).Scan(
 		&offer.ID,
 		&offer.AuthorId,
 		&offer.Name,
@@ -394,6 +403,8 @@ func (r *Repository) UpdateOffer(
 		&offer.PhotoUrls,
 		&offer.IsHidden,
 		&offer.ModificationBlocked,
+		&offer.Latitude,
+		&offer.Longitude,
 	)
 	if err == nil {
 		return offer, nil

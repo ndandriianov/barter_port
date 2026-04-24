@@ -5,11 +5,13 @@ import (
 )
 
 type User struct {
-	Id          uuid.UUID `db:"id"`
-	Name        *string   `db:"name"`
-	Bio         *string   `db:"bio"`
-	AvatarURL   *string   `db:"avatar_url"`
-	PhoneNumber *string   `db:"phone_number"`
+	Id               uuid.UUID `db:"id"`
+	Name             *string   `db:"name"`
+	Bio              *string   `db:"bio"`
+	AvatarURL        *string   `db:"avatar_url"`
+	PhoneNumber      *string   `db:"phone_number"`
+	CurrentLatitude  *float64  `db:"current_latitude"`
+	CurrentLongitude *float64  `db:"current_longitude"`
 }
 
 // UserInfo является вспомогательным типом для передачи базовой информации о пользователе в другие сервисы через gRPC

@@ -13,6 +13,8 @@ export const meSchema = userSchema.extend({
   createdAt: z.string(),
   isAdmin: z.boolean(),
   reputationPoints: z.number(),
+  currentLatitude: z.number().nullish().transform((v) => v ?? null),
+  currentLongitude: z.number().nullish().transform((v) => v ?? null),
 });
 
 export const userAvatarUploadSchema = z.object({

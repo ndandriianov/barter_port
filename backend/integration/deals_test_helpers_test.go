@@ -2,6 +2,7 @@ package integration
 
 import (
 	"barter-port/contracts/openapi/deals/types"
+	usertypes "barter-port/contracts/openapi/users/types"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -10,6 +11,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/url"
+	"strconv"
 	"testing"
 	"time"
 
@@ -215,8 +217,48 @@ func mustGetOffersPage(
 		if cursor.CreatedAt != nil {
 			values.Set("cursor_created_at", cursor.CreatedAt.Format(time.RFC3339Nano))
 		}
+		if cursor.Distance != nil {
+			values.Set("cursor_distance", strconv.FormatFloat(*cursor.Distance, 'g', -1, 64))
+		}
 		if cursor.Views != nil {
 			values.Set("cursor_views", fmt.Sprintf("%d", *cursor.Views))
+		}
+	}
+
+	req := mustUserRequest(t, http.MethodGet, dealsURL()+"/offers?"+values.Encode(), userID, nil)
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var result types.ListOffersResponse
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
+
+	return result
+}
+
+func mustGetOffersByDistancePage(
+	t *testing.T,
+	userID uuid.UUID,
+	userLat float64,
+	userLon float64,
+	cursor *types.OffersCursor,
+	limit int,
+	my *bool,
+) types.ListOffersResponse {
+	t.Helper()
+
+	values := url.Values{}
+	values.Set("sort", "ByDistance")
+	values.Set("user_lat", fmt.Sprintf("%.6f", userLat))
+	values.Set("user_lon", fmt.Sprintf("%.6f", userLon))
+	values.Set("cursor_limit", fmt.Sprintf("%d", limit))
+	if my != nil {
+		values.Set("my", fmt.Sprintf("%t", *my))
+	}
+	if cursor != nil {
+		values.Set("cursor_id", cursor.Id.String())
+		if cursor.Distance != nil {
+			values.Set("cursor_distance", strconv.FormatFloat(*cursor.Distance, 'g', -1, 64))
 		}
 	}
 
@@ -370,6 +412,20 @@ func mustViewOfferByID(t *testing.T, userID uuid.UUID, offerID uuid.UUID) {
 	t.Helper()
 
 	req := mustUserRequest(t, http.MethodPost, dealsURL()+"/offers/"+offerID.String()+"/view", userID, nil)
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+func mustUpdateCurrentUserLocation(t *testing.T, userID uuid.UUID, latitude, longitude float64) {
+	t.Helper()
+
+	req := mustUserRequest(t, http.MethodPatch, usersURL()+"/users/me", userID, mustJSONBody(t, usertypes.UpdateUserRequest{
+		CurrentLatitude:  &latitude,
+		CurrentLongitude: &longitude,
+	}))
+	req.Header.Set("Content-Type", "application/json")
+
 	resp := mustDo(t, req)
 	defer func() { _ = resp.Body.Close() }()
 	require.Equal(t, http.StatusOK, resp.StatusCode)

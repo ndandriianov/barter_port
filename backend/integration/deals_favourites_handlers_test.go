@@ -119,6 +119,35 @@ func TestFavoriteFlagsAppearInOffersListAndGetOfferByID(t *testing.T) {
 	require.False(t, *otherOffer.IsFavorite)
 }
 
+func TestFavoriteOffersIncludeDistanceWhenViewerAndOfferHaveLocations(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	author := mustRegisterDealsUser(t)
+	viewer := mustRegisterDealsUser(t)
+	mustUpdateCurrentUserLocation(t, viewer.UserID, 55.751244, 37.618423)
+
+	lat := 55.761244
+	lon := 37.628423
+	offer := mustCreateOfferDetails(t, author.UserID, types.CreateOfferRequest{
+		Name:        "Favorite with geo",
+		Description: "Offer with saved point",
+		Type:        types.Good,
+		Action:      types.Give,
+		Latitude:    &lat,
+		Longitude:   &lon,
+	})
+
+	mustAddOfferToFavorites(t, viewer.UserID, offer.Id)
+
+	favorites := mustGetFavoriteOffers(t, viewer.UserID)
+	require.Len(t, favorites.Offers, 1)
+	require.NotNil(t, favorites.Offers[0].DistanceMeters)
+	require.Greater(t, *favorites.Offers[0].DistanceMeters, int64(0))
+	require.NotNil(t, favorites.Offers[0].Latitude)
+	require.NotNil(t, favorites.Offers[0].Longitude)
+}
+
 func TestGetFavoriteOffersExcludesHiddenOfferForNonAuthor(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)

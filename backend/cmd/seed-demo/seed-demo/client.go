@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -513,6 +514,8 @@ func (c *SeedClient) createOfferJSON(ctx context.Context, token string, spec off
 		Description: spec.Description,
 		Type:        spec.Type,
 		Action:      spec.Action,
+		Latitude:    spec.Latitude,
+		Longitude:   spec.Longitude,
 	}
 	if len(spec.Tags) > 0 {
 		req.Tags = &spec.Tags
@@ -546,6 +549,15 @@ func (c *SeedClient) createOffer(ctx context.Context, token string, spec offerSp
 		for _, tag := range spec.Tags {
 			if err := writer.WriteField("tags", string(tag)); err != nil {
 				return dealtypes.Offer{}, fmt.Errorf("write offer tag: %w", err)
+			}
+		}
+
+		if spec.Latitude != nil {
+			if err := writer.WriteField("latitude", strconv.FormatFloat(*spec.Latitude, 'f', 6, 64)); err != nil {
+				return dealtypes.Offer{}, fmt.Errorf("write offer latitude: %w", err)
+			}
+			if err := writer.WriteField("longitude", strconv.FormatFloat(*spec.Longitude, 'f', 6, 64)); err != nil {
+				return dealtypes.Offer{}, fmt.Errorf("write offer longitude: %w", err)
 			}
 		}
 

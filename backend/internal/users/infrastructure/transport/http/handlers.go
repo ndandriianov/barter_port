@@ -218,7 +218,8 @@ func (h *Handlers) HandleUpdateMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if req.Name == nil && req.Bio == nil && req.AvatarUrl == nil && req.PhoneNumber == nil {
+	if req.Name == nil && req.Bio == nil && req.AvatarUrl == nil && req.PhoneNumber == nil &&
+		req.CurrentLatitude == nil && req.CurrentLongitude == nil {
 		httpx.WriteErrorStr(w, http.StatusBadRequest, "empty update payload")
 		return
 	}
@@ -246,6 +247,15 @@ func (h *Handlers) HandleUpdateMe(w http.ResponseWriter, r *http.Request) {
 
 	if req.PhoneNumber != nil {
 		if err := h.userService.UpdatePhoneNumber(r.Context(), userID, req.PhoneNumber); err != nil {
+			handleUpdateError(w, log, err, userID)
+			return
+		}
+	}
+
+	if req.CurrentLatitude != nil || req.CurrentLongitude != nil {
+		lat := (*float64)(req.CurrentLatitude)
+		lon := (*float64)(req.CurrentLongitude)
+		if err := h.userService.UpdateLocation(r.Context(), userID, lat, lon); err != nil {
 			handleUpdateError(w, log, err, userID)
 			return
 		}
@@ -482,6 +492,8 @@ func (h *Handlers) getMe(ctx context.Context, userID uuid.UUID) (types.Me, error
 		Bio:              me.Bio,
 		AvatarUrl:        me.AvatarURL,
 		PhoneNumber:      me.PhoneNumber,
+		CurrentLatitude:  me.CurrentLatitude,
+		CurrentLongitude: me.CurrentLongitude,
 		Email:            openapi_types.Email(me.Email), // TODO: конвертировать при отключенном bypass
 		CreatedAt:        me.CreatedAt,
 		IsAdmin:          me.IsAdmin,

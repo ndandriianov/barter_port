@@ -134,6 +134,8 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 			Type:        dealtypes.Good,
 			Action:      dealtypes.Give,
 			Tags:        []dealtypes.TagName{"декор", "винтаж"},
+			Latitude:    new(55.7500),
+			Longitude:   new(37.5960),
 		},
 		{
 			Key:         "plant-consulting",
@@ -142,6 +144,8 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 			Type:        dealtypes.Service,
 			Action:      dealtypes.Give,
 			Tags:        []dealtypes.TagName{"растения", "уход"},
+			Latitude:    new(55.7632),
+			Longitude:   new(37.6452),
 		},
 		{
 			Key:         "storage-boxes",
@@ -150,6 +154,8 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 			Type:        dealtypes.Good,
 			Action:      dealtypes.Give,
 			Tags:        []dealtypes.TagName{"хранение", "дом"},
+			Latitude:    new(55.7437),
+			Longitude:   new(37.6547),
 		},
 		{
 			Key:          "bookshelf",
@@ -181,6 +187,8 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 			Type:        dealtypes.Good,
 			Action:      dealtypes.Give,
 			Tags:        []dealtypes.TagName{"велосипед", "поездки"},
+			Latitude:    new(55.7312),
+			Longitude:   new(37.5987),
 		},
 		{
 			Key:         "tool-kit",
@@ -189,6 +197,8 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 			Type:        dealtypes.Good,
 			Action:      dealtypes.Give,
 			Tags:        []dealtypes.TagName{"инструменты", "дом"},
+			Latitude:    new(55.8011),
+			Longitude:   new(37.6234),
 		},
 		{
 			Key:          "coffee-beans",
@@ -206,6 +216,8 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 			Type:        dealtypes.Good,
 			Action:      dealtypes.Give,
 			Tags:        []dealtypes.TagName{"туризм", "поездки"},
+			Latitude:    new(55.7909),
+			Longitude:   new(37.6698),
 		},
 	})
 	if err != nil {
@@ -221,6 +233,8 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 			Type:        dealtypes.Service,
 			Action:      dealtypes.Give,
 			Tags:        []dealtypes.TagName{"языки", "уроки"},
+			Latitude:    new(55.7603),
+			Longitude:   new(37.6254),
 		},
 		{
 			Key:         "board-game",
@@ -229,6 +243,8 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 			Type:        dealtypes.Good,
 			Action:      dealtypes.Give,
 			Tags:        []dealtypes.TagName{"игры", "настолки"},
+			Latitude:    new(55.7295),
+			Longitude:   new(37.6453),
 		},
 	})
 	if err != nil {
@@ -244,6 +260,8 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 			Type:        dealtypes.Service,
 			Action:      dealtypes.Give,
 			Tags:        []dealtypes.TagName{"ремонт", "техника"},
+			Latitude:    new(55.7845),
+			Longitude:   new(37.4987),
 		},
 		{
 			Key:         "board-game-sleeves",
@@ -252,6 +270,8 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 			Type:        dealtypes.Good,
 			Action:      dealtypes.Give,
 			Tags:        []dealtypes.TagName{"игры", "карты"},
+			Latitude:    new(55.7389),
+			Longitude:   new(37.6567),
 		},
 	})
 	if err != nil {
@@ -267,6 +287,8 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 			Type:        dealtypes.Good,
 			Action:      dealtypes.Give,
 			Tags:        []dealtypes.TagName{"арт", "акварель"},
+			Latitude:    new(55.7653),
+			Longitude:   new(37.5843),
 		},
 		{
 			Key:         "canvas-set",
@@ -275,6 +297,8 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 			Type:        dealtypes.Good,
 			Action:      dealtypes.Give,
 			Tags:        []dealtypes.TagName{"арт", "холсты"},
+			Latitude:    new(55.7721),
+			Longitude:   new(37.6143),
 		},
 		{
 			Key:         "art-lesson",
@@ -283,6 +307,8 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 			Type:        dealtypes.Service,
 			Action:      dealtypes.Give,
 			Tags:        []dealtypes.TagName{"арт", "уроки"},
+			Latitude:    new(55.7578),
+			Longitude:   new(37.6619),
 		},
 		{
 			Key:          "want-brushes",
@@ -300,6 +326,8 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 			Type:        dealtypes.Good,
 			Action:      dealtypes.Give,
 			Tags:        []dealtypes.TagName{"арт", "скетчи"},
+			Latitude:    new(55.7765),
+			Longitude:   new(37.5826),
 		},
 	})
 	if err != nil {
@@ -316,6 +344,8 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 			Action:       dealtypes.Give,
 			Tags:         []dealtypes.TagName{"винтаж", "музыка"},
 			PhotoAliases: []string{"vinyl_player"},
+			Latitude:     new(55.7534),
+			Longitude:    new(37.6342),
 		},
 		{
 			Key:          "old-camera",
@@ -325,6 +355,8 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 			Action:       dealtypes.Give,
 			Tags:         []dealtypes.TagName{"фото", "винтаж"},
 			PhotoAliases: []string{"film_camera_zenit_11"},
+			Latitude:     new(55.7714),
+			Longitude:    new(37.6789),
 		},
 		{
 			Key:         "want-records",
@@ -343,6 +375,8 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 			Action:       dealtypes.Give,
 			Tags:         []dealtypes.TagName{"аудио", "винтаж"},
 			PhotoAliases: []string{"soviet_headphones"},
+			Latitude:     new(55.7150),
+			Longitude:    new(37.5568),
 		},
 	})
 	if err != nil {

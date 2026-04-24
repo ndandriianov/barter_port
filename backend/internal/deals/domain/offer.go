@@ -14,6 +14,7 @@ type Offer struct {
 	AuthorId            uuid.UUID         `db:"author_id"`
 	AuthorName          *string           `db:"-"`
 	IsFavorite          *bool             `db:"-"`
+	DistanceMeters      *int64            `db:"-"`
 	Name                string            `db:"name"`
 	Tags                []string          `db:"tags"`
 	PhotoIds            []uuid.UUID       `db:"photo_ids"`
@@ -21,6 +22,8 @@ type Offer struct {
 	Type                enums.ItemType    `db:"type"`
 	Action              enums.OfferAction `db:"action"`
 	Description         string            `db:"description"`
+	Latitude            *float64          `db:"latitude"`
+	Longitude           *float64          `db:"longitude"`
 	CreatedAt           time.Time         `db:"created_at"`
 	UpdatedAt           *time.Time        `db:"updated_at"`
 	Views               int               `db:"views"`
@@ -54,6 +57,9 @@ func (i *Offer) ToDto() types.Offer {
 		Type:                types.ItemType(i.Type.String()),
 		Action:              types.OfferAction(i.Action.String()),
 		Description:         i.Description,
+		Latitude:            i.Latitude,
+		Longitude:           i.Longitude,
+		DistanceMeters:      i.DistanceMeters,
 		CreatedAt:           i.CreatedAt,
 		UpdatedAt:           i.UpdatedAt,
 		Views:               int64(i.Views),
@@ -88,6 +94,9 @@ func (i *Offer) ToDTOWithInfo(info OfferInfo) types.OfferWithInfo {
 		IsFavorite:          i.IsFavorite,
 		IsHidden:            new(i.IsHidden),
 		ModificationBlocked: new(i.ModificationBlocked),
+		Latitude:            i.Latitude,
+		Longitude:           i.Longitude,
+		DistanceMeters:      i.DistanceMeters,
 		Name:                i.Name,
 		PhotoIds:            photoIDs,
 		PhotoUrls:           photoURLs,

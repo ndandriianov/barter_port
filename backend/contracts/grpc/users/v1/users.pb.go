@@ -526,6 +526,103 @@ func (x *ListSubscriptionsResponse) GetSubscriptions() []*UserInfo {
 	return nil
 }
 
+// GetUserLocation
+type GetUserLocationRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetUserLocationRequest) Reset() {
+	*x = GetUserLocationRequest{}
+	mi := &file_contracts_grpc_users_v1_users_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetUserLocationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetUserLocationRequest) ProtoMessage() {}
+
+func (x *GetUserLocationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_contracts_grpc_users_v1_users_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetUserLocationRequest.ProtoReflect.Descriptor instead.
+func (*GetUserLocationRequest) Descriptor() ([]byte, []int) {
+	return file_contracts_grpc_users_v1_users_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *GetUserLocationRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+type GetUserLocationResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Latitude      *float64               `protobuf:"fixed64,1,opt,name=latitude,proto3,oneof" json:"latitude,omitempty"`
+	Longitude     *float64               `protobuf:"fixed64,2,opt,name=longitude,proto3,oneof" json:"longitude,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetUserLocationResponse) Reset() {
+	*x = GetUserLocationResponse{}
+	mi := &file_contracts_grpc_users_v1_users_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetUserLocationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetUserLocationResponse) ProtoMessage() {}
+
+func (x *GetUserLocationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_contracts_grpc_users_v1_users_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetUserLocationResponse.ProtoReflect.Descriptor instead.
+func (*GetUserLocationResponse) Descriptor() ([]byte, []int) {
+	return file_contracts_grpc_users_v1_users_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *GetUserLocationResponse) GetLatitude() float64 {
+	if x != nil && x.Latitude != nil {
+		return *x.Latitude
+	}
+	return 0
+}
+
+func (x *GetUserLocationResponse) GetLongitude() float64 {
+	if x != nil && x.Longitude != nil {
+		return *x.Longitude
+	}
+	return 0
+}
+
 var File_contracts_grpc_users_v1_users_proto protoreflect.FileDescriptor
 
 const file_contracts_grpc_users_v1_users_proto_rawDesc = "" +
@@ -554,13 +651,22 @@ const file_contracts_grpc_users_v1_users_proto_rawDesc = "" +
 	"\x18ListSubscriptionsRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\"`\n" +
 	"\x19ListSubscriptionsResponse\x12C\n" +
-	"\rsubscriptions\x18\x01 \x03(\v2\x1d.barterport.users.v1.UserInfoR\rsubscriptions2\xcd\x04\n" +
+	"\rsubscriptions\x18\x01 \x03(\v2\x1d.barterport.users.v1.UserInfoR\rsubscriptions\"1\n" +
+	"\x16GetUserLocationRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\"x\n" +
+	"\x17GetUserLocationResponse\x12\x1f\n" +
+	"\blatitude\x18\x01 \x01(\x01H\x00R\blatitude\x88\x01\x01\x12!\n" +
+	"\tlongitude\x18\x02 \x01(\x01H\x01R\tlongitude\x88\x01\x01B\v\n" +
+	"\t_latitudeB\f\n" +
+	"\n" +
+	"_longitude2\xbb\x05\n" +
 	"\fUsersService\x12o\n" +
 	"\x10GetUsersWithInfo\x12,.barterport.users.v1.GetUsersWithInfoRequest\x1a-.barterport.users.v1.GetUsersWithInfoResponse\x12Z\n" +
 	"\tListUsers\x12%.barterport.users.v1.ListUsersRequest\x1a&.barterport.users.v1.ListUsersResponse\x12\x87\x01\n" +
 	"\x18ListUsersForChatCreation\x124.barterport.users.v1.ListUsersForChatCreationRequest\x1a5.barterport.users.v1.ListUsersForChatCreationResponse\x12r\n" +
 	"\x11CheckSubscription\x12-.barterport.users.v1.CheckSubscriptionRequest\x1a..barterport.users.v1.CheckSubscriptionResponse\x12r\n" +
-	"\x11ListSubscriptions\x12-.barterport.users.v1.ListSubscriptionsRequest\x1a..barterport.users.v1.ListSubscriptionsResponseB5Z3barterport/internal/contracts/grpc/users/v1;userspbb\x06proto3"
+	"\x11ListSubscriptions\x12-.barterport.users.v1.ListSubscriptionsRequest\x1a..barterport.users.v1.ListSubscriptionsResponse\x12l\n" +
+	"\x0fGetUserLocation\x12+.barterport.users.v1.GetUserLocationRequest\x1a,.barterport.users.v1.GetUserLocationResponseB5Z3barterport/internal/contracts/grpc/users/v1;userspbb\x06proto3"
 
 var (
 	file_contracts_grpc_users_v1_users_proto_rawDescOnce sync.Once
@@ -574,7 +680,7 @@ func file_contracts_grpc_users_v1_users_proto_rawDescGZIP() []byte {
 	return file_contracts_grpc_users_v1_users_proto_rawDescData
 }
 
-var file_contracts_grpc_users_v1_users_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_contracts_grpc_users_v1_users_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_contracts_grpc_users_v1_users_proto_goTypes = []any{
 	(*GetUsersWithInfoRequest)(nil),          // 0: barterport.users.v1.GetUsersWithInfoRequest
 	(*UserInfo)(nil),                         // 1: barterport.users.v1.UserInfo
@@ -587,6 +693,8 @@ var file_contracts_grpc_users_v1_users_proto_goTypes = []any{
 	(*CheckSubscriptionResponse)(nil),        // 8: barterport.users.v1.CheckSubscriptionResponse
 	(*ListSubscriptionsRequest)(nil),         // 9: barterport.users.v1.ListSubscriptionsRequest
 	(*ListSubscriptionsResponse)(nil),        // 10: barterport.users.v1.ListSubscriptionsResponse
+	(*GetUserLocationRequest)(nil),           // 11: barterport.users.v1.GetUserLocationRequest
+	(*GetUserLocationResponse)(nil),          // 12: barterport.users.v1.GetUserLocationResponse
 }
 var file_contracts_grpc_users_v1_users_proto_depIdxs = []int32{
 	1,  // 0: barterport.users.v1.GetUsersWithInfoResponse.users:type_name -> barterport.users.v1.UserInfo
@@ -598,13 +706,15 @@ var file_contracts_grpc_users_v1_users_proto_depIdxs = []int32{
 	5,  // 6: barterport.users.v1.UsersService.ListUsersForChatCreation:input_type -> barterport.users.v1.ListUsersForChatCreationRequest
 	7,  // 7: barterport.users.v1.UsersService.CheckSubscription:input_type -> barterport.users.v1.CheckSubscriptionRequest
 	9,  // 8: barterport.users.v1.UsersService.ListSubscriptions:input_type -> barterport.users.v1.ListSubscriptionsRequest
-	2,  // 9: barterport.users.v1.UsersService.GetUsersWithInfo:output_type -> barterport.users.v1.GetUsersWithInfoResponse
-	4,  // 10: barterport.users.v1.UsersService.ListUsers:output_type -> barterport.users.v1.ListUsersResponse
-	6,  // 11: barterport.users.v1.UsersService.ListUsersForChatCreation:output_type -> barterport.users.v1.ListUsersForChatCreationResponse
-	8,  // 12: barterport.users.v1.UsersService.CheckSubscription:output_type -> barterport.users.v1.CheckSubscriptionResponse
-	10, // 13: barterport.users.v1.UsersService.ListSubscriptions:output_type -> barterport.users.v1.ListSubscriptionsResponse
-	9,  // [9:14] is the sub-list for method output_type
-	4,  // [4:9] is the sub-list for method input_type
+	11, // 9: barterport.users.v1.UsersService.GetUserLocation:input_type -> barterport.users.v1.GetUserLocationRequest
+	2,  // 10: barterport.users.v1.UsersService.GetUsersWithInfo:output_type -> barterport.users.v1.GetUsersWithInfoResponse
+	4,  // 11: barterport.users.v1.UsersService.ListUsers:output_type -> barterport.users.v1.ListUsersResponse
+	6,  // 12: barterport.users.v1.UsersService.ListUsersForChatCreation:output_type -> barterport.users.v1.ListUsersForChatCreationResponse
+	8,  // 13: barterport.users.v1.UsersService.CheckSubscription:output_type -> barterport.users.v1.CheckSubscriptionResponse
+	10, // 14: barterport.users.v1.UsersService.ListSubscriptions:output_type -> barterport.users.v1.ListSubscriptionsResponse
+	12, // 15: barterport.users.v1.UsersService.GetUserLocation:output_type -> barterport.users.v1.GetUserLocationResponse
+	10, // [10:16] is the sub-list for method output_type
+	4,  // [4:10] is the sub-list for method input_type
 	4,  // [4:4] is the sub-list for extension type_name
 	4,  // [4:4] is the sub-list for extension extendee
 	0,  // [0:4] is the sub-list for field type_name
@@ -615,13 +725,14 @@ func file_contracts_grpc_users_v1_users_proto_init() {
 	if File_contracts_grpc_users_v1_users_proto != nil {
 		return
 	}
+	file_contracts_grpc_users_v1_users_proto_msgTypes[12].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_contracts_grpc_users_v1_users_proto_rawDesc), len(file_contracts_grpc_users_v1_users_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

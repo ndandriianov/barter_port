@@ -153,6 +153,7 @@ func (e ReviewEligibilityReason) Valid() bool {
 
 // Defines values for SortType.
 const (
+	SortTypeByDistance   SortType = "ByDistance"
 	SortTypeByPopularity SortType = "ByPopularity"
 	SortTypeByTime       SortType = "ByTime"
 )
@@ -160,6 +161,8 @@ const (
 // Valid indicates whether the value is a known member of the SortType enum.
 func (e SortType) Valid() bool {
 	switch e {
+	case SortTypeByDistance:
+		return true
 	case SortTypeByPopularity:
 		return true
 	case SortTypeByTime:
@@ -171,6 +174,7 @@ func (e SortType) Valid() bool {
 
 // Defines values for ListOffersParamsSort.
 const (
+	ListOffersParamsSortByDistance   ListOffersParamsSort = "ByDistance"
 	ListOffersParamsSortByPopularity ListOffersParamsSort = "ByPopularity"
 	ListOffersParamsSortByTime       ListOffersParamsSort = "ByTime"
 )
@@ -178,6 +182,8 @@ const (
 // Valid indicates whether the value is a known member of the ListOffersParamsSort enum.
 func (e ListOffersParamsSort) Valid() bool {
 	switch e {
+	case ListOffersParamsSortByDistance:
+		return true
 	case ListOffersParamsSortByPopularity:
 		return true
 	case ListOffersParamsSortByTime:
@@ -189,6 +195,7 @@ func (e ListOffersParamsSort) Valid() bool {
 
 // Defines values for ListSubscribedOffersParamsSort.
 const (
+	ByDistance   ListSubscribedOffersParamsSort = "ByDistance"
 	ByPopularity ListSubscribedOffersParamsSort = "ByPopularity"
 	ByTime       ListSubscribedOffersParamsSort = "ByTime"
 )
@@ -196,6 +203,8 @@ const (
 // Valid indicates whether the value is a known member of the ListSubscribedOffersParamsSort enum.
 func (e ListSubscribedOffersParamsSort) Valid() bool {
 	switch e {
+	case ByDistance:
+		return true
 	case ByPopularity:
 		return true
 	case ByTime:
@@ -296,7 +305,15 @@ type CreateOfferRequest struct {
 	// Action Whether the user offers or requests something
 	Action      OfferAction `json:"action"`
 	Description string      `json:"description"`
-	Name        string      `json:"name"`
+
+	// Latitude Широта точки объявления.
+	// Должна передаваться вместе с `longitude`.
+	Latitude *Latitude `json:"latitude,omitempty"`
+
+	// Longitude Долгота точки объявления.
+	// Должна передаваться вместе с `latitude`.
+	Longitude *Longitude `json:"longitude,omitempty"`
+	Name      string     `json:"name"`
 
 	// Photos Необязательные фотографии объявления.
 	// Каждая фотография передается отдельным бинарным файлом в `multipart/form-data`.
@@ -454,6 +471,14 @@ type FavoritedOffer struct {
 	// Description Подробное описание объявления
 	Description string `json:"description"`
 
+	// DistanceMeters Расстояние по прямой от текущей точки пользователя до точки объявления, в метрах.
+	// Возвращается только если:
+	// - у текущего пользователя сохранены `currentLatitude` и `currentLongitude`;
+	// - у объявления указаны `latitude` и `longitude`;
+	// - объявление не принадлежит текущему пользователю.
+	// Иначе поле равно `null`.
+	DistanceMeters *int64 `json:"distanceMeters,omitempty"`
+
 	// FavoritedAt Временная метка добавления объявления в избранное
 	FavoritedAt time.Time `json:"favoritedAt"`
 
@@ -467,6 +492,16 @@ type FavoritedOffer struct {
 	// IsHidden Признак того, что объявление скрыто модератором.
 	// Скрытые объявления видны только автору объявления и администратору.
 	IsHidden *bool `json:"isHidden,omitempty"`
+
+	// Latitude Широта точки объявления.
+	// Поле присутствует в ответах с `offer` вне зависимости от того, кто вызвал GET.
+	// `null`, если автор не указал точку на карте.
+	Latitude *Latitude `json:"latitude,omitempty"`
+
+	// Longitude Долгота точки объявления.
+	// Поле присутствует в ответах с `offer` вне зависимости от того, кто вызвал GET.
+	// `null`, если автор не указал точку на карте.
+	Longitude *Longitude `json:"longitude,omitempty"`
 
 	// ModificationBlocked Признак того, что объявление временно заблокировано для редактирования из-за pending-жалобы.
 	ModificationBlocked *bool `json:"modificationBlocked,omitempty"`
@@ -620,6 +655,9 @@ type Item struct {
 // ItemType Type of barter item
 type ItemType string
 
+// Latitude Широта в градусах WGS84.
+type Latitude = float64
+
 // ListFavoriteOffersResponse defines model for ListFavoriteOffersResponse.
 type ListFavoriteOffersResponse struct {
 	// NextCursor Курсор для получения следующей страницы; `null`, если следующей страницы нет
@@ -646,6 +684,9 @@ type ListOffersResponse struct {
 
 // ListTagsResponse defines model for ListTagsResponse.
 type ListTagsResponse = []TagName
+
+// Longitude Долгота в градусах WGS84.
+type Longitude = float64
 
 // ModeratorResolutionForFailureRequest defines model for ModeratorResolutionForFailureRequest.
 type ModeratorResolutionForFailureRequest struct {
@@ -748,6 +789,14 @@ type Offer struct {
 	// Description Подробное описание объявления
 	Description string `json:"description"`
 
+	// DistanceMeters Расстояние по прямой от текущей точки пользователя до точки объявления, в метрах.
+	// Возвращается только если:
+	// - у текущего пользователя сохранены `currentLatitude` и `currentLongitude`;
+	// - у объявления указаны `latitude` и `longitude`;
+	// - объявление не принадлежит текущему пользователю.
+	// Иначе поле равно `null`.
+	DistanceMeters *int64 `json:"distanceMeters,omitempty"`
+
 	// Id Уникальный идентификатор объявления
 	Id openapi_types.UUID `json:"id"`
 
@@ -758,6 +807,16 @@ type Offer struct {
 	// IsHidden Признак того, что объявление скрыто модератором.
 	// Скрытые объявления видны только автору объявления и администратору.
 	IsHidden *bool `json:"isHidden,omitempty"`
+
+	// Latitude Широта точки объявления.
+	// Поле присутствует в ответах с `offer` вне зависимости от того, кто вызвал GET.
+	// `null`, если автор не указал точку на карте.
+	Latitude *Latitude `json:"latitude,omitempty"`
+
+	// Longitude Долгота точки объявления.
+	// Поле присутствует в ответах с `offer` вне зависимости от того, кто вызвал GET.
+	// `null`, если автор не указал точку на карте.
+	Longitude *Longitude `json:"longitude,omitempty"`
 
 	// ModificationBlocked Признак того, что объявление временно заблокировано для редактирования из-за pending-жалобы.
 	ModificationBlocked *bool `json:"modificationBlocked,omitempty"`
@@ -908,6 +967,14 @@ type OfferWithInfo struct {
 	// Description Подробное описание объявления
 	Description string `json:"description"`
 
+	// DistanceMeters Расстояние по прямой от текущей точки пользователя до точки объявления, в метрах.
+	// Возвращается только если:
+	// - у текущего пользователя сохранены `currentLatitude` и `currentLongitude`;
+	// - у объявления указаны `latitude` и `longitude`;
+	// - объявление не принадлежит текущему пользователю.
+	// Иначе поле равно `null`.
+	DistanceMeters *int64 `json:"distanceMeters,omitempty"`
+
 	// Id Уникальный идентификатор объявления
 	Id openapi_types.UUID `json:"id"`
 
@@ -918,6 +985,16 @@ type OfferWithInfo struct {
 	// IsHidden Признак того, что объявление скрыто модератором.
 	// Скрытые объявления видны только автору объявления и администратору.
 	IsHidden *bool `json:"isHidden,omitempty"`
+
+	// Latitude Широта точки объявления.
+	// Поле присутствует в ответах с `offer` вне зависимости от того, кто вызвал GET.
+	// `null`, если автор не указал точку на карте.
+	Latitude *Latitude `json:"latitude,omitempty"`
+
+	// Longitude Долгота точки объявления.
+	// Поле присутствует в ответах с `offer` вне зависимости от того, кто вызвал GET.
+	// `null`, если автор не указал точку на карте.
+	Longitude *Longitude `json:"longitude,omitempty"`
 
 	// ModificationBlocked Признак того, что объявление временно заблокировано для редактирования из-за pending-жалобы.
 	ModificationBlocked *bool `json:"modificationBlocked,omitempty"`
@@ -953,6 +1030,7 @@ type OfferWithInfo struct {
 // OffersCursor Курсор для стабильной пагинации
 type OffersCursor struct {
 	CreatedAt *time.Time         `json:"createdAt,omitempty"`
+	Distance  *float64           `json:"distance,omitempty"`
 	Id        openapi_types.UUID `json:"id"`
 	Views     *int64             `json:"views,omitempty"`
 }
@@ -1154,7 +1232,17 @@ type UpdateOfferRequest struct {
 	// Порядок остальных фотографий сохраняется, новые добавляются в конец.
 	DeletePhotoIds *[]openapi_types.UUID `json:"deletePhotoIds,omitempty"`
 	Description    *string               `json:"description,omitempty"`
-	Name           *string               `json:"name,omitempty"`
+
+	// Latitude Новая широта точки объявления.
+	// Если передано вместе с `longitude`, координаты объявления обновляются.
+	// Если передано `null` вместе с `longitude: null`, точка объявления удаляется.
+	Latitude *Latitude `json:"latitude,omitempty"`
+
+	// Longitude Новая долгота точки объявления.
+	// Если передано вместе с `latitude`, координаты объявления обновляются.
+	// Если передано `null` вместе с `latitude: null`, точка объявления удаляется.
+	Longitude *Longitude `json:"longitude,omitempty"`
+	Name      *string    `json:"name,omitempty"`
 
 	// Photos Новые фотографии объявления.
 	// Каждая фотография передается отдельным бинарным файлом в `multipart/form-data`
@@ -1201,6 +1289,9 @@ type VoteForFailureRequest struct {
 // CursorCreatedAt defines model for CursorCreatedAt.
 type CursorCreatedAt = time.Time
 
+// CursorDistance defines model for CursorDistance.
+type CursorDistance = float64
+
 // CursorFavoritedAt defines model for CursorFavoritedAt.
 type CursorFavoritedAt = time.Time
 
@@ -1218,6 +1309,12 @@ type OfferTagsFilter = []TagName
 
 // SortType defines model for SortType.
 type SortType string
+
+// UserLat defines model for UserLat.
+type UserLat = float64
+
+// UserLon defines model for UserLon.
+type UserLon = float64
 
 // WithoutTags defines model for WithoutTags.
 type WithoutTags = bool
@@ -1269,6 +1366,10 @@ type ListOffersParams struct {
 	// Используется вместе с `cursor_id`, когда `sort=created_at`.
 	CursorCreatedAt *CursorCreatedAt `form:"cursor_created_at,omitempty" json:"cursor_created_at,omitempty"`
 
+	// CursorDistance Расстояние до точки пользователя в курсоре, в метрах.
+	// Используется вместе с `cursor_id`, когда `sort=ByDistance`.
+	CursorDistance *CursorDistance `form:"cursor_distance,omitempty" json:"cursor_distance,omitempty"`
+
 	// CursorViews Количество просмотров в курсоре.
 	// Используется вместе с `cursor_id`, когда `sort=popularity`.
 	CursorViews *CursorViews `form:"cursor_views,omitempty" json:"cursor_views,omitempty"`
@@ -1278,6 +1379,14 @@ type ListOffersParams struct {
 
 	// CursorLimit Максимальное количество объявлений в ответе
 	CursorLimit *Limit `form:"cursor_limit,omitempty" json:"cursor_limit,omitempty"`
+
+	// UserLat Широта точки пользователя, от которой считается расстояние.
+	// Обязательна при `sort=ByDistance`.
+	UserLat *UserLat `form:"user_lat,omitempty" json:"user_lat,omitempty"`
+
+	// UserLon Долгота точки пользователя, от которой считается расстояние.
+	// Обязательна при `sort=ByDistance`.
+	UserLon *UserLon `form:"user_lon,omitempty" json:"user_lon,omitempty"`
 
 	// Tags Фильтр по тегам. Возвращаются объявления, содержащие **все** переданные теги.
 	// Повторяйте параметр в query:
@@ -1314,6 +1423,10 @@ type ListSubscribedOffersParams struct {
 	// Используется вместе с `cursor_id`, когда `sort=created_at`.
 	CursorCreatedAt *CursorCreatedAt `form:"cursor_created_at,omitempty" json:"cursor_created_at,omitempty"`
 
+	// CursorDistance Расстояние до точки пользователя в курсоре, в метрах.
+	// Используется вместе с `cursor_id`, когда `sort=ByDistance`.
+	CursorDistance *CursorDistance `form:"cursor_distance,omitempty" json:"cursor_distance,omitempty"`
+
 	// CursorViews Количество просмотров в курсоре.
 	// Используется вместе с `cursor_id`, когда `sort=popularity`.
 	CursorViews *CursorViews `form:"cursor_views,omitempty" json:"cursor_views,omitempty"`
@@ -1323,6 +1436,14 @@ type ListSubscribedOffersParams struct {
 
 	// CursorLimit Максимальное количество объявлений в ответе
 	CursorLimit *Limit `form:"cursor_limit,omitempty" json:"cursor_limit,omitempty"`
+
+	// UserLat Широта точки пользователя, от которой считается расстояние.
+	// Обязательна при `sort=ByDistance`.
+	UserLat *UserLat `form:"user_lat,omitempty" json:"user_lat,omitempty"`
+
+	// UserLon Долгота точки пользователя, от которой считается расстояние.
+	// Обязательна при `sort=ByDistance`.
+	UserLon *UserLon `form:"user_lon,omitempty" json:"user_lon,omitempty"`
 }
 
 // ListSubscribedOffersParamsSort defines parameters for ListSubscribedOffers.

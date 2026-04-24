@@ -269,6 +269,8 @@ paths:
         Также возвращает текущий рейтинг пользователя (`reputationPoints`).
         В это значение входят как штрафы, так и положительные начисления,
         включая награду за завершение сделки и за оставление отзыва.
+        Если пользователь сохранил свою текущую точку, она возвращается
+        в полях `currentLatitude` и `currentLongitude`.
       operationId: getCurrentUser
       security:
         - bearerAuth: []
@@ -297,6 +299,8 @@ paths:
       summary: Редактировать информацию о себе
       description: |
         Позволяет отредактировать имя, биографию, аватар и номер телефона текущего пользователя.
+        Также позволяет сохранить, изменить или очистить текущую точку пользователя
+        через поля `currentLatitude` и `currentLongitude`.
       operationId: updateCurrentUser
       security:
         - bearerAuth: []
@@ -483,8 +487,9 @@ components:
       example: http://localhost:8333/avatars/user-123/avatar.jpg
     PhoneNumber:
       type: string
-      description: User phone number
-      example: '+79991234567'
+      pattern: ^\\+7 \\(\\d{3}\\) \\d{3}-\\d{2}-\\d{2}$
+      description: User phone number in format +7 (999) 123-45-67
+      example: +7 (999) 123-45-67
     User:
       type: object
       required:
@@ -523,6 +528,20 @@ components:
       type: integer
       description: Current user reputation score including rewards and penalties
       example: -10
+    Latitude:
+      type: number
+      format: double
+      minimum: -90
+      maximum: 90
+      description: Широта в градусах WGS84
+      example: 55.751244
+    Longitude:
+      type: number
+      format: double
+      minimum: -180
+      maximum: 180
+      description: Долгота в градусах WGS84
+      example: 37.618423
     Me:
       type: object
       required:
@@ -558,6 +577,20 @@ components:
           $ref: '#/components/schemas/PhoneNumber'
         reputationPoints:
           $ref: '#/components/schemas/ReputationPoints'
+        currentLatitude:
+          allOf:
+            - $ref: '#/components/schemas/Latitude'
+          nullable: true
+          description: |
+            Текущая точка пользователя.
+            `null`, если пользователь ещё не сохранял свою точку или очистил её.
+        currentLongitude:
+          allOf:
+            - $ref: '#/components/schemas/Longitude'
+          nullable: true
+          description: |
+            Текущая точка пользователя.
+            `null`, если пользователь ещё не сохранял свою точку или очистил её.
     UpdateUserRequest:
       type: object
       properties:
@@ -569,6 +602,22 @@ components:
           $ref: '#/components/schemas/AvatarUrl'
         phoneNumber:
           $ref: '#/components/schemas/PhoneNumber'
+        currentLatitude:
+          allOf:
+            - $ref: '#/components/schemas/Latitude'
+          nullable: true
+          description: |
+            Новая текущая широта пользователя.
+            Если передано вместе с `currentLongitude`, текущая точка пользователя обновляется.
+            Если передано `null` вместе с `currentLongitude: null`, текущая точка пользователя удаляется.
+        currentLongitude:
+          allOf:
+            - $ref: '#/components/schemas/Longitude'
+          nullable: true
+          description: |
+            Новая текущая долгота пользователя.
+            Если передано вместе с `currentLatitude`, текущая точка пользователя обновляется.
+            Если передано `null` вместе с `currentLatitude: null`, текущая точка пользователя удаляется.
     AvatarUploadResponse:
       type: object
       required:

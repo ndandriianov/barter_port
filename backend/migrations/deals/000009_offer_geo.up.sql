@@ -1,0 +1,3 @@
+ALTER TABLE offers
+    ADD COLUMN latitude  DOUBLE PRECISION,
+    ADD COLUMN longitude DOUBLE PRECISION;

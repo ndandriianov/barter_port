@@ -128,6 +128,18 @@ CreateOfferRequest:
       items:
         type: string
         format: binary
+    latitude:
+      allOf:
+        - $ref: 'schemas.yaml#/Latitude'
+      description: |
+        Широта точки объявления.
+        Должна передаваться вместе с `longitude`.
+    longitude:
+      allOf:
+        - $ref: 'schemas.yaml#/Longitude'
+      description: |
+        Долгота точки объявления.
+        Должна передаваться вместе с `latitude`.
 
 
 
@@ -176,6 +188,22 @@ UpdateOfferRequest:
       items:
         type: string
         format: binary
+    latitude:
+      allOf:
+        - $ref: 'schemas.yaml#/Latitude'
+      nullable: true
+      description: |
+        Новая широта точки объявления.
+        Если передано вместе с `longitude`, координаты объявления обновляются.
+        Если передано `null` вместе с `longitude: null`, точка объявления удаляется.
+    longitude:
+      allOf:
+        - $ref: 'schemas.yaml#/Longitude'
+      nullable: true
+      description: |
+        Новая долгота точки объявления.
+        Если передано вместе с `latitude`, координаты объявления обновляются.
+        Если передано `null` вместе с `latitude: null`, точка объявления удаляется.
 
 
 
@@ -313,4 +341,3 @@ ModeratorResolutionForFailureRequest:
       type: string
       description: |
         Комментарий админа, объясняющий его решение. Может быть пустым
-

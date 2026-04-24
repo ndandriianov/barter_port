@@ -83,7 +83,7 @@ func (h *Handlers) HandleCreateOffer(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	offer, err := h.offerService.CreateOffer(r.Context(), userID, req.Name, itemType, action, req.Description, tags, photos)
+	offer, err := h.offerService.CreateOffer(r.Context(), userID, req.Name, itemType, action, req.Description, tags, photos, req.Latitude, req.Longitude)
 	if err != nil {
 		if errors.Is(err, domain.ErrInvalidOfferName) {
 			log.Warn("invalid offer name", slog.Any("error", err))
@@ -145,6 +145,16 @@ func decodeCreateOfferMultipartRequest(w http.ResponseWriter, r *http.Request) (
 			tags = append(tags, tag)
 		}
 		req.Tags = &tags
+	}
+	if raw := r.FormValue("latitude"); raw != "" {
+		if v, err := strconv.ParseFloat(raw, 64); err == nil {
+			req.Latitude = &v
+		}
+	}
+	if raw := r.FormValue("longitude"); raw != "" {
+		if v, err := strconv.ParseFloat(raw, 64); err == nil {
+			req.Longitude = &v
+		}
 	}
 
 	fileHeaders := r.MultipartForm.File["photos"]
@@ -299,8 +309,14 @@ func (h *Handlers) HandleUpdateOffer(w http.ResponseWriter, r *http.Request) {
 	if r.MultipartForm != nil {
 		defer func() { _ = r.MultipartForm.RemoveAll() }()
 	}
+	var multipartHasLat, multipartHasLon bool
+	if r.MultipartForm != nil {
+		_, multipartHasLat = r.MultipartForm.Value["latitude"]
+		_, multipartHasLon = r.MultipartForm.Value["longitude"]
+	}
+	hasLocationUpdate := req.Latitude != nil || req.Longitude != nil || multipartHasLat || multipartHasLon
 	if req.Name == nil && req.Description == nil && req.Type == nil && req.Action == nil && req.Tags == nil &&
-		(req.DeletePhotoIds == nil || len(*req.DeletePhotoIds) == 0) && len(photos) == 0 {
+		(req.DeletePhotoIds == nil || len(*req.DeletePhotoIds) == 0) && len(photos) == 0 && !hasLocationUpdate {
 		httpx.WriteEmptyError(w, http.StatusBadRequest)
 		return
 	}
@@ -339,6 +355,12 @@ func (h *Handlers) HandleUpdateOffer(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		patch.Action = &action
+	}
+
+	if hasLocationUpdate {
+		patch.UpdateLocation = true
+		patch.Latitude = req.Latitude
+		patch.Longitude = req.Longitude
 	}
 
 	offer, err := h.offerService.UpdateOffer(r.Context(), userID, offerID, patch, photos)
@@ -419,6 +441,18 @@ func decodeUpdateOfferMultipartRequest(w http.ResponseWriter, r *http.Request) (
 			deletePhotoIDs = append(deletePhotoIDs, photoID)
 		}
 		req.DeletePhotoIds = &deletePhotoIDs
+	}
+	if raw, ok := firstMultipartValue(values, "latitude"); ok && raw != "" {
+		if v, err := strconv.ParseFloat(raw, 64); err == nil {
+			lat := types.Latitude(v)
+			req.Latitude = &lat
+		}
+	}
+	if raw, ok := firstMultipartValue(values, "longitude"); ok && raw != "" {
+		if v, err := strconv.ParseFloat(raw, 64); err == nil {
+			lon := types.Longitude(v)
+			req.Longitude = &lon
+		}
 	}
 
 	fileHeaders := r.MultipartForm.File["photos"]
@@ -506,7 +540,7 @@ func (h *Handlers) HandleDeleteOffer(w http.ResponseWriter, r *http.Request) {
 func (h *Handlers) HandleGetOffers(w http.ResponseWriter, r *http.Request) {
 	log := logger.LogFrom(r.Context(), slog.Default())
 
-	sortType, cursor, limit, my, tagFilter, ok := parseGetOffersRequest(w, r, log)
+	sortType, cursor, limit, my, tagFilter, requestLocation, ok := parseGetOffersRequest(w, r, log)
 	if !ok {
 		return
 	}
@@ -527,7 +561,7 @@ func (h *Handlers) HandleGetOffers(w http.ResponseWriter, r *http.Request) {
 		authorID = &requesterID
 	}
 
-	offerList, nextCursor, err := h.offerService.GetOffers(r.Context(), sortType, cursor, limit, authorID, requesterIDPtr, tagFilter)
+	offerList, nextCursor, err := h.offerService.GetOffers(r.Context(), sortType, cursor, limit, authorID, requesterIDPtr, tagFilter, requestLocation)
 	if err != nil {
 		log.Error("failed to get items", slog.Any("error", err))
 		httpx.WriteEmptyError(w, http.StatusInternalServerError)
@@ -540,7 +574,7 @@ func (h *Handlers) HandleGetOffers(w http.ResponseWriter, r *http.Request) {
 func (h *Handlers) HandleGetSubscribedOffers(w http.ResponseWriter, r *http.Request) {
 	log := logger.LogFrom(r.Context(), slog.Default())
 
-	sortType, cursor, limit, _, _, ok := parseGetOffersRequest(w, r, log)
+	sortType, cursor, limit, _, _, requestLocation, ok := parseGetOffersRequest(w, r, log)
 	if !ok {
 		return
 	}
@@ -552,7 +586,7 @@ func (h *Handlers) HandleGetSubscribedOffers(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	offerList, nextCursor, err := h.offerService.GetSubscribedOffers(r.Context(), requesterID, sortType, cursor, limit)
+	offerList, nextCursor, err := h.offerService.GetSubscribedOffers(r.Context(), requesterID, sortType, cursor, limit, requestLocation)
 	if err != nil {
 		log.Error("failed to get subscribed offers", slog.Any("error", err))
 		httpx.WriteEmptyError(w, http.StatusInternalServerError)
@@ -566,12 +600,12 @@ func parseGetOffersRequest(
 	w http.ResponseWriter,
 	r *http.Request,
 	log *slog.Logger,
-) (enums.SortType, *domain.UniversalCursor, int, bool, *[]string, bool) {
+) (enums.SortType, *domain.UniversalCursor, int, bool, *[]string, *domain.Location, bool) {
 	params, tagsFilter, err := decodeListOffersRequest(r)
 	if err != nil {
 		log.Error("failed to decode list offers request", slog.Any("error", err))
 		httpx.WriteErrorStr(w, http.StatusBadRequest, err.Error())
-		return enums.SortType(0), nil, 0, false, nil, false
+		return enums.SortType(0), nil, 0, false, nil, nil, false
 	}
 
 	my := params.My != nil && *params.My
@@ -581,14 +615,21 @@ func parseGetOffersRequest(
 	if err != nil {
 		log.Error("invalid sort type", slog.Any("error", err))
 		httpx.WriteErrorStr(w, http.StatusBadRequest, "invalid sort type")
-		return enums.SortType(0), nil, 0, false, nil, false
+		return enums.SortType(0), nil, 0, false, nil, nil, false
 	}
 
-	cursor, err := newUniversalCursorFromParams(params.CursorCreatedAt, params.CursorViews, params.CursorId)
+	cursor, err := newUniversalCursorFromParams(params.CursorCreatedAt, params.CursorDistance, params.CursorViews, params.CursorId)
 	if err != nil {
 		log.Error("failed to create offers cursor", slog.Any("error", err))
 		httpx.WriteErrorStr(w, http.StatusBadRequest, "invalid cursor")
-		return enums.SortType(0), nil, 0, false, nil, false
+		return enums.SortType(0), nil, 0, false, nil, nil, false
+	}
+
+	requestLocation, err := newRequestLocationFromParams(params.UserLat, params.UserLon, sortType)
+	if err != nil {
+		log.Error("failed to parse distance sort location", slog.Any("error", err))
+		httpx.WriteErrorStr(w, http.StatusBadRequest, err.Error())
+		return enums.SortType(0), nil, 0, false, nil, nil, false
 	}
 
 	limit := 10
@@ -596,13 +637,13 @@ func parseGetOffersRequest(
 		limit = *params.CursorLimit
 		if limit <= 0 {
 			httpx.WriteErrorStr(w, http.StatusBadRequest, "invalid limit")
-			return enums.SortType(0), nil, 0, false, nil, false
+			return enums.SortType(0), nil, 0, false, nil, nil, false
 		}
 	}
 
 	log.Debug("parsing finished", slog.Any("cursor", cursor), slog.Int("limit", limit), slog.Bool("my", my))
 
-	return sortType, cursor, limit, my, tagsFilter, true
+	return sortType, cursor, limit, my, tagsFilter, requestLocation, true
 }
 
 func writeListOffersResponse(w http.ResponseWriter, offerList []domain.Offer, nextCursor *domain.UniversalCursor) {
@@ -641,6 +682,13 @@ func decodeListOffersRequest(r *http.Request) (types.ListOffersParams, *[]string
 		}
 		params.CursorCreatedAt = new(value)
 	}
+	if rawDistance := query.Get("cursor_distance"); rawDistance != "" {
+		value, err := strconv.ParseFloat(rawDistance, 64)
+		if err != nil {
+			return types.ListOffersParams{}, nil, errors.New("invalid cursor_distance")
+		}
+		params.CursorDistance = new(value)
+	}
 	if rawViews := query.Get("cursor_views"); rawViews != "" {
 		value, err := strconv.ParseInt(rawViews, 10, 64)
 		if err != nil {
@@ -661,6 +709,20 @@ func decodeListOffersRequest(r *http.Request) (types.ListOffersParams, *[]string
 			return types.ListOffersParams{}, nil, errors.New("invalid cursor_limit")
 		}
 		params.CursorLimit = new(value)
+	}
+	if rawUserLat := query.Get("user_lat"); rawUserLat != "" {
+		value, err := strconv.ParseFloat(rawUserLat, 64)
+		if err != nil {
+			return types.ListOffersParams{}, nil, errors.New("invalid user_lat")
+		}
+		params.UserLat = new(value)
+	}
+	if rawUserLon := query.Get("user_lon"); rawUserLon != "" {
+		value, err := strconv.ParseFloat(rawUserLon, 64)
+		if err != nil {
+			return types.ListOffersParams{}, nil, errors.New("invalid user_lon")
+		}
+		params.UserLon = new(value)
 	}
 	if rawWithoutTags := query.Get("withoutTags"); rawWithoutTags != "" {
 		value, err := strconv.ParseBool(rawWithoutTags)
@@ -716,8 +778,8 @@ func normalizeTagNames(tags *[]types.TagName) ([]string, error) {
 	return domain.NormalizeTags(raw)
 }
 
-func newUniversalCursorFromParams(createdAt *types.CursorCreatedAt, views *types.CursorViews, id *types.CursorId) (*domain.UniversalCursor, error) {
-	if createdAt == nil && views == nil && id == nil {
+func newUniversalCursorFromParams(createdAt *types.CursorCreatedAt, distance *types.CursorDistance, views *types.CursorViews, id *types.CursorId) (*domain.UniversalCursor, error) {
+	if createdAt == nil && distance == nil && views == nil && id == nil {
 		return nil, nil
 	}
 
@@ -729,13 +791,31 @@ func newUniversalCursorFromParams(createdAt *types.CursorCreatedAt, views *types
 		Id: *id,
 	}
 	if createdAt != nil {
-		createdAtValue := time.Time(*createdAt)
-		cursor.CreatedAt = &createdAtValue
+		cursor.CreatedAt = new(time.Time(*createdAt))
+	}
+	if distance != nil {
+		cursor.Distance = new(float64(*distance))
 	}
 	if views != nil {
-		viewsValue := int(*views)
-		cursor.Views = &viewsValue
+		cursor.Views = new(int(*views))
 	}
 
 	return cursor, nil
+}
+
+func newRequestLocationFromParams(userLat *types.Latitude, userLon *types.Longitude, sortType enums.SortType) (*domain.Location, error) {
+	if userLat == nil && userLon == nil {
+		if sortType == enums.SortTypeByDistance {
+			return nil, errors.New("user_lat and user_lon are required for sort=ByDistance")
+		}
+		return nil, nil
+	}
+	if userLat == nil || userLon == nil {
+		return nil, errors.New("user_lat and user_lon must be provided together")
+	}
+
+	return &domain.Location{
+		Lat: float64(*userLat),
+		Lon: float64(*userLon),
+	}, nil
 }

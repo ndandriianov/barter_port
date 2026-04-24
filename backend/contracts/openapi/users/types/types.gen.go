@@ -57,6 +57,12 @@ type ErrorResponse struct {
 // GetReputationEventsResponse defines model for GetReputationEventsResponse.
 type GetReputationEventsResponse = []ReputationEvent
 
+// Latitude Широта в градусах WGS84
+type Latitude = float64
+
+// Longitude Долгота в градусах WGS84
+type Longitude = float64
+
 // Me defines model for Me.
 type Me struct {
 	// AvatarUrl User avatar URL
@@ -67,6 +73,14 @@ type Me struct {
 
 	// CreatedAt User registration timestamp
 	CreatedAt time.Time `json:"createdAt"`
+
+	// CurrentLatitude Текущая точка пользователя.
+	// `null`, если пользователь ещё не сохранял свою точку или очистил её.
+	CurrentLatitude *Latitude `json:"currentLatitude,omitempty"`
+
+	// CurrentLongitude Текущая точка пользователя.
+	// `null`, если пользователь ещё не сохранял свою точку или очистил её.
+	CurrentLongitude *Longitude `json:"currentLongitude,omitempty"`
 
 	// Email User email
 	Email openapi_types.Email `json:"email"`
@@ -80,7 +94,7 @@ type Me struct {
 	// Name User name
 	Name *Name `json:"name,omitempty"`
 
-	// PhoneNumber User phone number
+	// PhoneNumber User phone number in format +7 (999) 123-45-67
 	PhoneNumber *PhoneNumber `json:"phoneNumber,omitempty"`
 
 	// ReputationPoints Current user reputation score including rewards and penalties
@@ -90,7 +104,7 @@ type Me struct {
 // Name User name
 type Name = string
 
-// PhoneNumber User phone number
+// PhoneNumber User phone number in format +7 (999) 123-45-67
 type PhoneNumber = string
 
 // ReputationEvent defines model for ReputationEvent.
@@ -138,10 +152,20 @@ type UpdateUserRequest struct {
 	// Bio User bio
 	Bio *Bio `json:"bio,omitempty"`
 
+	// CurrentLatitude Новая текущая широта пользователя.
+	// Если передано вместе с `currentLongitude`, текущая точка пользователя обновляется.
+	// Если передано `null` вместе с `currentLongitude: null`, текущая точка пользователя удаляется.
+	CurrentLatitude *Latitude `json:"currentLatitude,omitempty"`
+
+	// CurrentLongitude Новая текущая долгота пользователя.
+	// Если передано вместе с `currentLatitude`, текущая точка пользователя обновляется.
+	// Если передано `null` вместе с `currentLatitude: null`, текущая точка пользователя удаляется.
+	CurrentLongitude *Longitude `json:"currentLongitude,omitempty"`
+
 	// Name User name
 	Name *Name `json:"name,omitempty"`
 
-	// PhoneNumber User phone number
+	// PhoneNumber User phone number in format +7 (999) 123-45-67
 	PhoneNumber *PhoneNumber `json:"phoneNumber,omitempty"`
 }
 
@@ -159,7 +183,7 @@ type User struct {
 	// Name User name
 	Name *Name `json:"name,omitempty"`
 
-	// PhoneNumber User phone number
+	// PhoneNumber User phone number in format +7 (999) 123-45-67
 	PhoneNumber *PhoneNumber `json:"phoneNumber,omitempty"`
 }
 

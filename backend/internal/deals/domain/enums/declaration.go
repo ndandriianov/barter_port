@@ -22,6 +22,7 @@ type SortType int
 const (
 	SortTypeByTime SortType = iota
 	SortTypeByPopularity
+	SortTypeByDistance
 )
 
 //go:generate enumer -type=DealStatus -json -text -sql -trimprefix=DealStatus

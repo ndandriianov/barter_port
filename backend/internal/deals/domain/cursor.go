@@ -11,11 +11,13 @@ import (
 
 var (
 	ErrCreatedAtIsNil = errors.New("createdAt is nil")
+	ErrDistanceIsNil  = errors.New("distance is nil")
 	ErrViewsIsNil     = errors.New("views is nil")
 	ErrInvalidId      = errors.New("invalid id")
 )
 
 type UniversalCursor struct {
+	Distance  *float64   `json:"distance" example:"1542.42"`
 	CreatedAt *time.Time `json:"createdAt" example:"2026-03-04T12:00:00Z"`
 	Views     *int       `json:"views"  example:"120"`
 	Id        uuid.UUID  `json:"id" example:"550e8400-e29b-41d4-a716-446655440000"`
@@ -44,6 +46,7 @@ func NewUniversalCursor(createdAtStr, viewsStr, idStr string) (*UniversalCursor,
 	}
 
 	return &UniversalCursor{
+		Distance:  nil,
 		CreatedAt: createdAtPtr,
 		Views:     viewsPtr,
 		Id:        id,
@@ -57,6 +60,7 @@ func (c *UniversalCursor) ToDto() types.OffersCursor {
 	}
 
 	return types.OffersCursor{
+		Distance:  c.Distance,
 		CreatedAt: c.CreatedAt,
 		Id:        c.Id,
 		Views:     views,
@@ -71,6 +75,11 @@ type TimeCursor struct {
 type PopularityCursor struct {
 	Views int
 	Id    uuid.UUID
+}
+
+type DistanceCursor struct {
+	Distance float64
+	Id       uuid.UUID
 }
 
 func (c *UniversalCursor) ToTimeCursor() (*TimeCursor, error) {
@@ -93,6 +102,16 @@ func (c *UniversalCursor) ToPopularityCursor() (*PopularityCursor, error) {
 	}, nil
 }
 
+func (c *UniversalCursor) ToDistanceCursor() (*DistanceCursor, error) {
+	if c.Distance == nil {
+		return nil, ErrDistanceIsNil
+	}
+	return &DistanceCursor{
+		Distance: *c.Distance,
+		Id:       c.Id,
+	}, nil
+}
+
 func (c *TimeCursor) ToUniversalCursor() *UniversalCursor {
 	return &UniversalCursor{
 		CreatedAt: &c.CreatedAt,
@@ -104,5 +123,12 @@ func (c *PopularityCursor) ToUniversalCursor() *UniversalCursor {
 	return &UniversalCursor{
 		Views: &c.Views,
 		Id:    c.Id,
+	}
+}
+
+func (c *DistanceCursor) ToUniversalCursor() *UniversalCursor {
+	return &UniversalCursor{
+		Distance: &c.Distance,
+		Id:       c.Id,
 	}
 }

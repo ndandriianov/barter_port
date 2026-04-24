@@ -87,6 +87,8 @@ type offerSpec struct {
 	Tags         []dealtypes.TagName
 	PhotoAliases []string
 	SkipPhoto    bool
+	Latitude     *float64
+	Longitude    *float64
 }
 
 type SeedSummary struct {

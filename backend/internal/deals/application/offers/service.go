@@ -8,6 +8,7 @@ import (
 	offersrep "barter-port/internal/deals/infrastructure/repository/offers"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/db"
+	"barter-port/pkg/geo"
 	"barter-port/pkg/logger"
 	"errors"
 	"fmt"
@@ -72,6 +73,8 @@ func (s *Service) CreateOffer(
 	description string,
 	tags []string,
 	photos []PhotoUpload,
+	latitude *float64,
+	longitude *float64,
 ) (*domain.Offer, error) {
 	if name == "" {
 		return nil, domain.ErrInvalidOfferName
@@ -92,6 +95,8 @@ func (s *Service) CreateOffer(
 		Type:        itemType,
 		Action:      action,
 		Description: description,
+		Latitude:    latitude,
+		Longitude:   longitude,
 		CreatedAt:   time.Now(),
 		Views:       0,
 	}
@@ -167,6 +172,7 @@ func (s *Service) GetOffers(
 	authorID *uuid.UUID,
 	requesterID *uuid.UUID,
 	tagFilter *[]string,
+	requestLocation *domain.Location,
 ) ([]domain.Offer, *domain.UniversalCursor, error) {
 
 	isAdmin := false
@@ -204,6 +210,10 @@ func (s *Service) GetOffers(
 			if err != nil {
 				return nil, nil, err
 			}
+			offers, err = s.addDistanceToOffers(ctx, *requesterID, offers)
+			if err != nil {
+				return nil, nil, err
+			}
 		}
 
 		return offers, newUniversalCursor, nil
@@ -233,6 +243,43 @@ func (s *Service) GetOffers(
 			if err != nil {
 				return nil, nil, err
 			}
+			offers, err = s.addDistanceToOffers(ctx, *requesterID, offers)
+			if err != nil {
+				return nil, nil, err
+			}
+		}
+
+		return offers, newUniversalCursor, nil
+
+	case enums.SortTypeByDistance:
+		if requestLocation == nil {
+			return nil, nil, fmt.Errorf("distance sort requires request location")
+		}
+
+		distanceCursor, err := getDistanceCursor(cursor)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		offers, newDistanceCursor, err := s.getOffersByDistance(ctx, distanceCursor, limit, authorID, isAdmin, tagFilter, *requestLocation)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		var newUniversalCursor *domain.UniversalCursor
+		if newDistanceCursor != nil {
+			newUniversalCursor = newDistanceCursor.ToUniversalCursor()
+		}
+
+		offers, err = s.addAuthorNameToOffers(ctx, offers)
+		if err != nil {
+			return nil, nil, err
+		}
+		if requesterID != nil {
+			offers, err = s.addFavoriteFlagToOffers(ctx, *requesterID, offers)
+			if err != nil {
+				return nil, nil, err
+			}
 		}
 
 		return offers, newUniversalCursor, nil
@@ -248,6 +295,7 @@ func (s *Service) GetSubscribedOffers(
 	sortType enums.SortType,
 	cursor *domain.UniversalCursor,
 	limit int,
+	requestLocation *domain.Location,
 ) ([]domain.Offer, *domain.UniversalCursor, error) {
 	isAdmin, err := s.adminChecker.IsAdmin(ctx, requesterID)
 	if err != nil {
@@ -303,6 +351,10 @@ func (s *Service) GetSubscribedOffers(
 		if err != nil {
 			return nil, nil, err
 		}
+		offers, err = s.addDistanceToOffers(ctx, requesterID, offers)
+		if err != nil {
+			return nil, nil, err
+		}
 
 		return offers, newUniversalCursor, nil
 
@@ -320,6 +372,41 @@ func (s *Service) GetSubscribedOffers(
 		var newUniversalCursor *domain.UniversalCursor
 		if newPopularityCursor != nil {
 			newUniversalCursor = newPopularityCursor.ToUniversalCursor()
+		}
+
+		offers, err = s.addAuthorNameToOffers(ctx, offers)
+		if err != nil {
+			return nil, nil, err
+		}
+		offers, err = s.addFavoriteFlagToOffers(ctx, requesterID, offers)
+		if err != nil {
+			return nil, nil, err
+		}
+		offers, err = s.addDistanceToOffers(ctx, requesterID, offers)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		return offers, newUniversalCursor, nil
+
+	case enums.SortTypeByDistance:
+		if requestLocation == nil {
+			return nil, nil, fmt.Errorf("distance sort requires request location")
+		}
+
+		distanceCursor, err := getDistanceCursor(cursor)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		offers, newDistanceCursor, err := s.getSubscribedOffersByDistance(ctx, distanceCursor, limit, authorIDs, isAdmin, *requestLocation)
+		if err != nil {
+			return nil, nil, err
+		}
+
+		var newUniversalCursor *domain.UniversalCursor
+		if newDistanceCursor != nil {
+			newUniversalCursor = newDistanceCursor.ToUniversalCursor()
 		}
 
 		offers, err = s.addAuthorNameToOffers(ctx, offers)
@@ -394,6 +481,13 @@ func getPopularityCursor(cursor *domain.UniversalCursor) (*domain.PopularityCurs
 	return cursor.ToPopularityCursor()
 }
 
+func getDistanceCursor(cursor *domain.UniversalCursor) (*domain.DistanceCursor, error) {
+	if cursor == nil {
+		return nil, nil
+	}
+	return cursor.ToDistanceCursor()
+}
+
 func (s *Service) getOffersByPopularity(
 	ctx context.Context,
 	cursor *domain.PopularityCursor,
@@ -434,6 +528,104 @@ func (s *Service) getSubscribedOffersByPopularity(
 	}
 
 	return s.repo.GetSubscribedOffersOrderByPopularityNoCursor(ctx, limit, authorIDs, isAdmin)
+}
+
+func (s *Service) getOffersByDistance(
+	ctx context.Context,
+	cursor *domain.DistanceCursor,
+	limit int,
+	authorID *uuid.UUID,
+	isAdmin bool,
+	tagFilter *[]string,
+	location domain.Location,
+) ([]domain.Offer, *domain.DistanceCursor, error) {
+	tags, tagsFilterPresent := extractTagFilter(tagFilter)
+
+	switch {
+	case cursor != nil:
+		switch {
+		case authorID != nil:
+			return s.repo.GetMyOffersOrderByDistance(ctx, limit, *cursor, *authorID, location.Lat, location.Lon, tags, tagsFilterPresent)
+		default:
+			return s.repo.GetOffersOrderByDistance(ctx, limit, *cursor, isAdmin, location.Lat, location.Lon, tags, tagsFilterPresent)
+		}
+	default:
+		switch {
+		case authorID != nil:
+			return s.repo.GetMyOffersOrderByDistanceNoCursor(ctx, limit, *authorID, location.Lat, location.Lon, tags, tagsFilterPresent)
+		default:
+			return s.repo.GetOffersOrderByDistanceNoCursor(ctx, limit, isAdmin, location.Lat, location.Lon, tags, tagsFilterPresent)
+		}
+	}
+}
+
+func (s *Service) getSubscribedOffersByDistance(
+	ctx context.Context,
+	cursor *domain.DistanceCursor,
+	limit int,
+	authorIDs []uuid.UUID,
+	isAdmin bool,
+	location domain.Location,
+) ([]domain.Offer, *domain.DistanceCursor, error) {
+	if cursor != nil {
+		return s.repo.GetSubscribedOffersOrderByDistance(ctx, limit, *cursor, authorIDs, isAdmin, location.Lat, location.Lon)
+	}
+
+	return s.repo.GetSubscribedOffersOrderByDistanceNoCursor(ctx, limit, authorIDs, isAdmin, location.Lat, location.Lon)
+}
+
+// addDistanceToOffers populates DistanceMeters on each offer that has coordinates, using the
+// requester's saved location from the users service. Silently skips if requester has no location.
+func (s *Service) addDistanceToOffers(ctx context.Context, requesterID uuid.UUID, offers []domain.Offer) ([]domain.Offer, error) {
+	resp, err := s.usersClient.GetUserLocation(ctx, &userspb.GetUserLocationRequest{UserId: requesterID.String()})
+	if err != nil {
+		return offers, nil // best-effort: no distance if gRPC fails
+	}
+	if resp.Latitude == nil || resp.Longitude == nil {
+		return offers, nil
+	}
+
+	userLat := resp.GetLatitude()
+	userLon := resp.GetLongitude()
+
+	for i := range offers {
+		o := &offers[i]
+		if o.Latitude == nil || o.Longitude == nil {
+			continue
+		}
+		d := geo.HaversineDistance(userLat, userLon, *o.Latitude, *o.Longitude)
+		o.DistanceMeters = &d
+	}
+
+	return offers, nil
+}
+
+func (s *Service) addDistanceToFavoritedOffers(
+	ctx context.Context,
+	requesterID uuid.UUID,
+	offers []domain.FavoritedOffer,
+) ([]domain.FavoritedOffer, error) {
+	resp, err := s.usersClient.GetUserLocation(ctx, &userspb.GetUserLocationRequest{UserId: requesterID.String()})
+	if err != nil {
+		return offers, nil // best-effort: no distance if gRPC fails
+	}
+	if resp.Latitude == nil || resp.Longitude == nil {
+		return offers, nil
+	}
+
+	userLat := resp.GetLatitude()
+	userLon := resp.GetLongitude()
+
+	for i := range offers {
+		o := &offers[i]
+		if o.Latitude == nil || o.Longitude == nil {
+			continue
+		}
+		d := geo.HaversineDistance(userLat, userLon, *o.Latitude, *o.Longitude)
+		o.DistanceMeters = &d
+	}
+
+	return offers, nil
 }
 
 func (s *Service) addAuthorNameToOffers(ctx context.Context, offers []domain.Offer) ([]domain.Offer, error) {
@@ -563,6 +755,12 @@ func (s *Service) GetOfferByID(ctx context.Context, id uuid.UUID, requesterID *u
 			return nil, favoriteErr
 		}
 		offer = &offersWithFavoriteFlag[0]
+
+		offerSlice, distErr := s.addDistanceToOffers(ctx, *requesterID, []domain.Offer{*offer})
+		if distErr != nil {
+			return nil, distErr
+		}
+		offer = &offerSlice[0]
 	}
 
 	return offer, nil
@@ -621,6 +819,11 @@ func (s *Service) GetFavoriteOffers(
 
 	for i := range offers {
 		offers[i].IsFavorite = new(true)
+	}
+
+	offers, err = s.addDistanceToFavoritedOffers(ctx, userID, offers)
+	if err != nil {
+		return nil, nil, err
 	}
 
 	return offers, nextCursor, nil

@@ -55,6 +55,7 @@ const buildOffersParams = (
   cursor: UniversalCursor | null,
   tags: string[],
   withoutTags: boolean,
+  location: { lat: number; lon: number } | null,
 ): GetOffersParams => {
   const params: GetOffersParams = {
     sort: sortType,
@@ -68,11 +69,20 @@ const buildOffersParams = (
     params.tags = tags;
   }
 
+  if (sortType === "ByDistance" && location) {
+    params.user_lat = location.lat;
+    params.user_lon = location.lon;
+  }
+
   if (!cursor) {
     return params;
   }
 
   params.cursor_id = cursor.id;
+
+  if (sortType === "ByDistance" && typeof cursor.distance === "number") {
+    params.cursor_distance = cursor.distance;
+  }
 
   if (sortType === "ByTime" && cursor.createdAt) {
     params.cursor_created_at = cursor.createdAt;
@@ -88,17 +98,27 @@ const buildOffersParams = (
 const buildSubscribedOffersParams = (
   sortType: SortType,
   cursor: UniversalCursor | null,
+  location: { lat: number; lon: number } | null,
 ): GetSubscribedOffersParams => {
   const params: GetSubscribedOffersParams = {
     sort: sortType,
     cursor_limit: PAGE_SIZE,
   };
 
+  if (sortType === "ByDistance" && location) {
+    params.user_lat = location.lat;
+    params.user_lon = location.lon;
+  }
+
   if (!cursor) {
     return params;
   }
 
   params.cursor_id = cursor.id;
+
+  if (sortType === "ByDistance" && typeof cursor.distance === "number") {
+    params.cursor_distance = cursor.distance;
+  }
 
   if (sortType === "ByTime" && cursor.createdAt) {
     params.cursor_created_at = cursor.createdAt;
@@ -156,17 +176,32 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
   });
   const { data: currentUser } = usersApi.useGetCurrentUserQuery();
   const { countsByOfferId } = useDraftOfferCounts({ enabled: isMyOffers });
+  const currentLocation = useMemo(
+    () => (
+      currentUser?.currentLatitude != null && currentUser.currentLongitude != null
+        ? { lat: currentUser.currentLatitude, lon: currentUser.currentLongitude }
+        : null
+    ),
+    [currentUser?.currentLatitude, currentUser?.currentLongitude],
+  );
   const parsedTags = useMemo(() => parseOfferTagsInput(tagsInput), [tagsInput]);
   const suggestedTags = useMemo(
     () => existingTags.filter((tag) => !parsedTags.includes(tag)).slice(0, 10),
     [existingTags, parsedTags],
   );
   const parsedTagsKey = parsedTags.join("|");
-  const feedKey = `${mode}:${sortType}:${withoutTagsOnly}:${parsedTagsKey}`;
+  const locationKey = currentLocation ? `${currentLocation.lat}:${currentLocation.lon}` : "none";
+  const feedKey = `${mode}:${sortType}:${withoutTagsOnly}:${parsedTagsKey}:${locationKey}`;
 
   feedKeyRef.current = feedKey;
   nextCursorRef.current = nextCursor;
   nextFavoriteCursorRef.current = nextFavoriteCursor;
+
+  useEffect(() => {
+    if (sortType === "ByDistance" && !currentLocation) {
+      setSortType("ByTime");
+    }
+  }, [currentLocation, sortType]);
 
   const loadOffersPage = useCallback(async (
     cursor: UniversalCursor | null,
@@ -198,6 +233,18 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
       isLoadingMoreRef.current = true;
     }
 
+    if (!isFavoriteOffers && sortType === "ByDistance" && !currentLocation) {
+      if (replace) {
+        hasLoadedOnceRef.current = true;
+        setHasLoadedOnce(true);
+        setOffers([]);
+        setInitialError("Чтобы сортировать по расстоянию, сначала укажите своё местоположение в профиле.");
+      } else {
+        setLoadMoreError("Не удалось загрузить следующие объявления без сохранённого местоположения.");
+      }
+      return;
+    }
+
     try {
       if (isFavoriteOffers) {
         const response = await triggerGetFavoriteOffers(buildFavoriteOffersParams(favoriteCursor)).unwrap();
@@ -214,8 +261,8 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
         nextCursorRef.current = null;
       } else {
         const response = isSubscribedOffers
-          ? await triggerGetSubscribedOffers(buildSubscribedOffersParams(sortType, cursor)).unwrap()
-          : await triggerGetOffers(buildOffersParams(sortType, isMyOffers, cursor, parsedTags, withoutTagsOnly)).unwrap();
+          ? await triggerGetSubscribedOffers(buildSubscribedOffersParams(sortType, cursor, currentLocation)).unwrap()
+          : await triggerGetOffers(buildOffersParams(sortType, isMyOffers, cursor, parsedTags, withoutTagsOnly, currentLocation)).unwrap();
 
         if (feedKeyRef.current !== requestFeedKey) {
           return;
@@ -281,6 +328,7 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
     isSubscribedOffers,
     parsedTags,
     sortType,
+    currentLocation,
     triggerGetFavoriteOffers,
     triggerGetOffers,
     triggerGetSubscribedOffers,
@@ -290,6 +338,8 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
   useEffect(() => {
     void loadOffersPage(null, null, true);
   }, [loadOffersPage]);
+
+  const hasNextCursor = nextCursor !== null || nextFavoriteCursor !== null;
 
   useEffect(() => {
     if (offers.length === 0) {
@@ -327,7 +377,7 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
     observer.observe(sentinelNode);
 
     return () => observer.disconnect();
-  }, [loadOffersPage, offers.length]);
+  }, [loadOffersPage, offers.length, isInitialLoading, hasNextCursor]);
 
   if (isInitialLoading && !hasLoadedOnce) {
     return (
@@ -383,6 +433,9 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
           >
             <MenuItem value="ByTime">Сначала новые</MenuItem>
             <MenuItem value="ByPopularity">По популярности</MenuItem>
+            <MenuItem value="ByDistance" disabled={!currentLocation}>
+              Сначала ближе
+            </MenuItem>
           </Select>
         </FormControl>
 
@@ -394,6 +447,12 @@ function OffersListWidget({ mode }: OffersListWidgetProps) {
           </span>
         </Tooltip>
       </Box>
+
+      {!isFavoriteOffers && !currentLocation && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          Сортировка по расстоянию доступна после сохранения местоположения в профиле.
+        </Alert>
+      )}
 
       {!isSubscribedOffers && !isFavoriteOffers && (
         <Box mb={3}>

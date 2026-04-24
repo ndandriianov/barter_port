@@ -33,6 +33,20 @@ Me:
       $ref: './properties.yaml#/PhoneNumber'
     reputationPoints:
       $ref: './properties.yaml#/ReputationPoints'
+    currentLatitude:
+      allOf:
+        - $ref: './properties.yaml#/Latitude'
+      nullable: true
+      description: |
+        Текущая точка пользователя.
+        `null`, если пользователь ещё не сохранял свою точку или очистил её.
+    currentLongitude:
+      allOf:
+        - $ref: './properties.yaml#/Longitude'
+      nullable: true
+      description: |
+        Текущая точка пользователя.
+        `null`, если пользователь ещё не сохранял свою точку или очистил её.
 
 AvatarUploadResponse:
   type: object

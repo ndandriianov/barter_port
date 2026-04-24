@@ -2038,17 +2038,28 @@ paths:
           - администраторам.
 
         Поддерживаемые режимы сортировки:
-        - `created_at`: сначала новые объявления
-        - `popularity`: сначала самые просматриваемые объявления
+        - `ByTime`: сначала новые объявления
+        - `ByPopularity`: сначала самые просматриваемые объявления
+        - `ByDistance`: сначала ближайшие объявления к точке `user_lat` / `user_lon`
 
         Поля курсора зависят от выбранного режима сортировки:
-        - для `created_at`: используйте `cursor_created_at` + `cursor_id`
-        - для `popularity`: используйте `cursor_views` + `cursor_id`
+        - для `ByTime`: используйте `cursor_created_at` + `cursor_id`
+        - для `ByPopularity`: используйте `cursor_views` + `cursor_id`
+        - для `ByDistance`: используйте `cursor_distance` + `cursor_id`
 
         Фильтрация по тегам:
         - `tags`: вернуть объявления, содержащие **все** указанные теги;
         - `withoutTags=true`: вернуть только объявления без тегов;
         - `tags` и `withoutTags=true` одновременно передавать нельзя.
+
+        Геолокация:
+        - поля `latitude` и `longitude` возвращаются в каждом объекте `offer` всегда,
+          независимо от того, указал ли текущий пользователь свою точку;
+        - если у объявления точка не указана, `latitude` и `longitude` равны `null`;
+        - при `sort=ByDistance` обязательны `user_lat` и `user_lon`; в этом режиме
+          `distanceMeters` возвращается для каждого объявления с координатами и считается от переданной точки;
+        - в остальных режимах `distanceMeters` возвращается только если у текущего пользователя сохранена текущая точка через users API
+          и у объявления указаны `latitude` и `longitude`.
       operationId: listOffers
       security:
         - bearerAuth: []
@@ -2065,9 +2076,12 @@ paths:
             type: boolean
         - $ref: '#/components/parameters/SortType'
         - $ref: '#/components/parameters/CursorCreatedAt'
+        - $ref: '#/components/parameters/CursorDistance'
         - $ref: '#/components/parameters/CursorViews'
         - $ref: '#/components/parameters/CursorId'
         - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/UserLat'
+        - $ref: '#/components/parameters/UserLon'
         - $ref: '#/components/parameters/OfferTagsFilter'
         - $ref: '#/components/parameters/WithoutTags'
       responses:
@@ -2099,7 +2113,11 @@ paths:
       tags:
         - offers
       summary: Создать объявление
-      description: Создаёт новое объявление для бартера
+      description: |
+        Создаёт новое объявление для бартера.
+
+        Пользователь может опционально передать `latitude` и `longitude` точки объявления.
+        Если точка не передана, объявление создаётся без координат.
       operationId: createOffers
       security:
         - bearerAuth: []
@@ -2182,15 +2200,27 @@ paths:
         Возвращает список объявлений с пагинацией, на которые подписан текущий пользователь.
 
         Список сортируется по времени последнего обновления объявления.
+
+        Поддерживаются те же режимы сортировки, что и для общего списка объявлений.
+        Для `sort=ByDistance` обязательны `user_lat` и `user_lon`, а курсор строится по `cursor_distance` + `cursor_id`.
+
+        Если выбран `sort=ByDistance`, `distanceMeters` считается от переданной точки.
+        В остальных режимах, если у текущего пользователя сохранена текущая точка через users API,
+        а у объявления указаны `latitude` и `longitude`,
+        в объекте `offer` возвращается `distanceMeters` в метрах.
+        Сами поля `latitude` и `longitude` возвращаются всегда.
       operationId: listSubscribedOffers
       security:
         - bearerAuth: []
       parameters:
         - $ref: '#/components/parameters/SortType'
         - $ref: '#/components/parameters/CursorCreatedAt'
+        - $ref: '#/components/parameters/CursorDistance'
         - $ref: '#/components/parameters/CursorViews'
         - $ref: '#/components/parameters/CursorId'
         - $ref: '#/components/parameters/Limit'
+        - $ref: '#/components/parameters/UserLat'
+        - $ref: '#/components/parameters/UserLon'
       responses:
         '200':
           description: Страница подписанных объявлений
@@ -2230,6 +2260,11 @@ paths:
         Применяются обычные правила видимости объявлений:
         - если объявление скрыто и недоступно текущему пользователю, оно не возвращается;
         - если объявление было удалено, запись в избранном удаляется каскадно.
+
+        Если у текущего пользователя сохранена текущая точка через users API,
+        а у объявления указаны `latitude` и `longitude`,
+        в объекте `offer` возвращается `distanceMeters` в метрах.
+        Сами поля `latitude` и `longitude` возвращаются всегда.
       operationId: listFavoriteOffers
       security:
         - bearerAuth: []
@@ -2273,6 +2308,11 @@ paths:
         Правила видимости для скрытых (hidden) объявлений:
         - автор и администратор могут получить объявление;
         - остальные пользователи получают `404 Not Found`.
+
+        Поля `latitude` и `longitude` возвращаются в ответе всегда.
+        Если у текущего пользователя сохранена текущая точка через users API,
+        а у объявления указаны `latitude` и `longitude`,
+        в ответе также возвращается `distanceMeters` в метрах.
       operationId: getOfferById
       security:
         - bearerAuth: []
@@ -2318,7 +2358,12 @@ paths:
       tags:
         - offers
       summary: Обновить объявление
-      description: Обновляет существующее объявление. Редактировать может только автор.
+      description: |
+        Обновляет существующее объявление. Редактировать может только автор.
+
+        Пользователь может:
+        - установить новую точку объявления, передав `latitude` и `longitude`;
+        - удалить точку объявления, передав `latitude: null` и `longitude: null`.
       operationId: updateOfferById
       security:
         - bearerAuth: []
@@ -3424,6 +3469,20 @@ components:
       enum:
         - give
         - take
+    Latitude:
+      type: number
+      format: double
+      minimum: -90
+      maximum: 90
+      description: Широта в градусах WGS84.
+      example: 55.751244
+    Longitude:
+      type: number
+      format: double
+      minimum: -180
+      maximum: 180
+      description: Долгота в градусах WGS84.
+      example: 37.618423
     Offer:
       type: object
       required:
@@ -3512,6 +3571,34 @@ components:
           items:
             type: string
             format: uri
+        latitude:
+          allOf:
+            - $ref: '#/components/schemas/Latitude'
+          nullable: true
+          description: |
+            Широта точки объявления.
+            Поле присутствует в ответах с `offer` вне зависимости от того, кто вызвал GET.
+            `null`, если автор не указал точку на карте.
+        longitude:
+          allOf:
+            - $ref: '#/components/schemas/Longitude'
+          nullable: true
+          description: |
+            Долгота точки объявления.
+            Поле присутствует в ответах с `offer` вне зависимости от того, кто вызвал GET.
+            `null`, если автор не указал точку на карте.
+        distanceMeters:
+          type: integer
+          format: int64
+          minimum: 0
+          nullable: true
+          description: |
+            Расстояние по прямой от текущей точки пользователя до точки объявления, в метрах.
+            Возвращается только если:
+            - у текущего пользователя сохранены `currentLatitude` и `currentLongitude`;
+            - у объявления указаны `latitude` и `longitude`;
+            - объявление не принадлежит текущему пользователю.
+            Иначе поле равно `null`.
     OfferInfo:
       type: object
       required:
@@ -4235,6 +4322,10 @@ components:
       required:
         - id
       properties:
+        distance:
+          type: number
+          format: double
+          example: 1542.42
         createdAt:
           type: string
           format: date-time
@@ -4298,6 +4389,18 @@ components:
           items:
             type: string
             format: binary
+        latitude:
+          allOf:
+            - $ref: '#/components/schemas/Latitude'
+          description: |
+            Широта точки объявления.
+            Должна передаваться вместе с `longitude`.
+        longitude:
+          allOf:
+            - $ref: '#/components/schemas/Longitude'
+          description: |
+            Долгота точки объявления.
+            Должна передаваться вместе с `latitude`.
     ListTagsResponse:
       type: array
       items:
@@ -4389,6 +4492,22 @@ components:
           items:
             type: string
             format: binary
+        latitude:
+          allOf:
+            - $ref: '#/components/schemas/Latitude'
+          nullable: true
+          description: |
+            Новая широта точки объявления.
+            Если передано вместе с `longitude`, координаты объявления обновляются.
+            Если передано `null` вместе с `longitude: null`, точка объявления удаляется.
+        longitude:
+          allOf:
+            - $ref: '#/components/schemas/Longitude'
+          nullable: true
+          description: |
+            Новая долгота точки объявления.
+            Если передано вместе с `latitude`, координаты объявления обновляются.
+            Если передано `null` вместе с `latitude: null`, точка объявления удаляется.
     OfferReportStatus:
       type: string
       enum:
@@ -4744,6 +4863,7 @@ components:
       schema:
         type: string
         enum:
+          - ByDistance
           - ByTime
           - ByPopularity
     CursorCreatedAt:
@@ -4756,6 +4876,17 @@ components:
       schema:
         type: string
         format: date-time
+    CursorDistance:
+      name: cursor_distance
+      in: query
+      required: false
+      description: |
+        Расстояние до точки пользователя в курсоре, в метрах.
+        Используется вместе с `cursor_id`, когда `sort=ByDistance`.
+      schema:
+        type: number
+        format: double
+        minimum: 0
     CursorViews:
       name: cursor_views
       in: query
@@ -4786,6 +4917,26 @@ components:
         minimum: 1
         maximum: 100
         default: 10
+    UserLat:
+      name: user_lat
+      in: query
+      required: false
+      description: |
+        Широта точки пользователя, от которой считается расстояние.
+        Обязательна при `sort=ByDistance`.
+      schema:
+        type: number
+        format: double
+    UserLon:
+      name: user_lon
+      in: query
+      required: false
+      description: |
+        Долгота точки пользователя, от которой считается расстояние.
+        Обязательна при `sort=ByDistance`.
+      schema:
+        type: number
+        format: double
     OfferTagsFilter:
       name: tags
       in: query
