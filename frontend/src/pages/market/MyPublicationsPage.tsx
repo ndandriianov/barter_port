@@ -36,7 +36,7 @@ function MyPublicationsPage() {
             to={appRoutes.market.myPublicationOffers}
             icon={<Inventory2OutlinedIcon />}
             title="Мои объявления"
-            description="Редактирование, удаление и отклики по моим публикациям."
+            description="Редактирование, удаление и отклики по моим публикациям"
             badge={isOffersLoading ? "..." : myOffers.length}
             accent="primary"
           />
@@ -46,7 +46,7 @@ function MyPublicationsPage() {
             to={appRoutes.market.myPublicationGroups}
             icon={<ViewInArOutlinedIcon />}
             title="Мои группы"
-            description="Ваши composite offer-group сценарии обмена в отдельном подрежиме без top-level дублирования."
+            description="Редактирование, удаление и отклики по моим публикациям"
             badge={isGroupsLoading ? "..." : myGroupsCount}
             accent="secondary"
           />
@@ -55,8 +55,8 @@ function MyPublicationsPage() {
           <SectionEntryCard
             to={appRoutes.market.myPublicationModeration}
             icon={<ReportProblemOutlinedIcon />}
-            title="На модерации"
-            description="История жалоб и ограничения по объявлениям, где уже есть блокировки или скрытие."
+            title="Жалобы"
+            description="Жалобы на мои публикации"
             badge={isOffersLoading ? "..." : moderationCount}
             accent="warning"
           />

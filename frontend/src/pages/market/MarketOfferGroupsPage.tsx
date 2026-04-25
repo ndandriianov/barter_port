@@ -16,15 +16,15 @@ function MarketOfferGroupsPage({ mode }: MarketOfferGroupsPageProps) {
       <Box display="flex" justifyContent="space-between" alignItems="flex-start" gap={2} flexWrap="wrap">
         <Box>
           <Typography variant="overline" color="secondary.main">
-            Объявления / Сценарии обмена
+            Объявления / Группы объявлений
           </Typography>
           <Typography variant="h4" fontWeight={800} mb={1}>
-            {mode === "mine" ? "Мои сценарии обмена" : "Сценарии обмена"}
+            {mode === "mine" ? "Мои группы объявлений" : "Группы объявлений"}
           </Typography>
           <Typography variant="body1" color="text.secondary">
             {mode === "mine"
-              ? "Здесь собраны ваши composite offer-group публикации и их текущий набор вариантов."
-              : "Композитные объявления встроены в рынок как отдельный тип публикации, а не как отдельный продукт."}
+              ? "Здесь собраны ваши группы объявлений"
+              : "Группы объявлений позволяют более гибко искать взаимовыгодный обмен"}
           </Typography>
         </Box>
         <Button

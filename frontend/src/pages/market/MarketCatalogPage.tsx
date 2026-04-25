@@ -16,15 +16,15 @@ interface MarketCatalogPageProps {
 const meta: Record<MarketCatalogMode, { title: string; description: string }> = {
   others: {
     title: "Все объявления",
-    description: "Общий discovery-поток: открытые объявления, сортировки, фильтры и быстрый переход к отклику.",
+    description: "Открытые объявления с сортировками и фильтрами по тэгам",
   },
   subscriptions: {
     title: "Подписки",
-    description: "Лента публикаций пользователей, за которыми вы следите. Это отдельный вход внутри того же каталога.",
+    description: "Лента публикаций пользователей, за которыми вы следите",
   },
   favorites: {
     title: "Избранное",
-    description: "Сохраненные объявления, к которым вы хотите вернуться без поиска по каталогу заново.",
+    description: "Сохраненные объявления",
   },
 };
 
