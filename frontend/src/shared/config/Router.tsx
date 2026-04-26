@@ -3,6 +3,7 @@ import {
   Navigate,
   Route,
   Routes,
+  useLocation,
   useParams,
   useSearchParams,
 } from "react-router-dom";
@@ -48,6 +49,7 @@ import MarketCatalogPage from "@/pages/market/MarketCatalogPage.tsx";
 import MarketOfferGroupsPage from "@/pages/market/MarketOfferGroupsPage.tsx";
 import MyPublicationsPage from "@/pages/market/MyPublicationsPage.tsx";
 import { appRoutes } from "@/shared/config/appRoutes.ts";
+import { useAppSelector } from "@/hooks/redux.ts";
 
 function LegacyOffersRedirect() {
   const [searchParams] = useSearchParams();
@@ -152,6 +154,23 @@ function RedirectLegacyAdminReport() {
   return reportId ? <Navigate to={appRoutes.admin.offerReport(reportId)} replace /> : <Navigate to={appRoutes.admin.offerReports} replace />;
 }
 
+function ProtectedAppLayout() {
+  const location = useLocation();
+  const { requiresReauth, reauthMessage } = useAppSelector((state) => state.auth);
+
+  if (requiresReauth) {
+    return (
+      <Navigate
+        to={appRoutes.auth.login}
+        replace
+        state={{ from: location, reason: reauthMessage }}
+      />
+    );
+  }
+
+  return <AppLayout />;
+}
+
 function AppRouter() {
   return (
     <BrowserRouter>
@@ -163,7 +182,7 @@ function AppRouter() {
           <Route path={appRoutes.auth.resetPassword} element={<ResetPasswordPage />} />
         </Route>
 
-        <Route element={<AppLayout />}>
+        <Route element={<ProtectedAppLayout />}>
           <Route path="/" element={<Navigate to={appRoutes.market.home} replace />} />
           <Route path="/app" element={<Navigate to={appRoutes.market.home} replace />} />
 

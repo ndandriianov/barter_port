@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useNavigate, Link as RouterLink } from "react-router-dom";
+import { useLocation, useNavigate, Link as RouterLink } from "react-router-dom";
 import {
   Alert,
   Box,
@@ -17,6 +17,15 @@ import authApi from "@/features/auth/api/authApi";
 import { getErrorMessage } from "@/shared/utils/getErrorMessage.ts";
 import { getStatusCode } from "@/shared/utils/getStatusCode.ts";
 
+type LoginLocationState = {
+  from?: {
+    pathname?: string;
+    search?: string;
+    hash?: string;
+  };
+  reason?: string;
+};
+
 function LoginForm() {
   const [login, { isLoading, error }] = authApi.useLoginMutation();
   const [requestPasswordReset, { isLoading: isRequestingReset, error: requestPasswordResetError }] =
@@ -26,14 +35,19 @@ function LoginForm() {
   const [resetEmail, setResetEmail] = useState("");
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [resetRequestSuccess, setResetRequestSuccess] = useState(false);
+  const location = useLocation();
   const navigate = useNavigate();
+  const locationState = location.state as LoginLocationState | null;
+  const redirectTarget = locationState?.from?.pathname
+    ? `${locationState.from.pathname}${locationState.from.search ?? ""}${locationState.from.hash ?? ""}`
+    : "/";
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     try {
       await login({ email, password }).unwrap();
-      navigate("/");
+      navigate(redirectTarget, { replace: true });
     } catch {
       // Error state is rendered below.
     }
@@ -65,6 +79,12 @@ function LoginForm() {
         <Typography variant="h5" fontWeight={700} mb={3} textAlign="center">
           Вход
         </Typography>
+
+        {locationState?.reason && (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            {locationState.reason}
+          </Alert>
+        )}
 
         <TextField
           label="Email"
