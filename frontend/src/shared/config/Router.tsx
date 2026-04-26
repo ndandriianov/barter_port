@@ -248,8 +248,8 @@ function AppRouter() {
                 forcedTab="available"
                 hideTabs
                 hideBackButton
-                title="Отзывы после завершения"
-                description="Доступные отзывы встроены в lifecycle сделки и больше не живут отдельным top-level разделом."
+                title="Отзывы на полученные товары/услуги"
+                description=""
               />
             }
           />
