@@ -33,7 +33,7 @@ const sectionMeta: Record<AppSection, { label: string; description: string }> = 
   },
   deals: {
     label: "Сделки",
-    description: "Черновики, активные обязательства, история и post-deal действия.",
+    description: "Черновики, активные сделки, история сделок и отзывы на товар после завершения сделки",
   },
   messages: {
     label: "Сообщения",

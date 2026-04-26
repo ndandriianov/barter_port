@@ -37,11 +37,11 @@ function DealsHomePage() {
           Сделки / Home
         </Typography>
         <Typography variant="h3" fontWeight={900} mb={1.5}>
-          Все обязательства после отклика
+          Все что касается сделок
         </Typography>
         <Typography variant="body1" sx={{ maxWidth: 760, opacity: 0.92 }}>
-          Черновики, активные сделки, история и post-deal отзывы собраны в одном разделе, чтобы
-          пользователь не переключался между разными top-level сущностями ради одного процесса.
+          Просматривать и управлять черновиками, активными сделками, просмотр истории
+          и оставить отзывы после завершения сделки
         </Typography>
       </Box>
 
@@ -50,8 +50,8 @@ function DealsHomePage() {
           <SectionEntryCard
             to={appRoutes.deals.tasks}
             icon={<AssignmentTurnedInOutlinedIcon />}
-            title="Нужны действия"
-            description="Очередь входящих черновиков, join request и отзывов, которые ещё не оставлены."
+            title="Требуются действия"
+            description="Входящие черновики, запросы на присоединение, напоминание об отзыве на товар после сделки"
             badge={totalActionCount}
             accent="warning"
           />
@@ -61,7 +61,7 @@ function DealsHomePage() {
             to={appRoutes.deals.drafts}
             icon={<PlaylistAddCheckCircleOutlinedIcon />}
             title="Черновики"
-            description="Входящие и исходящие draft-сценарии до перехода в полноценную сделку."
+            description="Входящие и исходящие черновики"
             badge={draftCount}
             accent="primary"
           />
@@ -71,7 +71,7 @@ function DealsHomePage() {
             to={appRoutes.deals.active}
             icon={<AutoModeOutlinedIcon />}
             title="Активные"
-            description="Открытые и подтвержденные сделки, где ещё продолжается совместная работа."
+            description="Сделки в которых активно идет обсуждение и обмен"
             badge={activeCount}
             accent="info"
           />
@@ -81,7 +81,7 @@ function DealsHomePage() {
             to={appRoutes.deals.history}
             icon={<HistoryOutlinedIcon />}
             title="История"
-            description="Завершённые, отменённые и проваленные сделки с переходом к review history."
+            description="Завершённые, отменённые и проваленные сделки"
             badge={historyCount}
             accent="secondary"
           />
@@ -90,7 +90,7 @@ function DealsHomePage() {
 
       <Box display="flex" gap={1} flexWrap="wrap">
         <Typography variant="body2" color="text.secondary">
-          Сейчас требуют внимания: черновики {draftCount}, join request {joinRequestCount}, отзывы {pendingReviewCount}.
+          Сейчас требуют внимания: черновики {draftCount}, запросы на присоединение {joinRequestCount}, отзывы {pendingReviewCount}.
         </Typography>
       </Box>
     </Stack>
