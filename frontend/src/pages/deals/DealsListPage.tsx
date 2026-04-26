@@ -98,9 +98,6 @@ function DealsListPage({ mode }: DealsListPageProps) {
           >
             История
           </Button>
-          <Button variant="outlined" component={RouterLink} to={appRoutes.deals.drafts}>
-            Мои черновики
-          </Button>
         </Box>
       </Box>
 
