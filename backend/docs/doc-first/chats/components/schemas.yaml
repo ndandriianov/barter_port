@@ -18,13 +18,26 @@ Chat:
       type: array
       description: Chat participant IDs
       items:
-        type: string
-        format: uuid
+        $ref: './schemas.yaml#/Participant'
     created_at:
       type: string
       format: date-time
       description: Chat creation timestamp
       example: '2026-03-04T12:00:00Z'
+
+Participant:
+  type: object
+  required:
+    - user_id
+  properties:
+    user_id:
+      type: string
+      format: uuid
+      description: User ID of the participant
+    user_name:
+      type: string
+      description: User display name
+      example: Ivan Ivanov
 
 Message:
   type: object

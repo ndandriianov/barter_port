@@ -301,6 +301,19 @@ components:
       scheme: bearer
       bearerFormat: JWT
   schemas:
+    Participant:
+      type: object
+      required:
+        - user_id
+      properties:
+        user_id:
+          type: string
+          format: uuid
+          description: User ID of the participant
+        user_name:
+          type: string
+          description: User display name
+          example: Ivan Ivanov
     Chat:
       type: object
       required:
@@ -321,8 +334,7 @@ components:
           type: array
           description: Chat participant IDs
           items:
-            type: string
-            format: uuid
+            $ref: '#/components/schemas/Participant'
         created_at:
           type: string
           format: date-time

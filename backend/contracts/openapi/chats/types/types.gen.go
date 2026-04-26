@@ -25,7 +25,7 @@ type Chat struct {
 	Id openapi_types.UUID `json:"id"`
 
 	// Participants Chat participant IDs
-	Participants []openapi_types.UUID `json:"participants"`
+	Participants []Participant `json:"participants"`
 }
 
 // CreateChatRequest defines model for CreateChatRequest.
@@ -64,6 +64,15 @@ type Message struct {
 
 	// SenderId Sender user ID
 	SenderId openapi_types.UUID `json:"sender_id"`
+}
+
+// Participant defines model for Participant.
+type Participant struct {
+	// UserId User ID of the participant
+	UserId openapi_types.UUID `json:"user_id"`
+
+	// UserName User display name
+	UserName *string `json:"user_name,omitempty"`
 }
 
 // SendMessageRequest defines model for SendMessageRequest.
