@@ -124,10 +124,17 @@ function AppLayout() {
             to={appRoutes.market.home}
             sx={{ textDecoration: "none", color: "inherit", display: "flex", flexDirection: "column", mr: 3 }}
           >
-            <Typography fontWeight={900} letterSpacing={-0.6}>
+            <Typography
+              fontWeight={900}
+              letterSpacing={-0.8}
+              sx={{ fontSize: { xs: "1.45rem", md: "1.8rem" }, lineHeight: 1.05 }}
+            >
               Barter Port
             </Typography>
-            <Typography variant="caption" color="text.secondary">
+            <Typography
+              color="text.secondary"
+              sx={{ fontSize: { xs: "0.9rem", md: "1rem" }, lineHeight: 1.2 }}
+            >
               Обмен товарами без денег
             </Typography>
           </Box>
