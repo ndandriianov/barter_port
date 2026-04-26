@@ -186,7 +186,7 @@ function ProfilePage() {
   return (
     <ProfileSectionShell
       title="Личные данные"
-      description="Здесь живут только данные аккаунта: профиль, контакты, локация и связанные с аккаунтом действия."
+      description=""
       actions={
         <Button variant="outlined" onClick={() => refetch()} disabled={isSubmitting}>
           Обновить
@@ -349,9 +349,6 @@ function ProfilePage() {
             <Stack spacing={2}>
               <Typography variant="h6" fontWeight={800}>
                 Действия аккаунта
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Служебные действия убраны из основной формы и живут отдельно, чтобы не конкурировать с данными профиля.
               </Typography>
               <Box display="flex" gap={2} flexWrap="wrap">
                 <Button component={RouterLink} to={appRoutes.profile.accountPassword} variant="outlined">

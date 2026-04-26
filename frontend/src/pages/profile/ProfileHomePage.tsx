@@ -15,11 +15,10 @@ function ProfileHomePage() {
           Профиль / Home
         </Typography>
         <Typography variant="h4" fontWeight={800} mb={1}>
-          Персональное состояние пользователя
+          Данные о себе
         </Typography>
         <Typography variant="body1" color="text.secondary" maxWidth={820}>
-          В профиле остаются только личные данные, история и метрики. Очередь действий по отзывам
-          вынесена обратно в lifecycle сделок.
+          Просмотр и редактирование личных данных, репутации, подписок, отзывов, статистики
         </Typography>
       </Box>
 

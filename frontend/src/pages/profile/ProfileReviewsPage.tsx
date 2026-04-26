@@ -17,7 +17,7 @@ function ProfileReviewsPage({ mode }: ProfileReviewsPageProps) {
   return (
     <ProfileSectionShell
       title={mode === "mine" ? "Мои отзывы" : "Отзывы обо мне"}
-      description="В профиле остаётся только архив отзывов и представление вашей истории как участника сделок."
+      description=""
       actions={
         <Button component={RouterLink} to={appRoutes.deals.reviews} variant="contained">
           {`Оставить отзыв (${pendingCountLabel})`}

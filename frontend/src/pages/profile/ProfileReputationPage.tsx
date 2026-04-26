@@ -51,7 +51,7 @@ function ProfileReputationPage({ historyMode = false }: ProfileReputationPagePro
   return (
     <ProfileSectionShell
       title={historyMode ? "История репутации" : "Репутация"}
-      description="Репутация больше не спрятана в drawer внутри общей формы. Это отдельная профильная зона с текущим значением и историей событий."
+      description=""
       actions={
         <Button variant="outlined" onClick={() => refetch()} disabled={isFetching}>
           Обновить

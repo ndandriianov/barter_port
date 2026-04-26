@@ -87,7 +87,7 @@ function StatisticsPage() {
   return (
     <ProfileSectionShell
       title="Статистика"
-      description="Персональные метрики пользователя собраны в отдельной профильной зоне, а не живут side-page без контекста."
+      description="Персональные метрики пользователя"
       actions={
         <Button variant="outlined" onClick={() => refetch()} disabled={isFetching}>
           Обновить

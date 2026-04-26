@@ -23,8 +23,8 @@ function ProfileNetworkPage({ mode }: ProfileNetworkPageProps) {
 
   const title = mode === "subscriptions" ? "Подписки" : "Подписчики";
   const description = mode === "subscriptions"
-    ? "Люди, на которых вы подписаны. Именно social graph управляет доступностью direct chat."
-    : "Люди, которые подписались на вас. Взаимная подписка остаётся условием создания нового личного чата.";
+    ? "Люди, на которых вы подписаны"
+    : "Люди, которые подписались на вас. Взаимная подписка является условием создания нового личного чата.";
 
   const renderUserListItem = (user: User) => (
     <ListItem
@@ -40,7 +40,6 @@ function ProfileNetworkPage({ mode }: ProfileNetworkPageProps) {
       </ListItemAvatar>
       <ListItemText
         primary={user.name?.trim() || "Имя не указано"}
-        secondary={`ID: ${user.id}`}
       />
     </ListItem>
   );
@@ -83,7 +82,7 @@ function ProfileNetworkPage({ mode }: ProfileNetworkPageProps) {
         </ButtonGroup>
 
         <Alert severity="info">
-          Новый direct chat можно создать только при взаимной подписке. Если подписка разорвана,
+          Новый личный чат можно создать только при взаимной подписке. Если подписка разорвана,
           существующий чат остаётся рабочим, но создать новый уже нельзя.
         </Alert>
 
