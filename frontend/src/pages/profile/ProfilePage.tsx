@@ -213,12 +213,6 @@ function ProfilePage() {
                   {!hasAvatarPreview && <PersonOutlineIcon fontSize="large" color="action" />}
                 </Avatar>
                 <Box>
-                  <Typography variant="caption" color="text.secondary">
-                    ID
-                  </Typography>
-                  <Typography variant="body2" fontFamily="monospace" fontWeight={500}>
-                    {data.id}
-                  </Typography>
                   <Typography variant="body2" color="text.secondary" mt={0.5}>
                     Зарегистрирован: {new Date(data.createdAt).toLocaleString("ru-RU")}
                   </Typography>

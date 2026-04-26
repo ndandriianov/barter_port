@@ -28,7 +28,7 @@ function ProfileHomePage() {
             to={appRoutes.profile.account}
             icon={<BadgeOutlinedIcon />}
             title="Личные данные"
-            description="Профиль, аватар, телефон, биография, текущая точка и смена пароля."
+            description="Профиль, аватар, телефон, биография, текущая точка и смена пароля"
             accent="primary"
           />
         </Grid>
@@ -37,7 +37,7 @@ function ProfileHomePage() {
             to={appRoutes.profile.reputation}
             icon={<WorkspacePremiumOutlinedIcon />}
             title="Репутация"
-            description="Текущие баллы, summary по источникам и отдельная история событий репутации."
+            description="Текущие баллы и история изменений репутации"
             accent="secondary"
           />
         </Grid>
@@ -46,7 +46,7 @@ function ProfileHomePage() {
             to={appRoutes.profile.networkSubscriptions}
             icon={<ConnectWithoutContactOutlinedIcon />}
             title="Подписки"
-            description="Подписки и подписчики как отдельный social subflow, влияющий на direct chat."
+            description="Подписки и подписчики"
             accent="info"
           />
         </Grid>
@@ -55,7 +55,7 @@ function ProfileHomePage() {
             to={appRoutes.profile.reviewsMine}
             icon={<ReviewsOutlinedIcon />}
             title="Отзывы"
-            description="Мои отзывы и отзывы обо мне как персональная история, а не action queue."
+            description="Мои отзывы и отзывы обо мне"
             accent="success"
           />
         </Grid>
@@ -64,7 +64,7 @@ function ProfileHomePage() {
             to={appRoutes.profile.statistics}
             icon={<AssessmentOutlinedIcon />}
             title="Статистика"
-            description="Агрегированные метрики по сделкам, отзывам, просмотрам и жалобам."
+            description="Метрики по сделкам, отзывам, просмотрам и жалобам"
             accent="warning"
           />
         </Grid>
