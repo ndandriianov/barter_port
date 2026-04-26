@@ -23,7 +23,6 @@ export const appRoutes = {
     exchangeGroup: (offerGroupId: string) => `/app/market/exchange-groups/${offerGroupId}`,
     myPublications: "/app/market/my-publications",
     myPublicationOffers: "/app/market/my-publications/offers",
-    myPublicationGroups: "/app/market/my-publications/groups",
     myPublicationModeration: "/app/market/my-publications/moderation",
   },
   deals: {

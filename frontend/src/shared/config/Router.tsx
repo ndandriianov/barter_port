@@ -28,7 +28,6 @@ import EditOfferPage from "@/pages/offers/EditOfferPage";
 import OffersListPage from "@/pages/offers/OffersListPage";
 import OfferPage from "@/pages/offers/OfferPage";
 import MyOfferReportsPage from "@/pages/offers/MyOfferReportsPage.tsx";
-import OfferGroupsListPage from "@/pages/offer-groups/OfferGroupsListPage.tsx";
 import CreateOfferGroupPage from "@/pages/offer-groups/CreateOfferGroupPage.tsx";
 import OfferGroupPage from "@/pages/offer-groups/OfferGroupPage.tsx";
 import DealPage from "@/pages/deals/DealPage";
@@ -189,17 +188,6 @@ function AppRouter() {
           <Route path="/app/market/offers/:offerId" element={<OfferPage />} />
           <Route path={appRoutes.market.exchangeGroups} element={<MarketOfferGroupsPage mode="others" />} />
           <Route path={appRoutes.market.exchangeGroupsMine} element={<MarketOfferGroupsPage mode="mine" />} />
-          <Route
-            path={appRoutes.market.myPublicationGroups}
-            element={
-              <OfferGroupsListPage
-                forcedTab="mine"
-                hideTabs
-                title="Мои сценарии обмена"
-                description="Ваши composite offer-group публикации в зоне управления собственными материалами."
-              />
-            }
-          />
           <Route path={appRoutes.market.createExchangeGroup} element={<CreateOfferGroupPage />} />
           <Route path="/app/market/exchange-groups/:offerGroupId" element={<OfferGroupPage />} />
           <Route path={appRoutes.market.myPublications} element={<MyPublicationsPage />} />

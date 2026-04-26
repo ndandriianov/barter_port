@@ -43,7 +43,7 @@ function MyPublicationsPage() {
         </Grid>
         <Grid size={{ xs: 12, md: 4 }}>
           <SectionEntryCard
-            to={appRoutes.market.myPublicationGroups}
+            to={appRoutes.market.exchangeGroupsMine}
             icon={<ViewInArOutlinedIcon />}
             title="Мои группы"
             description="Редактирование, удаление и отклики по моим публикациям"
