@@ -2,24 +2,40 @@ import { useMemo } from "react";
 import { Box, Grid, Stack, Typography } from "@mui/material";
 import AssignmentTurnedInOutlinedIcon from "@mui/icons-material/AssignmentTurnedInOutlined";
 import AutoModeOutlinedIcon from "@mui/icons-material/AutoModeOutlined";
+import GroupAddOutlinedIcon from "@mui/icons-material/GroupAddOutlined";
 import HistoryOutlinedIcon from "@mui/icons-material/HistoryOutlined";
 import PlaylistAddCheckCircleOutlinedIcon from "@mui/icons-material/PlaylistAddCheckCircleOutlined";
 import dealsApi from "@/features/deals/api/dealsApi.ts";
+import usersApi from "@/features/users/api/usersApi.ts";
 import useDealActionQueue from "@/features/deals/model/useDealActionQueue.ts";
 import SectionEntryCard from "@/shared/ui/SectionEntryCard.tsx";
 import { appRoutes } from "@/shared/config/appRoutes.ts";
+import { dealsListModeConfig } from "@/pages/deals/dealsListModes.ts";
 
 function DealsHomePage() {
-  const { data: deals = [] } = dealsApi.useGetDealsQuery({ my: true });
+  const { data: myDeals = [] } = dealsApi.useGetDealsQuery({ my: true });
+  const { data: joinableDeals = [] } = dealsApi.useGetDealsQuery({ open: true });
+  const { data: currentUser } = usersApi.useGetCurrentUserQuery();
   const { totalActionCount, draftCount, pendingReviewCount, joinRequestCount } = useDealActionQueue();
+  const activeMode = dealsListModeConfig.active;
+  const historyMode = dealsListModeConfig.history;
+  const joinableMode = dealsListModeConfig.joinable;
 
   const activeCount = useMemo(
-    () => deals.filter((deal) => ["LookingForParticipants", "Discussion", "Confirmed"].includes(deal.status)).length,
-    [deals],
+    () => myDeals.filter((deal) => activeMode.defaultStatuses.includes(deal.status)).length,
+    [activeMode.defaultStatuses, myDeals],
+  );
+  const joinableCount = useMemo(
+    () =>
+      joinableDeals.filter((deal) =>
+        joinableMode.defaultStatuses.includes(deal.status) &&
+        !deal.participants.includes(currentUser?.id ?? ""),
+      ).length,
+    [currentUser?.id, joinableDeals, joinableMode.defaultStatuses],
   );
   const historyCount = useMemo(
-    () => deals.filter((deal) => ["Completed", "Cancelled", "Failed"].includes(deal.status)).length,
-    [deals],
+    () => myDeals.filter((deal) => historyMode.defaultStatuses.includes(deal.status)).length,
+    [historyMode.defaultStatuses, myDeals],
   );
 
   return (
@@ -71,9 +87,19 @@ function DealsHomePage() {
             to={appRoutes.deals.active}
             icon={<AutoModeOutlinedIcon />}
             title="Активные"
-            description="Сделки в которых активно идет обсуждение и обмен"
+            description="Ваши сделки, в которых сейчас идёт работа"
             badge={activeCount}
             accent="info"
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 6, xl: 3 }}>
+          <SectionEntryCard
+            to={appRoutes.deals.joinable}
+            icon={<GroupAddOutlinedIcon />}
+            title="Можно присоединиться"
+            description="Открытые сделки, в которые можно подать заявку"
+            badge={joinableCount}
+            accent="success"
           />
         </Grid>
         <Grid size={{ xs: 12, md: 6, xl: 3 }}>

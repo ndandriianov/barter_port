@@ -36,7 +36,7 @@ import DraftPage from "@/pages/deals/DraftPage";
 import DealItemPage from "@/pages/deals/DealItemPage";
 import DealsHomePage from "@/pages/deals/DealsHomePage.tsx";
 import DealTasksPage from "@/pages/deals/DealTasksPage.tsx";
-import DealsStatusBoardPage from "@/pages/deals/DealsStatusBoardPage.tsx";
+import DealsListPage from "@/pages/deals/DealsListPage.tsx";
 import ChatsPage from "@/pages/chats/ChatsPage";
 import ReviewsPage from "@/pages/reviews/ReviewsPage";
 import UserReviewsPage from "@/pages/reviews/UserReviewsPage";
@@ -219,8 +219,9 @@ function AppRouter() {
             }
           />
           <Route path="/app/deals/drafts/:draftId" element={<DraftPage />} />
-          <Route path={appRoutes.deals.active} element={<DealsStatusBoardPage mode="active" />} />
-          <Route path={appRoutes.deals.history} element={<DealsStatusBoardPage mode="history" />} />
+          <Route path={appRoutes.deals.active} element={<DealsListPage mode="active" />} />
+          <Route path={appRoutes.deals.joinable} element={<DealsListPage mode="joinable" />} />
+          <Route path={appRoutes.deals.history} element={<DealsListPage mode="history" />} />
           <Route
             path={appRoutes.deals.reviews}
             element={

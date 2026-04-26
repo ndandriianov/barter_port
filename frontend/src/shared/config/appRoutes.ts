@@ -32,6 +32,7 @@ export const appRoutes = {
     draftsIncoming: "/app/deals/drafts/incoming",
     draftsMine: "/app/deals/drafts/mine",
     active: "/app/deals/active",
+    joinable: "/app/deals/joinable",
     history: "/app/deals/history",
     detail: (dealId: string) => `/app/deals/${dealId}`,
     item: (dealId: string, itemId: string) => `/app/deals/${dealId}/items/${itemId}`,
