@@ -11,15 +11,21 @@ interface ProfileNetworkPageProps {
 }
 
 function ProfileNetworkPage({ mode }: ProfileNetworkPageProps) {
+  const subscriptionsQuery = usersApi.useGetSubscriptionsQuery(undefined, {
+    skip: mode !== "subscriptions",
+  });
+  const subscribersQuery = usersApi.useGetSubscribersQuery(undefined, {
+    skip: mode !== "subscribers",
+  });
+
+  const activeQuery = mode === "subscriptions" ? subscriptionsQuery : subscribersQuery;
   const {
     data,
     isLoading,
     error,
     refetch,
     isFetching,
-  } = mode === "subscriptions"
-    ? usersApi.useGetSubscriptionsQuery()
-    : usersApi.useGetSubscribersQuery();
+  } = activeQuery;
 
   const title = mode === "subscriptions" ? "Подписки" : "Подписчики";
   const description = mode === "subscriptions"
