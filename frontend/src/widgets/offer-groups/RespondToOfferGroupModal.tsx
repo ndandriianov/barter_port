@@ -117,7 +117,7 @@ function RespondToOfferGroupModal({
 
       <DialogContent dividers>
         <Typography variant="body2" color="text.secondary" mb={3}>
-          Выберите по одному offer из каждого unit. После этого будет создан обычный draft deal.
+          Выберите по одному предложению из каждого юнита. После этого будет создан черновик сделки.
         </Typography>
 
         <Alert severity={isResponderOfferRequired ? "info" : "success"} sx={{ mb: 3 }}>

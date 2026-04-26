@@ -25,10 +25,10 @@ function MarketHomePage() {
               Объявления / Home
             </Typography>
             <Typography variant="h3" fontWeight={900} mb={1.5}>
-              Добро пожаловать
+              Отдавайте лишнее - получайте нужное
             </Typography>
             <Typography variant="body1" sx={{ maxWidth: 760, opacity: 0.92 }}>
-              В данном разделе вы можно опубликовать свои объявления, просматривать и откликаться на чужие
+              Вы можете опубликовать свои объявления, просматривать и откликаться на чужие
             </Typography>
           </Box>
 

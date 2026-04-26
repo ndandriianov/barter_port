@@ -28,7 +28,7 @@ function ProfileHomePage() {
             to={appRoutes.profile.account}
             icon={<BadgeOutlinedIcon />}
             title="Личные данные"
-            description="Профиль, аватар, телефон, биография, текущая точка и смена пароля"
+            description="Профиль, аватар, телефон, биография, текущее местоположение и смена пароля"
             accent="primary"
           />
         </Grid>

@@ -260,14 +260,14 @@ function ProfilePage() {
                 fullWidth
               />
               <TextField
-                label="Bio"
+                label="О себе"
                 value={currentBio}
                 onChange={(event) => setDraftBio(event.target.value)}
                 placeholder="Расскажите о себе"
                 fullWidth
                 multiline
                 minRows={3}
-                helperText="Чтобы удалить имя, bio или телефон, очистите поле и сохраните"
+                helperText="Чтобы удалить имя, раздел о себе или телефон, очистите поле и сохраните"
               />
               <TextField
                 label="Телефон"

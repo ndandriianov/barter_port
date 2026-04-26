@@ -74,7 +74,7 @@ function DraftPage() {
       </Button>
 
       <Typography variant="h4" fontWeight={700} mb={3}>
-        Черновой договор
+        Черновик сделки
       </Typography>
 
       <DraftCard draft={data} />

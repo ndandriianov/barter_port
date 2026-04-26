@@ -14,7 +14,7 @@ interface DraftsListPageProps {
 const tabMeta: Record<DraftsTab, { title: string; description: string }> = {
   all: {
     title: "Все",
-    description: "Все ваши черновики договоров: и входящие предложения, и ваши собственные исходящие приложения.",
+    description: "Все ваши черновики сделок: и входящие предложения, и ваши собственные исходящие приложения.",
   },
   others: {
     title: "Входящие предложения",
@@ -45,7 +45,7 @@ function DraftsListPage({ forcedTab, title, description, hideTabs = false }: Dra
     <Box maxWidth={1200} mx="auto">
       <Box mb={3}>
         <Typography variant="h4" fontWeight={700} mb={1}>
-          {title ?? "Черновики договоров"}
+          {title ?? "Черновики сделок"}
         </Typography>
         <Typography variant="body1" color="text.secondary">
           {description ?? tabMeta[tab].description}

@@ -513,7 +513,7 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 
 	multiUnitGroupID, err := client.createOfferGroup(ctx, eva.Token, offerGroupRequest{
 		Name:        new("Художественные материалы или урок"),
-		Description: new("Можно забрать краски или записаться на урок плюс блокноты в любом случае."),
+		Description: new("Можно забрать краски или записаться на урок и получить блокноты"),
 		Units: []offerGroupUnitRequest{
 			{
 				Offers: []offerGroupOfferRef{
