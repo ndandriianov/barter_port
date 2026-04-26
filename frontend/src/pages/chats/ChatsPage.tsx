@@ -61,9 +61,6 @@ function ChatsPage({ defaultMode = "all" }: ChatsPageProps) {
           <Typography variant="h4" fontWeight={800} mb={1}>
             {defaultMode === "deal" ? "Чаты по сделкам" : defaultMode === "direct" ? "Личные сообщения" : "Все сообщения"}
           </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Переписка живёт в отдельном разделе и открывается как thread внутри него, а не как побочный продукт других экранов.
-          </Typography>
         </Box>
       </Box>
 

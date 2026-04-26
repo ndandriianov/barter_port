@@ -29,7 +29,7 @@ import { appRoutes, getSectionFromPathname, type AppSection } from "@/shared/con
 const sectionMeta: Record<AppSection, { label: string; description: string }> = {
   market: {
     label: "Объявления",
-    description: "Найти, откликнуться, опубликовать и управлять своими материалами.",
+    description: "Найти, откликнуться, опубликовать и управлять своими материалами",
   },
   deals: {
     label: "Сделки",
@@ -37,15 +37,15 @@ const sectionMeta: Record<AppSection, { label: string; description: string }> = 
   },
   messages: {
     label: "Сообщения",
-    description: "Личные диалоги и переписка по сделкам в едином потоке.",
+    description: "Личные диалоги и переписка по сделкам",
   },
   profile: {
     label: "Профиль",
-    description: "Личные данные, репутация, отзывы, подписки и статистика.",
+    description: "Личные данные, репутация, отзывы, подписки и статистика",
   },
   admin: {
     label: "Модерация",
-    description: "Отдельная admin-only зона для очередей и системных сущностей.",
+    description: "Отдельная admin-only зона для очередей и системных сущностей",
   },
 };
 
