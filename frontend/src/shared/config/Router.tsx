@@ -179,7 +179,7 @@ function AppRouter() {
                 forcedTab="mine"
                 hideTabs
                 title="Мои объявления"
-                description="Ваши обычные публикации в отдельном подрежиме раздела «Объявления»."
+                description=""
               />
             }
           />

@@ -25,11 +25,10 @@ function MarketHomePage() {
               Объявления / Home
             </Typography>
             <Typography variant="h3" fontWeight={900} mb={1.5}>
-              Публикации и поиск без разрыва сценария
+              Добро пожаловать
             </Typography>
             <Typography variant="body1" sx={{ maxWidth: 760, opacity: 0.92 }}>
-              Здесь начинается discovery-поток: найти объявление, открыть сценарий обмена,
-              создать публикацию или проверить состояние своих материалов.
+              В данном разделе вы можно опубликовать свои объявления, просматривать и откликаться на чужие
             </Typography>
           </Box>
 
@@ -49,7 +48,7 @@ function MarketHomePage() {
               variant="outlined"
               sx={{ color: "common.white", borderColor: "rgba(255,255,255,0.4)" }}
             >
-              Создать сценарий обмена
+              Создать группу объявлений
             </Button>
           </Box>
         </Stack>

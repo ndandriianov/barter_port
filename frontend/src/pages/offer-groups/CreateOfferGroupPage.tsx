@@ -5,10 +5,10 @@ function CreateOfferGroupPage() {
   return (
     <Box maxWidth={900} mx="auto">
       <Typography variant="h4" fontWeight={700} mb={3}>
-        Новое композитное объявление
+        Новая группа объявлений
       </Typography>
       <Typography variant="body1" color="text.secondary" mb={3}>
-        Название можно задать вручную или оставить пустым, чтобы сервер собрал его автоматически из выбранных offers.
+        Название можно задать вручную или оставить пустым, чтобы сервер собрал его автоматически из выбранных объявлений
       </Typography>
       <CreateOfferGroupForm />
     </Box>

@@ -30,9 +30,6 @@ function DealTasksPage() {
           <Typography variant="h4" fontWeight={800} mb={1}>
             Очередь задач
           </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Вместо разрозненных списков здесь собраны все ближайшие шаги по lifecycle сделки.
-          </Typography>
         </Box>
         <Chip label={`${totalActionCount} задач`} color="warning" />
       </Box>
@@ -52,7 +49,7 @@ function DealTasksPage() {
                   Входящие черновики
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Предложения, где нужно подтвердить участие, отклонить сценарий или перейти к деталям.
+                  Подтвердить участие либо отклонить
                 </Typography>
               </div>
               <Button component={RouterLink} to={appRoutes.deals.draftsIncoming} variant="outlined">
@@ -96,7 +93,7 @@ function DealTasksPage() {
                   Заявки на присоединение
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Сделки, где есть ожидающие join request и решение нужно принять внутри карточки сделки.
+                  Сделки, где есть активные заявки на присоединение и нужно принять решение
                 </Typography>
               </div>
               <Button component={RouterLink} to={appRoutes.deals.active} variant="outlined">
@@ -105,7 +102,7 @@ function DealTasksPage() {
             </Box>
 
             {dealsWithJoinRequests.length === 0 ? (
-              <Typography color="text.secondary">Необработанных join request сейчас нет.</Typography>
+              <Typography color="text.secondary">Необработанных заявок на присоединение сейчас нет.</Typography>
             ) : (
               <Stack spacing={1.25}>
                 {dealsWithJoinRequests.map(({ deal, requests }) => (
@@ -135,15 +132,12 @@ function DealTasksPage() {
         <Box display="flex" justifyContent="space-between" gap={2} flexWrap="wrap">
           <div>
             <Typography variant="h6" fontWeight={700}>
-              Отзывы после завершения
+              Оставить отзыв
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              Review-задачи остаются частью post-deal потока и больше не требуют отдельного раздела в верхнем меню.
+              После завершения сделки можно оставить отзыв на полученные товары
             </Typography>
           </div>
-          <Button component={RouterLink} to={appRoutes.deals.reviews} variant="outlined">
-            Все review-задачи
-          </Button>
         </Box>
 
         {pendingReviews.length === 0 ? (
