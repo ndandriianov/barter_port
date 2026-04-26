@@ -111,7 +111,7 @@ function ChatList({ chats, mode, selectedChatId, onSelect, onNewChat }: Props) {
               Все чаты
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              {mode === "deal" ? "Только переписки по сделкам" : mode === "direct" ? "Только личные диалоги" : "Личные и deal-чаты"}
+              {mode === "deal" ? "Только переписки по сделкам" : mode === "direct" ? "Только личные диалоги" : "Личные и чаты по сделкам"}
             </Typography>
           </div>
           <Button onClick={onNewChat} variant="contained" size="small" startIcon={<AddOutlinedIcon />}>
