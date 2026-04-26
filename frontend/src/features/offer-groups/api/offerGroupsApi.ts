@@ -11,6 +11,7 @@ import type {
   CreateOfferGroupDraftResponse,
   CreateOfferGroupRequest,
   CreateOfferGroupResponse,
+  GetOfferGroupsParams,
   ListOfferGroupsResponse,
   OfferGroup,
 } from "@/features/offer-groups/model/types.ts";
@@ -20,8 +21,14 @@ const offerGroupsApi = createApi({
   baseQuery: baseQueryWithReauth,
   tagTypes: ["OfferGroups"],
   endpoints: (builder) => ({
-    getOfferGroups: builder.query<ListOfferGroupsResponse, void>({
-      query: () => "/offer-groups",
+    getOfferGroups: builder.query<ListOfferGroupsResponse, GetOfferGroupsParams | void>({
+      query: (params) =>
+        params
+          ? {
+              url: "/offer-groups",
+              params,
+            }
+          : "/offer-groups",
       transformResponse: (response: unknown) => listOfferGroupsResponseSchema.parse(response),
       providesTags: ["OfferGroups"],
     }),

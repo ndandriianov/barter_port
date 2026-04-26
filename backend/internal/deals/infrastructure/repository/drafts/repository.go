@@ -33,15 +33,16 @@ func (r *Repository) CreateDraft(
 	name *string,
 	description *string,
 	offers []domain.OfferIDAndInfo,
+	offerGroupID *uuid.UUID,
 ) (uuid.UUID, error) {
 
 	dealsQuery := `
-		INSERT INTO draft_deals (author_id, name, description)
-		VALUES ($1, $2, $3)
+		INSERT INTO draft_deals (author_id, name, description, offer_group_id)
+		VALUES ($1, $2, $3, $4)
 		RETURNING id;`
 
 	var id uuid.UUID
-	err := tx.QueryRow(ctx, dealsQuery, authorID, name, description).Scan(&id)
+	err := tx.QueryRow(ctx, dealsQuery, authorID, name, description, offerGroupID).Scan(&id)
 	if err != nil {
 		return uuid.Nil, fmt.Errorf("sql: deals: %w", err)
 	}
@@ -139,6 +140,7 @@ func (r *Repository) GetDraftByID(ctx context.Context, exec db.DB, id uuid.UUID)
 		       d.author_id,
 		       d.name,
 		       d.description,
+		       d.offer_group_id,
 		       d.created_at,
 		       d.updated_at,
 		       i.id,
@@ -180,12 +182,14 @@ func (r *Repository) GetDraftByID(ctx context.Context, exec db.DB, id uuid.UUID)
 		var offerPhotoUrls []string
 		var offerQuantity *int
 		var offerConfirmed *bool
+		var offerGroupID *uuid.UUID
 
 		if err = rows.Scan(
 			&draft.ID,
 			&draft.AuthorID,
 			&draft.Name,
 			&draft.Description,
+			&offerGroupID,
 			&draft.CreatedAt,
 			&draft.UpdatedAt,
 			&offerID,
@@ -205,6 +209,7 @@ func (r *Repository) GetDraftByID(ctx context.Context, exec db.DB, id uuid.UUID)
 		}
 
 		found = true
+		draft.OfferGroupID = offerGroupID
 
 		if offerID == nil {
 			continue
@@ -469,4 +474,23 @@ func (r *Repository) DeleteDraft(ctx context.Context, exec db.DB, id uuid.UUID) 
 	}
 
 	return nil
+}
+
+// ================================================================================
+// GetDraftsCountForOfferID
+// ================================================================================
+
+func (r *Repository) GetDraftsCountForOfferID(ctx context.Context, exec db.DB, offerID uuid.UUID) (int, error) {
+	query := `
+		SELECT COUNT(*)
+		FROM draft_deal_offers
+		WHERE offer_id = $1;`
+
+	var count int
+	err := exec.QueryRow(ctx, query, offerID).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("sql get drafts count for offer: %w", err)
+	}
+
+	return count, nil
 }

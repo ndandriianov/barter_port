@@ -1,17 +1,32 @@
-import { useState } from "react";
+import {
+  Avatar,
+  Box,
+  Button,
+  Chip,
+  Divider,
+  List,
+  ListItemButton,
+  ListItemText,
+  Paper,
+  Stack,
+  Typography,
+} from "@mui/material";
+import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
+import ForumOutlinedIcon from "@mui/icons-material/ForumOutlined";
+import HandshakeOutlinedIcon from "@mui/icons-material/HandshakeOutlined";
 import chatsApi from "@/features/chats/api/chatsApi.ts";
 import type { Chat } from "@/features/chats/model/types.ts";
 
 interface Props {
+  chats: Chat[];
+  mode: "all" | "direct" | "deal";
   selectedChatId: string | null;
   onSelect: (chatId: string) => void;
   onNewChat: () => void;
 }
 
-function ChatList({ selectedChatId, onSelect, onNewChat }: Props) {
-  const { data: chats = [], isLoading } = chatsApi.useListChatsQuery();
+function ChatList({ chats, mode, selectedChatId, onSelect, onNewChat }: Props) {
   const { data: users = [], isLoading: isUsersLoading } = chatsApi.useListUsersQuery();
-  const [dealSectionOpen, setDealSectionOpen] = useState(false);
 
   const userNameById = new Map(users.map((user) => [user.id, user.name]));
 
@@ -27,88 +42,98 @@ function ChatList({ selectedChatId, onSelect, onNewChat }: Props) {
   const personalChats = chats.filter((c) => !c.deal_id);
   const dealChats = chats.filter((c) => !!c.deal_id);
 
-  const chatItem = (chat: Chat) => (
-    <div
-      key={chat.id}
-      onClick={() => onSelect(chat.id)}
-      style={{
-        padding: "12px 16px",
-        cursor: "pointer",
-        background: selectedChatId === chat.id ? "#e3f2fd" : "transparent",
-        borderBottom: "1px solid #f0f0f0",
-      }}
-    >
-      <div style={{ fontSize: 13, fontWeight: 500 }}>Личный чат</div>
-      <div style={{ fontSize: 11, color: "#888", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-        {getParticipantsLabel(chat)}
-      </div>
-    </div>
+  const renderSection = (title: string, items: Chat[], kind: "direct" | "deal") => (
+    <Stack spacing={1.25}>
+      <Box display="flex" justifyContent="space-between" alignItems="center">
+        <Typography variant="overline" color="text.secondary">
+          {title}
+        </Typography>
+        <Chip size="small" label={items.length} />
+      </Box>
+      <List disablePadding sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+        {items.map((chat) => (
+          <Paper
+            key={chat.id}
+            variant="outlined"
+            sx={{
+              overflow: "hidden",
+              borderColor: selectedChatId === chat.id ? "primary.main" : "divider",
+              bgcolor: selectedChatId === chat.id ? "rgba(15,118,110,0.08)" : "background.paper",
+            }}
+          >
+            <ListItemButton onClick={() => onSelect(chat.id)} sx={{ borderRadius: 3 }}>
+              <Avatar
+                sx={{
+                  width: 40,
+                  height: 40,
+                  mr: 1.5,
+                  bgcolor: kind === "deal" ? "secondary.main" : "primary.main",
+                }}
+              >
+                {kind === "deal" ? <HandshakeOutlinedIcon fontSize="small" /> : <ForumOutlinedIcon fontSize="small" />}
+              </Avatar>
+              <ListItemText
+                primary={kind === "deal" ? "Чат сделки" : "Личный чат"}
+                secondary={getParticipantsLabel(chat)}
+                primaryTypographyProps={{ fontWeight: 700 }}
+                secondaryTypographyProps={{
+                  sx: {
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  },
+                }}
+              />
+            </ListItemButton>
+          </Paper>
+        ))}
+      </List>
+    </Stack>
   );
 
   return (
-    <div style={{ width: 260, borderRight: "1px solid #e0e0e0", display: "flex", flexDirection: "column", height: "100%" }}>
-      <div style={{ padding: "12px 16px", borderBottom: "1px solid #e0e0e0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <strong>Чаты</strong>
-        <button
-          onClick={onNewChat}
-          style={{ padding: "4px 12px", borderRadius: 4, border: "none", cursor: "pointer", background: "#1976d2", color: "#fff", fontSize: 13 }}
-        >
-          + Новый
-        </button>
-      </div>
+    <Paper
+      variant="outlined"
+      sx={{
+        width: { xs: "100%", md: 360 },
+        minWidth: 0,
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        borderRadius: 4,
+        overflow: "hidden",
+      }}
+    >
+      <Box p={2.5}>
+        <Stack direction="row" justifyContent="space-between" alignItems="center" gap={1.5}>
+          <div>
+            <Typography variant="h6" fontWeight={800}>
+              Все чаты
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {mode === "deal" ? "Только переписки по сделкам" : mode === "direct" ? "Только личные диалоги" : "Личные и чаты по сделкам"}
+            </Typography>
+          </div>
+          <Button onClick={onNewChat} variant="contained" size="small" startIcon={<AddOutlinedIcon />}>
+            Новый
+          </Button>
+        </Stack>
+      </Box>
+      <Divider />
 
-      <div style={{ overflowY: "auto", flex: 1 }}>
-        {isLoading && <p style={{ padding: 16, color: "#888" }}>Загрузка...</p>}
-
-        {!isLoading && chats.length === 0 && (
-          <p style={{ padding: 16, color: "#888", fontSize: 14 }}>Нет чатов</p>
+      <Box sx={{ p: 2, overflowY: "auto", flex: 1 }}>
+        {chats.length === 0 ? (
+          <Typography color="text.secondary" textAlign="center" py={6}>
+            Чатов пока нет.
+          </Typography>
+        ) : (
+          <Stack spacing={2}>
+            {(mode === "all" || mode === "direct") && personalChats.length > 0 && renderSection("Личные", personalChats, "direct")}
+            {(mode === "all" || mode === "deal") && dealChats.length > 0 && renderSection("По сделкам", dealChats, "deal")}
+          </Stack>
         )}
-
-        {personalChats.map(chatItem)}
-
-        {dealChats.length > 0 && (
-          <>
-            <div
-              onClick={() => setDealSectionOpen((v) => !v)}
-              style={{
-                padding: "8px 16px",
-                cursor: "pointer",
-                background: "#f5f5f5",
-                borderBottom: "1px solid #e0e0e0",
-                borderTop: personalChats.length > 0 ? "1px solid #e0e0e0" : undefined,
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                userSelect: "none",
-              }}
-            >
-              <span style={{ fontSize: 12, fontWeight: 600, color: "#555" }}>
-                Чаты сделок ({dealChats.length})
-              </span>
-              <span style={{ fontSize: 12, color: "#888" }}>{dealSectionOpen ? "▲" : "▼"}</span>
-            </div>
-
-            {dealSectionOpen && dealChats.map((chat) => (
-              <div
-                key={chat.id}
-                onClick={() => onSelect(chat.id)}
-                style={{
-                  padding: "12px 16px",
-                  cursor: "pointer",
-                  background: selectedChatId === chat.id ? "#e3f2fd" : "transparent",
-                  borderBottom: "1px solid #f0f0f0",
-                }}
-              >
-                <div style={{ fontSize: 13, fontWeight: 500 }}>Чат сделки</div>
-                <div style={{ fontSize: 11, color: "#888", marginTop: 2, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {getParticipantsLabel(chat)}
-                </div>
-              </div>
-            ))}
-          </>
-        )}
-      </div>
-    </div>
+      </Box>
+    </Paper>
   );
 }
 

@@ -2,8 +2,8 @@ import type { ReviewContextType, ReviewEligibilityReason } from "@/features/revi
 
 export const reviewContextLabels: Record<ReviewContextType, string> = {
   "item-only": "Отзыв о позиции",
-  "offer-only": "Отзыв об offer",
-  "offer+item": "Отзыв об offer и позиции",
+  "offer-only": "Отзыв об объявлении",
+  "offer+item": "Отзыв об объявлении и позиции",
 };
 
 export const reviewReasonLabels: Record<ReviewEligibilityReason, string> = {

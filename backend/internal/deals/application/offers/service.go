@@ -5,6 +5,7 @@ import (
 	"barter-port/internal/deals/domain"
 	"barter-port/internal/deals/domain/enums"
 	"barter-port/internal/deals/domain/htypes"
+	"barter-port/internal/deals/infrastructure/repository/drafts"
 	offersrep "barter-port/internal/deals/infrastructure/repository/offers"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/db"
@@ -40,6 +41,7 @@ type PhotoStorage interface {
 type Service struct {
 	db             *pgxpool.Pool
 	repo           *offersrep.Repository
+	draftsRepo     *drafts.Repository
 	photoStorage   PhotoStorage
 	usersClient    userspb.UsersServiceClient
 	adminChecker   *authkit.AdminChecker
@@ -49,6 +51,7 @@ type Service struct {
 func NewService(
 	dbPool *pgxpool.Pool,
 	offerRepository *offersrep.Repository,
+	draftsRepository *drafts.Repository,
 	usersClient userspb.UsersServiceClient,
 	photoStorage PhotoStorage,
 	adminChecker *authkit.AdminChecker,
@@ -57,6 +60,7 @@ func NewService(
 	return &Service{
 		db:             dbPool,
 		repo:           offerRepository,
+		draftsRepo:     draftsRepository,
 		photoStorage:   photoStorage,
 		usersClient:    usersClient,
 		adminChecker:   adminChecker,
@@ -215,6 +219,9 @@ func (s *Service) GetOffers(
 				return nil, nil, err
 			}
 		}
+		if authorID != nil {
+			offers, err = s.addDraftsCountForOffers(ctx, offers)
+		}
 
 		return offers, newUniversalCursor, nil
 
@@ -248,6 +255,9 @@ func (s *Service) GetOffers(
 				return nil, nil, err
 			}
 		}
+		if authorID != nil {
+			offers, err = s.addDraftsCountForOffers(ctx, offers)
+		}
 
 		return offers, newUniversalCursor, nil
 
@@ -280,6 +290,9 @@ func (s *Service) GetOffers(
 			if err != nil {
 				return nil, nil, err
 			}
+		}
+		if authorID != nil {
+			offers, err = s.addDraftsCountForOffers(ctx, offers)
 		}
 
 		return offers, newUniversalCursor, nil
@@ -724,6 +737,22 @@ func (s *Service) ensureOfferVisible(ctx context.Context, offer *domain.Offer, r
 	}
 
 	return nil
+}
+
+func (s *Service) addDraftsCountForOffers(ctx context.Context, offers []domain.Offer) ([]domain.Offer, error) {
+	if len(offers) == 0 {
+		return offers, nil
+	}
+
+	for i, o := range offers {
+		count, err := s.draftsRepo.GetDraftsCountForOfferID(ctx, s.db, o.ID)
+		if err != nil {
+			return nil, fmt.Errorf("get draft count: %w", err)
+		}
+		offers[i].DraftsCount = &count
+	}
+
+	return offers, nil
 }
 
 // ================================================================================

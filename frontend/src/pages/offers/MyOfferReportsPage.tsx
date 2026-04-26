@@ -169,8 +169,7 @@ function MyOfferReportsPage() {
             Жалобы на мои объявления
           </Typography>
           <Typography variant="body1" color="text.secondary" maxWidth={760}>
-            Здесь отображаются только объявления, по которым уже были жалобы. У каждого объявления
-            список жалоб свернут по умолчанию и раскрывается по нажатию.
+            Здесь отображаются объявления, по которым поступали жалобы
           </Typography>
         </Box>
         <Button variant="outlined" onClick={() => refetch()} disabled={isFetching}>

@@ -6,6 +6,7 @@ import (
 	"barter-port/pkg/db"
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -60,16 +61,23 @@ func (r *Repository) CreateOfferGroup(
 	return groupID, nil
 }
 
-func (r *Repository) GetOfferGroupByID(ctx context.Context, id uuid.UUID) (domain.OfferGroup, error) {
-	return r.getOfferGroups(ctx, r.db, &id)
+func (r *Repository) GetOfferGroupByID(ctx context.Context, id uuid.UUID, currentUserID uuid.UUID) (domain.OfferGroup, error) {
+	return r.getOfferGroups(ctx, r.db, &id, currentUserID, true, false)
 }
 
-func (r *Repository) ListOfferGroups(ctx context.Context) ([]domain.OfferGroup, error) {
-	return r.listOfferGroups(ctx, r.db, nil)
+func (r *Repository) ListOfferGroups(ctx context.Context, currentUserID uuid.UUID, onlyMine bool) ([]domain.OfferGroup, error) {
+	return r.listOfferGroups(ctx, r.db, nil, currentUserID, onlyMine, onlyMine)
 }
 
-func (r *Repository) getOfferGroups(ctx context.Context, exec db.DB, filterID *uuid.UUID) (domain.OfferGroup, error) {
-	groups, err := r.listOfferGroups(ctx, exec, filterID)
+func (r *Repository) getOfferGroups(
+	ctx context.Context,
+	exec db.DB,
+	filterID *uuid.UUID,
+	currentUserID uuid.UUID,
+	includeDraftDealsCount bool,
+	onlyMine bool,
+) (domain.OfferGroup, error) {
+	groups, err := r.listOfferGroups(ctx, exec, filterID, currentUserID, includeDraftDealsCount, onlyMine)
 	if err != nil {
 		return domain.OfferGroup{}, err
 	}
@@ -83,12 +91,40 @@ func (r *Repository) listOfferGroups(
 	ctx context.Context,
 	exec db.DB,
 	filterID *uuid.UUID,
+	currentUserID uuid.UUID,
+	includeDraftDealsCount bool,
+	onlyMine bool,
 ) ([]domain.OfferGroup, error) {
 	query := `
+		WITH offer_group_owners AS (
+			SELECT
+				og.id AS offer_group_id,
+				CASE
+					WHEN COUNT(DISTINCT o.author_id) = 1 THEN (array_agg(DISTINCT o.author_id))[1]
+					ELSE NULL
+				END AS owner_id
+			FROM offer_groups og
+			LEFT JOIN offer_group_units ogu ON ogu.offer_group_id = og.id
+			LEFT JOIN unit_offers uo ON uo.unit_id = ogu.id
+			LEFT JOIN offers o ON o.id = uo.offer_id
+			GROUP BY og.id
+		),
+		offer_group_draft_counts AS (
+			SELECT
+				dd.offer_group_id,
+				COUNT(*)::integer AS draft_deals_count
+			FROM draft_deals dd
+			WHERE dd.offer_group_id IS NOT NULL
+			GROUP BY dd.offer_group_id
+		)
 		SELECT
 			og.id,
 			og.name,
 			og.description,
+			CASE
+				WHEN $2 AND ogo.owner_id = $1 THEN COALESCE(ogdc.draft_deals_count, 0)
+				ELSE NULL
+			END AS draft_deals_count,
 			ogu.id,
 			o.id,
 			o.author_id,
@@ -101,15 +137,27 @@ func (r *Repository) listOfferGroups(
 			COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = o.id), '{}'::uuid[]) AS photo_ids,
 			COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = o.id), '{}'::text[]) AS photo_urls
 		FROM offer_groups og
+		LEFT JOIN offer_group_owners ogo ON ogo.offer_group_id = og.id
+		LEFT JOIN offer_group_draft_counts ogdc ON ogdc.offer_group_id = og.id
 		LEFT JOIN offer_group_units ogu ON ogu.offer_group_id = og.id
 		LEFT JOIN unit_offers uo ON uo.unit_id = ogu.id
 		LEFT JOIN offers o ON o.id = uo.offer_id
 	`
 
-	args := make([]any, 0, 1)
+	args := make([]any, 0, 3)
+	args = append(args, currentUserID)
+	args = append(args, includeDraftDealsCount)
+
+	conditions := make([]string, 0, 2)
+	if onlyMine {
+		conditions = append(conditions, "ogo.owner_id = $1")
+	}
 	if filterID != nil {
-		query += ` WHERE og.id = $1`
 		args = append(args, *filterID)
+		conditions = append(conditions, fmt.Sprintf("og.id = $%d", len(args)))
+	}
+	if len(conditions) > 0 {
+		query += ` WHERE ` + strings.Join(conditions, ` AND `)
 	}
 
 	query += ` ORDER BY og.id, ogu.position NULLS LAST, uo.position NULLS LAST, o.id`
@@ -129,6 +177,7 @@ func (r *Repository) listOfferGroups(
 			groupID          uuid.UUID
 			groupName        string
 			groupDescription *string
+			draftDealsCount  *int
 			unitID           *uuid.UUID
 			offerID          *uuid.UUID
 			authorID         *uuid.UUID
@@ -146,6 +195,7 @@ func (r *Repository) listOfferGroups(
 			&groupID,
 			&groupName,
 			&groupDescription,
+			&draftDealsCount,
 			&unitID,
 			&offerID,
 			&authorID,
@@ -164,10 +214,11 @@ func (r *Repository) listOfferGroups(
 		gIdx, ok := groupIndex[groupID]
 		if !ok {
 			result = append(result, domain.OfferGroup{
-				ID:          groupID,
-				Name:        groupName,
-				Description: groupDescription,
-				Units:       make([]domain.OfferGroupUnit, 0),
+				ID:              groupID,
+				Name:            groupName,
+				Description:     groupDescription,
+				DraftDealsCount: draftDealsCount,
+				Units:           make([]domain.OfferGroupUnit, 0),
 			})
 			gIdx = len(result) - 1
 			groupIndex[groupID] = gIdx

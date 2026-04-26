@@ -105,6 +105,11 @@ paths:
       tags:
         - drafts
       summary: Получить черновой договор по его ID
+      description: |
+        Возвращает `draft deal`.
+
+        Если черновик был создан через `/offer-groups/{offerGroupId}/drafts`,
+        в ответе заполняется `offerGroupId`.
       operationId: getDraftDealById
       security:
         - bearerAuth: []
@@ -2032,6 +2037,7 @@ paths:
         Возвращает список объявлений с пагинацией.
 
         - Если `my=true`, возвращаются только объявления, созданные текущим пользователем.
+          В этом режиме отображается количество черновиков, в которые входит данный offer
         - Скрытые объявления не показываются обычным пользователям.
         - Скрытые объявления видны:
           - автору объявления (в режиме `my=true`);
@@ -3140,6 +3146,9 @@ paths:
         - список `units`
         - список `offers` внутри каждого `unit`
 
+        Поле `draftDealsCount` возвращается только если пользователь запрашивает
+        свои `offer_groups`. Для чужих `offer_groups` это поле отсутствует.
+
         Endpoint является альтернативой `GET /offers` для композитных объявлений
         и не заменяет существующий список обычных объявлений.
       operationId: listOfferGroups
@@ -3251,6 +3260,9 @@ paths:
 
         Этот endpoint нужен клиенту, чтобы пользователь мог выбрать конкретный `offer`
         из каждой OR-группы перед созданием `draft deal`.
+
+        Поле `draftDealsCount` возвращается только если запрошенный `offer_group`
+        принадлежит текущему пользователю. Для чужого `offer_group` это поле отсутствует.
       operationId: getOfferGroupById
       security:
         - bearerAuth: []
@@ -3315,6 +3327,7 @@ paths:
         Каждый выбранный `offer` и `responderOfferId` попадает в `draft deal` с `quantity = 1`.
 
         После успешной валидации сервер формирует обычный `draft deal`,
+        записывает в него `offerGroupId`, равный `{offerGroupId}`,
         после чего продолжает работать существующая логика подтверждения,
         отмены и превращения черновика в `deal`.
 
@@ -3599,6 +3612,10 @@ components:
             - у объявления указаны `latitude` и `longitude`;
             - объявление не принадлежит текущему пользователю.
             Иначе поле равно `null`.
+        draftsCount:
+          type: integer
+          minimum: 0
+          description: Количество черновых сделок, в которых участвует объявление. Возвращается только для авторов объявления.
     OfferInfo:
       type: object
       required:
@@ -3636,6 +3653,13 @@ components:
         description:
           type: string
           description: Подробное описание черновой сделки
+        offerGroupId:
+          type: string
+          format: uuid
+          nullable: true
+          description: |
+            Идентификатор `offer_group`, из которого был создан этот `draft deal`.
+            Для черновиков, созданных напрямую через `/deals/drafts`, поле равно `null`.
         createdAt:
           type: string
           format: date-time
@@ -4771,6 +4795,14 @@ components:
         description:
           type: string
           description: Описание композитного объявления
+        draftDealsCount:
+          type: integer
+          minimum: 0
+          description: |
+            Количество `draft deals`, созданных из этого `offer_group`.
+            Поле возвращается только в выдаче своих `offer_groups`;
+            для чужих `offer_groups` поле отсутствует.
+            Один черновик считается ровно один раз.
         units:
           type: array
           description: |

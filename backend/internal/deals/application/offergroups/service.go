@@ -93,11 +93,11 @@ func (s *Service) CreateOfferGroup(
 		return domain.OfferGroup{}, err
 	}
 
-	return s.GetOfferGroupByID(ctx, groupID)
+	return s.GetOfferGroupByID(ctx, groupID, userID)
 }
 
-func (s *Service) ListOfferGroups(ctx context.Context) ([]domain.OfferGroup, error) {
-	items, err := s.repo.ListOfferGroups(ctx)
+func (s *Service) ListOfferGroups(ctx context.Context, userID uuid.UUID, onlyMine bool) ([]domain.OfferGroup, error) {
+	items, err := s.repo.ListOfferGroups(ctx, userID, onlyMine)
 	if err != nil {
 		return nil, err
 	}
@@ -105,8 +105,8 @@ func (s *Service) ListOfferGroups(ctx context.Context) ([]domain.OfferGroup, err
 	return s.populateAuthorNames(ctx, items)
 }
 
-func (s *Service) GetOfferGroupByID(ctx context.Context, id uuid.UUID) (domain.OfferGroup, error) {
-	item, err := s.repo.GetOfferGroupByID(ctx, id)
+func (s *Service) GetOfferGroupByID(ctx context.Context, id uuid.UUID, userID uuid.UUID) (domain.OfferGroup, error) {
+	item, err := s.repo.GetOfferGroupByID(ctx, id, userID)
 	if err != nil {
 		return domain.OfferGroup{}, err
 	}
@@ -140,7 +140,7 @@ func (s *Service) CreateDraftFromOfferGroup(
 		selectedSet[id] = struct{}{}
 	}
 
-	group, err := s.repo.GetOfferGroupByID(ctx, offerGroupID)
+	group, err := s.repo.GetOfferGroupByID(ctx, offerGroupID, userID)
 	if err != nil {
 		return uuid.Nil, err
 	}
@@ -201,7 +201,7 @@ func (s *Service) CreateDraftFromOfferGroup(
 		return uuid.Nil, domain.ErrOfferGroupResponderOfferRequired
 	}
 
-	return s.dealsService.CreateDraft(ctx, userID, name, description, selectedOffers)
+	return s.dealsService.CreateDraft(ctx, userID, name, description, selectedOffers, &offerGroupID)
 }
 
 func validateCreateUnits(units []domain.OfferGroupUnitCreateInput) ([]uuid.UUID, error) {

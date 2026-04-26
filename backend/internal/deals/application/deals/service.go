@@ -168,6 +168,7 @@ func (s *Service) CreateDraft(
 	name *string,
 	description *string,
 	offersList []domain.OfferIDAndInfo,
+	offerGroupID *uuid.UUID,
 ) (uuid.UUID, error) {
 	if len(offersList) == 0 {
 		return uuid.Nil, domain.ErrNoOffers
@@ -191,7 +192,7 @@ func (s *Service) CreateDraft(
 	var err error
 
 	txErr := db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
-		id, err = s.draftsRepository.CreateDraft(ctx, tx, authorID, name, description, offersList)
+		id, err = s.draftsRepository.CreateDraft(ctx, tx, authorID, name, description, offersList, offerGroupID)
 		return err
 	})
 

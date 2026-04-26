@@ -1,125 +1,120 @@
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import { Link as RouterLink, useSearchParams } from "react-router-dom";
 import { Box, Button, ButtonGroup, Paper, Typography } from "@mui/material";
-import type { DealStatus } from "@/features/deals/model/types.ts";
+import dealsApi from "@/features/deals/api/dealsApi.ts";
+import usersApi from "@/features/users/api/usersApi.ts";
 import DealsList from "@/widgets/deals/DealsList";
+import { appRoutes } from "@/shared/config/appRoutes.ts";
+import { dealsListModeConfig, type DealsListMode } from "@/pages/deals/dealsListModes.ts";
 
-type DealsStatusTab = "all" | DealStatus;
-type DealsStatusCounts = Partial<Record<DealsStatusTab, number>>;
-const orderedStatusTabs: DealsStatusTab[] = [
-  "all",
-  "LookingForParticipants",
-  "Discussion",
-  "Confirmed",
-  "Completed",
-  "Cancelled",
-  "Failed",
-];
-
-const statusTabMeta: Record<DealsStatusTab, { title: string; description: string }> = {
-  all: {
-    title: "Все сделки",
-    description: "Общий список сделок по всем статусам.",
-  },
-  LookingForParticipants: {
-    title: "В поиске участников",
-    description: "Сделки, в которые ещё можно добирать участников.",
-  },
-  Discussion: {
-    title: "Обсуждение",
-    description: "Сделки, которые уже перешли к согласованию условий.",
-  },
-  Confirmed: {
-    title: "Подтверждены",
-    description: "Сделки, где участники подтвердили договорённости.",
-  },
-  Completed: {
-    title: "Завершены",
-    description: "Успешно завершённые сделки.",
-  },
-  Cancelled: {
-    title: "Отменены",
-    description: "Сделки, которые были отменены.",
-  },
-  Failed: {
-    title: "Не состоялись",
-    description: "Сделки, завершившиеся неуспешно.",
-  },
-};
-
-function isDealsStatusTab(value: string | null): value is DealsStatusTab {
-  return value === "all" ||
-    value === "LookingForParticipants" ||
-    value === "Discussion" ||
-    value === "Confirmed" ||
-    value === "Completed" ||
-    value === "Cancelled" ||
-    value === "Failed";
+interface DealsListPageProps {
+  mode: DealsListMode;
 }
 
-function DealsListPage() {
+function DealsListPage({ mode }: DealsListPageProps) {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [availableTabs, setAvailableTabs] = useState<DealsStatusTab[] | null>(null);
-  const [statusCounts, setStatusCounts] = useState<DealsStatusCounts>({});
-  const rawStatus = searchParams.get("status");
-  const statusTab: DealsStatusTab = isDealsStatusTab(rawStatus) ? rawStatus : "all";
-  const visibleTabs = availableTabs ?? orderedStatusTabs;
+  const currentPage = dealsListModeConfig[mode];
+  const selections = currentPage.selections ?? [];
+  const rawSelectionKey = searchParams.get("status");
+  const { data: currentUser } = usersApi.useGetCurrentUserQuery();
+  const {
+    data: deals = [],
+    isLoading,
+    isFetching,
+    error,
+    refetch,
+  } = dealsApi.useGetDealsQuery({
+    my: currentPage.query.myOnly || undefined,
+    open: currentPage.query.openOnly || undefined,
+  });
 
-  const handleStatusTabChange = (nextStatus: DealsStatusTab) => {
+  const scopedDeals = useMemo(() => {
+    if (!currentPage.query.excludeCurrentUser || !currentUser) {
+      return deals;
+    }
+
+    return deals.filter((deal) => !deal.participants.includes(currentUser.id));
+  }, [currentPage.query.excludeCurrentUser, currentUser, deals]);
+
+  const selectedSelection = selections.find((selection) => selection.key === rawSelectionKey) ?? selections[0];
+  const selectedStatuses = selectedSelection?.statuses ?? currentPage.defaultStatuses;
+  const filteredDeals = useMemo(
+    () => scopedDeals.filter((deal) => selectedStatuses.includes(deal.status)),
+    [scopedDeals, selectedStatuses],
+  );
+  const selectionCounts = useMemo(
+    () =>
+      selections.reduce<Record<string, number>>((acc, selection) => {
+        acc[selection.key] = scopedDeals.filter((deal) => selection.statuses.includes(deal.status)).length;
+        return acc;
+      }, {}),
+    [scopedDeals, selections],
+  );
+
+  const handleSelectionChange = (nextSelectionKey: string) => {
     const nextParams = new URLSearchParams(searchParams);
-    nextParams.set("status", nextStatus);
+    nextParams.set("status", nextSelectionKey);
     setSearchParams(nextParams);
   };
-
-  useEffect(() => {
-    if (!availableTabs || availableTabs.includes(statusTab)) {
-      return;
-    }
-
-    const nextStatus = availableTabs[0];
-    const nextParams = new URLSearchParams(searchParams);
-
-    if (nextStatus) {
-      nextParams.set("status", nextStatus);
-    } else {
-      nextParams.delete("status");
-    }
-
-    setSearchParams(nextParams);
-  }, [availableTabs, searchParams, setSearchParams, statusTab]);
+  const pageTitle = selectedSelection?.title ?? currentPage.title;
+  const pageDescription = selectedSelection?.description ?? currentPage.description;
+  const emptyMessage = mode === "joinable"
+    ? "Подходящих сделок для присоединения пока нет"
+    : `Сделок в разделе «${pageTitle}» пока нет`;
 
   return (
     <Box maxWidth={1200} mx="auto">
       <Box display="flex" justifyContent="space-between" alignItems="center" mb={3} flexWrap="wrap" gap={1}>
         <Box>
+          <Typography variant="overline" color={mode === "history" ? "secondary.main" : "info.main"}>
+            {currentPage.eyebrow}
+          </Typography>
           <Typography variant="h4" fontWeight={700} mb={1}>
-            Сделки
+            {currentPage.title}
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            {statusTabMeta[statusTab].description}
+            {pageDescription}
           </Typography>
         </Box>
         <Box display="flex" gap={1}>
-          <Button variant="outlined" component={RouterLink} to="/deals/drafts">
-            Мои черновики
+          <Button
+            variant={mode === "active" ? "contained" : "outlined"}
+            component={RouterLink}
+            to={appRoutes.deals.active}
+          >
+            Активные
+          </Button>
+          <Button
+            variant={mode === "joinable" ? "contained" : "outlined"}
+            component={RouterLink}
+            to={appRoutes.deals.joinable}
+          >
+            Можно присоединиться
+          </Button>
+          <Button
+            variant={mode === "history" ? "contained" : "outlined"}
+            component={RouterLink}
+            to={appRoutes.deals.history}
+          >
+            История
           </Button>
         </Box>
       </Box>
 
-      {visibleTabs.length > 0 && (
+      {selections.length > 1 && (
         <Paper variant="outlined" sx={{ p: 1, mb: 3 }}>
           <ButtonGroup
             fullWidth
             variant="text"
             sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)", xl: "repeat(4, 1fr)" } }}
           >
-            {visibleTabs.map((tab) => (
+            {selections.map((selection) => (
               <Button
-                key={tab}
-                variant={statusTab === tab ? "contained" : "text"}
-                onClick={() => handleStatusTabChange(tab)}
+                key={selection.key}
+                variant={selectedSelection?.key === selection.key ? "contained" : "text"}
+                onClick={() => handleSelectionChange(selection.key)}
               >
-                {statusTabMeta[tab].title} {statusCounts[tab] ?? 0}
+                {selection.title} {selectionCounts[selection.key] ?? 0}
               </Button>
             ))}
           </ButtonGroup>
@@ -127,13 +122,17 @@ function DealsListPage() {
       )}
 
       <Typography variant="h5" fontWeight={700} mb={2}>
-        {statusTabMeta[statusTab].title}
+        {pageTitle}
       </Typography>
 
       <DealsList
-        statusFilter={statusTab}
-        onAvailableStatusTabsChange={setAvailableTabs}
-        onStatusCountsChange={setStatusCounts}
+        deals={filteredDeals}
+        isLoading={isLoading}
+        isFetching={isFetching}
+        hasError={Boolean(error)}
+        onRefresh={refetch}
+        emptyMessage={emptyMessage}
+        showStatusSections={selectedStatuses.length > 1}
       />
     </Box>
   );

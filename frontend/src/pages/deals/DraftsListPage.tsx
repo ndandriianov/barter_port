@@ -2,12 +2,19 @@ import { useSearchParams } from "react-router-dom";
 import { Box, Button, ButtonGroup, Paper, Typography } from "@mui/material";
 import DraftsList from "@/widgets/deals/DraftsList";
 
-type DraftsTab = "all" | "others" | "mine";
+export type DraftsTab = "all" | "others" | "mine";
+
+interface DraftsListPageProps {
+  forcedTab?: DraftsTab;
+  title?: string;
+  description?: string;
+  hideTabs?: boolean;
+}
 
 const tabMeta: Record<DraftsTab, { title: string; description: string }> = {
   all: {
     title: "Все",
-    description: "Все ваши черновики договоров: и входящие предложения, и ваши собственные исходящие приложения.",
+    description: "Все ваши черновики сделок: и входящие предложения, и ваши собственные исходящие приложения.",
   },
   others: {
     title: "Входящие предложения",
@@ -23,10 +30,10 @@ function isDraftsTab(value: string | null): value is DraftsTab {
   return value === "all" || value === "others" || value === "mine";
 }
 
-function DraftsListPage() {
+function DraftsListPage({ forcedTab, title, description, hideTabs = false }: DraftsListPageProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const rawTab = searchParams.get("tab");
-  const tab: DraftsTab = isDraftsTab(rawTab) ? rawTab : "all";
+  const tab: DraftsTab = forcedTab ?? (isDraftsTab(rawTab) ? rawTab : "all");
 
   const handleTabChange = (nextTab: DraftsTab) => {
     const nextParams = new URLSearchParams(searchParams);
@@ -38,39 +45,41 @@ function DraftsListPage() {
     <Box maxWidth={1200} mx="auto">
       <Box mb={3}>
         <Typography variant="h4" fontWeight={700} mb={1}>
-          Черновики договоров
+          {title ?? "Черновики сделок"}
         </Typography>
         <Typography variant="body1" color="text.secondary">
-          {tabMeta[tab].description}
+          {description ?? tabMeta[tab].description}
         </Typography>
       </Box>
 
-      <Paper variant="outlined" sx={{ p: 1, mb: 3 }}>
-        <ButtonGroup
-          fullWidth
-          variant="text"
-          sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" } }}
-        >
-          <Button
-            variant={tab === "all" ? "contained" : "text"}
-            onClick={() => handleTabChange("all")}
+      {!hideTabs && (
+        <Paper variant="outlined" sx={{ p: 1, mb: 3 }}>
+          <ButtonGroup
+            fullWidth
+            variant="text"
+            sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(3, 1fr)" } }}
           >
-            Все
-          </Button>
-          <Button
-            variant={tab === "others" ? "contained" : "text"}
-            onClick={() => handleTabChange("others")}
-          >
-            Входящие предложения
-          </Button>
-          <Button
-            variant={tab === "mine" ? "contained" : "text"}
-            onClick={() => handleTabChange("mine")}
-          >
-            Исходящие приложения
-          </Button>
-        </ButtonGroup>
-      </Paper>
+            <Button
+              variant={tab === "all" ? "contained" : "text"}
+              onClick={() => handleTabChange("all")}
+            >
+              Все
+            </Button>
+            <Button
+              variant={tab === "others" ? "contained" : "text"}
+              onClick={() => handleTabChange("others")}
+            >
+              Входящие предложения
+            </Button>
+            <Button
+              variant={tab === "mine" ? "contained" : "text"}
+              onClick={() => handleTabChange("mine")}
+            >
+              Исходящие приложения
+            </Button>
+          </ButtonGroup>
+        </Paper>
+      )}
 
       <Box mb={2}>
         <Typography variant="h5" fontWeight={700}>

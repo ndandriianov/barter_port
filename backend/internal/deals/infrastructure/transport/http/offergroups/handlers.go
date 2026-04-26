@@ -10,6 +10,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
@@ -52,7 +53,21 @@ func (h *Handlers) ListOfferGroups(w http.ResponseWriter, r *http.Request) {
 	log := logger.LogFrom(r.Context(), h.log).With(slog.String("handler", "ListOfferGroups"))
 	log.Info("handling list offer groups request")
 
-	items, err := h.offerGroupsService.ListOfferGroups(r.Context())
+	userID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		log.Error("failed to get userID from context")
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
+	my, err := decodeListOfferGroupsRequest(r)
+	if err != nil {
+		log.Error("failed to decode list offer groups request", slog.Any("error", err))
+		httpx.WriteErrorStr(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	items, err := h.offerGroupsService.ListOfferGroups(r.Context(), userID, my)
 	if err != nil {
 		log.Error("error listing offer groups", slog.Any("error", err))
 		httpx.WriteEmptyError(w, http.StatusInternalServerError)
@@ -116,12 +131,19 @@ func (h *Handlers) GetOfferGroupByID(w http.ResponseWriter, r *http.Request) {
 	log := logger.LogFrom(r.Context(), h.log).With(slog.String("handler", "GetOfferGroupByID"))
 	log.Info("handling get offer group by id request")
 
+	userID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		log.Error("failed to get userID from context")
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
 	id, ok := parseOfferGroupID(w, r)
 	if !ok {
 		return
 	}
 
-	item, err := h.offerGroupsService.GetOfferGroupByID(r.Context(), id)
+	item, err := h.offerGroupsService.GetOfferGroupByID(r.Context(), id, userID)
 	if err != nil {
 		switch {
 		case errors.Is(err, domain.ErrOfferGroupNotFound):
@@ -196,4 +218,18 @@ func parseOfferGroupID(w http.ResponseWriter, r *http.Request) (uuid.UUID, bool)
 		return uuid.Nil, false
 	}
 	return id, true
+}
+
+func decodeListOfferGroupsRequest(r *http.Request) (bool, error) {
+	rawMy := r.URL.Query().Get("my")
+	if rawMy == "" {
+		return false, nil
+	}
+
+	value, err := strconv.ParseBool(rawMy)
+	if err != nil {
+		return false, errors.New("invalid my filter")
+	}
+
+	return value, nil
 }

@@ -113,17 +113,17 @@ function RespondToOfferGroupModal({
 
   return (
     <Dialog open={isOpen} onClose={closeModal} maxWidth="md" fullWidth>
-      <DialogTitle>Откликнуться на композитное объявление</DialogTitle>
+      <DialogTitle>Откликнуться на группу объявлений</DialogTitle>
 
       <DialogContent dividers>
         <Typography variant="body2" color="text.secondary" mb={3}>
-          Выберите по одному offer из каждого unit. После этого будет создан обычный draft deal.
+          Выберите по одному предложению из каждого юнита. После этого будет создан черновик сделки.
         </Typography>
 
         <Alert severity={isResponderOfferRequired ? "info" : "success"} sx={{ mb: 3 }}>
           {isResponderOfferRequired && requiredResponderAction
-            ? `Во всех unit группы одинаковый action. Нужно приложить свой offer с action "${actionLabels[requiredResponderAction]}".`
-            : "В группе встречаются разные action. Свой offer можно приложить, но это необязательно."}
+            ? `Во всех юнитах группы одинаковое действие. Нужно приложить свое объявление с действием "${actionLabels[requiredResponderAction]}".`
+            : "В группе встречаются разные действия. Свое объявление можно приложить, но это необязательно."}
         </Alert>
 
         <Box display="flex" flexDirection="column" gap={3}>
@@ -183,11 +183,11 @@ function RespondToOfferGroupModal({
           {!isLoadingMyOffers && !myOffersError && (
             <FormControl fullWidth required={isResponderOfferRequired}>
               <InputLabel>
-                {isResponderOfferRequired ? "Ваш offer для отклика" : "Ваш offer для отклика (необязательно)"}
+                {isResponderOfferRequired ? "Ваше объявление для отклика" : "Ваше объявление для отклика (необязательно)"}
               </InputLabel>
               <Select
                 value={responderOfferId}
-                label={isResponderOfferRequired ? "Ваш offer для отклика" : "Ваш offer для отклика (необязательно)"}
+                label={isResponderOfferRequired ? "Ваше объявление для отклика" : "Ваше объявление для отклика (необязательно)"}
                 onChange={(event) => setResponderOfferId(event.target.value)}
               >
                 {!isResponderOfferRequired && <MenuItem value="">Не прикреплять</MenuItem>}
@@ -203,21 +203,21 @@ function RespondToOfferGroupModal({
           {!isLoadingMyOffers && !myOffersError && responderOffers.length === 0 && (
             <Alert severity={isResponderOfferRequired ? "warning" : "info"} sx={{ mt: 2 }}>
               {isResponderOfferRequired && requiredResponderAction
-                ? `У вас нет offer с action "${actionLabels[requiredResponderAction]}". Без него отклик на эту группу невозможен.`
-                : "У вас пока нет offer, который можно дополнительно приложить к отклику."}
+                ? `У вас нет объявления с action "${actionLabels[requiredResponderAction]}". Без него отклик на эту группу невозможен.`
+                : "У вас пока нет объявления, который можно дополнительно приложить к отклику."}
             </Alert>
           )}
         </Box>
 
         <Box mt={3} display="flex" flexDirection="column" gap={2}>
           <TextField
-            label="Название draft deal"
+            label="Название черновика сделки"
             value={draftName}
             onChange={(event) => setDraftName(event.target.value)}
             helperText="Необязательно. Если оставить пустым, сервер сгенерирует имя автоматически."
           />
           <TextField
-            label="Описание draft deal"
+            label="Описание черновика сделки"
             multiline
             minRows={2}
             value={draftDescription}
@@ -227,7 +227,7 @@ function RespondToOfferGroupModal({
 
         {error && (
           <Alert severity="error" sx={{ mt: 2 }}>
-            {getErrorMessage(error) ?? "Не удалось создать черновик по композитному объявлению"}
+            {getErrorMessage(error) ?? "Не удалось создать черновик по группе объявлений"}
           </Alert>
         )}
       </DialogContent>

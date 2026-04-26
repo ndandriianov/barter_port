@@ -1,4 +1,15 @@
 import { useEffect, useRef, useState } from "react";
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  Paper,
+  Stack,
+  TextField,
+  Typography,
+} from "@mui/material";
+import SendOutlinedIcon from "@mui/icons-material/SendOutlined";
 import chatsApi from "@/features/chats/api/chatsApi.ts";
 import usersApi from "@/features/users/api/usersApi.ts";
 import type { Message, User } from "@/features/chats/model/types.ts";
@@ -71,66 +82,84 @@ function ChatWindow({ chatId, participants, readOnly = false }: Props) {
   }
 
   return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", height: "100%" }}>
-      <div style={{ flex: 1, overflowY: "auto", padding: 16, display: "flex", flexDirection: "column", gap: 10 }}>
+    <Paper
+      variant="outlined"
+      sx={{
+        flex: 1,
+        minHeight: 0,
+        display: "flex",
+        flexDirection: "column",
+        borderRadius: 4,
+        overflow: "hidden",
+      }}
+    >
+      <Box px={3} py={2.5} borderBottom="1px solid" borderColor="divider">
+        <Stack direction="row" justifyContent="space-between" alignItems="center" gap={2} flexWrap="wrap">
+          <div>
+            <Typography variant="h6" fontWeight={800}>
+              Диалог
+            </Typography>
+            <Typography variant="body2" color="text.secondary">
+              {participants.length > 0 ? `${participants.length} участников` : "Состав участников уточняется"}
+            </Typography>
+          </div>
+          {readOnly ? <Chip label="Только чтение" color="warning" /> : <Chip label="Активен" color="success" variant="outlined" />}
+        </Stack>
+      </Box>
+
+      <Box sx={{ flex: 1, overflowY: "auto", p: 3, display: "flex", flexDirection: "column", gap: 1.5 }}>
         {messages.map((msg: Message) => {
           const isMe = me?.id === msg.sender_id;
           const senderLabel = getSenderLabel(msg.sender_id);
 
           return (
-            <div
+            <Box
               key={msg.id}
-              style={{
+              sx={{
                 display: "flex",
                 flexDirection: "column",
                 alignItems: isMe ? "flex-end" : "flex-start",
               }}
             >
-              {/* Имя отправителя */}
-              <span style={{ fontSize: 11, color: "#888", marginBottom: 2, paddingLeft: isMe ? 0 : 4, paddingRight: isMe ? 4 : 0 }}>
+              <Typography
+                variant="caption"
+                color="text.secondary"
+                sx={{ mb: 0.5, px: 0.5 }}
+              >
                 {isMe ? "Вы" : senderLabel}
-              </span>
+              </Typography>
 
-              {/* Пузырёк сообщения */}
-              <div
-                style={{
-                  background: isMe ? "#1976d2" : "#f0f0f0",
-                  color: isMe ? "#fff" : "#000",
-                  borderRadius: isMe ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
-                  padding: "8px 12px",
-                  maxWidth: "65%",
+              <Box
+                sx={{
+                  bgcolor: isMe ? "primary.main" : "background.default",
+                  color: isMe ? "primary.contrastText" : "text.primary",
+                  borderRadius: isMe ? "22px 22px 6px 22px" : "22px 22px 22px 6px",
+                  px: 1.75,
+                  py: 1.25,
+                  maxWidth: { xs: "85%", md: "70%" },
                   wordBreak: "break-word",
-                  fontSize: 14,
+                  boxShadow: isMe ? "0 12px 24px rgba(15,118,110,0.2)" : "none",
                 }}
               >
                 {msg.content}
-              </div>
+              </Box>
 
-              {/* Время */}
-              <span style={{ fontSize: 11, color: "#aaa", marginTop: 2, paddingLeft: isMe ? 0 : 4, paddingRight: isMe ? 4 : 0 }}>
+              <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, px: 0.5 }}>
                 {new Date(msg.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-              </span>
-            </div>
+              </Typography>
+            </Box>
           );
         })}
         <div ref={bottomRef} />
-      </div>
+      </Box>
 
       {readOnly ? (
-        <div
-          style={{
-            borderTop: "1px solid #e0e0e0",
-            padding: 12,
-            color: "#666",
-            fontSize: 13,
-            background: "#fafafa",
-          }}
-        >
+        <Alert severity="warning" sx={{ borderRadius: 0 }}>
           Чат доступен только для просмотра.
-        </div>
+        </Alert>
       ) : (
-        <div style={{ borderTop: "1px solid #e0e0e0", padding: 12, display: "flex", gap: 8 }}>
-          <textarea
+        <Box sx={{ borderTop: "1px solid", borderColor: "divider", p: 2.5, display: "flex", gap: 1.5, alignItems: "flex-end" }}>
+          <TextField
             value={content}
             onChange={(e) => {
               setContent(e.target.value);
@@ -139,50 +168,32 @@ function ChatWindow({ chatId, participants, readOnly = false }: Props) {
               }
             }}
             onKeyDown={handleKeyDown}
-            placeholder="Сообщение... (Enter — отправить)"
-            rows={2}
-            style={{
+            placeholder="Сообщение... Enter отправляет, Shift+Enter переносит строку"
+            multiline
+            minRows={2}
+            maxRows={5}
+            fullWidth
+            sx={{
               flex: 1,
-              resize: "none",
-              padding: 8,
-              borderRadius: 4,
-              border: "1px solid #ccc",
-              fontFamily: "inherit",
-              fontSize: 14,
             }}
           />
-          <button
+          <Button
             onClick={() => void handleSend()}
             disabled={!content.trim() || isSending}
-            style={{
-              padding: "8px 20px",
-              borderRadius: 4,
-              border: "none",
-              cursor: !content.trim() || isSending ? "default" : "pointer",
-              background: "#1976d2",
-              color: "#fff",
-              alignSelf: "flex-end",
-              opacity: content.trim() && !isSending ? 1 : 0.5,
-            }}
+            variant="contained"
+            startIcon={<SendOutlinedIcon />}
+            sx={{ minWidth: 132, alignSelf: "stretch" }}
           >
             {isSending ? "Отправка..." : "Отправить"}
-          </button>
-        </div>
+          </Button>
+        </Box>
       )}
       {sendError && (
-        <div
-          style={{
-            borderTop: readOnly ? undefined : "1px solid #f0d3d3",
-            padding: "10px 12px",
-            color: "#b42318",
-            background: "#fef3f2",
-            fontSize: 13,
-          }}
-        >
+        <Alert severity="error" sx={{ borderRadius: 0 }}>
           {sendError}
-        </div>
+        </Alert>
       )}
-    </div>
+    </Paper>
   );
 }
 

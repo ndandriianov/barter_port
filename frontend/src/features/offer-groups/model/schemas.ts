@@ -15,6 +15,7 @@ export const offerGroupSchema = z.object({
   id: z.string(),
   name: z.string(),
   description: z.string().nullish(),
+  draftDealsCount: z.number().int().nonnegative().nullish(),
   units: z.array(offerGroupUnitSchema),
 });
 

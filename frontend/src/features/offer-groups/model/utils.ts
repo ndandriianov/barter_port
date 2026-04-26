@@ -13,6 +13,21 @@ export function getOfferGroupVariantCount(group: OfferGroup): number {
   return group.units.reduce((total, unit) => total + unit.offers.length, 0);
 }
 
+export function formatOfferGroupDraftDealsCount(count: number): string {
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+
+  if (mod10 === 1 && mod100 !== 11) {
+    return `${count} черновик`;
+  }
+
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
+    return `${count} черновика`;
+  }
+
+  return `${count} черновиков`;
+}
+
 export function getOfferGroupUnitActions(group: OfferGroup): OfferAction[] {
   return group.units
     .map((unit) => unit.offers[0]?.action)

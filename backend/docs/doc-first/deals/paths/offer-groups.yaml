@@ -12,11 +12,27 @@ offerGroups:
       - список `units`
       - список `offers` внутри каждого `unit`
 
+      Поле `draftDealsCount` возвращается только если пользователь запрашивает
+      свои `offer_groups`. Для чужих `offer_groups` это поле отсутствует.
+
       Endpoint является альтернативой `GET /offers` для композитных объявлений
       и не заменяет существующий список обычных объявлений.
     operationId: listOfferGroups
     security:
       - bearerAuth: [ ]
+    parameters:
+      - name: my
+        in: query
+        required: false
+        schema:
+          type: boolean
+        description: |
+          Если `true`, endpoint возвращает только `offer_group`, принадлежащие
+          текущему пользователю. В этом режиме для элементов списка также
+          заполняется поле `draftDealsCount`.
+
+          Если параметр не передан или равен `false`, endpoint возвращает общий
+          список `offer_group`, а поле `draftDealsCount` не включается.
     responses:
       '200':
         description: Offer groups list
@@ -26,6 +42,12 @@ offerGroups:
               $ref: '../components/responses.yaml#/ListOfferGroupsResponse'
       '401':
         description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '400':
+        description: Invalid query parameters
         content:
           application/json:
             schema:
@@ -125,6 +147,9 @@ offerGroupById:
 
       Этот endpoint нужен клиенту, чтобы пользователь мог выбрать конкретный `offer`
       из каждой OR-группы перед созданием `draft deal`.
+
+      Поле `draftDealsCount` возвращается только если запрошенный `offer_group`
+      принадлежит текущему пользователю. Для чужого `offer_group` это поле отсутствует.
     operationId: getOfferGroupById
     security:
       - bearerAuth: [ ]
@@ -190,6 +215,7 @@ offerGroupDrafts:
       Каждый выбранный `offer` и `responderOfferId` попадает в `draft deal` с `quantity = 1`.
 
       После успешной валидации сервер формирует обычный `draft deal`,
+      записывает в него `offerGroupId`, равный `{offerGroupId}`,
       после чего продолжает работать существующая логика подтверждения,
       отмены и превращения черновика в `deal`.
 

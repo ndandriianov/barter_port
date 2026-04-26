@@ -12,15 +12,21 @@ interface OfferGroupsListWidgetProps {
 
 function OfferGroupsListWidget({ mode }: OfferGroupsListWidgetProps) {
   const { data: me } = usersApi.useGetCurrentUserQuery();
-  const { data, isLoading, error } = offerGroupsApi.useGetOfferGroupsQuery();
+  const { data, isLoading, error } = offerGroupsApi.useGetOfferGroupsQuery(
+    mode === "mine" ? { my: true } : undefined,
+  );
 
   const items = useMemo(() => {
     if (!data) {
       return [] as OfferGroup[];
     }
 
+    if (mode === "mine") {
+      return data;
+    }
+
     if (!me) {
-      return mode === "mine" ? [] : data;
+      return data;
     }
 
     return data.filter((group) => {
@@ -29,7 +35,7 @@ function OfferGroupsListWidget({ mode }: OfferGroupsListWidgetProps) {
         return false;
       }
 
-      return mode === "mine" ? ownerId === me.id : ownerId !== me.id;
+      return ownerId !== me.id;
     });
   }, [data, me, mode]);
 

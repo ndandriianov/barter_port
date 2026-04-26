@@ -131,9 +131,9 @@ func main() {
 	}
 
 	adminChecker := authkit.NewAdminChecker(authClient)
-	offersService := offers.NewService(db, offersRepo, usersClient, offerPhotoStorage, adminChecker, logg)
-
 	draftsRepo := drafts.NewRepository()
+	offersService := offers.NewService(db, offersRepo, draftsRepo, usersClient, offerPhotoStorage, adminChecker, logg)
+
 	dealsRepo := deals.NewRepository()
 	failuresRepo := failuresrepo.NewRepository(dealsRepo)
 	joinsRepo := joins.NewRepository()

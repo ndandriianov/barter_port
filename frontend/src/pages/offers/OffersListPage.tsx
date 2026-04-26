@@ -5,8 +5,16 @@ import FavoriteBorderOutlinedIcon from "@mui/icons-material/FavoriteBorderOutlin
 import LayersOutlinedIcon from "@mui/icons-material/LayersOutlined";
 import NotificationsActiveOutlinedIcon from "@mui/icons-material/NotificationsActiveOutlined";
 import OffersListWidget from "@/widgets/offers/OffersListWidget.tsx";
+import { appRoutes } from "@/shared/config/appRoutes.ts";
 
-type OffersTab = "others" | "favorites" | "subscriptions" | "mine";
+export type OffersTab = "others" | "favorites" | "subscriptions" | "mine";
+
+interface OffersListPageProps {
+  forcedTab?: OffersTab;
+  title?: string;
+  description?: string;
+  hideTabs?: boolean;
+}
 
 const tabMeta: Record<OffersTab, { title: string; description: string }> = {
   others: {
@@ -31,10 +39,10 @@ function isOffersTab(value: string | null): value is OffersTab {
   return value === "others" || value === "favorites" || value === "subscriptions" || value === "mine";
 }
 
-function OffersListPage() {
+function OffersListPage({ forcedTab, title, description, hideTabs = false }: OffersListPageProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const rawTab = searchParams.get("tab");
-  const tab: OffersTab = isOffersTab(rawTab) ? rawTab : "others";
+  const tab: OffersTab = forcedTab ?? (isOffersTab(rawTab) ? rawTab : "others");
 
   const handleTabChange = (nextTab: OffersTab) => {
     const nextParams = new URLSearchParams();
@@ -47,17 +55,17 @@ function OffersListPage() {
       <Box display="flex" justifyContent="space-between" alignItems="flex-start" gap={2} mb={3} flexWrap="wrap">
         <div>
           <Typography variant="h4" fontWeight={700} mb={1}>
-            Объявления
+            {title ?? "Объявления"}
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            {tabMeta[tab].description}
+            {description ?? tabMeta[tab].description}
           </Typography>
         </div>
         <Button
           variant="contained"
           startIcon={<AddIcon />}
           component={RouterLink}
-          to="/offers/create"
+          to={appRoutes.market.createOffer}
         >
           Создать
         </Button>
@@ -66,47 +74,49 @@ function OffersListPage() {
             variant="outlined"
             startIcon={<LayersOutlinedIcon />}
             component={RouterLink}
-            to="/offer-groups"
+            to={appRoutes.market.exchangeGroups}
           >
             Композитные
           </Button>
         </Stack>
       </Box>
 
-      <Paper variant="outlined" sx={{ p: 1, mb: 3 }}>
-        <ButtonGroup
-          fullWidth
-          variant="text"
-          sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(4, 1fr)" } }}
-        >
-          <Button
-            variant={tab === "others" ? "contained" : "text"}
-            onClick={() => handleTabChange("others")}
+      {!hideTabs && (
+        <Paper variant="outlined" sx={{ p: 1, mb: 3 }}>
+          <ButtonGroup
+            fullWidth
+            variant="text"
+            sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "repeat(4, 1fr)" } }}
           >
-            Все объявления
-          </Button>
-          <Button
-            variant={tab === "favorites" ? "contained" : "text"}
-            onClick={() => handleTabChange("favorites")}
-            startIcon={<FavoriteBorderOutlinedIcon />}
-          >
-            Избранное
-          </Button>
-          <Button
-            variant={tab === "subscriptions" ? "contained" : "text"}
-            onClick={() => handleTabChange("subscriptions")}
-            startIcon={<NotificationsActiveOutlinedIcon />}
-          >
-            Подписки
-          </Button>
-          <Button
-            variant={tab === "mine" ? "contained" : "text"}
-            onClick={() => handleTabChange("mine")}
-          >
-            Только мои
-          </Button>
-        </ButtonGroup>
-      </Paper>
+            <Button
+              variant={tab === "others" ? "contained" : "text"}
+              onClick={() => handleTabChange("others")}
+            >
+              Все объявления
+            </Button>
+            <Button
+              variant={tab === "favorites" ? "contained" : "text"}
+              onClick={() => handleTabChange("favorites")}
+              startIcon={<FavoriteBorderOutlinedIcon />}
+            >
+              Избранное
+            </Button>
+            <Button
+              variant={tab === "subscriptions" ? "contained" : "text"}
+              onClick={() => handleTabChange("subscriptions")}
+              startIcon={<NotificationsActiveOutlinedIcon />}
+            >
+              Подписки
+            </Button>
+            <Button
+              variant={tab === "mine" ? "contained" : "text"}
+              onClick={() => handleTabChange("mine")}
+            >
+              Только мои
+            </Button>
+          </ButtonGroup>
+        </Paper>
+      )}
 
       <Typography variant="h5" fontWeight={700} mb={2}>
         {tabMeta[tab].title}
