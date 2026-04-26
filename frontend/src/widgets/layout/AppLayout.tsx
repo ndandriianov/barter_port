@@ -128,7 +128,7 @@ function AppLayout() {
               Barter Port
             </Typography>
             <Typography variant="caption" color="text.secondary">
-              Workflow-first marketplace
+              Обмен товарами без денег
             </Typography>
           </Box>
 
