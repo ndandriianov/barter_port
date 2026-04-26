@@ -2,6 +2,7 @@ import { Box, Button, ButtonGroup, Stack } from "@mui/material";
 import { Link as RouterLink } from "react-router-dom";
 import MyReviewsWidget from "@/widgets/reviews/MyReviewsWidget.tsx";
 import AboutMeReviewsWidget from "@/widgets/reviews/AboutMeReviewsWidget.tsx";
+import usePendingReviews from "@/features/reviews/model/usePendingReviews.ts";
 import { appRoutes } from "@/shared/config/appRoutes.ts";
 import ProfileSectionShell from "@/widgets/profile/ProfileSectionShell.tsx";
 
@@ -10,13 +11,16 @@ interface ProfileReviewsPageProps {
 }
 
 function ProfileReviewsPage({ mode }: ProfileReviewsPageProps) {
+  const { pendingCount, isDealsLoading, isPendingLoading } = usePendingReviews();
+  const pendingCountLabel = isDealsLoading || isPendingLoading ? "..." : String(pendingCount);
+
   return (
     <ProfileSectionShell
       title={mode === "mine" ? "Мои отзывы" : "Отзывы обо мне"}
       description="В профиле остаётся только архив отзывов и представление вашей истории как участника сделок."
       actions={
         <Button component={RouterLink} to={appRoutes.deals.reviews} variant="contained">
-          Оставить отзыв
+          {`Оставить отзыв (${pendingCountLabel})`}
         </Button>
       }
     >
