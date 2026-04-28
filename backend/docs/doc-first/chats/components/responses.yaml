@@ -6,12 +6,12 @@ ErrorResponse:
       example: Вы отправили некорректный запрос
 
 CreateChatResponse:
-  $ref: './schemas.yaml#/Chat'
+  $ref: '../components/schemas.yaml#/Chat'
 
 ListChatsResponse:
   type: array
   items:
-    $ref: './schemas.yaml#/Chat'
+    $ref: '../components/schemas.yaml#/Chat'
 
 GetMessagesResponse:
   type: array
