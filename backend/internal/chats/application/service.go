@@ -2,6 +2,7 @@ package application
 
 import (
 	dealspb "barter-port/contracts/grpc/deals/v1"
+	userspb "barter-port/contracts/grpc/users/v1"
 	"barter-port/internal/chats/domain"
 	"barter-port/pkg/authkit"
 	"errors"
@@ -25,6 +26,7 @@ type ChatsRepository interface {
 type Service struct {
 	repo         ChatsRepository
 	dealsClient  dealspb.DealsServiceClient
+	usersClient  userspb.UsersServiceClient
 	adminChecker *authkit.AdminChecker
 }
 
@@ -39,6 +41,11 @@ func (s *Service) WithAdminChecker(checker *authkit.AdminChecker) *Service {
 
 func (s *Service) WithDealsClient(client dealspb.DealsServiceClient) *Service {
 	s.dealsClient = client
+	return s
+}
+
+func (s *Service) WithUsersClient(client userspb.UsersServiceClient) *Service {
+	s.usersClient = client
 	return s
 }
 
@@ -90,6 +97,12 @@ func (s *Service) GetDealChat(ctx context.Context, userID, dealID uuid.UUID) (*d
 		return nil, fmt.Errorf("repo.GetChatByID: %w", err)
 	}
 
+	info, err := s.usersClient.GetUsersWithInfo(ctx, &userspb.GetUsersWithInfoRequest{Ids: chat.GetParticipantIdsToString()})
+	if err != nil {
+		return nil, fmt.Errorf("usersClient.GetUsersWithInfo: %w", err)
+	}
+	chat.Participants = chatParticipantsFromUserInfo(info.GetUsers())
+
 	return chat, nil
 }
 
@@ -99,6 +112,16 @@ func (s *Service) ListChatsForUser(ctx context.Context, userID uuid.UUID) ([]dom
 	if err != nil {
 		return nil, fmt.Errorf("repo.ListChatsForUser: %w", err)
 	}
+
+	for i, chat := range chats {
+		info, err := s.usersClient.GetUsersWithInfo(ctx, &userspb.GetUsersWithInfoRequest{Ids: chat.GetParticipantIdsToString()})
+		if err != nil {
+			return nil, fmt.Errorf("usersClient.GetUsersWithInfo: %w", err)
+		}
+
+		chats[i].Participants = chatParticipantsFromUserInfo(info.GetUsers())
+	}
+
 	return chats, nil
 }
 
@@ -200,4 +223,19 @@ func localizeDealStatus(status string) string {
 	default:
 		return status
 	}
+}
+
+func chatParticipantsFromUserInfo(userInfo []*userspb.UserInfo) []domain.ChatParticipant {
+	participants := make([]domain.ChatParticipant, len(userInfo))
+	for i, info := range userInfo {
+		var name *string
+		if info.GetName() != "" {
+			name = &info.Name
+		}
+		participants[i] = domain.ChatParticipant{
+			ID:   uuid.MustParse(info.GetId()),
+			Name: name,
+		}
+	}
+	return participants
 }

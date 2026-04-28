@@ -1,9 +1,14 @@
 import {z} from "zod";
 
+export const chatParticipantSchema = z.object({
+  user_id: z.string(),
+  user_name: z.string().nullish(),
+});
+
 export const chatSchema = z.object({
   id: z.string(),
   deal_id: z.string().nullable().optional(),
-  participants: z.array(z.string()),
+  participants: z.array(chatParticipantSchema),
   created_at: z.string(),
 });
 

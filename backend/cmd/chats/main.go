@@ -62,7 +62,8 @@ func main() {
 	repo := repository.NewRepository(db)
 	chatsService := application.NewService(repo).
 		WithAdminChecker(authkit.NewAdminChecker(authClient)).
-		WithDealsClient(dealsClient)
+		WithDealsClient(dealsClient).
+		WithUsersClient(usersClient)
 
 	validator, err := bootstrap.InitLocalJWTFromConfig(cfg)
 	if err != nil {

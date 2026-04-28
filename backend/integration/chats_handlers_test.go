@@ -76,6 +76,56 @@ func hasUser(subscriptions usertypes.GetSubscriptionsResponse, userID uuid.UUID)
 	return false
 }
 
+func updateUserName(t *testing.T, fixture *Fixture, userID uuid.UUID, name string) {
+	t.Helper()
+
+	payload := []byte(`{"name":"` + name + `"}`)
+	req, err := http.NewRequest(http.MethodPatch, fixture.UsersURL+"/users/me", bytes.NewReader(payload))
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userID))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = resp.Body.Close() })
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+}
+
+func requireParticipantNames(t *testing.T, participants []chattypes.Participant, expected map[uuid.UUID]string) {
+	t.Helper()
+
+	require.Len(t, participants, len(expected))
+
+	actual := make(map[uuid.UUID]string, len(participants))
+	for _, participant := range participants {
+		require.NotNil(t, participant.UserName)
+		actual[participant.UserId] = *participant.UserName
+	}
+
+	for userID, expectedName := range expected {
+		actualName, ok := actual[userID]
+		require.True(t, ok, "participant %s not found in response", userID)
+		require.Equal(t, expectedName, actualName)
+	}
+}
+
+func listChats(t *testing.T, fixture *Fixture, userID uuid.UUID) []chattypes.Chat {
+	t.Helper()
+
+	req, err := http.NewRequest(http.MethodGet, fixture.ChatsURL+"/chats/", nil)
+	require.NoError(t, err)
+	req.Header.Set("Authorization", "Bearer "+mustAccessToken(t, userID))
+
+	resp, err := http.DefaultClient.Do(req)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = resp.Body.Close() })
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var chats []chattypes.Chat
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&chats))
+	return chats
+}
+
 func TestChatsCreateDirectChatCreated(t *testing.T) {
 	t.Parallel()
 	dumpChatsLogs(t)
@@ -86,6 +136,11 @@ func TestChatsCreateDirectChatCreated(t *testing.T) {
 	target := registerAuthUser(t, fixture)
 	waitForUsersProjection(t, fixture, requester.UserID)
 	waitForUsersProjection(t, fixture, target.UserID)
+
+	requesterName := "Requester " + requester.UserID.String()[:8]
+	targetName := "Target " + target.UserID.String()[:8]
+	updateUserName(t, fixture, requester.UserID, requesterName)
+	updateUserName(t, fixture, target.UserID, targetName)
 
 	// Для успешного createChat по контракту target должен быть подписан на requester.
 	subResp := subscribeUser(t, fixture, target.UserID, requester.UserID)
@@ -105,6 +160,14 @@ func TestChatsCreateDirectChatCreated(t *testing.T) {
 	// CheckSubscription должен автоматически создать обратную подписку requester -> target.
 	subs := getSubscriptions(t, fixture, requester.UserID)
 	require.True(t, hasUser(subs, target.UserID))
+
+	requesterChats := listChats(t, fixture, requester.UserID)
+	require.Len(t, requesterChats, 1)
+	require.Equal(t, chat.Id, requesterChats[0].Id)
+	requireParticipantNames(t, requesterChats[0].Participants, map[uuid.UUID]string{
+		requester.UserID: requesterName,
+		target.UserID:    targetName,
+	})
 }
 
 func TestChatsCreateDirectChatForbiddenWhenNoIncomingSubscription(t *testing.T) {

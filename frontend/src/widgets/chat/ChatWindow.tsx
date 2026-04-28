@@ -12,12 +12,13 @@ import {
 import SendOutlinedIcon from "@mui/icons-material/SendOutlined";
 import chatsApi from "@/features/chats/api/chatsApi.ts";
 import usersApi from "@/features/users/api/usersApi.ts";
-import type { Message, User } from "@/features/chats/model/types.ts";
+import type { ChatParticipant, Message } from "@/features/chats/model/types.ts";
 import { getErrorMessage } from "@/shared/utils/getErrorMessage.ts";
+import { getUserDisplayName } from "@/shared/utils/getUserDisplayName.ts";
 
 interface Props {
   chatId: string;
-  participants: string[];
+  participants: ChatParticipant[];
   readOnly?: boolean;
 }
 
@@ -30,19 +31,27 @@ function ChatWindow({ chatId, participants, readOnly = false }: Props) {
 
   const { data: messages = [], refetch } = chatsApi.useGetMessagesQuery({ chatId });
   const { data: me } = usersApi.useGetCurrentUserQuery();
-  const { data: allUsers = [] } = chatsApi.useListUsersQuery();
   const [sendMessage, { isLoading: isSending }] = chatsApi.useSendMessageMutation();
 
-  // Map userId → name for participants
   const userMap = new Map<string, string>(
-    allUsers
-      .filter((u: User) => participants.includes(u.id))
-      .map((u: User) => [u.id, u.name])
+    participants.map((participant) => [
+      participant.user_id,
+      getUserDisplayName(participant.user_name, participant.user_id),
+    ]),
   );
 
-  // Fallback: if a sender isn't in participants list (e.g. deal chat), still show short id
   function getSenderLabel(senderId: string): string {
-    return userMap.get(senderId) ?? senderId.slice(0, 8);
+    return userMap.get(senderId) ?? getUserDisplayName(undefined, senderId);
+  }
+
+  function getParticipantsLabel(): string {
+    if (!participants.length) {
+      return "Состав участников уточняется";
+    }
+
+    return participants
+      .map((participant) => getUserDisplayName(participant.user_name, participant.user_id))
+      .join(", ");
   }
 
   useEffect(() => {
@@ -100,7 +109,7 @@ function ChatWindow({ chatId, participants, readOnly = false }: Props) {
               Диалог
             </Typography>
             <Typography variant="body2" color="text.secondary">
-              {participants.length > 0 ? `${participants.length} участников` : "Состав участников уточняется"}
+              {getParticipantsLabel()}
             </Typography>
           </div>
           {readOnly ? <Chip label="Только чтение" color="warning" /> : <Chip label="Активен" color="success" variant="outlined" />}
