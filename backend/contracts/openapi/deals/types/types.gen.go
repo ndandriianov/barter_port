@@ -225,6 +225,260 @@ type AddDealItemRequest struct {
 	Quantity int `json:"quantity"`
 }
 
+// AdminDealStatusDistribution defines model for AdminDealStatusDistribution.
+type AdminDealStatusDistribution struct {
+	// Cancelled Число сделок в статусе `Cancelled`
+	Cancelled int `json:"cancelled"`
+
+	// Completed Число сделок в статусе `Completed`
+	Completed int `json:"completed"`
+
+	// Confirmed Число сделок в статусе `Confirmed`
+	Confirmed int `json:"confirmed"`
+
+	// Discussion Число сделок в статусе `Discussion`
+	Discussion int `json:"discussion"`
+
+	// Failed Число сделок в статусе `Failed`
+	Failed int `json:"failed"`
+
+	// LookingForParticipants Число сделок в статусе `LookingForParticipants`
+	LookingForParticipants int `json:"lookingForParticipants"`
+}
+
+// AdminHiddenOfferStatistics defines model for AdminHiddenOfferStatistics.
+type AdminHiddenOfferStatistics struct {
+	// HiddenByAuthor Число объявлений, скрытых самим пользователем
+	HiddenByAuthor int `json:"hiddenByAuthor"`
+
+	// Moderated Число объявлений, скрытых модератором по результатам жалоб
+	Moderated int `json:"moderated"`
+}
+
+// AdminOfferActionDistribution defines model for AdminOfferActionDistribution.
+type AdminOfferActionDistribution struct {
+	// Give Число объявлений направления `give`
+	Give int `json:"give"`
+
+	// Take Число объявлений направления `take`
+	Take int `json:"take"`
+}
+
+// AdminOfferTypeDistribution defines model for AdminOfferTypeDistribution.
+type AdminOfferTypeDistribution struct {
+	// Good Число объявлений типа `good`
+	Good int `json:"good"`
+
+	// Service Число объявлений типа `service`
+	Service int `json:"service"`
+}
+
+// AdminPlatformDealStatistics defines model for AdminPlatformDealStatistics.
+type AdminPlatformDealStatistics struct {
+	// AverageParticipants Среднее число участников в сделке
+	AverageParticipants float64                     `json:"averageParticipants"`
+	ByStatus            AdminDealStatusDistribution `json:"byStatus"`
+
+	// MultiPartyShare Доля сделок, в которых участвует более двух пользователей
+	MultiPartyShare float64 `json:"multiPartyShare"`
+
+	// SuccessfulConversionRate Доля успешных сделок среди всех завершённых сделок.
+	// Под завершёнными понимаются сделки в терминальных статусах:
+	// `Completed`, `Failed`, `Cancelled`.
+	SuccessfulConversionRate float64 `json:"successfulConversionRate"`
+
+	// Total Общее число сделок
+	Total int `json:"total"`
+}
+
+// AdminPlatformOfferStatistics defines model for AdminPlatformOfferStatistics.
+type AdminPlatformOfferStatistics struct {
+	// AveragePerUser Среднее число объявлений на одного пользователя
+	AveragePerUser float64 `json:"averagePerUser"`
+
+	// AverageRating Средний рейтинг объявлений по платформе.
+	// Рассчитывается по отзывам, содержащим `offer_id`.
+	// `null`, если на платформе ещё нет таких отзывов.
+	AverageRating *float64                     `json:"averageRating,omitempty"`
+	ByAction      AdminOfferActionDistribution `json:"byAction"`
+	ByType        AdminOfferTypeDistribution   `json:"byType"`
+
+	// Drafts Число черновиков сделок
+	Drafts int                        `json:"drafts"`
+	Hidden AdminHiddenOfferStatistics `json:"hidden"`
+
+	// TopByFavorites Топ объявлений по числу добавлений в избранное
+	TopByFavorites []AdminTopFavoriteOfferStat `json:"topByFavorites"`
+
+	// TopTags Теги с наибольшим числом объявлений
+	TopTags []AdminTopTagStat `json:"topTags"`
+
+	// Total Общее число объявлений на платформе
+	Total int `json:"total"`
+
+	// TotalViews Общее число просмотров объявлений
+	TotalViews int64 `json:"totalViews"`
+}
+
+// AdminPlatformReportStatistics defines model for AdminPlatformReportStatistics.
+type AdminPlatformReportStatistics struct {
+	// AdminFailureResolutions Число решений администратора по спорам о провале сделок
+	AdminFailureResolutions int `json:"adminFailureResolutions"`
+
+	// BlockedOffers Число объявлений, скрытых модератором по итогам жалоб
+	BlockedOffers int `json:"blockedOffers"`
+
+	// Pending Число необработанных жалоб
+	Pending int `json:"pending"`
+
+	// TopUsersByReceivedReports Топ пользователей по числу полученных жалоб на их объявления
+	TopUsersByReceivedReports []AdminTopReportedUserStat `json:"topUsersByReceivedReports"`
+
+	// Total Общее число жалоб на объявления
+	Total int `json:"total"`
+}
+
+// AdminPlatformReviewStatistics defines model for AdminPlatformReviewStatistics.
+type AdminPlatformReviewStatistics struct {
+	// AverageRating Средний рейтинг по всей платформе; `null`, если отзывов пока нет
+	AverageRating      *float64                `json:"averageRating,omitempty"`
+	RatingDistribution AdminRatingDistribution `json:"ratingDistribution"`
+
+	// Total Общее число отзывов на платформе
+	Total int `json:"total"`
+}
+
+// AdminPlatformStatistics defines model for AdminPlatformStatistics.
+type AdminPlatformStatistics struct {
+	Deals   AdminPlatformDealStatistics   `json:"deals"`
+	Offers  AdminPlatformOfferStatistics  `json:"offers"`
+	Reports AdminPlatformReportStatistics `json:"reports"`
+	Reviews AdminPlatformReviewStatistics `json:"reviews"`
+}
+
+// AdminRatingDistribution defines model for AdminRatingDistribution.
+type AdminRatingDistribution struct {
+	// FiveStars Число отзывов с оценкой 5
+	FiveStars int `json:"fiveStars"`
+
+	// FourStars Число отзывов с оценкой 4
+	FourStars int `json:"fourStars"`
+
+	// OneStar Число отзывов с оценкой 1
+	OneStar int `json:"oneStar"`
+
+	// ThreeStars Число отзывов с оценкой 3
+	ThreeStars int `json:"threeStars"`
+
+	// TwoStars Число отзывов с оценкой 2
+	TwoStars int `json:"twoStars"`
+}
+
+// AdminTopFavoriteOfferStat defines model for AdminTopFavoriteOfferStat.
+type AdminTopFavoriteOfferStat struct {
+	// AuthorId UUID автора объявления
+	AuthorId openapi_types.UUID `json:"authorId"`
+
+	// FavoritesCount Число пользователей, добавивших объявление в избранное
+	FavoritesCount int `json:"favoritesCount"`
+
+	// Name Заголовок объявления
+	Name string `json:"name"`
+
+	// OfferId UUID объявления
+	OfferId openapi_types.UUID `json:"offerId"`
+}
+
+// AdminTopReportedUserStat defines model for AdminTopReportedUserStat.
+type AdminTopReportedUserStat struct {
+	// ReportsCount Количество жалоб, полученных на объявления пользователя
+	ReportsCount int `json:"reportsCount"`
+
+	// UserId UUID пользователя
+	UserId openapi_types.UUID `json:"userId"`
+}
+
+// AdminTopTagStat defines model for AdminTopTagStat.
+type AdminTopTagStat struct {
+	// OffersCount Количество объявлений, в которых используется тег
+	OffersCount int `json:"offersCount"`
+
+	// Tag Имя тега. Сервер выполняет нормализацию `trim + lowercase`.
+	// Допустимы только латинские и кириллические буквы.
+	Tag TagName `json:"tag"`
+}
+
+// AdminUserDealStatistics defines model for AdminUserDealStatistics.
+type AdminUserDealStatistics struct {
+	// Active Число активных сделок пользователя
+	Active int `json:"active"`
+
+	// Cancelled Число отменённых сделок пользователя
+	Cancelled int `json:"cancelled"`
+
+	// Completed Число завершённых сделок пользователя
+	Completed int                           `json:"completed"`
+	Failed    AdminUserFailedDealStatistics `json:"failed"`
+}
+
+// AdminUserFailedDealStatistics defines model for AdminUserFailedDealStatistics.
+type AdminUserFailedDealStatistics struct {
+	// Affected Число провальных сделок, где пользователь не указан виновным
+	// и считается пострадавшей стороной
+	Affected int `json:"affected"`
+
+	// Responsible Число провальных сделок, где пользователь признан виновным
+	Responsible int `json:"responsible"`
+
+	// Total Общее число провальных сделок пользователя
+	Total int `json:"total"`
+}
+
+// AdminUserOfferStatistics defines model for AdminUserOfferStatistics.
+type AdminUserOfferStatistics struct {
+	// Published Число опубликованных объявлений пользователя
+	Published int `json:"published"`
+
+	// TotalViews Суммарное число просмотров объявлений пользователя
+	TotalViews int64 `json:"totalViews"`
+}
+
+// AdminUserReceivedReportStatistics defines model for AdminUserReceivedReportStatistics.
+type AdminUserReceivedReportStatistics struct {
+	// Accepted Число принятых жалоб, полученных пользователем
+	Accepted int `json:"accepted"`
+
+	// Rejected Число отклонённых жалоб, полученных пользователем
+	Rejected int `json:"rejected"`
+}
+
+// AdminUserReportStatistics defines model for AdminUserReportStatistics.
+type AdminUserReportStatistics struct {
+	// Filed Число жалоб, отправленных пользователем
+	Filed    int                               `json:"filed"`
+	Received AdminUserReceivedReportStatistics `json:"received"`
+}
+
+// AdminUserReviewStatistics defines model for AdminUserReviewStatistics.
+type AdminUserReviewStatistics struct {
+	// AverageReceivedRating Средний рейтинг по полученным отзывам; `null`, если отзывов нет
+	AverageReceivedRating *float64 `json:"averageReceivedRating,omitempty"`
+
+	// Received Число отзывов, полученных пользователем
+	Received int `json:"received"`
+
+	// Written Число отзывов, оставленных пользователем
+	Written int `json:"written"`
+}
+
+// AdminUserStatistics defines model for AdminUserStatistics.
+type AdminUserStatistics struct {
+	Deals   AdminUserDealStatistics   `json:"deals"`
+	Offers  AdminUserOfferStatistics  `json:"offers"`
+	Reports AdminUserReportStatistics `json:"reports"`
+	Reviews AdminUserReviewStatistics `json:"reviews"`
+}
+
 // ChangeDealStatusRequest defines model for ChangeDealStatusRequest.
 type ChangeDealStatusRequest struct {
 	// ExpectedStatus Статус сделки
@@ -1368,6 +1622,17 @@ type GetMyDraftDealsParams struct {
 // ProcessJoinRequestParams defines parameters for ProcessJoinRequest.
 type ProcessJoinRequestParams struct {
 	Accept bool `form:"accept" json:"accept"`
+}
+
+// ListOfferGroupsParams defines parameters for ListOfferGroups.
+type ListOfferGroupsParams struct {
+	// My Если `true`, endpoint возвращает только `offer_group`, принадлежащие
+	// текущему пользователю. В этом режиме для элементов списка также
+	// заполняется поле `draftDealsCount`.
+	//
+	// Если параметр не передан или равен `false`, endpoint возвращает общий
+	// список `offer_group`, а поле `draftDealsCount` не включается.
+	My *bool `form:"my,omitempty" json:"my,omitempty"`
 }
 
 // ListOffersParams defines parameters for ListOffers.

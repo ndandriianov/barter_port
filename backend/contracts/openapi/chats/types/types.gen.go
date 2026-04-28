@@ -13,6 +13,17 @@ const (
 	BearerAuthScopes = "bearerAuth.Scopes"
 )
 
+// AdminChatStatistics defines model for AdminChatStatistics.
+type AdminChatStatistics struct {
+	// Total Общее число чатов на платформе
+	Total int `json:"total"`
+}
+
+// AdminPlatformStatistics defines model for AdminPlatformStatistics.
+type AdminPlatformStatistics struct {
+	Chats AdminChatStatistics `json:"chats"`
+}
+
 // Chat defines model for Chat.
 type Chat struct {
 	// CreatedAt Chat creation timestamp

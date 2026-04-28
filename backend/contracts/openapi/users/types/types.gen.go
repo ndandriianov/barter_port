@@ -37,6 +37,59 @@ func (e ReputationEventSourceType) Valid() bool {
 	}
 }
 
+// AdminPlatformReputationStatistics defines model for AdminPlatformReputationStatistics.
+type AdminPlatformReputationStatistics struct {
+	// Average Средняя репутация по всем пользователям
+	Average float64 `json:"average"`
+
+	// Median Медианная репутация по всем пользователям
+	Median float64 `json:"median"`
+
+	// TopUsers Топ-N пользователей по репутации
+	TopUsers []AdminTopUserByReputation `json:"topUsers"`
+}
+
+// AdminPlatformStatistics defines model for AdminPlatformStatistics.
+type AdminPlatformStatistics struct {
+	Reputation AdminPlatformReputationStatistics `json:"reputation"`
+}
+
+// AdminTopUserByReputation defines model for AdminTopUserByReputation.
+type AdminTopUserByReputation struct {
+	// Name User name
+	Name *Name `json:"name,omitempty"`
+
+	// ReputationPoints Current user reputation score including rewards and penalties
+	ReputationPoints ReputationPoints `json:"reputationPoints"`
+
+	// UserId User ID
+	UserId UserId `json:"userId"`
+}
+
+// AdminUserReputationStatistics defines model for AdminUserReputationStatistics.
+type AdminUserReputationStatistics struct {
+	// CurrentPoints Current user reputation score including rewards and penalties
+	CurrentPoints ReputationPoints `json:"currentPoints"`
+
+	// History История начислений и штрафов пользователя
+	History []ReputationEvent `json:"history"`
+}
+
+// AdminUserSocialStatistics defines model for AdminUserSocialStatistics.
+type AdminUserSocialStatistics struct {
+	// FollowersCount Число подписчиков пользователя
+	FollowersCount int `json:"followersCount"`
+
+	// SubscriptionsCount Число подписок пользователя
+	SubscriptionsCount int `json:"subscriptionsCount"`
+}
+
+// AdminUserStatistics defines model for AdminUserStatistics.
+type AdminUserStatistics struct {
+	Reputation AdminUserReputationStatistics `json:"reputation"`
+	Social     AdminUserSocialStatistics     `json:"social"`
+}
+
 // AvatarUploadResponse defines model for AvatarUploadResponse.
 type AvatarUploadResponse struct {
 	// AvatarUrl User avatar URL

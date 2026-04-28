@@ -3132,6 +3132,130 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /admin/statistics/platform:
+    get:
+      tags:
+        - admin
+        - statistics
+      summary: Получить статистику платформы из deals-сервиса
+      description: |
+        Возвращает агрегированную статистику платформы по домену `deals`.
+
+        Ответ содержит административные метрики по следующим сущностям:
+        - объявления;
+        - сделки;
+        - жалобы и результаты модерации;
+        - отзывы.
+
+        В статистику объявлений входят общие счётчики, распределения по типу и направлению,
+        популярные теги, среднее число объявлений на пользователя, число черновиков,
+        суммарные просмотры, топ объявлений по добавлениям в избранное
+        и средний рейтинг объявлений по отзывам.
+
+        В статистику сделок входят общее число сделок, распределение по статусам,
+        доля успешных завершений, среднее число участников и доля многосторонних сделок.
+
+        В статистику жалоб и модерации входят общее число жалоб, текущая очередь необработанных жалоб,
+        число скрытых модератором объявлений, число решений администратора по спорам о провале сделок
+        и топ пользователей по числу жалоб на их объявления.
+
+        В статистику отзывов входят общее число отзывов, средний рейтинг по платформе
+        и распределение оценок по шкале от 1 до 5.
+
+        Endpoint доступен только администратору.
+      operationId: getAdminDealsPlatformStatistics
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Агрегированная статистика платформы по домену deals
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminPlatformStatistics'
+        '401':
+          description: Не авторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Доступ только для администратора
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /admin/users/{id}/statistics:
+    get:
+      tags:
+        - admin
+        - statistics
+      summary: Получить статистику пользователя из deals-сервиса
+      description: |
+        Возвращает детализированную статистику конкретного пользователя по домену `deals`.
+
+        Ответ включает:
+        - число завершённых, активных, провальных и отменённых сделок;
+        - разбивку провальных сделок по роли пользователя: виновный или пострадавший;
+        - число опубликованных объявлений пользователя;
+        - суммарное число просмотров его объявлений;
+        - число полученных отзывов и средний рейтинг по ним;
+        - число отзывов, оставленных пользователем;
+        - число жалоб, полученных пользователем, с разбивкой на принятые и отклонённые;
+        - число жалоб, отправленных пользователем.
+
+        В ответ не входят метрики репутации, история начислений и данные о подписках:
+        эти данные находятся в зоне ответственности `users`.
+
+        Endpoint доступен только администратору.
+      operationId: getAdminDealsUserStatistics
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: UUID пользователя
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Статистика пользователя по домену deals
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUserStatistics'
+        '401':
+          description: Не авторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Доступ только для администратора
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /offer-groups:
     get:
       tags:
@@ -3154,6 +3278,19 @@ paths:
       operationId: listOfferGroups
       security:
         - bearerAuth: []
+      parameters:
+        - name: my
+          in: query
+          required: false
+          schema:
+            type: boolean
+          description: |
+            Если `true`, endpoint возвращает только `offer_group`, принадлежащие
+            текущему пользователю. В этом режиме для элементов списка также
+            заполняется поле `draftDealsCount`.
+
+            Если параметр не передан или равен `false`, endpoint возвращает общий
+            список `offer_group`, а поле `draftDealsCount` не включается.
       responses:
         '200':
           description: Offer groups list
@@ -3161,6 +3298,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ListOfferGroupsResponse'
+        '400':
+          description: Invalid query parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: Unauthorized
           content:
@@ -4762,6 +4905,438 @@ components:
           $ref: '#/components/schemas/MyReviewStats'
         reports:
           $ref: '#/components/schemas/MyReportStats'
+    AdminHiddenOfferStatistics:
+      type: object
+      required:
+        - moderated
+        - hiddenByAuthor
+      properties:
+        moderated:
+          type: integer
+          minimum: 0
+          description: Число объявлений, скрытых модератором по результатам жалоб
+        hiddenByAuthor:
+          type: integer
+          minimum: 0
+          description: Число объявлений, скрытых самим пользователем
+    AdminOfferTypeDistribution:
+      type: object
+      required:
+        - good
+        - service
+      properties:
+        good:
+          type: integer
+          minimum: 0
+          description: Число объявлений типа `good`
+        service:
+          type: integer
+          minimum: 0
+          description: Число объявлений типа `service`
+    AdminOfferActionDistribution:
+      type: object
+      required:
+        - give
+        - take
+      properties:
+        give:
+          type: integer
+          minimum: 0
+          description: Число объявлений направления `give`
+        take:
+          type: integer
+          minimum: 0
+          description: Число объявлений направления `take`
+    AdminTopTagStat:
+      type: object
+      required:
+        - tag
+        - offersCount
+      properties:
+        tag:
+          $ref: '#/components/schemas/TagName'
+        offersCount:
+          type: integer
+          minimum: 0
+          description: Количество объявлений, в которых используется тег
+    AdminTopFavoriteOfferStat:
+      type: object
+      required:
+        - offerId
+        - authorId
+        - name
+        - favoritesCount
+      properties:
+        offerId:
+          type: string
+          format: uuid
+          description: UUID объявления
+        authorId:
+          type: string
+          format: uuid
+          description: UUID автора объявления
+        name:
+          type: string
+          description: Заголовок объявления
+        favoritesCount:
+          type: integer
+          minimum: 0
+          description: Число пользователей, добавивших объявление в избранное
+    AdminPlatformOfferStatistics:
+      type: object
+      required:
+        - total
+        - hidden
+        - byType
+        - byAction
+        - topTags
+        - averagePerUser
+        - drafts
+        - totalViews
+        - topByFavorites
+      properties:
+        total:
+          type: integer
+          minimum: 0
+          description: Общее число объявлений на платформе
+        hidden:
+          $ref: '#/components/schemas/AdminHiddenOfferStatistics'
+        byType:
+          $ref: '#/components/schemas/AdminOfferTypeDistribution'
+        byAction:
+          $ref: '#/components/schemas/AdminOfferActionDistribution'
+        topTags:
+          type: array
+          description: Теги с наибольшим числом объявлений
+          items:
+            $ref: '#/components/schemas/AdminTopTagStat'
+        averagePerUser:
+          type: number
+          format: double
+          minimum: 0
+          description: Среднее число объявлений на одного пользователя
+        drafts:
+          type: integer
+          minimum: 0
+          description: Число черновиков сделок
+        totalViews:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Общее число просмотров объявлений
+        topByFavorites:
+          type: array
+          description: Топ объявлений по числу добавлений в избранное
+          items:
+            $ref: '#/components/schemas/AdminTopFavoriteOfferStat'
+        averageRating:
+          type: number
+          format: double
+          nullable: true
+          minimum: 1
+          maximum: 5
+          description: |
+            Средний рейтинг объявлений по платформе.
+            Рассчитывается по отзывам, содержащим `offer_id`.
+            `null`, если на платформе ещё нет таких отзывов.
+    AdminDealStatusDistribution:
+      type: object
+      required:
+        - lookingForParticipants
+        - discussion
+        - confirmed
+        - completed
+        - failed
+        - cancelled
+      properties:
+        lookingForParticipants:
+          type: integer
+          minimum: 0
+          description: Число сделок в статусе `LookingForParticipants`
+        discussion:
+          type: integer
+          minimum: 0
+          description: Число сделок в статусе `Discussion`
+        confirmed:
+          type: integer
+          minimum: 0
+          description: Число сделок в статусе `Confirmed`
+        completed:
+          type: integer
+          minimum: 0
+          description: Число сделок в статусе `Completed`
+        failed:
+          type: integer
+          minimum: 0
+          description: Число сделок в статусе `Failed`
+        cancelled:
+          type: integer
+          minimum: 0
+          description: Число сделок в статусе `Cancelled`
+    AdminPlatformDealStatistics:
+      type: object
+      required:
+        - total
+        - byStatus
+        - successfulConversionRate
+        - averageParticipants
+        - multiPartyShare
+      properties:
+        total:
+          type: integer
+          minimum: 0
+          description: Общее число сделок
+        byStatus:
+          $ref: '#/components/schemas/AdminDealStatusDistribution'
+        successfulConversionRate:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: |
+            Доля успешных сделок среди всех завершённых сделок.
+            Под завершёнными понимаются сделки в терминальных статусах:
+            `Completed`, `Failed`, `Cancelled`.
+        averageParticipants:
+          type: number
+          format: double
+          minimum: 0
+          description: Среднее число участников в сделке
+        multiPartyShare:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: Доля сделок, в которых участвует более двух пользователей
+    AdminTopReportedUserStat:
+      type: object
+      required:
+        - userId
+        - reportsCount
+      properties:
+        userId:
+          type: string
+          format: uuid
+          description: UUID пользователя
+        reportsCount:
+          type: integer
+          minimum: 0
+          description: Количество жалоб, полученных на объявления пользователя
+    AdminPlatformReportStatistics:
+      type: object
+      required:
+        - total
+        - pending
+        - blockedOffers
+        - adminFailureResolutions
+        - topUsersByReceivedReports
+      properties:
+        total:
+          type: integer
+          minimum: 0
+          description: Общее число жалоб на объявления
+        pending:
+          type: integer
+          minimum: 0
+          description: Число необработанных жалоб
+        blockedOffers:
+          type: integer
+          minimum: 0
+          description: Число объявлений, скрытых модератором по итогам жалоб
+        adminFailureResolutions:
+          type: integer
+          minimum: 0
+          description: Число решений администратора по спорам о провале сделок
+        topUsersByReceivedReports:
+          type: array
+          description: Топ пользователей по числу полученных жалоб на их объявления
+          items:
+            $ref: '#/components/schemas/AdminTopReportedUserStat'
+    AdminRatingDistribution:
+      type: object
+      required:
+        - oneStar
+        - twoStars
+        - threeStars
+        - fourStars
+        - fiveStars
+      properties:
+        oneStar:
+          type: integer
+          minimum: 0
+          description: Число отзывов с оценкой 1
+        twoStars:
+          type: integer
+          minimum: 0
+          description: Число отзывов с оценкой 2
+        threeStars:
+          type: integer
+          minimum: 0
+          description: Число отзывов с оценкой 3
+        fourStars:
+          type: integer
+          minimum: 0
+          description: Число отзывов с оценкой 4
+        fiveStars:
+          type: integer
+          minimum: 0
+          description: Число отзывов с оценкой 5
+    AdminPlatformReviewStatistics:
+      type: object
+      required:
+        - total
+        - ratingDistribution
+      properties:
+        total:
+          type: integer
+          minimum: 0
+          description: Общее число отзывов на платформе
+        averageRating:
+          type: number
+          format: double
+          nullable: true
+          minimum: 1
+          maximum: 5
+          description: Средний рейтинг по всей платформе; `null`, если отзывов пока нет
+        ratingDistribution:
+          $ref: '#/components/schemas/AdminRatingDistribution'
+    AdminPlatformStatistics:
+      type: object
+      required:
+        - offers
+        - deals
+        - reports
+        - reviews
+      properties:
+        offers:
+          $ref: '#/components/schemas/AdminPlatformOfferStatistics'
+        deals:
+          $ref: '#/components/schemas/AdminPlatformDealStatistics'
+        reports:
+          $ref: '#/components/schemas/AdminPlatformReportStatistics'
+        reviews:
+          $ref: '#/components/schemas/AdminPlatformReviewStatistics'
+    AdminUserFailedDealStatistics:
+      type: object
+      required:
+        - total
+        - responsible
+        - affected
+      properties:
+        total:
+          type: integer
+          minimum: 0
+          description: Общее число провальных сделок пользователя
+        responsible:
+          type: integer
+          minimum: 0
+          description: Число провальных сделок, где пользователь признан виновным
+        affected:
+          type: integer
+          minimum: 0
+          description: |
+            Число провальных сделок, где пользователь не указан виновным
+            и считается пострадавшей стороной
+    AdminUserDealStatistics:
+      type: object
+      required:
+        - completed
+        - active
+        - failed
+        - cancelled
+      properties:
+        completed:
+          type: integer
+          minimum: 0
+          description: Число завершённых сделок пользователя
+        active:
+          type: integer
+          minimum: 0
+          description: Число активных сделок пользователя
+        failed:
+          $ref: '#/components/schemas/AdminUserFailedDealStatistics'
+        cancelled:
+          type: integer
+          minimum: 0
+          description: Число отменённых сделок пользователя
+    AdminUserOfferStatistics:
+      type: object
+      required:
+        - published
+        - totalViews
+      properties:
+        published:
+          type: integer
+          minimum: 0
+          description: Число опубликованных объявлений пользователя
+        totalViews:
+          type: integer
+          format: int64
+          minimum: 0
+          description: Суммарное число просмотров объявлений пользователя
+    AdminUserReviewStatistics:
+      type: object
+      required:
+        - received
+        - written
+      properties:
+        received:
+          type: integer
+          minimum: 0
+          description: Число отзывов, полученных пользователем
+        averageReceivedRating:
+          type: number
+          format: double
+          nullable: true
+          minimum: 1
+          maximum: 5
+          description: Средний рейтинг по полученным отзывам; `null`, если отзывов нет
+        written:
+          type: integer
+          minimum: 0
+          description: Число отзывов, оставленных пользователем
+    AdminUserReceivedReportStatistics:
+      type: object
+      required:
+        - accepted
+        - rejected
+      properties:
+        accepted:
+          type: integer
+          minimum: 0
+          description: Число принятых жалоб, полученных пользователем
+        rejected:
+          type: integer
+          minimum: 0
+          description: Число отклонённых жалоб, полученных пользователем
+    AdminUserReportStatistics:
+      type: object
+      required:
+        - received
+        - filed
+      properties:
+        received:
+          $ref: '#/components/schemas/AdminUserReceivedReportStatistics'
+        filed:
+          type: integer
+          minimum: 0
+          description: Число жалоб, отправленных пользователем
+    AdminUserStatistics:
+      type: object
+      required:
+        - deals
+        - offers
+        - reviews
+        - reports
+      properties:
+        deals:
+          $ref: '#/components/schemas/AdminUserDealStatistics'
+        offers:
+          $ref: '#/components/schemas/AdminUserOfferStatistics'
+        reviews:
+          $ref: '#/components/schemas/AdminUserReviewStatistics'
+        reports:
+          $ref: '#/components/schemas/AdminUserReportStatistics'
     OfferGroupUnit:
       type: object
       required:
