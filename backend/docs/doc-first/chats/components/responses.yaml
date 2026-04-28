@@ -25,3 +25,6 @@ ListUsersResponse:
   type: array
   items:
     $ref: './schemas.yaml#/User'
+
+AdminPlatformStatisticsResponse:
+  $ref: './schemas.yaml#/AdminPlatformStatistics'

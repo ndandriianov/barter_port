@@ -1,0 +1,41 @@
+adminPlatformStatistics:
+  get:
+    tags:
+      - Admin
+      - Statistics
+    summary: Получить статистику платформы из chats-сервиса
+    description: |
+      Возвращает административные метрики, которыми владеет `chats`.
+
+      В текущем `README` к этому сервису относится только одна метрика:
+      общее число чатов на платформе.
+
+      Endpoint доступен только администратору.
+    operationId: getAdminChatsPlatformStatistics
+    security:
+      - bearerAuth: []
+    responses:
+      '200':
+        description: Агрегированная статистика платформы по домену chats
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/AdminPlatformStatisticsResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: Forbidden. Доступ только для администратора
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'

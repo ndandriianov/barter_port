@@ -8,6 +8,8 @@ servers:
   - url: 'http://localhost:80'
 
 paths:
+  /admin/statistics/platform:
+    $ref: './paths/admin-statistics.yaml#/adminPlatformStatistics'
   /chats:
     $ref: './paths/chats.yaml#/chats'
   /chats/users:
