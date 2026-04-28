@@ -238,6 +238,30 @@ func (h *Handlers) SendMessage(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusCreated, mapMessageToResp(msg))
 }
 
+func (h *Handlers) GetAdminPlatformStatistics(w http.ResponseWriter, r *http.Request) {
+	userID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
+	total, err := h.chatsService.GetAdminPlatformChatsCount(r.Context(), userID)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrForbidden):
+			httpx.WriteEmptyError(w, http.StatusForbidden)
+		default:
+			h.log.Error("error getting admin chats platform statistics", slog.Any("error", err))
+			httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, types.AdminPlatformStatistics{
+		Chats: types.AdminChatStatistics{Total: total},
+	})
+}
+
 // ================================================================================
 // GET /users — list users (for starting a new chat)
 // ================================================================================

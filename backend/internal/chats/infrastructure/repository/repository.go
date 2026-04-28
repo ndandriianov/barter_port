@@ -162,6 +162,14 @@ func (r *Repository) ListChatsForUser(ctx context.Context, userID uuid.UUID) ([]
 	return chats, nil
 }
 
+func (r *Repository) CountChats(ctx context.Context) (int, error) {
+	var count int
+	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM chats`).Scan(&count); err != nil {
+		return 0, fmt.Errorf("count chats: %w", err)
+	}
+	return count, nil
+}
+
 // IsParticipant checks if a user is a participant of a chat.
 func (r *Repository) IsParticipant(ctx context.Context, chatID, userID uuid.UUID) (bool, error) {
 	var exists bool
