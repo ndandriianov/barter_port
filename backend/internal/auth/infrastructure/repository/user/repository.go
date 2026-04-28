@@ -93,6 +93,21 @@ func (r *Repository) GetByID(ctx context.Context, exec db.DB, id uuid.UUID) (dom
 	return user, nil
 }
 
+func (r *Repository) GetStatistics(ctx context.Context, exec db.DB) (totalRegistered int, verifiedEmails int, err error) {
+	const query = `
+		SELECT
+			COUNT(*) AS total_registered,
+			COUNT(*) FILTER (WHERE email_verified) AS verified_emails
+		FROM users
+	`
+
+	if err = exec.QueryRow(ctx, query).Scan(&totalRegistered, &verifiedEmails); err != nil {
+		return 0, 0, err
+	}
+
+	return totalRegistered, verifiedEmails, nil
+}
+
 // VerifyEmailIfNotVerified marks a user's email as verified. And returns true if the email was updated,
 // false if it was already verified.
 //

@@ -16,6 +16,7 @@ var (
 	ErrTokenNotFound      = errors.New("token not found")
 
 	ErrUserNotFound       = errors.New("user not found")
+	ErrForbidden          = errors.New("forbidden")
 	ErrInvalidCredentials = errors.New("invalid credentials")
 	ErrEmailNotVerified   = errors.New("email not verified")
 	ErrIncorrectPassword  = errors.New("incorrect password")

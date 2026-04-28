@@ -49,6 +49,8 @@ func NewRouter(logger *slog.Logger, validator *validators.LocalJWT, h *Handlers)
 			r.Use(authkit.Middleware(logger, validator, nil))
 			r.Post("/change-password", h.ChangePassword)
 			r.Get("/me", h.Me)
+			r.Get("/admin/statistics/platform", h.GetAdminPlatformStatistics)
+			r.Get("/admin/users/{id}/statistics", h.GetAdminUserStatistics)
 		})
 	})
 

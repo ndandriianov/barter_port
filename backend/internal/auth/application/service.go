@@ -37,6 +37,7 @@ type UserRepo interface {
 	Create(ctx context.Context, exec db.DB, user domain.User) error
 	GetByEmail(ctx context.Context, exec db.DB, email string) (domain.User, error)
 	GetByID(ctx context.Context, exec db.DB, id uuid.UUID) (domain.User, error)
+	GetStatistics(ctx context.Context, exec db.DB) (totalRegistered int, verifiedEmails int, err error)
 	VerifyEmailIfNotVerified(ctx context.Context, exec db.DB, userID uuid.UUID) (changed bool, err error)
 	UpdatePasswordHash(ctx context.Context, exec db.DB, userID uuid.UUID, passwordHash string) error
 }
@@ -378,6 +379,53 @@ func (s *Service) IsAdminEmail(email string) bool {
 	return s.isAdminEmail(email)
 }
 
+func (s *Service) GetAdminPlatformStatistics(ctx context.Context, requesterID uuid.UUID) (AdminPlatformStatistics, error) {
+	isAdmin, err := s.IsAdmin(ctx, requesterID)
+	if err != nil {
+		return AdminPlatformStatistics{}, err
+	}
+	if !isAdmin {
+		return AdminPlatformStatistics{}, domain.ErrForbidden
+	}
+
+	totalRegistered, verifiedEmails, err := s.users.GetStatistics(ctx, s.db)
+	if err != nil {
+		return AdminPlatformStatistics{}, fmt.Errorf("failed to get auth platform statistics: %w", err)
+	}
+
+	return AdminPlatformStatistics{
+		Users: AdminPlatformUsersStatistics{
+			TotalRegistered: totalRegistered,
+			VerifiedEmails:  verifiedEmails,
+		},
+	}, nil
+}
+
+func (s *Service) GetAdminUserStatistics(
+	ctx context.Context,
+	requesterID uuid.UUID,
+	targetUserID uuid.UUID,
+) (AdminUserStatistics, error) {
+	isAdmin, err := s.IsAdmin(ctx, requesterID)
+	if err != nil {
+		return AdminUserStatistics{}, err
+	}
+	if !isAdmin {
+		return AdminUserStatistics{}, domain.ErrForbidden
+	}
+
+	user, err := s.users.GetByID(ctx, s.db, targetUserID)
+	if err != nil {
+		return AdminUserStatistics{}, err
+	}
+
+	return AdminUserStatistics{
+		UserID:        targetUserID,
+		RegisteredAt:  user.CreatedAt,
+		EmailVerified: user.EmailVerified,
+	}, nil
+}
+
 func (s *Service) isAdminEmail(email string) bool {
 	if s.adminEmail == "" {
 		return false
@@ -418,6 +466,21 @@ func (s *Service) createUser(ctx context.Context, tx pgx.Tx, userID uuid.UUID) e
 
 type LoginResult struct {
 	AccessToken string
+}
+
+type AdminPlatformStatistics struct {
+	Users AdminPlatformUsersStatistics
+}
+
+type AdminPlatformUsersStatistics struct {
+	TotalRegistered int
+	VerifiedEmails  int
+}
+
+type AdminUserStatistics struct {
+	UserID        uuid.UUID
+	RegisteredAt  time.Time
+	EmailVerified bool
 }
 
 func (s *Service) GetUserCreationStatus(ctx context.Context, userID uuid.UUID) (string, error) {
