@@ -102,7 +102,7 @@ func TestCreateChat_CheckSubscriptionSuccess(t *testing.T) {
 			if len(participantIDs) != 2 || participantIDs[0] != requesterID || participantIDs[1] != targetID {
 				t.Fatalf("unexpected participants: %v", participantIDs)
 			}
-			return &domain.Chat{ID: chatID, Participants: participantIDs, CreatedAt: time.Now()}, nil
+			return &domain.Chat{ID: chatID, Participants: domain.NewChatParticipantsWithoutNames(participantIDs), CreatedAt: time.Now()}, nil
 		},
 	}
 	usersClient := &testUsersClient{checkResp: &userspb.CheckSubscriptionResponse{IsSubscribed: true}}
