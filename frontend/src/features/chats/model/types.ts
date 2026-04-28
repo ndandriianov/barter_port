@@ -1,7 +1,12 @@
+export interface ChatParticipant {
+  user_id: string;
+  user_name?: string | null;
+}
+
 export interface Chat {
   id: string;
   deal_id?: string | null;
-  participants: string[];
+  participants: ChatParticipant[];
   created_at: string;
 }
 

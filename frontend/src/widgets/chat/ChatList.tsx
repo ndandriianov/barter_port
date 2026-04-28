@@ -14,8 +14,8 @@ import {
 import AddOutlinedIcon from "@mui/icons-material/AddOutlined";
 import ForumOutlinedIcon from "@mui/icons-material/ForumOutlined";
 import HandshakeOutlinedIcon from "@mui/icons-material/HandshakeOutlined";
-import chatsApi from "@/features/chats/api/chatsApi.ts";
 import type { Chat } from "@/features/chats/model/types.ts";
+import { getUserDisplayName } from "@/shared/utils/getUserDisplayName.ts";
 
 interface Props {
   chats: Chat[];
@@ -26,16 +26,11 @@ interface Props {
 }
 
 function ChatList({ chats, mode, selectedChatId, onSelect, onNewChat }: Props) {
-  const { data: users = [], isLoading: isUsersLoading } = chatsApi.useListUsersQuery();
-
-  const userNameById = new Map(users.map((user) => [user.id, user.name]));
-
   function getParticipantsLabel(chat: Chat): string {
-    if (isUsersLoading) return "Участники загружаются...";
     if (!chat.participants.length) return "Участники не указаны";
 
     return chat.participants
-      .map((participantId) => userNameById.get(participantId) ?? participantId.slice(0, 8))
+      .map((participant) => getUserDisplayName(participant.user_name, participant.user_id))
       .join(", ");
   }
 

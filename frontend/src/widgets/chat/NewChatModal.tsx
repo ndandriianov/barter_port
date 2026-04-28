@@ -52,7 +52,7 @@ function NewChatModal({ onClose, onCreated }: Props) {
   const [createChat, { isLoading: isCreating, error, reset }] = chatsApi.useCreateChatMutation();
   const [selected, setSelected] = useState<string>("");
   const existingDirectChat = useMemo(
-    () => chats.find((chat) => !chat.deal_id && chat.participants.includes(selected)),
+    () => chats.find((chat) => !chat.deal_id && chat.participants.some((participant) => participant.user_id === selected)),
     [chats, selected],
   );
 
