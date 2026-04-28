@@ -9,6 +9,7 @@ var (
 	ErrInvalidQuantity                  = errors.New("invalid quantity")
 	ErrDraftNotFound                    = errors.New("draft not found")
 	ErrDealNotFound                     = errors.New("deal not found")
+	ErrUserNotFound                     = errors.New("user not found")
 	ErrItemNotFound                     = errors.New("item not found")
 	ErrFailureNotFound                  = errors.New("failure not found")
 	ErrNoOffers                         = errors.New("no offers")
