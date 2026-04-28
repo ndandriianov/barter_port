@@ -87,7 +87,7 @@ func (r *Repository) CreateChat(ctx context.Context, dealID *uuid.UUID, particip
 		return nil, fmt.Errorf("commit: %w", err)
 	}
 
-	chat.Participants = participantIDs
+	chat.Participants = domain.NewChatParticipantsWithoutNames(participantIDs)
 	return &chat, nil
 }
 
@@ -109,7 +109,7 @@ func (r *Repository) GetChatByID(ctx context.Context, chatID uuid.UUID) (*domain
 	if err != nil {
 		return nil, err
 	}
-	chat.Participants = participants
+	chat.Participants = domain.NewChatParticipantsWithoutNames(participants)
 
 	return &chat, nil
 }
@@ -156,7 +156,7 @@ func (r *Repository) ListChatsForUser(ctx context.Context, userID uuid.UUID) ([]
 		if err != nil {
 			return nil, err
 		}
-		chats[i].Participants = participants
+		chats[i].Participants = domain.NewChatParticipantsWithoutNames(participants)
 	}
 
 	return chats, nil

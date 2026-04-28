@@ -6,12 +6,21 @@ import (
 )
 
 func mapChatToResp(c *domain.Chat) types.Chat {
+	participants := make([]types.Participant, len(c.Participants))
+	for i, p := range c.Participants {
+		participants[i] = types.Participant{
+			UserId:   p.ID,
+			UserName: p.Name,
+		}
+	}
+
 	resp := types.Chat{
 		Id:           c.ID,
-		Participants: c.Participants,
+		Participants: participants,
 		CreatedAt:    c.CreatedAt,
 		DealId:       c.DealID,
 	}
+
 	return resp
 }
 
