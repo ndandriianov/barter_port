@@ -12,6 +12,12 @@ GetReputationEventsResponse:
     items:
         $ref: './schemas.yaml#/ReputationEvent'
 
+AdminPlatformStatisticsResponse:
+  $ref: './schemas.yaml#/AdminPlatformStatistics'
+
+AdminUserStatisticsResponse:
+  $ref: './schemas.yaml#/AdminUserStatistics'
+
 
 getSubscriptionsResponse:
   type: array

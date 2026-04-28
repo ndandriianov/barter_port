@@ -1,0 +1,94 @@
+adminPlatformStatistics:
+  get:
+    tags:
+      - admin
+      - statistics
+    summary: Получить статистику платформы из users-сервиса
+    description: |
+      Возвращает агрегированные административные метрики, которыми владеет `users`:
+      - распределение пользователей по уровням репутации
+      - средняя и медианная репутация
+      - топ пользователей по репутации
+
+      Метрики регистрации и верификации email сюда не входят:
+      они относятся к `auth`.
+
+      Endpoint доступен только администратору.
+    operationId: getAdminUsersPlatformStatistics
+    security:
+      - bearerAuth: []
+    responses:
+      '200':
+        description: Агрегированная статистика платформы по домену users
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/AdminPlatformStatisticsResponse'
+      '401':
+        description: Не авторизован
+        content:
+          application/json:
+            schema:
+              $ref: '../components/errors.yaml#/ErrorResponse'
+      '403':
+        description: Доступ только для администратора
+        content:
+          application/json:
+            schema:
+              $ref: '../components/errors.yaml#/ErrorResponse'
+      '500':
+        description: Внутренняя ошибка сервера
+        content:
+          application/json:
+            schema:
+              $ref: '../components/errors.yaml#/ErrorResponse'
+
+adminUserStatistics:
+  get:
+    tags:
+      - admin
+      - statistics
+    summary: Получить статистику пользователя из users-сервиса
+    description: |
+      Возвращает административные метрики конкретного пользователя, которыми владеет `users`:
+      - текущий репутационный балл
+      - история начислений и штрафов
+      - число подписчиков и подписок
+
+      Endpoint доступен только администратору.
+    operationId: getAdminUsersUserStatistics
+    security:
+      - bearerAuth: []
+    parameters:
+      - $ref: '../components/parameters.yaml#/Id'
+    responses:
+      '200':
+        description: Статистика пользователя по домену users
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/AdminUserStatisticsResponse'
+      '401':
+        description: Не авторизован
+        content:
+          application/json:
+            schema:
+              $ref: '../components/errors.yaml#/ErrorResponse'
+      '403':
+        description: Доступ только для администратора
+        content:
+          application/json:
+            schema:
+              $ref: '../components/errors.yaml#/ErrorResponse'
+      '404':
+        description: Пользователь не найден
+        content:
+          application/json:
+            schema:
+              $ref: '../components/errors.yaml#/ErrorResponse'
+      '500':
+        description: Внутренняя ошибка сервера
+        content:
+          application/json:
+            schema:
+              $ref: '../components/errors.yaml#/ErrorResponse'
