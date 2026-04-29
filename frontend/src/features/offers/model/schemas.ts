@@ -18,6 +18,7 @@ export const offerSchema = z.object({
   createdAt: z.string(),
   updatedAt: z.string().nullish(),
   isHidden: z.boolean().nullish().transform((value) => value ?? false),
+  hiddenByAuthor: z.boolean().nullish().transform((value) => value ?? false),
   isFavorite: z.boolean().nullish().transform((value) => value ?? false),
   modificationBlocked: z.boolean().nullish().transform((value) => value ?? false),
   draftsCount: z.number().int().nullish().transform((value) => value ?? 0),

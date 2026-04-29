@@ -15,6 +15,7 @@ import {
   getOfferModerationState,
 } from "@/features/offers/model/getOfferModerationState.ts";
 import UserAvatarLabel from "@/shared/UserAvatarLabel.tsx";
+import OwnOfferVisibilityChips from "@/widgets/offers/OwnOfferVisibilityChips.tsx";
 
 const actionLabels: Record<OfferAction, string> = {
   give: "Отдаю",
@@ -76,6 +77,7 @@ function OfferCard({
   const isFavoriteActionLoading = isAddingToFavorites || isRemovingFromFavorites;
   const [favoriteOverride, setFavoriteOverride] = useState<boolean | null>(null);
   const isFavorite = favoriteOverride ?? offer.isFavorite;
+  const shouldShowGenericModerationChip = Boolean(moderationLabel) && (!isMine || moderationState !== "hidden");
 
   const handleToggleFavorite = async () => {
     const nextIsFavorite = !isFavorite;
@@ -118,7 +120,8 @@ function OfferCard({
             {isMine && <Chip label="Мой" size="small" color="secondary" />}
             <Chip label={typeLabels[offer.type]} size="small" variant="outlined" />
             <Chip label={actionLabels[offer.action]} size="small" color={actionColors[offer.action]} />
-            {moderationLabel && (
+            {isMine && <OwnOfferVisibilityChips offer={offer} />}
+            {shouldShowGenericModerationChip && moderationLabel && (
               <Chip
                 label={moderationLabel}
                 size="small"

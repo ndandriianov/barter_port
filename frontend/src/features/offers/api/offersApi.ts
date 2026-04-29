@@ -206,6 +206,30 @@ const offersApi = createApi({
       invalidatesTags: (_result, _error, offerId) => ["Offers", {type: "Offers", id: offerId}, "Tags"],
     }),
 
+    hideOfferByAuthor: builder.mutation<void, string>({
+      query: (offerId) => ({
+        url: `/offers/${offerId}/hidden`,
+        method: "PUT",
+      }),
+      invalidatesTags: (_result, _error, offerId) => [
+        "Offers",
+        "FavoriteOffers",
+        { type: "Offers", id: offerId },
+      ],
+    }),
+
+    unhideOfferByAuthor: builder.mutation<void, string>({
+      query: (offerId) => ({
+        url: `/offers/${offerId}/hidden`,
+        method: "DELETE",
+      }),
+      invalidatesTags: (_result, _error, offerId) => [
+        "Offers",
+        "FavoriteOffers",
+        { type: "Offers", id: offerId },
+      ],
+    }),
+
     listTags: builder.query<ListTagsResponse, void>({
       query: () => "/tags",
       transformResponse: (response: unknown) => listTagsResponseSchema.parse(response),

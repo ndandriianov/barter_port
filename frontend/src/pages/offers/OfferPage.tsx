@@ -11,6 +11,7 @@ import OfferCard from "@/widgets/offers/OfferCard";
 import RespondToOfferModal from "@/widgets/offers/RespondToOfferModal";
 import ReviewSummaryCard from "@/widgets/reviews/ReviewSummaryCard.tsx";
 import CreateOfferReportDialog from "@/widgets/offers/CreateOfferReportDialog.tsx";
+import { getStatusCode } from "@/shared/utils/getStatusCode.ts";
 
 function OfferPage() {
   const { offerId } = useParams<{ offerId: string }>();
@@ -23,6 +24,8 @@ function OfferPage() {
   const viewedOfferIdsRef = useRef<Set<string>>(new Set());
   const { data: meData } = usersApi.useGetCurrentUserQuery();
   const [deleteOffer, { isLoading: isDeleting, error: deleteError }] = offersApi.useDeleteOfferMutation();
+  const [hideOfferByAuthor, { isLoading: isHiding, error: hideError }] = offersApi.useHideOfferByAuthorMutation();
+  const [unhideOfferByAuthor, { isLoading: isUnhiding, error: unhideError }] = offersApi.useUnhideOfferByAuthorMutation();
   const [viewOfferById] = offersApi.useViewOfferByIdMutation();
   const [addOfferToFavorites, { isLoading: isAddingToFavorites }] = offersApi.useAddOfferToFavoritesMutation();
   const [removeOfferFromFavorites, { isLoading: isRemovingFromFavorites }] = offersApi.useRemoveOfferFromFavoritesMutation();
@@ -36,6 +39,7 @@ function OfferPage() {
   const isAdmin = meData?.isAdmin === true;
   const isOwnOffer = !!meData && !!offer && offer.authorId === meData.id;
   const isFavoriteActionLoading = isAddingToFavorites || isRemovingFromFavorites;
+  const isVisibilityActionLoading = isHiding || isUnhiding;
 
   useEffect(() => {
     if (!offer || !meData || offer.authorId === meData.id || viewedOfferIdsRef.current.has(offer.id)) {
@@ -85,6 +89,27 @@ function OfferPage() {
     }
   };
 
+  const handleToggleHidden = async () => {
+    try {
+      if (offer.hiddenByAuthor) {
+        await unhideOfferByAuthor(offer.id).unwrap();
+        return;
+      }
+
+      await hideOfferByAuthor(offer.id).unwrap();
+    } catch {
+      // The error is surfaced via RTK Query state.
+    }
+  };
+
+  const hideActionLabel = offer.hiddenByAuthor
+    ? offer.isHidden
+      ? "Снять авторское скрытие"
+      : "Убрать из скрытых"
+    : "Скрыть";
+
+  const visibilityActionError = hideError ?? unhideError;
+
   const handleToggleFavorite = async () => {
     const nextIsFavorite = !displayedIsFavorite;
     setFavoriteOverride({ offerId: offer.id, value: nextIsFavorite });
@@ -122,6 +147,7 @@ function OfferPage() {
 
       <OfferCard
         offer={displayedOffer}
+        isMine={isOwnOffer}
         onFavoriteChange={handleFavoriteChange}
         showModerationState={isOwnOffer || isAdmin}
         draftCount={isOwnOffer ? offer.draftsCount : 0}
@@ -182,13 +208,29 @@ function OfferPage() {
 
       {deleteError && (
         <Alert severity="error" sx={{ mb: 3 }}>
-          Не удалось удалить объявление
+          {getStatusCode(deleteError) === 409
+            ? "Не удалось удалить объявление: по нему идет разбирательство."
+            : "Не удалось удалить объявление"}
+        </Alert>
+      )}
+
+      {visibilityActionError && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          Не удалось изменить режим скрытия объявления
         </Alert>
       )}
 
       {reportSuccessMessage && (
         <Alert severity="success" sx={{ mb: 3 }} onClose={() => setReportSuccessMessage(null)}>
           {reportSuccessMessage}
+        </Alert>
+      )}
+
+      {isOwnOffer && offer.hiddenByAuthor && (
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          {offer.isHidden
+            ? "Вы скрыли это объявление сами. Сейчас оно также скрыто модератором, поэтому после снятия авторского скрытия оно все равно останется недоступным для других пользователей."
+            : "Вы скрыли это объявление. Оно не показывается другим пользователям в каталоге и по прямой ссылке, пока вы не уберете его из скрытых."}
         </Alert>
       )}
 
@@ -222,6 +264,18 @@ function OfferPage() {
             disabled={isFavoriteActionLoading}
           >
             {displayedIsFavorite ? "В избранном" : "В избранное"}
+          </Button>
+        )}
+        {isOwnOffer && (
+          <Button
+            variant={offer.hiddenByAuthor ? "contained" : "outlined"}
+            color={offer.hiddenByAuthor ? "warning" : "inherit"}
+            onClick={() => void handleToggleHidden()}
+            disabled={isVisibilityActionLoading}
+          >
+            {isVisibilityActionLoading
+              ? "Сохраняем..."
+              : hideActionLabel}
           </Button>
         )}
         {isOwnOffer && (

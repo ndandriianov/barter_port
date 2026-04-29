@@ -24,6 +24,7 @@ import {
   getOfferModerationState,
 } from "@/features/offers/model/getOfferModerationState.ts";
 import { getStatusCode } from "@/shared/utils/getStatusCode.ts";
+import OwnOfferVisibilityChips from "@/widgets/offers/OwnOfferVisibilityChips.tsx";
 
 function OfferReportStatusChip({ status }: { status: OfferReportThread["report"]["status"] }) {
   const color = status === "Pending" ? "warning" : status === "Accepted" ? "error" : "success";
@@ -60,6 +61,7 @@ function MyOfferReportsItem({ offer }: { offer: Offer }) {
 
   const moderationState = getOfferModerationState(offer, data);
   const moderationLabel = getOfferModerationLabel(moderationState);
+  const shouldShowGenericModerationChip = moderationState !== "hidden";
 
   return (
     <Card variant="outlined" sx={{ borderRadius: 3 }}>
@@ -74,10 +76,11 @@ function MyOfferReportsItem({ offer }: { offer: Offer }) {
             </Typography>
           </Box>
           <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
-            {moderationLabel && (
+            <OwnOfferVisibilityChips offer={offer} />
+            {shouldShowGenericModerationChip && moderationLabel && (
               <Chip
                 label={moderationLabel}
-                color={moderationState === "hidden" ? "error" : moderationState === "pending" ? "warning" : "info"}
+                color={moderationState === "pending" ? "warning" : "info"}
               />
             )}
             <Button component={RouterLink} to={`/offers/${offer.id}`} variant="outlined" size="small">
@@ -196,4 +199,3 @@ function MyOfferReportsPage() {
 }
 
 export default MyOfferReportsPage;
-
