@@ -1,6 +1,7 @@
 import {createApi} from "@reduxjs/toolkit/query/react";
 import {baseQueryWithReauth} from "@/shared/api/baseApi.ts";
 import {
+  adminUsersListResponseSchema,
   adminUsersPlatformStatisticsSchema,
   adminUsersUserStatisticsSchema,
   meSchema,
@@ -10,6 +11,7 @@ import {
   userSchema,
 } from "@/features/users/model/schemas.ts";
 import type {
+  AdminUsersListResponse,
   AdminUsersPlatformStatistics,
   AdminUsersUserStatistics,
   Me,
@@ -61,6 +63,12 @@ const usersApi = createApi({
       query: (id) => `/users/${id}`,
       transformResponse: (response: unknown) => userSchema.parse(response),
       providesTags: (_result, _error, id) => [{type: "Users", id}],
+    }),
+
+    listAdminUsers: builder.query<AdminUsersListResponse, void>({
+      query: () => "/users/admin/users",
+      transformResponse: (response: unknown) => adminUsersListResponseSchema.parse(response),
+      providesTags: ["Users"],
     }),
 
     getSubscriptions: builder.query<SubscriptionsResponse, void>({

@@ -8,6 +8,10 @@ export const userSchema = z.object({
   phoneNumber: z.string().optional(),
 });
 
+export const adminUserListItemSchema = userSchema.extend({
+  reputationPoints: z.number(),
+});
+
 export const meSchema = userSchema.extend({
   email: z.string(),
   createdAt: z.string(),
@@ -42,6 +46,7 @@ export const subscribeRequestSchema = z.object({
 });
 
 export const subscriptionsResponseSchema = z.array(userSchema);
+export const adminUsersListResponseSchema = z.array(adminUserListItemSchema);
 
 export const adminUsersPlatformStatisticsSchema = z.object({
   reputation: z.object({
