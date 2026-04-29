@@ -36,3 +36,9 @@ export type ListChatsResponse = Chat[];
 export type GetMessagesResponse = Message[];
 
 export type ListUsersResponse = User[];
+
+export interface AdminChatsPlatformStatistics {
+  chats: {
+    total: number;
+  };
+}

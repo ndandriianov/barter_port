@@ -60,6 +60,21 @@
 		reverse_proxy auth:8080 # локально host.docker.internal:8081
 	}
 
+	handle /users/admin/* {
+		uri replace /users/admin /admin
+		reverse_proxy users:8080
+	}
+
+	handle /chats/admin/* {
+		uri replace /chats/admin /admin
+		reverse_proxy chats:8083
+	}
+
+	handle /deals/admin/* {
+		uri replace /deals/admin /admin
+		reverse_proxy items:8080
+	}
+
 	# Users service по префиксу /users/*
 	handle /users/* {
 		reverse_proxy users:8080

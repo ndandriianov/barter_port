@@ -1,5 +1,12 @@
 import {z} from "zod";
-import {meSchema, reputationEventSchema, subscriptionsResponseSchema, userSchema} from "@/features/users/model/schemas.ts";
+import {
+  adminUsersPlatformStatisticsSchema,
+  adminUsersUserStatisticsSchema,
+  meSchema,
+  reputationEventSchema,
+  subscriptionsResponseSchema,
+  userSchema,
+} from "@/features/users/model/schemas.ts";
 
 export type User = z.Infer<typeof userSchema>;
 export type Me = z.Infer<typeof meSchema>;
@@ -23,3 +30,5 @@ export interface SubscribeRequest {
 }
 
 export type SubscriptionsResponse = z.Infer<typeof subscriptionsResponseSchema>;
+export type AdminUsersPlatformStatistics = z.Infer<typeof adminUsersPlatformStatisticsSchema>;
+export type AdminUsersUserStatistics = z.Infer<typeof adminUsersUserStatisticsSchema>;

@@ -45,7 +45,7 @@ const sectionMeta: Record<AppSection, { label: string; description: string }> = 
   },
   admin: {
     label: "Модерация",
-    description: "Отдельная admin-only зона для очередей и системных сущностей",
+    description: "Очереди модерации, статистика платформы и системные сущности",
   },
 };
 

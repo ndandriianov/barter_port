@@ -51,8 +51,8 @@ function ModerationHomePage() {
           <SectionEntryCard
             to={appRoutes.admin.system}
             icon={<SettingsSuggestOutlinedIcon />}
-            title="Системные сущности"
-            description="Теги, обзор ключевых показателей и административные настройки второго уровня."
+            title="Статистика платформы"
+            description="Сводка по auth, users, chats и deals, плюс проверка пользователя по UUID."
             accent="info"
           />
         </Grid>

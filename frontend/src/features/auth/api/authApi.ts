@@ -2,6 +2,14 @@ import {createApi} from "@reduxjs/toolkit/query/react";
 
 import {setCredentials} from "../model/authSlice";
 import {baseQueryWithReauth} from "@/shared/api/baseApi.ts";
+import {
+  adminAuthPlatformStatisticsSchema,
+  adminAuthUserStatisticsSchema,
+} from "@/features/auth/model/schemas.ts";
+import type {
+  AdminAuthPlatformStatistics,
+  AdminAuthUserStatistics,
+} from "@/features/auth/model/types.ts";
 
 const authApi = createApi({
   reducerPath: "authApi",
@@ -74,6 +82,16 @@ const authApi = createApi({
         method: "POST",
         body,
       }),
+    }),
+
+    getAdminPlatformStatistics: builder.query<AdminAuthPlatformStatistics, void>({
+      query: () => "/auth/admin/statistics/platform",
+      transformResponse: (response: unknown) => adminAuthPlatformStatisticsSchema.parse(response),
+    }),
+
+    getAdminUserStatistics: builder.query<AdminAuthUserStatistics, string>({
+      query: (userId) => `/auth/admin/users/${userId}/statistics`,
+      transformResponse: (response: unknown) => adminAuthUserStatisticsSchema.parse(response),
     }),
   }),
 });

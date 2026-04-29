@@ -1,5 +1,7 @@
-import { Link as RouterLink } from "react-router-dom";
-import { skipToken } from "@reduxjs/toolkit/query";
+import {type FormEvent, type ReactNode, useEffect, useMemo, useState} from "react";
+import {Link as RouterLink} from "react-router-dom";
+import {skipToken} from "@reduxjs/toolkit/query";
+import type {FetchBaseQueryError} from "@reduxjs/toolkit/query";
 import {
   Alert,
   Box,
@@ -8,118 +10,247 @@ import {
   CardContent,
   Chip,
   CircularProgress,
-  Divider,
   Grid,
   Stack,
+  TextField,
   Typography,
 } from "@mui/material";
 import AdminPanelSettingsOutlinedIcon from "@mui/icons-material/AdminPanelSettingsOutlined";
-import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
+import ForumOutlinedIcon from "@mui/icons-material/ForumOutlined";
 import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
-import SettingsEthernetOutlinedIcon from "@mui/icons-material/SettingsEthernetOutlined";
+import ManageSearchOutlinedIcon from "@mui/icons-material/ManageSearchOutlined";
+import PeopleAltOutlinedIcon from "@mui/icons-material/PeopleAltOutlined";
+import SellOutlinedIcon from "@mui/icons-material/SellOutlined";
 import ShieldOutlinedIcon from "@mui/icons-material/ShieldOutlined";
-import TrendingUpOutlinedIcon from "@mui/icons-material/TrendingUpOutlined";
-import chatsApi from "@/features/chats/api/chatsApi";
-import dealsApi from "@/features/deals/api/dealsApi";
-import offersApi from "@/features/offers/api/offersApi";
-import usersApi from "@/features/users/api/usersApi";
-import FailureModerationQueue from "@/widgets/deals/FailureModerationQueue.tsx";
+import TagOutlinedIcon from "@mui/icons-material/TagOutlined";
+import VerifiedOutlinedIcon from "@mui/icons-material/VerifiedOutlined";
+import VisibilityOutlinedIcon from "@mui/icons-material/VisibilityOutlined";
+import authApi from "@/features/auth/api/authApi.ts";
+import chatsApi from "@/features/chats/api/chatsApi.ts";
+import dealsApi from "@/features/deals/api/dealsApi.ts";
+import offersApi from "@/features/offers/api/offersApi.ts";
+import usersApi from "@/features/users/api/usersApi.ts";
+import {appRoutes} from "@/shared/config/appRoutes.ts";
 
 const quickActions = [
-  { label: "Жалобы на объявления", to: "/admin/offer-reports" },
-  { label: "Открыть объявления", to: "/offers" },
-  { label: "Открыть сделки", to: "/deals" },
-  { label: "Открыть черновики", to: "/deals/drafts" },
-  { label: "Открыть чаты", to: "/chats" },
-];
+  { label: "Жалобы", to: appRoutes.admin.offerReports },
+  { label: "Провалы сделок", to: appRoutes.admin.failures },
+  { label: "Объявления", to: appRoutes.market.catalog },
+  { label: "Сделки", to: appRoutes.deals.home },
+  { label: "Чаты", to: appRoutes.messages.home },
+] as const;
 
-const futureModules = [
-  {
-    title: "Управление пользователями",
-    description: "Список пользователей, роли, блокировки и ручная проверка профилей.",
-    icon: <ShieldOutlinedIcon color="primary" />,
-  },
-  {
-    title: "Модерация контента",
-    description: "Проверка объявлений и жалоб с очередью на ручной разбор.",
-    icon: <Inventory2OutlinedIcon color="primary" />,
-  },
-  {
-    title: "Сделки и споры",
-    description: "Просмотр проблемных сделок, ручные статусы и журнал решений.",
-    icon: <SettingsEthernetOutlinedIcon color="primary" />,
-  },
-  {
-    title: "Метрики",
-    description: "Ключевые показатели, воронка активности и динамика платформы.",
-    icon: <TrendingUpOutlinedIcon color="primary" />,
-  },
-];
+const numberFormatter = new Intl.NumberFormat("ru-RU");
+const percentFormatter = new Intl.NumberFormat("ru-RU", {
+  style: "percent",
+  maximumFractionDigits: 1,
+});
+const dateTimeFormatter = new Intl.DateTimeFormat("ru-RU", {
+  dateStyle: "medium",
+  timeStyle: "short",
+});
+const ratingFormatter = new Intl.NumberFormat("ru-RU", {
+  minimumFractionDigits: 1,
+  maximumFractionDigits: 1,
+});
+const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 interface MetricCardProps {
   title: string;
   value: string;
   caption: string;
+  icon: ReactNode;
   isLoading?: boolean;
 }
 
-function MetricCard({ title, value, caption, isLoading = false }: MetricCardProps) {
+function MetricCard({ title, value, caption, icon, isLoading = false }: MetricCardProps) {
   return (
-    <Card
-      variant="outlined"
-      sx={{
-        height: "100%",
-        borderRadius: 3,
-        background:
-          "linear-gradient(180deg, rgba(25,118,210,0.06) 0%, rgba(25,118,210,0.01) 100%)",
-      }}
-    >
+    <Card variant="outlined" sx={{ height: "100%", borderRadius: 2 }}>
       <CardContent>
-        <Typography variant="body2" color="text.secondary" mb={1}>
-          {title}
-        </Typography>
-        {isLoading ? (
-          <CircularProgress size={24} />
-        ) : (
-          <Typography variant="h4" fontWeight={700} mb={1}>
-            {value}
+        <Stack spacing={1.5}>
+          <Box display="flex" justifyContent="space-between" alignItems="flex-start" gap={2}>
+            <Typography variant="body2" color="text.secondary">
+              {title}
+            </Typography>
+            <Typography color="primary.main">{icon}</Typography>
+          </Box>
+          {isLoading ? (
+            <CircularProgress size={24} />
+          ) : (
+            <Typography variant="h4" fontWeight={800}>
+              {value}
+            </Typography>
+          )}
+          <Typography variant="body2" color="text.secondary">
+            {caption}
           </Typography>
-        )}
-        <Typography variant="body2" color="text.secondary">
-          {caption}
-        </Typography>
+        </Stack>
       </CardContent>
     </Card>
   );
 }
 
+interface StatLineProps {
+  label: string;
+  value: string;
+}
+
+function StatLine({ label, value }: StatLineProps) {
+  return (
+    <Box display="flex" justifyContent="space-between" gap={2}>
+      <Typography variant="body2" color="text.secondary">
+        {label}
+      </Typography>
+      <Typography variant="body2" fontWeight={700} textAlign="right">
+        {value}
+      </Typography>
+    </Box>
+  );
+}
+
+function formatNumber(value: number | bigint) {
+  return numberFormatter.format(value);
+}
+
+function formatPercent(value: number) {
+  return percentFormatter.format(value);
+}
+
+function formatRating(value: number | null | undefined) {
+  if (value === null || value === undefined) {
+    return "Нет данных";
+  }
+
+  return ratingFormatter.format(value);
+}
+
+function formatDateTime(value: string) {
+  return dateTimeFormatter.format(new Date(value));
+}
+
+function formatName(name: string | undefined, fallback: string) {
+  const trimmed = name?.trim();
+  return trimmed && trimmed.length > 0 ? trimmed : fallback;
+}
+
+function getErrorMessage(error: unknown, fallback: string) {
+  if (!error || typeof error !== "object") {
+    return fallback;
+  }
+
+  if ("status" in error) {
+    const fetchError = error as FetchBaseQueryError & { data?: unknown };
+    if (fetchError.data && typeof fetchError.data === "object" && "message" in fetchError.data) {
+      const message = (fetchError.data as { message?: unknown }).message;
+      if (typeof message === "string" && message.trim().length > 0) {
+        return message;
+      }
+    }
+
+    if (fetchError.status === 404) {
+      return "Пользователь не найден.";
+    }
+  }
+
+  return fallback;
+}
+
 function AdminPage() {
-  const { data: currentUser, isLoading: isUserLoading } = usersApi.useGetCurrentUserQuery();
+  const { data: currentUser, isLoading: isCurrentUserLoading } = usersApi.useGetCurrentUserQuery();
   const isAdmin = currentUser?.isAdmin === true;
 
-  const { data: visibleUsers, isLoading: isVisibleUsersLoading } = chatsApi.useListUsersQuery(
-    isAdmin ? undefined : skipToken,
-  );
-  const { data: chats, isLoading: isChatsLoading } = chatsApi.useListChatsQuery(isAdmin ? undefined : skipToken);
-  const { data: offers, isLoading: isOffersLoading } = offersApi.useGetOffersQuery(
-    isAdmin
-      ? {
-          sort: "ByTime",
-          cursor_limit: 20,
-        }
-      : skipToken,
-  );
-  const { data: deals, isLoading: isDealsLoading } = dealsApi.useGetDealsQuery(isAdmin ? undefined : skipToken);
-  const { data: drafts, isLoading: isDraftsLoading } = dealsApi.useGetMyDraftDealsQuery(
-    isAdmin ? undefined : skipToken,
-  );
-  const { data: tags, isLoading: isTagsLoading } = offersApi.useListTagsQuery(isAdmin ? undefined : skipToken);
-  const [deleteAdminTag] = offersApi.useDeleteAdminTagMutation();
+  const { data: authPlatform, isLoading: isAuthPlatformLoading, error: authPlatformError } =
+    authApi.useGetAdminPlatformStatisticsQuery(isAdmin ? undefined : skipToken);
+  const { data: usersPlatform, isLoading: isUsersPlatformLoading, error: usersPlatformError } =
+    usersApi.useGetAdminPlatformStatisticsQuery(isAdmin ? undefined : skipToken);
+  const { data: chatsPlatform, isLoading: isChatsPlatformLoading, error: chatsPlatformError } =
+    chatsApi.useGetAdminPlatformStatisticsQuery(isAdmin ? undefined : skipToken);
+  const { data: dealsPlatform, isLoading: isDealsPlatformLoading, error: dealsPlatformError } =
+    dealsApi.useGetAdminPlatformStatisticsQuery(isAdmin ? undefined : skipToken);
+  const { data: tags = [], isLoading: isTagsLoading } =
+    offersApi.useListTagsQuery(isAdmin ? undefined : skipToken);
+  const [deleteAdminTag, { isLoading: isDeletingTag }] = offersApi.useDeleteAdminTagMutation();
 
-  const isOverviewLoading =
-    isVisibleUsersLoading || isChatsLoading || isOffersLoading || isDealsLoading || isDraftsLoading;
+  const [userInput, setUserInput] = useState("");
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
 
-  if (isUserLoading) {
+  useEffect(() => {
+    if (!currentUser?.isAdmin || selectedUserId || userInput) {
+      return;
+    }
+
+    setUserInput(currentUser.id);
+    setSelectedUserId(currentUser.id);
+  }, [currentUser, selectedUserId, userInput]);
+
+  const normalizedInput = userInput.trim();
+  const isInputValid = uuidPattern.test(normalizedInput);
+  const resolvedUserId = selectedUserId && uuidPattern.test(selectedUserId) ? selectedUserId : null;
+
+  const {
+    data: authUserStats,
+    isLoading: isAuthUserStatsLoading,
+    error: authUserStatsError,
+  } = authApi.useGetAdminUserStatisticsQuery(resolvedUserId ?? skipToken);
+  const {
+    data: usersUserStats,
+    isLoading: isUsersUserStatsLoading,
+    error: usersUserStatsError,
+  } = usersApi.useGetAdminUserStatisticsQuery(resolvedUserId ?? skipToken);
+  const {
+    data: dealsUserStats,
+    isLoading: isDealsUserStatsLoading,
+    error: dealsUserStatsError,
+  } = dealsApi.useGetAdminUserStatisticsQuery(resolvedUserId ?? skipToken);
+  const {
+    data: publicUser,
+    isLoading: isPublicUserLoading,
+    error: publicUserError,
+  } = usersApi.useGetUserByIdQuery(
+    resolvedUserId && resolvedUserId !== currentUser?.id ? resolvedUserId : skipToken,
+  );
+
+  const inspectedUser = resolvedUserId === currentUser?.id ? currentUser : publicUser;
+  const isPlatformLoading =
+    isAuthPlatformLoading ||
+    isUsersPlatformLoading ||
+    isChatsPlatformLoading ||
+    isDealsPlatformLoading;
+  const isUserDetailsLoading =
+    isAuthUserStatsLoading ||
+    isUsersUserStatsLoading ||
+    isDealsUserStatsLoading ||
+    (resolvedUserId !== null && resolvedUserId !== currentUser?.id && isPublicUserLoading);
+
+  const platformErrorMessage = useMemo(() => {
+    return (
+      getErrorMessage(authPlatformError, "") ||
+      getErrorMessage(usersPlatformError, "") ||
+      getErrorMessage(chatsPlatformError, "") ||
+      getErrorMessage(dealsPlatformError, "")
+    );
+  }, [authPlatformError, chatsPlatformError, dealsPlatformError, usersPlatformError]);
+
+  const userErrorMessage = useMemo(() => {
+    return (
+      getErrorMessage(authUserStatsError, "") ||
+      getErrorMessage(usersUserStatsError, "") ||
+      getErrorMessage(dealsUserStatsError, "") ||
+      getErrorMessage(publicUserError, "")
+    );
+  }, [authUserStatsError, dealsUserStatsError, publicUserError, usersUserStatsError]);
+
+  const handleUserSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!isInputValid) {
+      return;
+    }
+
+    setSelectedUserId(normalizedInput);
+  };
+
+  if (isCurrentUserLoading) {
     return (
       <Box display="flex" justifyContent="center" py={8}>
         <CircularProgress />
@@ -134,68 +265,54 @@ function AdminPage() {
   if (!currentUser.isAdmin) {
     return (
       <Stack spacing={3}>
-        <Alert severity="error">
-          Доступ к панели администратора разрешен только администраторам. Текущий пользователь не
-          имеет права `isAdmin`.
-        </Alert>
-        <Card variant="outlined" sx={{ borderRadius: 3 }}>
-          <CardContent>
-            <Typography variant="h5" fontWeight={700} mb={1}>
-              Доступ запрещен
-            </Typography>
-            <Typography variant="body2" color="text.secondary" mb={3}>
-              Проверка выполнена через `GET /users/me`. Если доступ должен быть, проверь
-              конфигурацию admin пользователя в auth сервисе.
-            </Typography>
-            <Button component={RouterLink} to="/profile" variant="contained">
-              Вернуться в профиль
-            </Button>
-          </CardContent>
-        </Card>
+        <Alert severity="error">Доступ к разделу статистики есть только у администратора.</Alert>
+        <Button component={RouterLink} to={appRoutes.profile.home} variant="contained" sx={{ alignSelf: "flex-start" }}>
+          Вернуться в профиль
+        </Button>
       </Stack>
     );
   }
 
   return (
-    <Stack spacing={3}>
+    <Stack spacing={4}>
       <Box
         sx={{
-          p: { xs: 3, md: 4 },
-          borderRadius: 4,
+          px: { xs: 3, md: 4 },
+          py: { xs: 3, md: 4 },
+          borderRadius: 2,
           color: "common.white",
           background:
-            "radial-gradient(circle at top left, rgba(255,255,255,0.2), transparent 35%), linear-gradient(135deg, #16324f 0%, #1e5b88 55%, #3c89b8 100%)",
+            "linear-gradient(135deg, rgba(19,47,76,1) 0%, rgba(24,86,122,1) 58%, rgba(24,125,100,1) 100%)",
         }}
       >
-        <Stack spacing={2}>
+        <Stack spacing={2.5}>
           <Box display="flex" justifyContent="space-between" alignItems="flex-start" gap={2} flexWrap="wrap">
             <Box>
               <Box display="flex" alignItems="center" gap={1} mb={1}>
-                <AdminPanelSettingsOutlinedIcon />
-                <Typography variant="overline" sx={{ opacity: 0.9 }}>
-                  Admin Workspace
+                <AdminPanelSettingsOutlinedIcon fontSize="small" />
+                <Typography variant="overline" sx={{ opacity: 0.92 }}>
+                  Admin Statistics
                 </Typography>
               </Box>
-              <Typography variant="h3" fontWeight={800} mb={1}>
-                Базовая админка
+              <Typography variant="h4" fontWeight={800} mb={1}>
+                Состояние платформы и проверка пользователя
               </Typography>
-              <Typography variant="body1" sx={{ maxWidth: 720, opacity: 0.92 }}>
-                Доступ к этой странице подтвержден через `GET /users/me`. Экран показывает текущие
-                данные системы и остается базой для дальнейшего расширения админских сценариев.
+              <Typography variant="body1" sx={{ maxWidth: 760, opacity: 0.9 }}>
+                Сводка собирается из `auth`, `users`, `chats` и `deals`. Ниже есть и общий обзор, и drill-down по конкретному UUID.
               </Typography>
             </Box>
             <Chip
-              label="Admin access enabled"
+              label={`admin: ${formatName(currentUser.name, currentUser.email)}`}
               sx={{
-                bgcolor: "rgba(255,255,255,0.14)",
+                bgcolor: "rgba(255,255,255,0.12)",
                 color: "common.white",
                 borderRadius: 2,
-                fontWeight: 600,
+                fontWeight: 700,
               }}
             />
           </Box>
 
-          <Box display="flex" gap={1.5} flexWrap="wrap">
+          <Box display="flex" gap={1.25} flexWrap="wrap">
             {quickActions.map((action) => (
               <Button
                 key={action.to}
@@ -204,7 +321,6 @@ function AdminPage() {
                 variant="contained"
                 sx={{
                   bgcolor: "rgba(255,255,255,0.12)",
-                  backdropFilter: "blur(10px)",
                   "&:hover": { bgcolor: "rgba(255,255,255,0.2)" },
                 }}
               >
@@ -215,111 +331,127 @@ function AdminPage() {
         </Stack>
       </Box>
 
-      <Alert severity="info">
-        Страница доступна только пользователям с `isAdmin = true`. Новые admin-эндпоинты можно
-        добавлять поверх этой проверки без изменения структуры страницы.
-      </Alert>
-
-      <Card variant="outlined" sx={{ borderRadius: 3 }}>
-        <CardContent>
-          <Box display="flex" justifyContent="space-between" alignItems="flex-start" gap={2} flexWrap="wrap">
-            <Box>
-              <Typography variant="h5" fontWeight={700} mb={1}>
-                Жалобы на объявления
-              </Typography>
-              <Typography variant="body2" color="text.secondary">
-                Отдельный раздел для ручной модерации жалоб на объявления, просмотра материалов и
-                принятия решения.
-              </Typography>
-            </Box>
-            <Button component={RouterLink} to="/admin/offer-reports" variant="contained">
-              Открыть раздел
-            </Button>
-          </Box>
-        </CardContent>
-      </Card>
-
-      <Card variant="outlined" sx={{ borderRadius: 3 }}>
-        <CardContent>
-          <Typography variant="h5" fontWeight={700} mb={1}>
-            Теги объявлений
-          </Typography>
-          <Typography variant="body2" color="text.secondary" mb={2}>
-            Общий список тегов из `GET /tags`. Удаление вызывает `DELETE /admin/tags`.
-          </Typography>
-
-          {isTagsLoading ? (
-            <CircularProgress size={24} />
-          ) : !tags || tags.length === 0 ? (
-            <Alert severity="info">Тегов пока нет.</Alert>
-          ) : (
-            <Box display="flex" gap={1} flexWrap="wrap">
-              {tags.map((tag) => (
-                <Chip
-                  key={tag}
-                  label={tag}
-                  onDelete={() => void deleteAdminTag(tag)}
-                  deleteIcon={<DeleteOutlineIcon fontSize="small" />}
-                  variant="outlined"
-                />
-              ))}
-            </Box>
-          )}
-        </CardContent>
-      </Card>
-
-      <FailureModerationQueue />
+      {platformErrorMessage ? (
+        <Alert severity="warning">
+          Не удалось загрузить часть платформенной статистики. {platformErrorMessage}
+        </Alert>
+      ) : null}
 
       <Grid container spacing={2}>
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Card variant="outlined" sx={{ height: "100%", borderRadius: 3 }}>
-            <CardContent>
-              <Typography variant="h5" fontWeight={700} mb={2}>
-                Текущий доступ
-              </Typography>
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+          <MetricCard
+            title="Зарегистрированные аккаунты"
+            value={formatNumber(authPlatform?.users.totalRegistered ?? 0)}
+            caption="Все аккаунты из auth."
+            icon={<PeopleAltOutlinedIcon />}
+            isLoading={isAuthPlatformLoading}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+          <MetricCard
+            title="Подтверждённые email"
+            value={formatNumber(authPlatform?.users.verifiedEmails ?? 0)}
+            caption="Почты с завершённой верификацией."
+            icon={<VerifiedOutlinedIcon />}
+            isLoading={isAuthPlatformLoading}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+          <MetricCard
+            title="Чаты"
+            value={formatNumber(chatsPlatform?.chats.total ?? 0)}
+            caption="Общее число диалогов на платформе."
+            icon={<ForumOutlinedIcon />}
+            isLoading={isChatsPlatformLoading}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
+          <MetricCard
+            title="Сделки"
+            value={formatNumber(dealsPlatform?.deals.total ?? 0)}
+            caption="Все сделки, включая активные и терминальные."
+            icon={<Inventory2OutlinedIcon />}
+            isLoading={isDealsPlatformLoading}
+          />
+        </Grid>
+      </Grid>
 
-              <Stack spacing={1.5}>
-                <Box>
-                  <Typography variant="caption" color="text.secondary">
-                    Пользователь
-                  </Typography>
-                  <Typography variant="body1" fontWeight={600}>
-                    {currentUser.name || "Без имени"}
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, lg: 4 }}>
+          <Card variant="outlined" sx={{ height: "100%", borderRadius: 2 }}>
+            <CardContent>
+              <Stack spacing={2}>
+                <Box display="flex" alignItems="center" gap={1}>
+                  <ShieldOutlinedIcon color="primary" />
+                  <Typography variant="h6" fontWeight={800}>
+                    Auth
                   </Typography>
                 </Box>
-                <Box>
-                  <Typography variant="caption" color="text.secondary">
-                    Email
+                <StatLine
+                  label="Всего пользователей"
+                  value={formatNumber(authPlatform?.users.totalRegistered ?? 0)}
+                />
+                <StatLine
+                  label="Подтверждённые email"
+                  value={formatNumber(authPlatform?.users.verifiedEmails ?? 0)}
+                />
+                <StatLine
+                  label="Доля подтверждений"
+                  value={
+                    authPlatform && authPlatform.users.totalRegistered > 0
+                      ? formatPercent(authPlatform.users.verifiedEmails / authPlatform.users.totalRegistered)
+                      : "0%"
+                  }
+                />
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+
+        <Grid size={{ xs: 12, lg: 4 }}>
+          <Card variant="outlined" sx={{ height: "100%", borderRadius: 2 }}>
+            <CardContent>
+              <Stack spacing={2}>
+                <Box display="flex" alignItems="center" gap={1}>
+                  <PeopleAltOutlinedIcon color="primary" />
+                  <Typography variant="h6" fontWeight={800}>
+                    Users
                   </Typography>
-                  <Typography variant="body2">{currentUser.email}</Typography>
                 </Box>
-                <Box display="flex" gap={1} flexWrap="wrap">
-                  <Chip label="Текущая сессия" color="primary" variant="outlined" />
-                  <Chip label="isAdmin = true" color="success" variant="outlined" />
+                <StatLine label="Средняя репутация" value={formatRating(usersPlatform?.reputation.average)} />
+                <StatLine label="Медианная репутация" value={formatRating(usersPlatform?.reputation.median)} />
+                <Box>
+                  <Typography variant="body2" color="text.secondary" mb={1}>
+                    Топ по репутации
+                  </Typography>
+                  <Stack spacing={0.75}>
+                    {(usersPlatform?.reputation.topUsers ?? []).slice(0, 5).map((user) => (
+                      <StatLine
+                        key={user.userId}
+                        label={formatName(user.name, user.userId)}
+                        value={formatNumber(user.reputationPoints)}
+                      />
+                    ))}
+                  </Stack>
                 </Box>
               </Stack>
             </CardContent>
           </Card>
         </Grid>
 
-        <Grid size={{ xs: 12, md: 6 }}>
-          <Card variant="outlined" sx={{ height: "100%", borderRadius: 3 }}>
+        <Grid size={{ xs: 12, lg: 4 }}>
+          <Card variant="outlined" sx={{ height: "100%", borderRadius: 2 }}>
             <CardContent>
-              <Typography variant="h5" fontWeight={700} mb={2}>
-                Что уже можно расширять
-              </Typography>
-              <Stack spacing={1.5}>
+              <Stack spacing={2}>
+                <Box display="flex" alignItems="center" gap={1}>
+                  <ForumOutlinedIcon color="primary" />
+                  <Typography variant="h6" fontWeight={800}>
+                    Chats
+                  </Typography>
+                </Box>
+                <StatLine label="Всего чатов" value={formatNumber(chatsPlatform?.chats.total ?? 0)} />
                 <Typography variant="body2" color="text.secondary">
-                  Маршрут `/admin` уже встроен в основную навигацию и может стать входной точкой
-                  для полноценных админ-разделов.
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Карточки ниже загружаются только после подтверждения `isAdmin`, поэтому этот
-                  экран можно безопасно расширять системными данными.
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Следующий логичный шаг: вынести отдельный layout, секции и специализированные
-                  admin-операции.
+                  Метрика идёт из отдельного chats сервиса и не зависит от выборок списка сообщений на клиенте.
                 </Typography>
               </Stack>
             </CardContent>
@@ -327,103 +459,393 @@ function AdminPage() {
         </Grid>
       </Grid>
 
-      <Box>
-        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2} gap={2} flexWrap="wrap">
-          <Typography variant="h5" fontWeight={700}>
-            Обзор текущих данных
-          </Typography>
-          {isOverviewLoading && <Chip label="Обновление" size="small" />}
-        </Box>
-        <Grid container spacing={2}>
-          <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-            <MetricCard
-              title="Пользователи"
-              value={String(visibleUsers?.length ?? 0)}
-              caption="Количество пользователей, доступных через текущий API."
-              isLoading={isVisibleUsersLoading}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-            <MetricCard
-              title="Чаты"
-              value={String(chats?.length ?? 0)}
-              caption="Диалоги, которые уже можно использовать в будущем центре поддержки."
-              isLoading={isChatsLoading}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-            <MetricCard
-              title="Объявления"
-              value={String(offers?.offers.length ?? 0)}
-              caption="Первые 20 объявлений из текущего списка, без отдельной админ-фильтрации."
-              isLoading={isOffersLoading}
-            />
-          </Grid>
-          <Grid size={{ xs: 12, sm: 6, lg: 3 }}>
-            <MetricCard
-              title="Сделки и черновики"
-              value={`${deals?.length ?? 0} / ${drafts?.length ?? 0}`}
-              caption="Слева сделки, справа черновики; формат удобен как базовый health snapshot."
-              isLoading={isDealsLoading || isDraftsLoading}
-            />
-          </Grid>
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, xl: 6 }}>
+          <Card variant="outlined" sx={{ height: "100%", borderRadius: 2 }}>
+            <CardContent>
+              <Stack spacing={2}>
+                <Box display="flex" alignItems="center" gap={1}>
+                  <SellOutlinedIcon color="primary" />
+                  <Typography variant="h6" fontWeight={800}>
+                    Объявления
+                  </Typography>
+                </Box>
+                <StatLine label="Всего" value={formatNumber(dealsPlatform?.offers.total ?? 0)} />
+                <StatLine label="Черновики сделок" value={formatNumber(dealsPlatform?.offers.drafts ?? 0)} />
+                <StatLine label="Просмотры" value={formatNumber(dealsPlatform?.offers.totalViews ?? 0)} />
+                <StatLine
+                  label="Среднее на пользователя"
+                  value={formatRating(dealsPlatform?.offers.averagePerUser)}
+                />
+                <StatLine label="Средний рейтинг" value={formatRating(dealsPlatform?.offers.averageRating)} />
+                <StatLine
+                  label="Скрыто модератором"
+                  value={formatNumber(dealsPlatform?.offers.hidden.moderated ?? 0)}
+                />
+                <StatLine
+                  label="Скрыто автором"
+                  value={formatNumber(dealsPlatform?.offers.hidden.hiddenByAuthor ?? 0)}
+                />
+                <StatLine
+                  label="good / service"
+                  value={`${formatNumber(dealsPlatform?.offers.byType.good ?? 0)} / ${formatNumber(dealsPlatform?.offers.byType.service ?? 0)}`}
+                />
+                <StatLine
+                  label="give / take"
+                  value={`${formatNumber(dealsPlatform?.offers.byAction.give ?? 0)} / ${formatNumber(dealsPlatform?.offers.byAction.take ?? 0)}`}
+                />
+                <Box>
+                  <Typography variant="body2" color="text.secondary" mb={1}>
+                    Топ тегов
+                  </Typography>
+                  <Box display="flex" flexWrap="wrap" gap={1}>
+                    {(dealsPlatform?.offers.topTags ?? []).slice(0, 6).map((tag) => (
+                      <Chip
+                        key={tag.tag}
+                        label={`${tag.tag} · ${formatNumber(tag.offersCount)}`}
+                        size="small"
+                        variant="outlined"
+                      />
+                    ))}
+                  </Box>
+                </Box>
+              </Stack>
+            </CardContent>
+          </Card>
         </Grid>
+
+        <Grid size={{ xs: 12, xl: 6 }}>
+          <Card variant="outlined" sx={{ height: "100%", borderRadius: 2 }}>
+            <CardContent>
+              <Stack spacing={2}>
+                <Box display="flex" alignItems="center" gap={1}>
+                  <Inventory2OutlinedIcon color="primary" />
+                  <Typography variant="h6" fontWeight={800}>
+                    Сделки, жалобы и отзывы
+                  </Typography>
+                </Box>
+                <StatLine label="Сделок всего" value={formatNumber(dealsPlatform?.deals.total ?? 0)} />
+                <StatLine
+                  label="Успешная конверсия"
+                  value={formatPercent(dealsPlatform?.deals.successfulConversionRate ?? 0)}
+                />
+                <StatLine
+                  label="Среднее число участников"
+                  value={formatRating(dealsPlatform?.deals.averageParticipants)}
+                />
+                <StatLine
+                  label="Доля multi-party"
+                  value={formatPercent(dealsPlatform?.deals.multiPartyShare ?? 0)}
+                />
+                <Box>
+                  <Typography variant="body2" color="text.secondary" mb={1}>
+                    Статусы сделок
+                  </Typography>
+                  <Box display="flex" flexWrap="wrap" gap={1}>
+                    <Chip
+                      size="small"
+                      variant="outlined"
+                      label={`LFP ${formatNumber(dealsPlatform?.deals.byStatus.lookingForParticipants ?? 0)}`}
+                    />
+                    <Chip
+                      size="small"
+                      variant="outlined"
+                      label={`Discussion ${formatNumber(dealsPlatform?.deals.byStatus.discussion ?? 0)}`}
+                    />
+                    <Chip
+                      size="small"
+                      variant="outlined"
+                      label={`Confirmed ${formatNumber(dealsPlatform?.deals.byStatus.confirmed ?? 0)}`}
+                    />
+                    <Chip
+                      size="small"
+                      variant="outlined"
+                      label={`Completed ${formatNumber(dealsPlatform?.deals.byStatus.completed ?? 0)}`}
+                    />
+                    <Chip
+                      size="small"
+                      variant="outlined"
+                      label={`Failed ${formatNumber(dealsPlatform?.deals.byStatus.failed ?? 0)}`}
+                    />
+                    <Chip
+                      size="small"
+                      variant="outlined"
+                      label={`Cancelled ${formatNumber(dealsPlatform?.deals.byStatus.cancelled ?? 0)}`}
+                    />
+                  </Box>
+                </Box>
+                <StatLine label="Жалоб всего" value={formatNumber(dealsPlatform?.reports.total ?? 0)} />
+                <StatLine
+                  label="Жалоб в ожидании"
+                  value={formatNumber(dealsPlatform?.reports.pending ?? 0)}
+                />
+                <StatLine
+                  label="Заблокированные объявления"
+                  value={formatNumber(dealsPlatform?.reports.blockedOffers ?? 0)}
+                />
+                <StatLine
+                  label="Решения по failure"
+                  value={formatNumber(dealsPlatform?.reports.adminFailureResolutions ?? 0)}
+                />
+                <StatLine label="Отзывов всего" value={formatNumber(dealsPlatform?.reviews.total ?? 0)} />
+                <StatLine
+                  label="Средний рейтинг отзывов"
+                  value={formatRating(dealsPlatform?.reviews.averageRating)}
+                />
+              </Stack>
+            </CardContent>
+          </Card>
+        </Grid>
+      </Grid>
+
+      <Box
+        sx={{
+          border: "1px solid",
+          borderColor: "divider",
+          borderRadius: 2,
+          px: { xs: 2, md: 3 },
+          py: { xs: 2, md: 3 },
+        }}
+      >
+        <Stack spacing={3}>
+          <Box display="flex" alignItems="center" gap={1}>
+            <ManageSearchOutlinedIcon color="primary" />
+            <Typography variant="h6" fontWeight={800}>
+              Проверка пользователя
+            </Typography>
+          </Box>
+
+          <Box component="form" onSubmit={handleUserSubmit}>
+            <Stack direction={{ xs: "column", md: "row" }} spacing={1.5}>
+              <TextField
+                fullWidth
+                label="UUID пользователя"
+                value={userInput}
+                onChange={(event) => setUserInput(event.target.value)}
+                error={normalizedInput.length > 0 && !isInputValid}
+                helperText={
+                  normalizedInput.length > 0 && !isInputValid
+                    ? "Нужен корректный UUID."
+                    : "Берём auth, users и deals статистику по одному userId."
+                }
+              />
+              <Button type="submit" variant="contained" disabled={!isInputValid}>
+                Загрузить
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={() => {
+                  setUserInput(currentUser.id);
+                  setSelectedUserId(currentUser.id);
+                }}
+              >
+                Мой ID
+              </Button>
+            </Stack>
+          </Box>
+
+          {resolvedUserId === null ? null : userErrorMessage ? (
+            <Alert severity="warning">{userErrorMessage}</Alert>
+          ) : null}
+
+          {resolvedUserId === null ? null : isUserDetailsLoading ? (
+            <Box display="flex" justifyContent="center" py={4}>
+              <CircularProgress />
+            </Box>
+          ) : authUserStats && usersUserStats && dealsUserStats ? (
+            <Stack spacing={2.5}>
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 12, lg: 4 }}>
+                  <Card variant="outlined" sx={{ height: "100%", borderRadius: 2 }}>
+                    <CardContent>
+                      <Stack spacing={1.5}>
+                        <Typography variant="body2" color="text.secondary">
+                          Пользователь
+                        </Typography>
+                        <Typography variant="h6" fontWeight={800}>
+                          {formatName(inspectedUser?.name, authUserStats.userId)}
+                        </Typography>
+                        <Typography variant="body2" sx={{ wordBreak: "break-all" }}>
+                          {authUserStats.userId}
+                        </Typography>
+                        <StatLine label="Регистрация" value={formatDateTime(authUserStats.registeredAt)} />
+                        <StatLine
+                          label="Email"
+                          value={authUserStats.emailVerified ? "Подтверждён" : "Не подтверждён"}
+                        />
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                </Grid>
+
+                <Grid size={{ xs: 12, lg: 4 }}>
+                  <Card variant="outlined" sx={{ height: "100%", borderRadius: 2 }}>
+                    <CardContent>
+                      <Stack spacing={1.5}>
+                        <Typography variant="body2" color="text.secondary">
+                          Репутация и social
+                        </Typography>
+                        <StatLine
+                          label="Текущая репутация"
+                          value={formatNumber(usersUserStats.reputation.currentPoints)}
+                        />
+                        <StatLine
+                          label="Подписчики"
+                          value={formatNumber(usersUserStats.social.followersCount)}
+                        />
+                        <StatLine
+                          label="Подписки"
+                          value={formatNumber(usersUserStats.social.subscriptionsCount)}
+                        />
+                        <StatLine
+                          label="События в истории"
+                          value={formatNumber(usersUserStats.reputation.history.length)}
+                        />
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                </Grid>
+
+                <Grid size={{ xs: 12, lg: 4 }}>
+                  <Card variant="outlined" sx={{ height: "100%", borderRadius: 2 }}>
+                    <CardContent>
+                      <Stack spacing={1.5}>
+                        <Typography variant="body2" color="text.secondary">
+                          Активность в deals
+                        </Typography>
+                        <StatLine label="Опубликованные объявления" value={formatNumber(dealsUserStats.offers.published)} />
+                        <StatLine label="Просмотры объявлений" value={formatNumber(dealsUserStats.offers.totalViews)} />
+                        <StatLine label="Активные сделки" value={formatNumber(dealsUserStats.deals.active)} />
+                        <StatLine label="Завершённые сделки" value={formatNumber(dealsUserStats.deals.completed)} />
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </Grid>
+
+              <Grid container spacing={2}>
+                <Grid size={{ xs: 12, xl: 4 }}>
+                  <Card variant="outlined" sx={{ height: "100%", borderRadius: 2 }}>
+                    <CardContent>
+                      <Stack spacing={1.5}>
+                        <Typography variant="h6" fontWeight={800}>
+                          События репутации
+                        </Typography>
+                        {usersUserStats.reputation.history.length === 0 ? (
+                          <Typography variant="body2" color="text.secondary">
+                            История пока пустая.
+                          </Typography>
+                        ) : (
+                          usersUserStats.reputation.history.slice(0, 6).map((event) => (
+                            <Box key={event.id} sx={{ py: 0.5 }}>
+                              <Box display="flex" justifyContent="space-between" gap={2}>
+                                <Typography variant="body2" fontWeight={700}>
+                                  {event.delta > 0 ? `+${event.delta}` : event.delta}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">
+                                  {formatDateTime(event.createdAt)}
+                                </Typography>
+                              </Box>
+                              <Typography variant="body2" color="text.secondary">
+                                {event.sourceType}
+                              </Typography>
+                            </Box>
+                          ))
+                        )}
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                </Grid>
+
+                <Grid size={{ xs: 12, xl: 4 }}>
+                  <Card variant="outlined" sx={{ height: "100%", borderRadius: 2 }}>
+                    <CardContent>
+                      <Stack spacing={1.5}>
+                        <Typography variant="h6" fontWeight={800}>
+                          Сделки и отзывы
+                        </Typography>
+                        <StatLine label="Failed всего" value={formatNumber(dealsUserStats.deals.failed.total)} />
+                        <StatLine
+                          label="Failed по вине пользователя"
+                          value={formatNumber(dealsUserStats.deals.failed.responsible)}
+                        />
+                        <StatLine
+                          label="Failed как пострадавший"
+                          value={formatNumber(dealsUserStats.deals.failed.affected)}
+                        />
+                        <StatLine label="Cancelled" value={formatNumber(dealsUserStats.deals.cancelled)} />
+                        <StatLine label="Получено отзывов" value={formatNumber(dealsUserStats.reviews.received)} />
+                        <StatLine
+                          label="Средняя оценка"
+                          value={formatRating(dealsUserStats.reviews.averageReceivedRating)}
+                        />
+                        <StatLine label="Написано отзывов" value={formatNumber(dealsUserStats.reviews.written)} />
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                </Grid>
+
+                <Grid size={{ xs: 12, xl: 4 }}>
+                  <Card variant="outlined" sx={{ height: "100%", borderRadius: 2 }}>
+                    <CardContent>
+                      <Stack spacing={1.5}>
+                        <Typography variant="h6" fontWeight={800}>
+                          Жалобы
+                        </Typography>
+                        <StatLine label="Подал жалоб" value={formatNumber(dealsUserStats.reports.filed)} />
+                        <StatLine
+                          label="Принятые жалобы на пользователя"
+                          value={formatNumber(dealsUserStats.reports.received.accepted)}
+                        />
+                        <StatLine
+                          label="Отклонённые жалобы на пользователя"
+                          value={formatNumber(dealsUserStats.reports.received.rejected)}
+                        />
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                </Grid>
+              </Grid>
+            </Stack>
+          ) : null}
+        </Stack>
       </Box>
 
-      <Card variant="outlined" sx={{ borderRadius: 3 }}>
+      <Card variant="outlined" sx={{ borderRadius: 2 }}>
         <CardContent>
-          <Typography variant="h5" fontWeight={700} mb={2}>
-            Каркас модулей
-          </Typography>
-          <Grid container spacing={2}>
-            {futureModules.map((module) => (
-              <Grid key={module.title} size={{ xs: 12, md: 6 }}>
-                <Card
-                  variant="outlined"
-                  sx={{
-                    height: "100%",
-                    borderRadius: 3,
-                    borderStyle: "dashed",
-                  }}
-                >
-                  <CardContent>
-                    <Box display="flex" alignItems="center" gap={1.5} mb={1.5}>
-                      {module.icon}
-                      <Typography variant="h6" fontWeight={700}>
-                        {module.title}
-                      </Typography>
-                    </Box>
-                    <Typography variant="body2" color="text.secondary">
-                      {module.description}
-                    </Typography>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
-        </CardContent>
-      </Card>
-
-      <Card variant="outlined" sx={{ borderRadius: 3 }}>
-        <CardContent>
-          <Typography variant="h5" fontWeight={700} mb={2}>
-            Технические заметки
-          </Typography>
-          <Divider sx={{ mb: 2 }} />
-          <Stack spacing={1.5}>
-            <Typography variant="body2" color="text.secondary">
-              1. Сейчас это обычный frontend-маршрут внутри пользовательского приложения.
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              2. Доступ не ограничен отдельной ролью, потому что бэкенд ещё не отдаёт такие права.
-            </Typography>
-            <Typography variant="body2" color="text.secondary">
-              3. Структура страницы уже готова для подключения реальных списков, фильтров, таблиц
-              и действий администратора.
-            </Typography>
+          <Stack spacing={2}>
+            <Box display="flex" alignItems="center" gap={1}>
+              <TagOutlinedIcon color="primary" />
+              <Typography variant="h6" fontWeight={800}>
+                Теги объявлений
+              </Typography>
+            </Box>
+            {isTagsLoading ? (
+              <CircularProgress size={24} />
+            ) : tags.length === 0 ? (
+              <Alert severity="info">Тегов пока нет.</Alert>
+            ) : (
+              <Box display="flex" gap={1} flexWrap="wrap">
+                {tags.map((tag) => (
+                  <Chip
+                    key={tag}
+                    label={tag}
+                    onDelete={() => void deleteAdminTag(tag)}
+                    disabled={isDeletingTag}
+                    variant="outlined"
+                  />
+                ))}
+              </Box>
+            )}
           </Stack>
         </CardContent>
       </Card>
+
+      {isPlatformLoading ? (
+        <Box display="flex" justifyContent="center" py={1}>
+          <Chip icon={<VisibilityOutlinedIcon />} label="Платформенная статистика обновляется" />
+        </Box>
+      ) : null}
     </Stack>
   );
 }

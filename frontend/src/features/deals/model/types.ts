@@ -1,6 +1,8 @@
 import {z} from "zod";
 import {
   addDealItemRequestSchema,
+  adminDealsPlatformStatisticsSchema,
+  adminDealsUserStatisticsSchema,
   changeDealStatusRequestSchema,
   confirmDraftDealResponseSchema,
   createDraftDealResponseSchema,
@@ -78,3 +80,5 @@ export type ModeratorResolutionForFailureRequest = z.Infer<typeof moderatorResol
 export type FailureResolution = z.Infer<typeof failureResolutionSchema>;
 export type FailureMaterials = z.Infer<typeof failureMaterialsSchema>;
 export type FailureModerationDealsResponse = z.Infer<typeof failureModerationDealsResponseSchema>;
+export type AdminDealsPlatformStatistics = z.Infer<typeof adminDealsPlatformStatisticsSchema>;
+export type AdminDealsUserStatistics = z.Infer<typeof adminDealsUserStatisticsSchema>;

@@ -2,6 +2,8 @@ import {createApi} from "@reduxjs/toolkit/query/react";
 import {baseQueryWithReauth} from "@/shared/api/baseApi.ts";
 import {
   addDealItemRequestSchema,
+  adminDealsPlatformStatisticsSchema,
+  adminDealsUserStatisticsSchema,
   changeDealStatusRequestSchema,
   confirmDraftDealResponseSchema,
   createDraftDealResponseSchema,
@@ -21,6 +23,8 @@ import {
 } from "@/features/deals/model/schemas.ts";
 import type {
   AddDealItemRequest,
+  AdminDealsPlatformStatistics,
+  AdminDealsUserStatistics,
   ChangeDealStatusRequest,
   ConfirmDraftDealResponse,
   CreateDraftDealRequest,
@@ -336,6 +340,16 @@ const dealsApi = createApi({
       query: (dealId) => `/deals/failures/${dealId}/moderator-resolution`,
       transformResponse: (response: unknown) => failureResolutionSchema.parse(response),
       providesTags: (_result, _error, dealId) => [{ type: "FailureResolution", id: dealId }],
+    }),
+
+    getAdminPlatformStatistics: builder.query<AdminDealsPlatformStatistics, void>({
+      query: () => "/deals/admin/statistics/platform",
+      transformResponse: (response: unknown) => adminDealsPlatformStatisticsSchema.parse(response),
+    }),
+
+    getAdminUserStatistics: builder.query<AdminDealsUserStatistics, string>({
+      query: (userId) => `/deals/admin/users/${userId}/statistics`,
+      transformResponse: (response: unknown) => adminDealsUserStatisticsSchema.parse(response),
     }),
   }),
 });
