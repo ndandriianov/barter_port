@@ -743,6 +743,11 @@ type FavoritedOffer struct {
 	// FavoritedAt Временная метка добавления объявления в избранное
 	FavoritedAt time.Time `json:"favoritedAt"`
 
+	// HiddenByAuthor Признак того, что объявление скрыто самим автором.
+	// Эффективно скрытым объявление считается, если `hiddenByAuthor=true`
+	// или `isHidden=true`.
+	HiddenByAuthor *bool `json:"hiddenByAuthor,omitempty"`
+
 	// Id Уникальный идентификатор объявления
 	Id openapi_types.UUID `json:"id"`
 
@@ -751,7 +756,8 @@ type FavoritedOffer struct {
 	IsFavorite *bool `json:"isFavorite,omitempty"`
 
 	// IsHidden Признак того, что объявление скрыто модератором.
-	// Скрытые объявления видны только автору объявления и администратору.
+	// Если `true`, объявление остается скрытым для обычных пользователей
+	// независимо от значения `hiddenByAuthor`.
 	IsHidden *bool `json:"isHidden,omitempty"`
 
 	// Latitude Широта точки объявления.
@@ -1061,6 +1067,11 @@ type Offer struct {
 	// DraftsCount Количество черновых сделок, в которых участвует объявление. Возвращается только для авторов объявления.
 	DraftsCount *int `json:"draftsCount,omitempty"`
 
+	// HiddenByAuthor Признак того, что объявление скрыто самим автором.
+	// Эффективно скрытым объявление считается, если `hiddenByAuthor=true`
+	// или `isHidden=true`.
+	HiddenByAuthor *bool `json:"hiddenByAuthor,omitempty"`
+
 	// Id Уникальный идентификатор объявления
 	Id openapi_types.UUID `json:"id"`
 
@@ -1069,7 +1080,8 @@ type Offer struct {
 	IsFavorite *bool `json:"isFavorite,omitempty"`
 
 	// IsHidden Признак того, что объявление скрыто модератором.
-	// Скрытые объявления видны только автору объявления и администратору.
+	// Если `true`, объявление остается скрытым для обычных пользователей
+	// независимо от значения `hiddenByAuthor`.
 	IsHidden *bool `json:"isHidden,omitempty"`
 
 	// Latitude Широта точки объявления.
@@ -1248,6 +1260,11 @@ type OfferWithInfo struct {
 	// DraftsCount Количество черновых сделок, в которых участвует объявление. Возвращается только для авторов объявления.
 	DraftsCount *int `json:"draftsCount,omitempty"`
 
+	// HiddenByAuthor Признак того, что объявление скрыто самим автором.
+	// Эффективно скрытым объявление считается, если `hiddenByAuthor=true`
+	// или `isHidden=true`.
+	HiddenByAuthor *bool `json:"hiddenByAuthor,omitempty"`
+
 	// Id Уникальный идентификатор объявления
 	Id openapi_types.UUID `json:"id"`
 
@@ -1256,7 +1273,8 @@ type OfferWithInfo struct {
 	IsFavorite *bool `json:"isFavorite,omitempty"`
 
 	// IsHidden Признак того, что объявление скрыто модератором.
-	// Скрытые объявления видны только автору объявления и администратору.
+	// Если `true`, объявление остается скрытым для обычных пользователей
+	// независимо от значения `hiddenByAuthor`.
 	IsHidden *bool `json:"isHidden,omitempty"`
 
 	// Latitude Широта точки объявления.

@@ -2048,6 +2048,7 @@ paths:
 
         - Если `my=true`, возвращаются только объявления, созданные текущим пользователем.
           В этом режиме отображается количество черновиков, в которые входит данный offer
+        - Скрытым считается объявление, у которого `hiddenByAuthor=true` или `isHidden=true`.
         - Скрытые объявления не показываются обычным пользователям.
         - Скрытые объявления видны:
           - автору объявления (в режиме `my=true`);
@@ -2326,7 +2327,9 @@ paths:
       description: |
         Возвращает одно объявление по его ID.
 
-        Правила видимости для скрытых (hidden) объявлений:
+        Скрытым считается объявление, у которого `hiddenByAuthor=true` или `isHidden=true`.
+
+        Правила видимости для скрытых объявлений:
         - автор и администратор могут получить объявление;
         - остальные пользователи получают `404 Not Found`.
 
@@ -2445,7 +2448,13 @@ paths:
       tags:
         - offers
       summary: Удалить объявление
-      description: Удаляет существующее объявление. Удалить может только автор.
+      description: |
+        Удаляет существующее объявление по его `offerId`.
+
+        Бизнес-правила:
+        - удалить объявление может только его автор;
+        - пользователь может удалять только свои объявления;
+        - при попытке удалить чужое объявление сервер возвращает `403 Forbidden`.
       operationId: deleteOfferById
       security:
         - bearerAuth: []
@@ -2458,7 +2467,131 @@ paths:
             format: uuid
       responses:
         '204':
-          description: Offer deleted
+          description: Объявление удалено
+        '400':
+          description: Invalid offer ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Доступ запрещён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Offer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /offers/{offerId}/hidden:
+    put:
+      tags:
+        - offers
+      summary: Скрыть своё объявление
+      description: |
+        Помечает объявление как скрытое со стороны автора, устанавливая `hiddenByAuthor=true`.
+
+        Это обратимая альтернатива удалению объявления.
+
+        Бизнес-правила:
+        - скрыть объявление может только его автор;
+        - операция идемпотентна: если `hiddenByAuthor` уже равно `true`,
+          сервер всё равно возвращает `204 No Content`;
+        - после скрытия объявление считается скрытым, если `hiddenByAuthor=true`
+          или `isHidden=true`;
+        - скрытое объявление не показывается обычным пользователям в публичных списках и по `GET /offers/{offerId}`.
+      operationId: hideOfferByAuthor
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: offerId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Объявление скрыто автором
+        '400':
+          description: Invalid offer ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Доступ запрещён
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Offer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - offers
+      summary: Убрать своё объявление из скрытых
+      description: |
+        Снимает авторское скрытие объявления, устанавливая `hiddenByAuthor=false`.
+
+        Бизнес-правила:
+        - убрать объявление из скрытых может только его автор;
+        - операция идемпотентна: если `hiddenByAuthor` уже равно `false`,
+          сервер всё равно возвращает `204 No Content`;
+        - операция очищает только флаг `hiddenByAuthor`;
+        - если объявление скрыто модератором (`isHidden=true`), оно остается скрытым
+          после вызова endpoint, потому что проверка скрытости выполняется как
+          `hiddenByAuthor=true OR isHidden=true`.
+      operationId: unhideOfferByAuthor
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: offerId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Авторское скрытие снято
+        '400':
+          description: Invalid offer ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: Unauthorized
           content:
@@ -3724,7 +3857,14 @@ components:
           type: boolean
           description: |
             Признак того, что объявление скрыто модератором.
-            Скрытые объявления видны только автору объявления и администратору.
+            Если `true`, объявление остается скрытым для обычных пользователей
+            независимо от значения `hiddenByAuthor`.
+        hiddenByAuthor:
+          type: boolean
+          description: |
+            Признак того, что объявление скрыто самим автором.
+            Эффективно скрытым объявление считается, если `hiddenByAuthor=true`
+            или `isHidden=true`.
         modificationBlocked:
           type: boolean
           description: Признак того, что объявление временно заблокировано для редактирования из-за pending-жалобы.
