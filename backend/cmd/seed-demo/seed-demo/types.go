@@ -99,15 +99,16 @@ type SeedSummary struct {
 	OfferGroupDraftID uuid.UUID `json:"offerGroupDraftId"`
 	MultiUnitGroupID  uuid.UUID `json:"multiUnitGroupId"`
 
-	LookingDealID    uuid.UUID `json:"lookingDealId"`
-	DiscussionDealID uuid.UUID `json:"discussionDealId"`
-	ConfirmedDealID  uuid.UUID `json:"confirmedDealId"`
-	CompletedDealID  uuid.UUID `json:"completedDealId"`
-	CompletedDeal2ID uuid.UUID `json:"completedDeal2Id"`
-	CompletedDeal3ID uuid.UUID `json:"completedDeal3Id"`
-	CancelledDealID  uuid.UUID `json:"cancelledDealId"`
-	FailedDealID     uuid.UUID `json:"failedDealId"`
-	JoinDealID       uuid.UUID `json:"joinDealId"`
+	LookingDealID       uuid.UUID `json:"lookingDealId"`
+	DiscussionDealID    uuid.UUID `json:"discussionDealId"`
+	ConfirmedDealID     uuid.UUID `json:"confirmedDealId"`
+	CompletedDealID     uuid.UUID `json:"completedDealId"`
+	CompletedDeal2ID    uuid.UUID `json:"completedDeal2Id"`
+	CompletedDeal3ID    uuid.UUID `json:"completedDeal3Id"`
+	CancelledDealID     uuid.UUID `json:"cancelledDealId"`
+	PendingFailedDealID uuid.UUID `json:"pendingFailedDealId"`
+	FailedDealID        uuid.UUID `json:"failedDealId"`
+	JoinDealID          uuid.UUID `json:"joinDealId"`
 
 	DirectChatID uuid.UUID `json:"directChatId"`
 	DealChatID   uuid.UUID `json:"dealChatId"`

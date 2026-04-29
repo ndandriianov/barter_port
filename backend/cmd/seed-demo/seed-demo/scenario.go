@@ -839,6 +839,30 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 		return nil, fmt.Errorf("cancel revoke-vote deal: %w", err)
 	}
 
+	pendingFailedDealID, err := client.createTwoPartyDeal(ctx, bob, eva, bobOffers["thermos"], evaOffers["watercolors"],
+		"Термос на акварель",
+		"Bob и Eva договорились об обмене, но только Bob зафиксировал провал сделки.")
+	if err != nil {
+		return nil, fmt.Errorf("create pending failed deal: %w", err)
+	}
+
+	if _, err := client.promoteDealToDiscussion(ctx, pendingFailedDealID, bob, eva); err != nil {
+		return nil, fmt.Errorf("promote pending failed deal to discussion: %w", err)
+	}
+
+	if err := client.changeDealStatus(ctx, bob.Token, pendingFailedDealID, dealtypes.Confirmed); err != nil {
+		return nil, fmt.Errorf("confirm pending failed deal by bob: %w", err)
+	}
+	if err := client.changeDealStatus(ctx, eva.Token, pendingFailedDealID, dealtypes.Confirmed); err != nil {
+		return nil, fmt.Errorf("confirm pending failed deal by eva: %w", err)
+	}
+	if err := client.voteForFailure(ctx, bob.Token, pendingFailedDealID, eva.UserID); err != nil {
+		return nil, fmt.Errorf("bob vote for pending failure: %w", err)
+	}
+	if _, err := client.getFailureVotes(ctx, bob.Token, pendingFailedDealID); err != nil {
+		return nil, fmt.Errorf("get failure votes for pending failed deal: %w", err)
+	}
+
 	failedDealID, err := client.createTwoPartyDeal(ctx, alice, fedor, aliceOffers["lamp"], fedorOffers["old-camera"],
 		"Лампа на фотоаппарат",
 		"Alice и Fedor пытались обменять лампу на фотокамеру.")
@@ -1151,15 +1175,16 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 		OfferGroupDraftID: offerGroupDraftID,
 		MultiUnitGroupID:  multiUnitGroupID,
 
-		LookingDealID:    lookingDealID,
-		DiscussionDealID: discussionDealID,
-		ConfirmedDealID:  confirmedDealID,
-		CompletedDealID:  completedDealID,
-		CompletedDeal2ID: completedDeal2ID,
-		CompletedDeal3ID: completedDeal3ID,
-		CancelledDealID:  cancelledDealID,
-		FailedDealID:     failedDealID,
-		JoinDealID:       joinDealID,
+		LookingDealID:       lookingDealID,
+		DiscussionDealID:    discussionDealID,
+		ConfirmedDealID:     confirmedDealID,
+		CompletedDealID:     completedDealID,
+		CompletedDeal2ID:    completedDeal2ID,
+		CompletedDeal3ID:    completedDeal3ID,
+		CancelledDealID:     cancelledDealID,
+		PendingFailedDealID: pendingFailedDealID,
+		FailedDealID:        failedDealID,
+		JoinDealID:          joinDealID,
 
 		DirectChatID: directChatID,
 		DealChatID:   dealChatID,
