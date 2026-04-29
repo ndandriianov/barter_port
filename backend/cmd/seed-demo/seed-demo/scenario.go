@@ -577,11 +577,11 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 
 	// ── Deals ────────────────────────────────────────────────────────────────
 
-	lookingDealID, err := client.createLookingDeal(ctx, fedor, fedorOffers["vinyl-player"],
-		"Виниловый проигрыватель ищет нового хозяина",
-		"Открытая сделка, жду партнёра с интересным предложением.")
+	lookingDealID, err := client.createTwoPartyDeal(ctx, fedor, eva, fedorOffers["vinyl-player"], evaOffers["sketchbooks"],
+		"Проигрыватель на скетчбуки",
+		"Fedor и Eva собрали открытую сделку и оставили её в поиске участников для уточнения условий обмена.")
 	if err != nil {
-		return nil, fmt.Errorf("create looking deal: %w", err)
+		return nil, fmt.Errorf("create open deal: %w", err)
 	}
 
 	discussionDealID, err := client.createTwoPartyDeal(ctx, alice, bob, aliceOffers["storage-boxes"], bobOffers["tool-kit"],
@@ -920,11 +920,11 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 		return nil, fmt.Errorf("get moderator resolution for failed deal: %w", err)
 	}
 
-	joinDealID, err := client.createLookingDeal(ctx, bob, bobOffers["coffee-beans"],
-		"Ищу зерновой кофе",
-		"Открытая сделка, готов обменять на что-то интересное.")
+	joinDealID, err := client.createTwoPartyDeal(ctx, bob, dan, bobOffers["coffee-beans"], danOffers["repair"],
+		"Кофе на мелкий ремонт",
+		"Bob и Dan оставили сделку открытой: кофе в обмен на помощь с техникой, позже Bob добавил термос.")
 	if err != nil {
-		return nil, fmt.Errorf("create join deal: %w", err)
+		return nil, fmt.Errorf("create join-ready deal: %w", err)
 	}
 
 	joinDeal, err := client.addDealItem(ctx, bob.Token, joinDealID, dealtypes.AddDealItemRequest{
@@ -956,12 +956,15 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 	if err := client.processJoinRequest(ctx, bob.Token, joinDealID, eva.UserID, true); err != nil {
 		return nil, fmt.Errorf("bob process join request: %w", err)
 	}
+	if err := client.processJoinRequest(ctx, dan.Token, joinDealID, eva.UserID, true); err != nil {
+		return nil, fmt.Errorf("dan process join request: %w", err)
+	}
 
-	leaveJoinDealID, err := client.createLookingDeal(ctx, clara, claraOffers["english-session"],
-		"Временная сделка для leave join",
-		"Техническая открытая сделка, чтобы покрыть выход из join request.")
+	leaveJoinDealID, err := client.createTwoPartyDeal(ctx, clara, alice, claraOffers["english-session"], aliceOffers["storage-boxes"],
+		"Английский на короба для хранения",
+		"Clara и Alice оставили сделку открытой, чтобы рассмотреть дополнительные предложения по обмену.")
 	if err != nil {
-		return nil, fmt.Errorf("create leave-join deal: %w", err)
+		return nil, fmt.Errorf("create leave-join-ready deal: %w", err)
 	}
 	if err := client.requestJoinDeal(ctx, eva.Token, leaveJoinDealID); err != nil {
 		return nil, fmt.Errorf("eva request leave-join deal: %w", err)

@@ -1246,28 +1246,6 @@ func (c *SeedClient) getChatMessages(ctx context.Context, token string, chatID u
 	return body, nil
 }
 
-func (c *SeedClient) createLookingDeal(ctx context.Context, user *seededUser, offerID uuid.UUID, name, description string) (uuid.UUID, error) {
-	before, err := c.listMyDeals(ctx, user.Token)
-	if err != nil {
-		return uuid.Nil, fmt.Errorf("list deals before looking draft: %w", err)
-	}
-
-	draftID, err := c.createDraft(ctx, user.Token, dealtypes.CreateDraftDealRequest{
-		Name:        &name,
-		Description: &description,
-		Offers:      []dealtypes.OfferIDAndQuantity{{OfferID: offerID, Quantity: 1}},
-	})
-	if err != nil {
-		return uuid.Nil, err
-	}
-
-	if err := c.confirmDraft(ctx, user.Token, draftID); err != nil {
-		return uuid.Nil, fmt.Errorf("confirm looking draft: %w", err)
-	}
-
-	return c.waitForNewDeal(ctx, user.Token, before)
-}
-
 func (c *SeedClient) createAndCancelDeal(ctx context.Context, userA, userB *seededUser, offerA, offerB uuid.UUID, name, description string) (uuid.UUID, error) {
 	dealID, err := c.createTwoPartyDeal(ctx, userA, userB, offerA, offerB, name, description)
 	if err != nil {
