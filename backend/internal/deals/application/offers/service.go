@@ -753,7 +753,7 @@ func (s *Service) addFavoriteFlagToOffers(ctx context.Context, userID uuid.UUID,
 }
 
 func (s *Service) ensureOfferVisible(ctx context.Context, offer *domain.Offer, requesterID *uuid.UUID) error {
-	if !offer.IsHidden {
+	if !offer.EffectivelyHidden() {
 		return nil
 	}
 	if requesterID == nil {
@@ -1054,6 +1054,28 @@ func (s *Service) DeleteOffer(ctx context.Context, userID uuid.UUID, offerID uui
 			return err
 		}
 		return s.repo.DeleteUnusedTags(ctx, tx)
+	})
+}
+
+func (s *Service) HideOfferByAuthor(ctx context.Context, userID uuid.UUID, offerID uuid.UUID) error {
+	return s.setOfferHiddenByAuthor(ctx, userID, offerID, true)
+}
+
+func (s *Service) UnhideOfferByAuthor(ctx context.Context, userID uuid.UUID, offerID uuid.UUID) error {
+	return s.setOfferHiddenByAuthor(ctx, userID, offerID, false)
+}
+
+func (s *Service) setOfferHiddenByAuthor(ctx context.Context, userID uuid.UUID, offerID uuid.UUID, hidden bool) error {
+	return db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
+		offer, err := s.repo.GetOffer(ctx, tx, offerID)
+		if err != nil {
+			return err
+		}
+		if offer.AuthorId != userID {
+			return domain.ErrForbidden
+		}
+
+		return s.repo.SetOfferHiddenByAuthor(ctx, tx, offerID, hidden)
 	})
 }
 

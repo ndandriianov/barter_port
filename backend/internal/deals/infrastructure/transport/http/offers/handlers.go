@@ -533,6 +533,72 @@ func (h *Handlers) HandleDeleteOffer(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+func (h *Handlers) HandleHideOfferByAuthor(w http.ResponseWriter, r *http.Request) {
+	log := logger.LogFrom(r.Context(), slog.Default()).With(slog.String("handler", "HideOfferByAuthor"))
+	log.Info("handling hide offer request")
+
+	offerID, ok := parseOfferID(w, r)
+	if !ok {
+		return
+	}
+
+	userID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		log.Error("failed to get userID from context")
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
+	err := h.offerService.HideOfferByAuthor(r.Context(), userID, offerID)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrOfferNotFound):
+			httpx.WriteEmptyError(w, http.StatusNotFound)
+		case errors.Is(err, domain.ErrForbidden):
+			httpx.WriteEmptyError(w, http.StatusForbidden)
+		default:
+			log.Error("failed to hide offer", slog.Any("error", err))
+			httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handlers) HandleUnhideOfferByAuthor(w http.ResponseWriter, r *http.Request) {
+	log := logger.LogFrom(r.Context(), slog.Default()).With(slog.String("handler", "UnhideOfferByAuthor"))
+	log.Info("handling unhide offer request")
+
+	offerID, ok := parseOfferID(w, r)
+	if !ok {
+		return
+	}
+
+	userID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		log.Error("failed to get userID from context")
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
+	err := h.offerService.UnhideOfferByAuthor(r.Context(), userID, offerID)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrOfferNotFound):
+			httpx.WriteEmptyError(w, http.StatusNotFound)
+		case errors.Is(err, domain.ErrForbidden):
+			httpx.WriteEmptyError(w, http.StatusForbidden)
+		default:
+			log.Error("failed to unhide offer", slog.Any("error", err))
+			httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // ================================================================================
 // GET OFFERS
 // ================================================================================

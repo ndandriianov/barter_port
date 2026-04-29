@@ -15,7 +15,7 @@ const rowsToSelect = `
 	COALESCE((SELECT array_agg(ot.tag_name ORDER BY ot.tag_name) FROM offer_tags ot WHERE ot.offer_id = offers.id), '{}'::text[]) AS tags,
 	COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
 	COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
-	offers.is_hidden, offers.modification_blocked, offers.latitude, offers.longitude`
+	offers.is_hidden, offers.hidden_by_author, offers.modification_blocked, offers.latitude, offers.longitude`
 
 const tagFilterClause = `
 	AND (
@@ -124,6 +124,7 @@ func (r *Repository) scanDistanceOffers(ctx context.Context, query string, args 
 			&offer.PhotoIds,
 			&offer.PhotoUrls,
 			&offer.IsHidden,
+			&offer.HiddenByAuthor,
 			&offer.ModificationBlocked,
 			&offer.Latitude,
 			&offer.Longitude,
@@ -132,8 +133,7 @@ func (r *Repository) scanDistanceOffers(ctx context.Context, query string, args 
 			return nil, nil, fmt.Errorf("scan distance offer: %w", err)
 		}
 
-		roundedDistance := int64(math.Round(distance))
-		offer.DistanceMeters = &roundedDistance
+		offer.DistanceMeters = new(int64(math.Round(distance)))
 		offers = append(offers, offer)
 		nextCursor = &domain.DistanceCursor{
 			Distance: distance,
@@ -194,7 +194,7 @@ func (r *Repository) GetOffersOrderByDistance(
 			FROM offers
 			WHERE offers.latitude IS NOT NULL
 			  AND offers.longitude IS NOT NULL
-			  AND (offers.is_hidden = FALSE OR $6)
+			  AND (NOT (offers.is_hidden OR offers.hidden_by_author) OR $6)
 			  AND NOT (offers.author_id = ANY($7))` + fmt.Sprintf(tagFilterClause, 9, 8, 8, 8, 8) + `
 		)
 		SELECT *
@@ -224,7 +224,7 @@ func (r *Repository) GetOffersOrderByDistanceNoCursor(
 			FROM offers
 			WHERE offers.latitude IS NOT NULL
 			  AND offers.longitude IS NOT NULL
-			  AND (offers.is_hidden = FALSE OR $4)
+			  AND (NOT (offers.is_hidden OR offers.hidden_by_author) OR $4)
 			  AND NOT (offers.author_id = ANY($5))` + fmt.Sprintf(tagFilterClause, 7, 6, 6, 6, 6) + `
 		)
 		SELECT *
@@ -307,7 +307,7 @@ func (r *Repository) GetSubscribedOffersOrderByDistance(
 			WHERE offers.latitude IS NOT NULL
 			  AND offers.longitude IS NOT NULL
 			  AND offers.author_id = ANY($6)
-			  AND (offers.is_hidden = FALSE OR $7)
+			  AND (NOT (offers.is_hidden OR offers.hidden_by_author) OR $7)
 		)
 		SELECT *
 		FROM filtered_offers
@@ -335,7 +335,7 @@ func (r *Repository) GetSubscribedOffersOrderByDistanceNoCursor(
 			WHERE offers.latitude IS NOT NULL
 			  AND offers.longitude IS NOT NULL
 			  AND offers.author_id = ANY($4)
-			  AND (offers.is_hidden = FALSE OR $5)
+			  AND (NOT (offers.is_hidden OR offers.hidden_by_author) OR $5)
 		)
 		SELECT *
 		FROM filtered_offers
@@ -362,7 +362,7 @@ func (r *Repository) GetOffersOrderByTime(
 		SELECT ` + rowsToSelect + `
 		FROM offers
 		WHERE (created_at, id) < ($2, $3)
-			AND (is_hidden = FALSE OR $4)
+			AND (NOT (is_hidden OR hidden_by_author) OR $4)
 			AND NOT (author_id = ANY($5))` + fmt.Sprintf(tagFilterClause, 7, 6, 6, 6, 6) + `
 		ORDER BY created_at DESC, id DESC
 		LIMIT $1`
@@ -381,7 +381,7 @@ func (r *Repository) GetOffersOrderByTimeNoCursor(
 	query := `
 		SELECT ` + rowsToSelect + `
 		FROM offers
-		WHERE (is_hidden = FALSE OR $2)
+		WHERE (NOT (is_hidden OR hidden_by_author) OR $2)
 		  AND NOT (author_id = ANY($3))` + fmt.Sprintf(tagFilterClause, 5, 4, 4, 4, 4) + `
 		ORDER BY created_at DESC, id DESC
 		LIMIT $1`
@@ -440,7 +440,7 @@ func (r *Repository) GetSubscribedOffersOrderByTime(
 		FROM offers
 		WHERE (created_at, id) < ($2, $3)
 			AND author_id = ANY($4)
-			AND (is_hidden = FALSE OR $5)
+			AND (NOT (is_hidden OR hidden_by_author) OR $5)
 		ORDER BY created_at DESC, id DESC
 		LIMIT $1`
 
@@ -457,7 +457,7 @@ func (r *Repository) GetSubscribedOffersOrderByTimeNoCursor(
 		SELECT ` + rowsToSelect + `
 		FROM offers
 		WHERE author_id = ANY($2)
-			AND (is_hidden = FALSE OR $3)
+			AND (NOT (is_hidden OR hidden_by_author) OR $3)
 		ORDER BY created_at DESC, id DESC
 		LIMIT $1`
 
@@ -481,7 +481,7 @@ func (r *Repository) GetOffersOrderByPopularity(
 		SELECT ` + rowsToSelect + `
 		FROM offers
 		WHERE (views, id) < ($2, $3)
-			AND (is_hidden = FALSE OR $4)
+			AND (NOT (is_hidden OR hidden_by_author) OR $4)
 			AND NOT (author_id = ANY($5))` + fmt.Sprintf(tagFilterClause, 7, 6, 6, 6, 6) + `
 		ORDER BY views DESC, id DESC
 		LIMIT $1`
@@ -500,7 +500,7 @@ func (r *Repository) GetOffersOrderByPopularityNoCursor(
 	query := `
 		SELECT ` + rowsToSelect + `
 		FROM offers
-		WHERE (is_hidden = FALSE OR $2)
+		WHERE (NOT (is_hidden OR hidden_by_author) OR $2)
 		  AND NOT (author_id = ANY($3))` + fmt.Sprintf(tagFilterClause, 5, 4, 4, 4, 4) + `
 		ORDER BY views DESC, id DESC
 		LIMIT $1`
@@ -559,7 +559,7 @@ func (r *Repository) GetSubscribedOffersOrderByPopularity(
 		FROM offers
 		WHERE (views, id) < ($2, $3)
 			AND author_id = ANY($4)
-			AND (is_hidden = FALSE OR $5)
+			AND (NOT (is_hidden OR hidden_by_author) OR $5)
 		ORDER BY views DESC, id DESC
 		LIMIT $1`
 
@@ -576,7 +576,7 @@ func (r *Repository) GetSubscribedOffersOrderByPopularityNoCursor(
 		SELECT ` + rowsToSelect + `
 		FROM offers
 		WHERE author_id = ANY($2)
-			AND (is_hidden = FALSE OR $3)
+			AND (NOT (is_hidden OR hidden_by_author) OR $3)
 		ORDER BY views DESC, id DESC
 		LIMIT $1`
 
@@ -597,7 +597,7 @@ func (r *Repository) GetFavoriteOffers(
 		JOIN offers ON offers.id = fo.offer_id
 		WHERE fo.user_id = $1
 		  AND (fo.created_at, fo.offer_id) < ($2, $3)
-		  AND (offers.is_hidden = FALSE OR offers.author_id = $1 OR $5)
+		  AND (NOT (offers.is_hidden OR offers.hidden_by_author) OR offers.author_id = $1 OR $5)
 		ORDER BY fo.created_at DESC, fo.offer_id DESC
 		LIMIT $4`
 
@@ -616,7 +616,7 @@ func (r *Repository) GetFavoriteOffersNoCursor(
 		FROM favorite_offers fo
 		JOIN offers ON offers.id = fo.offer_id
 		WHERE fo.user_id = $1
-		  AND (offers.is_hidden = FALSE OR offers.author_id = $1 OR $3)
+		  AND (NOT (offers.is_hidden OR offers.hidden_by_author) OR offers.author_id = $1 OR $3)
 		ORDER BY fo.created_at DESC, fo.offer_id DESC
 		LIMIT $2`
 
@@ -647,6 +647,7 @@ func (r *Repository) scanFavoriteOffers(ctx context.Context, query string, args 
 			&offer.PhotoIds,
 			&offer.PhotoUrls,
 			&offer.IsHidden,
+			&offer.HiddenByAuthor,
 			&offer.ModificationBlocked,
 			&offer.Latitude,
 			&offer.Longitude,

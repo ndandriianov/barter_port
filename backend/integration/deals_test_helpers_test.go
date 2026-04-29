@@ -186,6 +186,36 @@ func mustGetOfferByID(t *testing.T, userID uuid.UUID, offerID uuid.UUID) types.O
 	return offer
 }
 
+func doHideOfferByAuthor(t *testing.T, userID uuid.UUID, offerID uuid.UUID) *http.Response {
+	t.Helper()
+
+	req := mustUserRequest(t, http.MethodPut, dealsURL()+"/offers/"+offerID.String()+"/hidden", userID, nil)
+	return mustDo(t, req)
+}
+
+func mustHideOfferByAuthor(t *testing.T, userID uuid.UUID, offerID uuid.UUID) {
+	t.Helper()
+
+	resp := doHideOfferByAuthor(t, userID, offerID)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusNoContent, resp.StatusCode)
+}
+
+func doUnhideOfferByAuthor(t *testing.T, userID uuid.UUID, offerID uuid.UUID) *http.Response {
+	t.Helper()
+
+	req := mustUserRequest(t, http.MethodDelete, dealsURL()+"/offers/"+offerID.String()+"/hidden", userID, nil)
+	return mustDo(t, req)
+}
+
+func mustUnhideOfferByAuthor(t *testing.T, userID uuid.UUID, offerID uuid.UUID) {
+	t.Helper()
+
+	resp := doUnhideOfferByAuthor(t, userID, offerID)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusNoContent, resp.StatusCode)
+}
+
 func mustGetOffers(t *testing.T, userID uuid.UUID, my *bool) types.ListOffersResponse {
 	t.Helper()
 

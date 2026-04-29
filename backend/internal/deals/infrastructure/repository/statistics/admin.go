@@ -190,7 +190,7 @@ func (r *Repository) queryAdminPlatformOffers(ctx context.Context, result *Admin
 		SELECT
 			COUNT(*) AS total,
 			COUNT(*) FILTER (WHERE is_hidden AND hidden_reason IS NOT NULL) AS moderated_hidden,
-			COUNT(*) FILTER (WHERE is_hidden AND hidden_reason IS NULL) AS hidden_by_author,
+			COUNT(*) FILTER (WHERE hidden_by_author) AS hidden_by_author,
 			COUNT(*) FILTER (WHERE type = 'good') AS good_count,
 			COUNT(*) FILTER (WHERE type = 'service') AS service_count,
 			COUNT(*) FILTER (WHERE action = 'give') AS give_count,

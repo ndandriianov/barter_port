@@ -26,6 +26,7 @@ func (o *FavoritedOffer) ToDto() types.FavoritedOffer {
 		Id:                  offerDTO.Id,
 		IsFavorite:          offerDTO.IsFavorite,
 		IsHidden:            offerDTO.IsHidden,
+		HiddenByAuthor:      offerDTO.HiddenByAuthor,
 		Latitude:            offerDTO.Latitude,
 		Longitude:           offerDTO.Longitude,
 		ModificationBlocked: offerDTO.ModificationBlocked,
