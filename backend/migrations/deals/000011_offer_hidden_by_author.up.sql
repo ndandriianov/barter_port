@@ -1,0 +1,2 @@
+ALTER TABLE offers
+    ADD COLUMN hidden_by_author BOOLEAN NOT NULL DEFAULT FALSE;
