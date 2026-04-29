@@ -9,6 +9,10 @@ dealsDrafts:
       - `offerID` id объявления, которое должно войти в черновой договор.
       - `quantity` количество единиц товара из объявления, которое должно войти в черновой договор.
       
+      Перед созданием черновика сервис проверяет, что инициатор запроса
+      не находится в списке скрытых авторов ни у одного автора объявлений из `offers`.
+      Если хотя бы один из авторов скрыл инициатора, черновик не создается.
+
       В ответе придет созданный черновой договор с его `id`, который можно будет использовать для дальнейших действий
     operationId: createDraftDeal
     security:
@@ -34,6 +38,12 @@ dealsDrafts:
               $ref: '../components/responses.yaml#/ErrorResponse'
       '401':
         description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: Forbidden. Инициатор запроса находится в списке скрытых авторов у одного из авторов объявлений
         content:
           application/json:
             schema:

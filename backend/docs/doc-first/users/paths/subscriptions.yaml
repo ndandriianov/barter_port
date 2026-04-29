@@ -7,6 +7,9 @@ subscription:
       Позволяет подписаться на другого пользователя, чтобы смотреть его публикации в своей ленте.
       
       Писать другому пользователю в личные сообщения можно только при взаимной подписке.
+
+      Если целевой пользователь уже находится в списке скрытых авторов текущего пользователя,
+      подписка не создается и сервис возвращает `403`.
     operationId: subscribeToUser
     security:
       - bearerAuth: [ ]
@@ -27,6 +30,12 @@ subscription:
               $ref: '../components/errors.yaml#/ErrorResponse'
       '401':
         description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/errors.yaml#/ErrorResponse'
+      '403':
+        description: Forbidden - пользователь находится в списке скрытых авторов
         content:
           application/json:
             schema:
