@@ -24,7 +24,7 @@ import offersApi from "@/features/offers/api/offersApi.ts";
 import type { OfferAction } from "@/features/offers/model/types.ts";
 import type { OfferGroup } from "@/features/offer-groups/model/types.ts";
 import { getOfferGroupUniformAction } from "@/features/offer-groups/model/utils.ts";
-import { getErrorMessage } from "@/shared/utils/getErrorMessage.ts";
+import { getCreateDraftFromOfferGroupErrorMessage } from "@/shared/utils/getCreateDraftErrorMessage.ts";
 
 interface RespondToOfferGroupModalProps {
   offerGroup: OfferGroup;
@@ -227,7 +227,7 @@ function RespondToOfferGroupModal({
 
         {error && (
           <Alert severity="error" sx={{ mt: 2 }}>
-            {getErrorMessage(error) ?? "Не удалось создать черновик по группе объявлений"}
+            {getCreateDraftFromOfferGroupErrorMessage(error)}
           </Alert>
         )}
       </DialogContent>

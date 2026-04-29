@@ -18,6 +18,7 @@ import {
 import offersApi from "@/features/offers/api/offersApi";
 import dealsApi from "@/features/deals/api/dealsApi";
 import type { Offer } from "@/features/offers/model/types";
+import { getCreateDraftDealErrorMessage } from "@/shared/utils/getCreateDraftErrorMessage.ts";
 
 interface RespondToOfferModalProps {
   targetOffer: Offer;
@@ -184,7 +185,7 @@ function RespondToOfferModal({ targetOffer, isOpen, onClose }: RespondToOfferMod
 
         {createError && (
           <Alert severity="error" sx={{ mt: 2 }}>
-            Не удалось создать черновик сделки
+            {getCreateDraftDealErrorMessage(createError)}
           </Alert>
         )}
       </DialogContent>
