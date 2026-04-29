@@ -380,7 +380,13 @@ offerById:
     tags:
       - offers
     summary: Удалить объявление
-    description: Удаляет существующее объявление. Удалить может только автор.
+    description: |
+      Удаляет существующее объявление по его `offerId`.
+
+      Бизнес-правила:
+      - удалить объявление может только его автор;
+      - пользователь может удалять только свои объявления;
+      - при попытке удалить чужое объявление сервер возвращает `403 Forbidden`.
     operationId: deleteOfferById
     security:
       - bearerAuth: [ ]
@@ -393,7 +399,13 @@ offerById:
           format: uuid
     responses:
       '204':
-        description: Offer deleted
+        description: Объявление удалено
+      '400':
+        description: Invalid offer ID
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
       '401':
         description: Unauthorized
         content:
