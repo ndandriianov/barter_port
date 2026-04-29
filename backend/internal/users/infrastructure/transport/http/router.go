@@ -45,6 +45,7 @@ func NewRouter(logg *slog.Logger, validator *validators.LocalJWT, h *Handlers) h
 		r.Use(authkit.Middleware(logg, validator, nil))
 		r.Use(logger.Middleware(logg))
 		r.Get("/admin/statistics/platform", h.HandleGetAdminPlatformStatistics)
+		r.Get("/admin/users", h.HandleGetAdminUsersList)
 		r.Get("/admin/users/{id}/statistics", h.HandleGetAdminUserStatistics)
 		r.Route("/users", func(r chi.Router) {
 			r.Get("/me", h.HandleGetMe)

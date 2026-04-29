@@ -14,6 +14,7 @@ import (
 
 type UsersRepository interface {
 	GetUserById(ctx context.Context, id uuid.UUID) (*domain.User, error)
+	ListUsersForAdmin(ctx context.Context) ([]domain.AdminUserListItem, error)
 	GetReputationPoints(ctx context.Context, id uuid.UUID) (int, error)
 	GetReputationEvents(ctx context.Context, id uuid.UUID) ([]domain.ReputationEvent, error)
 	GetReputationStats(ctx context.Context) (average float64, median float64, err error)
@@ -73,6 +74,15 @@ type AdminPlatformReputationStatistics struct {
 type AdminTopUserByReputation struct {
 	UserID           uuid.UUID
 	Name             *string
+	ReputationPoints int
+}
+
+type AdminUserListItem struct {
+	ID               uuid.UUID
+	Name             *string
+	Bio              *string
+	AvatarURL        *string
+	PhoneNumber      *string
 	ReputationPoints int
 }
 
@@ -180,6 +190,31 @@ func (s *Service) GetAdminPlatformStatistics(ctx context.Context, requesterID uu
 			TopUsers: topUsers,
 		},
 	}, nil
+}
+
+func (s *Service) GetAdminUsersList(ctx context.Context, requesterID uuid.UUID) ([]AdminUserListItem, error) {
+	if err := s.ensureAdmin(ctx, requesterID); err != nil {
+		return nil, err
+	}
+
+	users, err := s.repository.ListUsersForAdmin(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]AdminUserListItem, 0, len(users))
+	for _, listedUser := range users {
+		result = append(result, AdminUserListItem{
+			ID:               listedUser.Id,
+			Name:             listedUser.Name,
+			Bio:              listedUser.Bio,
+			AvatarURL:        listedUser.AvatarURL,
+			PhoneNumber:      listedUser.PhoneNumber,
+			ReputationPoints: listedUser.ReputationPoints,
+		})
+	}
+
+	return result, nil
 }
 
 func (s *Service) GetAdminUserStatistics(ctx context.Context, requesterID, targetUserID uuid.UUID) (AdminUserStatistics, error) {

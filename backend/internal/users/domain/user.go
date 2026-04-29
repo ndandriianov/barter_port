@@ -14,6 +14,15 @@ type User struct {
 	CurrentLongitude *float64  `db:"current_longitude"`
 }
 
+type AdminUserListItem struct {
+	Id               uuid.UUID `db:"id"`
+	Name             *string   `db:"name"`
+	Bio              *string   `db:"bio"`
+	AvatarURL        *string   `db:"avatar_url"`
+	PhoneNumber      *string   `db:"phone_number"`
+	ReputationPoints int       `db:"reputation_points"`
+}
+
 // UserInfo является вспомогательным типом для передачи базовой информации о пользователе в другие сервисы через gRPC
 type UserInfo struct {
 	Id   uuid.UUID `db:"id"`

@@ -171,6 +171,42 @@ func (h *Handlers) HandleGetAdminPlatformStatistics(w http.ResponseWriter, r *ht
 	})
 }
 
+func (h *Handlers) HandleGetAdminUsersList(w http.ResponseWriter, r *http.Request) {
+	log := httplog.LogFrom(r.Context(), slog.Default())
+
+	requesterID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
+	usersList, err := h.userService.GetAdminUsersList(r.Context(), requesterID)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrForbidden):
+			httpx.WriteEmptyError(w, http.StatusForbidden)
+		default:
+			log.Error("failed to get admin users list", slog.String("error", err.Error()))
+			httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	response := make(types.AdminUsersListResponse, 0, len(usersList))
+	for _, listedUser := range usersList {
+		response = append(response, types.AdminUserListItem{
+			Id:               listedUser.ID,
+			Name:             listedUser.Name,
+			Bio:              listedUser.Bio,
+			AvatarUrl:        listedUser.AvatarURL,
+			PhoneNumber:      listedUser.PhoneNumber,
+			ReputationPoints: listedUser.ReputationPoints,
+		})
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, response)
+}
+
 func (h *Handlers) HandleGetAdminUserStatistics(w http.ResponseWriter, r *http.Request) {
 	log := httplog.LogFrom(r.Context(), slog.Default())
 

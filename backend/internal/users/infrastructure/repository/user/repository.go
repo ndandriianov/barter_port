@@ -187,6 +187,27 @@ func (r *Repository) ListUsers(ctx context.Context) ([]domain.User, error) {
 	return users, nil
 }
 
+func (r *Repository) ListUsersForAdmin(ctx context.Context) ([]domain.AdminUserListItem, error) {
+	query := `
+		SELECT id, name, bio, avatar_url, phone_number, reputation_points
+		FROM users
+		ORDER BY id
+	`
+
+	rows, err := r.db.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("sql: %w", err)
+	}
+	defer rows.Close()
+
+	users, err := pgx.CollectRows(rows, pgx.RowToStructByName[domain.AdminUserListItem])
+	if err != nil {
+		return nil, fmt.Errorf("collect: %w", err)
+	}
+
+	return users, nil
+}
+
 // GetReputationPoints returns the reputation_points of a user.
 //
 // Errors:
