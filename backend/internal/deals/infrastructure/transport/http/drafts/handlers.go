@@ -64,11 +64,27 @@ func (h *Handlers) CreateDraft(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if err = h.dealsService.EnsureRequesterCanCreateDraftDeal(r.Context(), authorID, offers); err != nil {
+		if errors.Is(err, domain.ErrForbidden) {
+			log.Warn("draft creation is forbidden by hidden users policy", slog.String("author_id", authorID.String()))
+			httpx.WriteEmptyError(w, http.StatusForbidden)
+			return
+		}
+		log.Error("error checking hidden users policy for draft creation", slog.Any("error", err))
+		httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		return
+	}
+
 	id, err := h.dealsService.CreateDraft(r.Context(), authorID, req.Name, req.Description, offers, nil)
 	if err != nil {
 		if errors.Is(err, domain.ErrNoOffers) {
 			log.Warn("no offers in request")
 			httpx.WriteError(w, http.StatusBadRequest, err)
+			return
+		}
+		if errors.Is(err, domain.ErrForbidden) {
+			log.Warn("forbidden to create draft", slog.String("author_id", authorID.String()))
+			httpx.WriteEmptyError(w, http.StatusForbidden)
 			return
 		}
 		log.Error("error creating draft", slog.Any("error", err))

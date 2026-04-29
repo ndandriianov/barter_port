@@ -729,6 +729,35 @@ func TestGetSubscribedOffersByPopularityReturnsMostViewedFirst(t *testing.T) {
 	require.EqualValues(t, 1, result.Offers[1].Views)
 }
 
+func TestGetOffersExcludesHiddenAuthors(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	viewer := mustRegisterDealsUser(t)
+	hiddenAuthor := mustRegisterDealsUser(t)
+	visibleAuthor := mustRegisterDealsUser(t)
+
+	hiddenOffer := mustCreateOffer(t, hiddenAuthor.UserID)
+	visibleOffer := mustCreateOffer(t, visibleAuthor.UserID)
+
+	mustHideUser(t, viewer.UserID, hiddenAuthor.UserID)
+
+	result := mustGetOffers(t, viewer.UserID, nil)
+
+	var foundHidden, foundVisible bool
+	for _, offer := range result.Offers {
+		if offer.Id == hiddenOffer {
+			foundHidden = true
+		}
+		if offer.Id == visibleOffer {
+			foundVisible = true
+		}
+	}
+
+	require.False(t, foundHidden)
+	require.True(t, foundVisible)
+}
+
 func TestUpdateOfferSuccess(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)

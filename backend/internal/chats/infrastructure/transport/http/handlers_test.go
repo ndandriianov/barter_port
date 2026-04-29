@@ -89,6 +89,14 @@ func (c *testUsersClient) ListSubscriptions(context.Context, *userspb.ListSubscr
 	return nil, errors.New("not implemented")
 }
 
+func (c *testUsersClient) ListHiddenUsers(context.Context, *userspb.ListHiddenUsersRequest, ...grpc.CallOption) (*userspb.ListHiddenUsersResponse, error) {
+	return nil, errors.New("not implemented")
+}
+
+func (c *testUsersClient) IsUserHiddenByAnyOwners(context.Context, *userspb.IsUserHiddenByAnyOwnersRequest, ...grpc.CallOption) (*userspb.IsUserHiddenByAnyOwnersResponse, error) {
+	return nil, errors.New("not implemented")
+}
+
 func (c *testUsersClient) GetUserLocation(context.Context, *userspb.GetUserLocationRequest, ...grpc.CallOption) (*userspb.GetUserLocationResponse, error) {
 	return nil, errors.New("not implemented")
 }

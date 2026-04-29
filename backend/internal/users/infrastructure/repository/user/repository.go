@@ -370,6 +370,45 @@ func (r *Repository) IsSubscribed(ctx context.Context, subscriberID, targetUserI
 	return exists, nil
 }
 
+func (r *Repository) HideUser(ctx context.Context, ownerUserID, hiddenUserID uuid.UUID) error {
+	query := `
+		INSERT INTO hidden_users (owner_user_id, hidden_user_id)
+		VALUES ($1, $2)
+		ON CONFLICT (owner_user_id, hidden_user_id) DO NOTHING
+	`
+
+	_, err := r.db.Exec(ctx, query, ownerUserID, hiddenUserID)
+	if err != nil {
+		if isForeignKeyViolation(err) {
+			return domain.ErrUserNotFound
+		}
+		return err
+	}
+	return nil
+}
+
+func (r *Repository) UnhideUser(ctx context.Context, ownerUserID, hiddenUserID uuid.UUID) error {
+	query := `
+		DELETE FROM hidden_users
+		WHERE owner_user_id = $1 AND hidden_user_id = $2
+	`
+
+	_, err := r.db.Exec(ctx, query, ownerUserID, hiddenUserID)
+	return err
+}
+
+func (r *Repository) IsHiddenUser(ctx context.Context, ownerUserID, hiddenUserID uuid.UUID) (bool, error) {
+	var exists bool
+	err := r.db.QueryRow(ctx,
+		`SELECT EXISTS (SELECT 1 FROM hidden_users WHERE owner_user_id = $1 AND hidden_user_id = $2)`,
+		ownerUserID, hiddenUserID,
+	).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
+}
+
 // GetSubscriptions returns the list of users that userID is subscribed to.
 //
 // No domain Errors
@@ -418,6 +457,48 @@ func (r *Repository) GetSubscribers(ctx context.Context, userID uuid.UUID) ([]do
 		return nil, fmt.Errorf("collect: %w", err)
 	}
 	return users, nil
+}
+
+func (r *Repository) GetHiddenUsers(ctx context.Context, userID uuid.UUID) ([]domain.User, error) {
+	query := `
+		SELECT u.id, u.name, u.bio, u.avatar_url, u.phone_number, u.current_latitude, u.current_longitude
+		FROM hidden_users hu
+		JOIN users u ON u.id = hu.hidden_user_id
+		WHERE hu.owner_user_id = $1
+		ORDER BY hu.created_at DESC, hu.hidden_user_id
+	`
+
+	rows, err := r.db.Query(ctx, query, userID)
+	if err != nil {
+		return nil, fmt.Errorf("sql: %w", err)
+	}
+	defer rows.Close()
+
+	users, err := pgx.CollectRows(rows, pgx.RowToStructByName[domain.User])
+	if err != nil {
+		return nil, fmt.Errorf("collect: %w", err)
+	}
+	return users, nil
+}
+
+func (r *Repository) IsUserHiddenByAnyOwners(ctx context.Context, hiddenUserID uuid.UUID, ownerUserIDs []uuid.UUID) (bool, error) {
+	if len(ownerUserIDs) == 0 {
+		return false, nil
+	}
+
+	var exists bool
+	err := r.db.QueryRow(ctx, `
+		SELECT EXISTS (
+			SELECT 1
+			FROM hidden_users
+			WHERE owner_user_id = ANY($1::uuid[])
+			  AND hidden_user_id = $2
+		)
+	`, ownerUserIDs, hiddenUserID).Scan(&exists)
+	if err != nil {
+		return false, err
+	}
+	return exists, nil
 }
 
 // UpdateLocation updates the current geolocation of a user. Pass nil to clear both fields.

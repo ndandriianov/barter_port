@@ -24,6 +24,8 @@ const (
 	UsersService_ListUsersForChatCreation_FullMethodName = "/barterport.users.v1.UsersService/ListUsersForChatCreation"
 	UsersService_CheckSubscription_FullMethodName        = "/barterport.users.v1.UsersService/CheckSubscription"
 	UsersService_ListSubscriptions_FullMethodName        = "/barterport.users.v1.UsersService/ListSubscriptions"
+	UsersService_ListHiddenUsers_FullMethodName          = "/barterport.users.v1.UsersService/ListHiddenUsers"
+	UsersService_IsUserHiddenByAnyOwners_FullMethodName  = "/barterport.users.v1.UsersService/IsUserHiddenByAnyOwners"
 	UsersService_GetUserLocation_FullMethodName          = "/barterport.users.v1.UsersService/GetUserLocation"
 )
 
@@ -41,6 +43,8 @@ type UsersServiceClient interface {
 	// Если же requester уже был подписан на target, то has_created_subscription = false.
 	CheckSubscription(ctx context.Context, in *CheckSubscriptionRequest, opts ...grpc.CallOption) (*CheckSubscriptionResponse, error)
 	ListSubscriptions(ctx context.Context, in *ListSubscriptionsRequest, opts ...grpc.CallOption) (*ListSubscriptionsResponse, error)
+	ListHiddenUsers(ctx context.Context, in *ListHiddenUsersRequest, opts ...grpc.CallOption) (*ListHiddenUsersResponse, error)
+	IsUserHiddenByAnyOwners(ctx context.Context, in *IsUserHiddenByAnyOwnersRequest, opts ...grpc.CallOption) (*IsUserHiddenByAnyOwnersResponse, error)
 	GetUserLocation(ctx context.Context, in *GetUserLocationRequest, opts ...grpc.CallOption) (*GetUserLocationResponse, error)
 }
 
@@ -102,6 +106,26 @@ func (c *usersServiceClient) ListSubscriptions(ctx context.Context, in *ListSubs
 	return out, nil
 }
 
+func (c *usersServiceClient) ListHiddenUsers(ctx context.Context, in *ListHiddenUsersRequest, opts ...grpc.CallOption) (*ListHiddenUsersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListHiddenUsersResponse)
+	err := c.cc.Invoke(ctx, UsersService_ListHiddenUsers_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *usersServiceClient) IsUserHiddenByAnyOwners(ctx context.Context, in *IsUserHiddenByAnyOwnersRequest, opts ...grpc.CallOption) (*IsUserHiddenByAnyOwnersResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(IsUserHiddenByAnyOwnersResponse)
+	err := c.cc.Invoke(ctx, UsersService_IsUserHiddenByAnyOwners_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *usersServiceClient) GetUserLocation(ctx context.Context, in *GetUserLocationRequest, opts ...grpc.CallOption) (*GetUserLocationResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetUserLocationResponse)
@@ -126,6 +150,8 @@ type UsersServiceServer interface {
 	// Если же requester уже был подписан на target, то has_created_subscription = false.
 	CheckSubscription(context.Context, *CheckSubscriptionRequest) (*CheckSubscriptionResponse, error)
 	ListSubscriptions(context.Context, *ListSubscriptionsRequest) (*ListSubscriptionsResponse, error)
+	ListHiddenUsers(context.Context, *ListHiddenUsersRequest) (*ListHiddenUsersResponse, error)
+	IsUserHiddenByAnyOwners(context.Context, *IsUserHiddenByAnyOwnersRequest) (*IsUserHiddenByAnyOwnersResponse, error)
 	GetUserLocation(context.Context, *GetUserLocationRequest) (*GetUserLocationResponse, error)
 	mustEmbedUnimplementedUsersServiceServer()
 }
@@ -151,6 +177,12 @@ func (UnimplementedUsersServiceServer) CheckSubscription(context.Context, *Check
 }
 func (UnimplementedUsersServiceServer) ListSubscriptions(context.Context, *ListSubscriptionsRequest) (*ListSubscriptionsResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method ListSubscriptions not implemented")
+}
+func (UnimplementedUsersServiceServer) ListHiddenUsers(context.Context, *ListHiddenUsersRequest) (*ListHiddenUsersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method ListHiddenUsers not implemented")
+}
+func (UnimplementedUsersServiceServer) IsUserHiddenByAnyOwners(context.Context, *IsUserHiddenByAnyOwnersRequest) (*IsUserHiddenByAnyOwnersResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method IsUserHiddenByAnyOwners not implemented")
 }
 func (UnimplementedUsersServiceServer) GetUserLocation(context.Context, *GetUserLocationRequest) (*GetUserLocationResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetUserLocation not implemented")
@@ -266,6 +298,42 @@ func _UsersService_ListSubscriptions_Handler(srv interface{}, ctx context.Contex
 	return interceptor(ctx, in, info, handler)
 }
 
+func _UsersService_ListHiddenUsers_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ListHiddenUsersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UsersServiceServer).ListHiddenUsers(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UsersService_ListHiddenUsers_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UsersServiceServer).ListHiddenUsers(ctx, req.(*ListHiddenUsersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _UsersService_IsUserHiddenByAnyOwners_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(IsUserHiddenByAnyOwnersRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(UsersServiceServer).IsUserHiddenByAnyOwners(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: UsersService_IsUserHiddenByAnyOwners_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(UsersServiceServer).IsUserHiddenByAnyOwners(ctx, req.(*IsUserHiddenByAnyOwnersRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _UsersService_GetUserLocation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetUserLocationRequest)
 	if err := dec(in); err != nil {
@@ -310,6 +378,14 @@ var UsersService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ListSubscriptions",
 			Handler:    _UsersService_ListSubscriptions_Handler,
+		},
+		{
+			MethodName: "ListHiddenUsers",
+			Handler:    _UsersService_ListHiddenUsers_Handler,
+		},
+		{
+			MethodName: "IsUserHiddenByAnyOwners",
+			Handler:    _UsersService_IsUserHiddenByAnyOwners_Handler,
 		},
 		{
 			MethodName: "GetUserLocation",

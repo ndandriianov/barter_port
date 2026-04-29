@@ -425,6 +425,8 @@ func (h *Handlers) HandleSubscribe(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case errors.Is(err, domain.ErrUserNotFound):
 			httpx.WriteEmptyError(w, http.StatusNotFound)
+		case errors.Is(err, domain.ErrHiddenUserSubscription):
+			httpx.WriteEmptyError(w, http.StatusForbidden)
 		case errors.Is(err, domain.ErrAlreadySubscribed):
 			httpx.WriteEmptyError(w, http.StatusConflict)
 		case errors.Is(err, domain.ErrCannotSubscribeToYourself):
@@ -487,6 +489,103 @@ func (h *Handlers) HandleGetSubscriptions(w http.ResponseWriter, r *http.Request
 	if err != nil {
 		log.Error("failed to get subscriptions", slog.String("user_id", userID.String()), slog.Any("error", err))
 		httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		return
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, makeUsersResponse(users))
+}
+
+func (h *Handlers) HandleHideUser(w http.ResponseWriter, r *http.Request) {
+	log := httplog.LogFrom(r.Context(), slog.Default())
+
+	userID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		log.Warn("failed to get user id from context")
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
+	var req types.HideUserJSONRequestBody
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		log.Warn("failed to decode hide user request", slog.Any("error", err))
+		httpx.WriteError(w, http.StatusBadRequest, httpx.ErrCannotDecodeRequestBody)
+		return
+	}
+
+	err := h.userService.HideUser(r.Context(), userID, req.TargetUserId)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrUserNotFound):
+			httpx.WriteEmptyError(w, http.StatusNotFound)
+		case errors.Is(err, domain.ErrForbidden):
+			httpx.WriteEmptyError(w, http.StatusForbidden)
+		case errors.Is(err, domain.ErrCannotHideYourself):
+			httpx.WriteErrorStr(w, http.StatusBadRequest, err.Error())
+		case errors.Is(err, domain.ErrCannotHideSubscribedUser):
+			httpx.WriteEmptyError(w, http.StatusConflict)
+		default:
+			log.Error("failed to hide user", slog.String("user_id", userID.String()), slog.Any("error", err))
+			httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handlers) HandleUnhideUser(w http.ResponseWriter, r *http.Request) {
+	log := httplog.LogFrom(r.Context(), slog.Default())
+
+	userID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		log.Warn("failed to get user id from context")
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
+	var req types.UnhideUserJSONRequestBody
+	if err := httpx.DecodeJSON(r, &req); err != nil {
+		log.Warn("failed to decode unhide user request", slog.Any("error", err))
+		httpx.WriteError(w, http.StatusBadRequest, httpx.ErrCannotDecodeRequestBody)
+		return
+	}
+
+	err := h.userService.UnhideUser(r.Context(), userID, req.TargetUserId)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrForbidden):
+			httpx.WriteEmptyError(w, http.StatusForbidden)
+		case errors.Is(err, domain.ErrCannotHideYourself):
+			httpx.WriteErrorStr(w, http.StatusBadRequest, err.Error())
+		default:
+			log.Error("failed to unhide user", slog.String("user_id", userID.String()), slog.Any("error", err))
+			httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (h *Handlers) HandleGetHiddenUsers(w http.ResponseWriter, r *http.Request) {
+	log := httplog.LogFrom(r.Context(), slog.Default())
+
+	userID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		log.Warn("failed to get user id from context")
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
+	users, err := h.userService.GetHiddenUsers(r.Context(), userID)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrForbidden):
+			httpx.WriteEmptyError(w, http.StatusForbidden)
+		default:
+			log.Error("failed to get hidden users", slog.String("user_id", userID.String()), slog.Any("error", err))
+			httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		}
 		return
 	}
 

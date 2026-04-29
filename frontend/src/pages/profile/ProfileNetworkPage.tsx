@@ -7,7 +7,7 @@ import type { User } from "@/features/users/model/types.ts";
 import ProfileSectionShell from "@/widgets/profile/ProfileSectionShell.tsx";
 
 interface ProfileNetworkPageProps {
-  mode: "subscriptions" | "subscribers";
+  mode: "subscriptions" | "subscribers" | "hidden";
 }
 
 function ProfileNetworkPage({ mode }: ProfileNetworkPageProps) {
@@ -17,8 +17,15 @@ function ProfileNetworkPage({ mode }: ProfileNetworkPageProps) {
   const subscribersQuery = usersApi.useGetSubscribersQuery(undefined, {
     skip: mode !== "subscribers",
   });
+  const hiddenUsersQuery = usersApi.useGetHiddenUsersQuery(undefined, {
+    skip: mode !== "hidden",
+  });
 
-  const activeQuery = mode === "subscriptions" ? subscriptionsQuery : subscribersQuery;
+  const activeQuery = mode === "subscriptions"
+    ? subscriptionsQuery
+    : mode === "subscribers"
+      ? subscribersQuery
+      : hiddenUsersQuery;
   const {
     data,
     isLoading,
@@ -27,10 +34,12 @@ function ProfileNetworkPage({ mode }: ProfileNetworkPageProps) {
     isFetching,
   } = activeQuery;
 
-  const title = mode === "subscriptions" ? "Подписки" : "Подписчики";
+  const title = mode === "subscriptions" ? "Подписки" : mode === "subscribers" ? "Подписчики" : "Черный список";
   const description = mode === "subscriptions"
     ? "Люди, на которых вы подписаны"
-    : "Люди, которые подписались на вас. Взаимная подписка является условием создания нового личного чата.";
+    : mode === "subscribers"
+      ? "Люди, которые подписались на вас. Взаимная подписка является условием создания нового личного чата."
+      : "Авторы, чьи объявления скрыты из общего каталога для вашего аккаунта.";
 
   const renderUserListItem = (user: User) => (
     <ListItem
@@ -85,12 +94,27 @@ function ProfileNetworkPage({ mode }: ProfileNetworkPageProps) {
           >
             Подписчики
           </Button>
+          <Button
+            component={RouterLink}
+            to={appRoutes.profile.networkHidden}
+            variant={mode === "hidden" ? "contained" : "text"}
+          >
+            Черный список
+          </Button>
         </ButtonGroup>
 
-        <Alert severity="info">
-          Новый личный чат можно создать только при взаимной подписке. Если подписка разорвана,
-          существующий чат остаётся рабочим, но создать новый уже нельзя.
-        </Alert>
+        {mode === "hidden" ? (
+          <Alert severity="info">
+            Пользователи из черного списка не исчезают из приложения полностью, но их объявления
+            скрываются из общего списка. Чтобы подписаться на такого пользователя, сначала уберите его
+            из черного списка.
+          </Alert>
+        ) : (
+          <Alert severity="info">
+            Новый личный чат можно создать только при взаимной подписке. Если подписка разорвана,
+            существующий чат остаётся рабочим, но создать новый уже нельзя.
+          </Alert>
+        )}
 
         <Card variant="outlined">
           <CardContent>
@@ -102,7 +126,9 @@ function ProfileNetworkPage({ mode }: ProfileNetworkPageProps) {
               <Alert severity="info">
                 {mode === "subscriptions"
                   ? "Вы пока ни на кого не подписаны."
-                  : "У вас пока нет подписчиков."}
+                  : mode === "subscribers"
+                    ? "У вас пока нет подписчиков."
+                    : "Черный список пока пуст."}
               </Alert>
             ) : (
               <Box>

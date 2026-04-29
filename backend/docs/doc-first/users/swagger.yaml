@@ -22,6 +22,8 @@ paths:
     $ref: './paths/subscriptions.yaml#/mySubscribers'
   /users/subscribers/{id}:
     $ref: './paths/subscriptions.yaml#/subscribersById'
+  /users/hidden-users:
+    $ref: './paths/hidden-users.yaml#/hiddenUsers'
   /users/me:
     get:
       tags:

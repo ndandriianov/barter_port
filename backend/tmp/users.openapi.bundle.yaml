@@ -149,6 +149,9 @@ paths:
         Позволяет подписаться на другого пользователя, чтобы смотреть его публикации в своей ленте.
 
         Писать другому пользователю в личные сообщения можно только при взаимной подписке.
+
+        Если целевой пользователь уже находится в списке скрытых авторов текущего пользователя,
+        подписка не создается и сервис возвращает `403`.
       operationId: subscribeToUser
       security:
         - bearerAuth: []
@@ -169,6 +172,12 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '401':
           description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Forbidden - пользователь находится в списке скрытых авторов
           content:
             application/json:
               schema:
@@ -381,6 +390,155 @@ paths:
                 $ref: '#/components/schemas/ErrorResponse'
         '404':
           description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /users/hidden-users:
+    post:
+      tags:
+        - HiddenUsers
+      summary: Скрыть автора
+      description: |
+        Добавляет пользователя в список скрытых авторов текущего пользователя.
+
+        После этого объявления данного автора не должны попадать в `operationId: listOffers`
+        для текущего пользователя.
+
+        Правила:
+        - скрывать можно только обычным пользователям;
+        - скрыть самого себя нельзя;
+        - если текущий пользователь уже подписан на `targetUserId`, запрос возвращает `409`;
+        - запрос идемпотентный: если пользователь уже находится в списке скрытых авторов,
+          повторный вызов все равно считается успешным.
+      operationId: hideUser
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscribeRequest'
+      responses:
+        '204':
+          description: Пользователь успешно добавлен в список скрытых авторов
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Администратор не может скрывать авторов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '409':
+          description: Конфликт - уже подписаны на пользователя
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      tags:
+        - HiddenUsers
+      summary: Получить список скрытых авторов
+      description: |
+        Возвращает список пользователей, чьи объявления скрыты от текущего пользователя.
+
+        Endpoint доступен только обычным пользователям.
+      operationId: getHiddenUsers
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Список скрытых авторов
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/getSubscriptionsResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Администратор не может получать список скрытых авторов
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    delete:
+      tags:
+        - HiddenUsers
+      summary: Убрать автора из скрытых
+      description: |
+        Удаляет пользователя из списка скрытых авторов текущего пользователя.
+
+        Endpoint доступен только обычным пользователям.
+        Запрос идемпотентный: если пользователя нет в списке, повторный вызов
+        все равно считается успешным.
+      operationId: unhideUser
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SubscribeRequest'
+      responses:
+        '204':
+          description: Пользователь успешно удален из списка скрытых авторов
+        '400':
+          description: Bad request
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Администратор не может скрывать авторов
           content:
             application/json:
               schema:

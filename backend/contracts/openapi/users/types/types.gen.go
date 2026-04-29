@@ -278,6 +278,12 @@ type UploadCurrentUserAvatarMultipartBody struct {
 	File openapi_types.File `json:"file"`
 }
 
+// UnhideUserJSONRequestBody defines body for UnhideUser for application/json ContentType.
+type UnhideUserJSONRequestBody = SubscribeRequest
+
+// HideUserJSONRequestBody defines body for HideUser for application/json ContentType.
+type HideUserJSONRequestBody = SubscribeRequest
+
 // UpdateCurrentUserJSONRequestBody defines body for UpdateCurrentUser for application/json ContentType.
 type UpdateCurrentUserJSONRequestBody = UpdateUserRequest
 

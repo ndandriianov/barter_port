@@ -274,6 +274,10 @@ function AppRouter() {
             element={<ProfileNetworkPage mode="subscribers" />}
           />
           <Route
+            path={appRoutes.profile.networkHidden}
+            element={<ProfileNetworkPage mode="hidden" />}
+          />
+          <Route
             path={appRoutes.profile.reviewsMine}
             element={
               <ProfileReviewsPage mode="mine" />

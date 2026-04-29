@@ -142,6 +142,7 @@ func main() {
 	dealsService := dealssvc.NewService(db, draftsRepo, dealsRepo, failuresRepo, joinsRepo, offersRepo, itemPhotoStorage).
 		WithReputationOutbox(offerreportoutboxrepo.NewRepository()).
 		WithReputationRewardPoints(cfg.Reputation.DealCompletionRewardPoints, cfg.Reputation.ReviewCreationRewardPoints).
+		WithUsersClient(usersClient).
 		WithAdminChecker(adminChecker).
 		WithLogger(logg)
 	if chatsClient != nil {

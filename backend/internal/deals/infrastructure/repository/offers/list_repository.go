@@ -185,6 +185,7 @@ func (r *Repository) GetOffersOrderByDistance(
 	userLon float64,
 	tags []string,
 	tagsFilterPresent bool,
+	hiddenAuthorIDs []uuid.UUID,
 ) ([]domain.Offer, *domain.DistanceCursor, error) {
 	query := `
 		WITH filtered_offers AS (
@@ -193,7 +194,8 @@ func (r *Repository) GetOffersOrderByDistance(
 			FROM offers
 			WHERE offers.latitude IS NOT NULL
 			  AND offers.longitude IS NOT NULL
-			  AND (offers.is_hidden = FALSE OR $6)` + fmt.Sprintf(tagFilterClause, 8, 7, 7, 7, 7) + `
+			  AND (offers.is_hidden = FALSE OR $6)
+			  AND NOT (offers.author_id = ANY($7))` + fmt.Sprintf(tagFilterClause, 9, 8, 8, 8, 8) + `
 		)
 		SELECT *
 		FROM filtered_offers
@@ -202,7 +204,7 @@ func (r *Repository) GetOffersOrderByDistance(
 		ORDER BY distance_cursor ASC, id ASC
 		LIMIT $1`
 
-	return r.scanDistanceOffers(ctx, query, limit, userLat, userLon, cursor.Distance, cursor.Id, isAdmin, tags, tagsFilterPresent)
+	return r.scanDistanceOffers(ctx, query, limit, userLat, userLon, cursor.Distance, cursor.Id, isAdmin, hiddenAuthorIDs, tags, tagsFilterPresent)
 }
 
 func (r *Repository) GetOffersOrderByDistanceNoCursor(
@@ -213,6 +215,7 @@ func (r *Repository) GetOffersOrderByDistanceNoCursor(
 	userLon float64,
 	tags []string,
 	tagsFilterPresent bool,
+	hiddenAuthorIDs []uuid.UUID,
 ) ([]domain.Offer, *domain.DistanceCursor, error) {
 	query := `
 		WITH filtered_offers AS (
@@ -221,14 +224,15 @@ func (r *Repository) GetOffersOrderByDistanceNoCursor(
 			FROM offers
 			WHERE offers.latitude IS NOT NULL
 			  AND offers.longitude IS NOT NULL
-			  AND (offers.is_hidden = FALSE OR $4)` + fmt.Sprintf(tagFilterClause, 6, 5, 5, 5, 5) + `
+			  AND (offers.is_hidden = FALSE OR $4)
+			  AND NOT (offers.author_id = ANY($5))` + fmt.Sprintf(tagFilterClause, 7, 6, 6, 6, 6) + `
 		)
 		SELECT *
 		FROM filtered_offers
 		ORDER BY distance_cursor ASC, id ASC
 		LIMIT $1`
 
-	return r.scanDistanceOffers(ctx, query, limit, userLat, userLon, isAdmin, tags, tagsFilterPresent)
+	return r.scanDistanceOffers(ctx, query, limit, userLat, userLon, isAdmin, hiddenAuthorIDs, tags, tagsFilterPresent)
 }
 
 func (r *Repository) GetMyOffersOrderByDistance(
@@ -352,16 +356,18 @@ func (r *Repository) GetOffersOrderByTime(
 	isAdmin bool,
 	tags []string,
 	tagsFilterPresent bool,
+	hiddenAuthorIDs []uuid.UUID,
 ) ([]domain.Offer, *domain.TimeCursor, error) {
 	query := `
 		SELECT ` + rowsToSelect + `
 		FROM offers
 		WHERE (created_at, id) < ($2, $3)
-			AND (is_hidden = FALSE OR $4)` + fmt.Sprintf(tagFilterClause, 6, 5, 5, 5, 5) + `
+			AND (is_hidden = FALSE OR $4)
+			AND NOT (author_id = ANY($5))` + fmt.Sprintf(tagFilterClause, 7, 6, 6, 6, 6) + `
 		ORDER BY created_at DESC, id DESC
 		LIMIT $1`
 
-	return offersAndTimeCursor(repox.FetchStructs[domain.Offer](ctx, r.db, query, limit, cursor.CreatedAt, cursor.Id, isAdmin, tags, tagsFilterPresent))
+	return offersAndTimeCursor(repox.FetchStructs[domain.Offer](ctx, r.db, query, limit, cursor.CreatedAt, cursor.Id, isAdmin, hiddenAuthorIDs, tags, tagsFilterPresent))
 }
 
 func (r *Repository) GetOffersOrderByTimeNoCursor(
@@ -370,15 +376,17 @@ func (r *Repository) GetOffersOrderByTimeNoCursor(
 	isAdmin bool,
 	tags []string,
 	tagsFilterPresent bool,
+	hiddenAuthorIDs []uuid.UUID,
 ) ([]domain.Offer, *domain.TimeCursor, error) {
 	query := `
 		SELECT ` + rowsToSelect + `
 		FROM offers
-		WHERE (is_hidden = FALSE OR $2)` + fmt.Sprintf(tagFilterClause, 4, 3, 3, 3, 3) + `
+		WHERE (is_hidden = FALSE OR $2)
+		  AND NOT (author_id = ANY($3))` + fmt.Sprintf(tagFilterClause, 5, 4, 4, 4, 4) + `
 		ORDER BY created_at DESC, id DESC
 		LIMIT $1`
 
-	return offersAndTimeCursor(repox.FetchStructs[domain.Offer](ctx, r.db, query, limit, isAdmin, tags, tagsFilterPresent))
+	return offersAndTimeCursor(repox.FetchStructs[domain.Offer](ctx, r.db, query, limit, isAdmin, hiddenAuthorIDs, tags, tagsFilterPresent))
 }
 
 // my
@@ -467,16 +475,18 @@ func (r *Repository) GetOffersOrderByPopularity(
 	isAdmin bool,
 	tags []string,
 	tagsFilterPresent bool,
+	hiddenAuthorIDs []uuid.UUID,
 ) ([]domain.Offer, *domain.PopularityCursor, error) {
 	query := `
 		SELECT ` + rowsToSelect + `
 		FROM offers
 		WHERE (views, id) < ($2, $3)
-			AND (is_hidden = FALSE OR $4)` + fmt.Sprintf(tagFilterClause, 6, 5, 5, 5, 5) + `
+			AND (is_hidden = FALSE OR $4)
+			AND NOT (author_id = ANY($5))` + fmt.Sprintf(tagFilterClause, 7, 6, 6, 6, 6) + `
 		ORDER BY views DESC, id DESC
 		LIMIT $1`
 
-	return offersAndPopularityCursor(repox.FetchStructs[domain.Offer](ctx, r.db, query, limit, cursor.Views, cursor.Id, isAdmin, tags, tagsFilterPresent))
+	return offersAndPopularityCursor(repox.FetchStructs[domain.Offer](ctx, r.db, query, limit, cursor.Views, cursor.Id, isAdmin, hiddenAuthorIDs, tags, tagsFilterPresent))
 }
 
 func (r *Repository) GetOffersOrderByPopularityNoCursor(
@@ -485,15 +495,17 @@ func (r *Repository) GetOffersOrderByPopularityNoCursor(
 	isAdmin bool,
 	tags []string,
 	tagsFilterPresent bool,
+	hiddenAuthorIDs []uuid.UUID,
 ) ([]domain.Offer, *domain.PopularityCursor, error) {
 	query := `
 		SELECT ` + rowsToSelect + `
 		FROM offers
-		WHERE (is_hidden = FALSE OR $2)` + fmt.Sprintf(tagFilterClause, 4, 3, 3, 3, 3) + `
+		WHERE (is_hidden = FALSE OR $2)
+		  AND NOT (author_id = ANY($3))` + fmt.Sprintf(tagFilterClause, 5, 4, 4, 4, 4) + `
 		ORDER BY views DESC, id DESC
 		LIMIT $1`
 
-	return offersAndPopularityCursor(repox.FetchStructs[domain.Offer](ctx, r.db, query, limit, isAdmin, tags, tagsFilterPresent))
+	return offersAndPopularityCursor(repox.FetchStructs[domain.Offer](ctx, r.db, query, limit, isAdmin, hiddenAuthorIDs, tags, tagsFilterPresent))
 }
 
 // my

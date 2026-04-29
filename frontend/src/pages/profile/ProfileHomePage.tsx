@@ -45,8 +45,8 @@ function ProfileHomePage() {
           <SectionEntryCard
             to={appRoutes.profile.networkSubscriptions}
             icon={<ConnectWithoutContactOutlinedIcon />}
-            title="Подписки"
-            description="Подписки и подписчики"
+            title="Подписки и связи"
+            description="Подписки, подписчики и черный список авторов"
             accent="info"
           />
         </Grid>

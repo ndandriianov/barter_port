@@ -578,6 +578,139 @@ func TestSubscribeUnauthorized(t *testing.T) {
 	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
 }
 
+func TestHideUserAndGetHiddenUsers(t *testing.T) {
+	t.Parallel()
+
+	fixture := globalFixture
+
+	owner := registerAuthUser(t, fixture)
+	target := registerAuthUser(t, fixture)
+	waitForUsersProjection(t, fixture, owner.UserID)
+	waitForUsersProjection(t, fixture, target.UserID)
+
+	body, err := json.Marshal(usertypes.HideUserJSONRequestBody{TargetUserId: target.UserID})
+	require.NoError(t, err)
+
+	hideReq, err := http.NewRequest(http.MethodPost, fixture.UsersURL+"/users/hidden-users", bytes.NewReader(body))
+	require.NoError(t, err)
+	hideReq.Header.Set("Authorization", "Bearer "+mustAccessToken(t, owner.UserID))
+	hideReq.Header.Set("Content-Type", "application/json")
+
+	hideResp, err := http.DefaultClient.Do(hideReq)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = hideResp.Body.Close() })
+	require.Equal(t, http.StatusNoContent, hideResp.StatusCode)
+
+	hideAgainReq, err := http.NewRequest(http.MethodPost, fixture.UsersURL+"/users/hidden-users", bytes.NewReader(body))
+	require.NoError(t, err)
+	hideAgainReq.Header.Set("Authorization", "Bearer "+mustAccessToken(t, owner.UserID))
+	hideAgainReq.Header.Set("Content-Type", "application/json")
+
+	hideAgainResp, err := http.DefaultClient.Do(hideAgainReq)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = hideAgainResp.Body.Close() })
+	require.Equal(t, http.StatusNoContent, hideAgainResp.StatusCode)
+
+	getReq, err := http.NewRequest(http.MethodGet, fixture.UsersURL+"/users/hidden-users", nil)
+	require.NoError(t, err)
+	getReq.Header.Set("Authorization", "Bearer "+mustAccessToken(t, owner.UserID))
+
+	getResp, err := http.DefaultClient.Do(getReq)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = getResp.Body.Close() })
+	require.Equal(t, http.StatusOK, getResp.StatusCode)
+
+	var hiddenUsers usertypes.GetSubscriptionsResponse
+	require.NoError(t, json.NewDecoder(getResp.Body).Decode(&hiddenUsers))
+	require.Len(t, hiddenUsers, 1)
+	require.Equal(t, target.UserID, hiddenUsers[0].Id)
+
+	unhideReq, err := http.NewRequest(http.MethodDelete, fixture.UsersURL+"/users/hidden-users", bytes.NewReader(body))
+	require.NoError(t, err)
+	unhideReq.Header.Set("Authorization", "Bearer "+mustAccessToken(t, owner.UserID))
+	unhideReq.Header.Set("Content-Type", "application/json")
+
+	unhideResp, err := http.DefaultClient.Do(unhideReq)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = unhideResp.Body.Close() })
+	require.Equal(t, http.StatusNoContent, unhideResp.StatusCode)
+
+	unhideAgainReq, err := http.NewRequest(http.MethodDelete, fixture.UsersURL+"/users/hidden-users", bytes.NewReader(body))
+	require.NoError(t, err)
+	unhideAgainReq.Header.Set("Authorization", "Bearer "+mustAccessToken(t, owner.UserID))
+	unhideAgainReq.Header.Set("Content-Type", "application/json")
+
+	unhideAgainResp, err := http.DefaultClient.Do(unhideAgainReq)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = unhideAgainResp.Body.Close() })
+	require.Equal(t, http.StatusNoContent, unhideAgainResp.StatusCode)
+}
+
+func TestHideUserConflictWhenSubscribed(t *testing.T) {
+	t.Parallel()
+
+	fixture := globalFixture
+
+	owner := registerAuthUser(t, fixture)
+	target := registerAuthUser(t, fixture)
+	waitForUsersProjection(t, fixture, owner.UserID)
+	waitForUsersProjection(t, fixture, target.UserID)
+
+	subscribeResp := subscribeUser(t, fixture, owner.UserID, target.UserID)
+	t.Cleanup(func() { _ = subscribeResp.Body.Close() })
+	require.Equal(t, http.StatusCreated, subscribeResp.StatusCode)
+
+	body, err := json.Marshal(usertypes.HideUserJSONRequestBody{TargetUserId: target.UserID})
+	require.NoError(t, err)
+
+	hideReq, err := http.NewRequest(http.MethodPost, fixture.UsersURL+"/users/hidden-users", bytes.NewReader(body))
+	require.NoError(t, err)
+	hideReq.Header.Set("Authorization", "Bearer "+mustAccessToken(t, owner.UserID))
+	hideReq.Header.Set("Content-Type", "application/json")
+
+	hideResp, err := http.DefaultClient.Do(hideReq)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = hideResp.Body.Close() })
+	require.Equal(t, http.StatusConflict, hideResp.StatusCode)
+}
+
+func TestSubscribeForbiddenWhenTargetHidden(t *testing.T) {
+	t.Parallel()
+
+	fixture := globalFixture
+
+	owner := registerAuthUser(t, fixture)
+	target := registerAuthUser(t, fixture)
+	waitForUsersProjection(t, fixture, owner.UserID)
+	waitForUsersProjection(t, fixture, target.UserID)
+
+	hideBody, err := json.Marshal(usertypes.HideUserJSONRequestBody{TargetUserId: target.UserID})
+	require.NoError(t, err)
+
+	hideReq, err := http.NewRequest(http.MethodPost, fixture.UsersURL+"/users/hidden-users", bytes.NewReader(hideBody))
+	require.NoError(t, err)
+	hideReq.Header.Set("Authorization", "Bearer "+mustAccessToken(t, owner.UserID))
+	hideReq.Header.Set("Content-Type", "application/json")
+
+	hideResp, err := http.DefaultClient.Do(hideReq)
+	require.NoError(t, err)
+	_ = hideResp.Body.Close()
+	require.Equal(t, http.StatusNoContent, hideResp.StatusCode)
+
+	subscribeBody, err := json.Marshal(usertypes.SubscribeToUserJSONRequestBody{TargetUserId: target.UserID})
+	require.NoError(t, err)
+
+	subscribeReq, err := http.NewRequest(http.MethodPost, fixture.UsersURL+"/users/subscriptions", bytes.NewReader(subscribeBody))
+	require.NoError(t, err)
+	subscribeReq.Header.Set("Authorization", "Bearer "+mustAccessToken(t, owner.UserID))
+	subscribeReq.Header.Set("Content-Type", "application/json")
+
+	subscribeResp, err := http.DefaultClient.Do(subscribeReq)
+	require.NoError(t, err)
+	t.Cleanup(func() { _ = subscribeResp.Body.Close() })
+	require.Equal(t, http.StatusForbidden, subscribeResp.StatusCode)
+}
+
 func TestUnsubscribeFromUser(t *testing.T) {
 	t.Parallel()
 

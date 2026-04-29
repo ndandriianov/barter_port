@@ -526,6 +526,192 @@ func (x *ListSubscriptionsResponse) GetSubscriptions() []*UserInfo {
 	return nil
 }
 
+// ListHiddenUsers
+type ListHiddenUsersRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	UserId        string                 `protobuf:"bytes,1,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListHiddenUsersRequest) Reset() {
+	*x = ListHiddenUsersRequest{}
+	mi := &file_contracts_grpc_users_v1_users_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListHiddenUsersRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListHiddenUsersRequest) ProtoMessage() {}
+
+func (x *ListHiddenUsersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_contracts_grpc_users_v1_users_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListHiddenUsersRequest.ProtoReflect.Descriptor instead.
+func (*ListHiddenUsersRequest) Descriptor() ([]byte, []int) {
+	return file_contracts_grpc_users_v1_users_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *ListHiddenUsersRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+type ListHiddenUsersResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Users         []*UserInfo            `protobuf:"bytes,1,rep,name=users,proto3" json:"users,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListHiddenUsersResponse) Reset() {
+	*x = ListHiddenUsersResponse{}
+	mi := &file_contracts_grpc_users_v1_users_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListHiddenUsersResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListHiddenUsersResponse) ProtoMessage() {}
+
+func (x *ListHiddenUsersResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_contracts_grpc_users_v1_users_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListHiddenUsersResponse.ProtoReflect.Descriptor instead.
+func (*ListHiddenUsersResponse) Descriptor() ([]byte, []int) {
+	return file_contracts_grpc_users_v1_users_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *ListHiddenUsersResponse) GetUsers() []*UserInfo {
+	if x != nil {
+		return x.Users
+	}
+	return nil
+}
+
+// IsUserHiddenByAnyOwners
+type IsUserHiddenByAnyOwnersRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	HiddenUserId  string                 `protobuf:"bytes,1,opt,name=hidden_user_id,json=hiddenUserId,proto3" json:"hidden_user_id,omitempty"`
+	OwnerUserIds  []string               `protobuf:"bytes,2,rep,name=owner_user_ids,json=ownerUserIds,proto3" json:"owner_user_ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *IsUserHiddenByAnyOwnersRequest) Reset() {
+	*x = IsUserHiddenByAnyOwnersRequest{}
+	mi := &file_contracts_grpc_users_v1_users_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *IsUserHiddenByAnyOwnersRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*IsUserHiddenByAnyOwnersRequest) ProtoMessage() {}
+
+func (x *IsUserHiddenByAnyOwnersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_contracts_grpc_users_v1_users_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use IsUserHiddenByAnyOwnersRequest.ProtoReflect.Descriptor instead.
+func (*IsUserHiddenByAnyOwnersRequest) Descriptor() ([]byte, []int) {
+	return file_contracts_grpc_users_v1_users_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *IsUserHiddenByAnyOwnersRequest) GetHiddenUserId() string {
+	if x != nil {
+		return x.HiddenUserId
+	}
+	return ""
+}
+
+func (x *IsUserHiddenByAnyOwnersRequest) GetOwnerUserIds() []string {
+	if x != nil {
+		return x.OwnerUserIds
+	}
+	return nil
+}
+
+type IsUserHiddenByAnyOwnersResponse struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	IsHidden      bool                   `protobuf:"varint,1,opt,name=is_hidden,json=isHidden,proto3" json:"is_hidden,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *IsUserHiddenByAnyOwnersResponse) Reset() {
+	*x = IsUserHiddenByAnyOwnersResponse{}
+	mi := &file_contracts_grpc_users_v1_users_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *IsUserHiddenByAnyOwnersResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*IsUserHiddenByAnyOwnersResponse) ProtoMessage() {}
+
+func (x *IsUserHiddenByAnyOwnersResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_contracts_grpc_users_v1_users_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use IsUserHiddenByAnyOwnersResponse.ProtoReflect.Descriptor instead.
+func (*IsUserHiddenByAnyOwnersResponse) Descriptor() ([]byte, []int) {
+	return file_contracts_grpc_users_v1_users_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *IsUserHiddenByAnyOwnersResponse) GetIsHidden() bool {
+	if x != nil {
+		return x.IsHidden
+	}
+	return false
+}
+
 // GetUserLocation
 type GetUserLocationRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -536,7 +722,7 @@ type GetUserLocationRequest struct {
 
 func (x *GetUserLocationRequest) Reset() {
 	*x = GetUserLocationRequest{}
-	mi := &file_contracts_grpc_users_v1_users_proto_msgTypes[11]
+	mi := &file_contracts_grpc_users_v1_users_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -548,7 +734,7 @@ func (x *GetUserLocationRequest) String() string {
 func (*GetUserLocationRequest) ProtoMessage() {}
 
 func (x *GetUserLocationRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_contracts_grpc_users_v1_users_proto_msgTypes[11]
+	mi := &file_contracts_grpc_users_v1_users_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -561,7 +747,7 @@ func (x *GetUserLocationRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetUserLocationRequest.ProtoReflect.Descriptor instead.
 func (*GetUserLocationRequest) Descriptor() ([]byte, []int) {
-	return file_contracts_grpc_users_v1_users_proto_rawDescGZIP(), []int{11}
+	return file_contracts_grpc_users_v1_users_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *GetUserLocationRequest) GetUserId() string {
@@ -581,7 +767,7 @@ type GetUserLocationResponse struct {
 
 func (x *GetUserLocationResponse) Reset() {
 	*x = GetUserLocationResponse{}
-	mi := &file_contracts_grpc_users_v1_users_proto_msgTypes[12]
+	mi := &file_contracts_grpc_users_v1_users_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -593,7 +779,7 @@ func (x *GetUserLocationResponse) String() string {
 func (*GetUserLocationResponse) ProtoMessage() {}
 
 func (x *GetUserLocationResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_contracts_grpc_users_v1_users_proto_msgTypes[12]
+	mi := &file_contracts_grpc_users_v1_users_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -606,7 +792,7 @@ func (x *GetUserLocationResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetUserLocationResponse.ProtoReflect.Descriptor instead.
 func (*GetUserLocationResponse) Descriptor() ([]byte, []int) {
-	return file_contracts_grpc_users_v1_users_proto_rawDescGZIP(), []int{12}
+	return file_contracts_grpc_users_v1_users_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *GetUserLocationResponse) GetLatitude() float64 {
@@ -652,6 +838,15 @@ const file_contracts_grpc_users_v1_users_proto_rawDesc = "" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\"`\n" +
 	"\x19ListSubscriptionsResponse\x12C\n" +
 	"\rsubscriptions\x18\x01 \x03(\v2\x1d.barterport.users.v1.UserInfoR\rsubscriptions\"1\n" +
+	"\x16ListHiddenUsersRequest\x12\x17\n" +
+	"\auser_id\x18\x01 \x01(\tR\x06userId\"N\n" +
+	"\x17ListHiddenUsersResponse\x123\n" +
+	"\x05users\x18\x01 \x03(\v2\x1d.barterport.users.v1.UserInfoR\x05users\"l\n" +
+	"\x1eIsUserHiddenByAnyOwnersRequest\x12$\n" +
+	"\x0ehidden_user_id\x18\x01 \x01(\tR\fhiddenUserId\x12$\n" +
+	"\x0eowner_user_ids\x18\x02 \x03(\tR\fownerUserIds\">\n" +
+	"\x1fIsUserHiddenByAnyOwnersResponse\x12\x1b\n" +
+	"\tis_hidden\x18\x01 \x01(\bR\bisHidden\"1\n" +
 	"\x16GetUserLocationRequest\x12\x17\n" +
 	"\auser_id\x18\x01 \x01(\tR\x06userId\"x\n" +
 	"\x17GetUserLocationResponse\x12\x1f\n" +
@@ -659,13 +854,15 @@ const file_contracts_grpc_users_v1_users_proto_rawDesc = "" +
 	"\tlongitude\x18\x02 \x01(\x01H\x01R\tlongitude\x88\x01\x01B\v\n" +
 	"\t_latitudeB\f\n" +
 	"\n" +
-	"_longitude2\xbb\x05\n" +
+	"_longitude2\xb0\a\n" +
 	"\fUsersService\x12o\n" +
 	"\x10GetUsersWithInfo\x12,.barterport.users.v1.GetUsersWithInfoRequest\x1a-.barterport.users.v1.GetUsersWithInfoResponse\x12Z\n" +
 	"\tListUsers\x12%.barterport.users.v1.ListUsersRequest\x1a&.barterport.users.v1.ListUsersResponse\x12\x87\x01\n" +
 	"\x18ListUsersForChatCreation\x124.barterport.users.v1.ListUsersForChatCreationRequest\x1a5.barterport.users.v1.ListUsersForChatCreationResponse\x12r\n" +
 	"\x11CheckSubscription\x12-.barterport.users.v1.CheckSubscriptionRequest\x1a..barterport.users.v1.CheckSubscriptionResponse\x12r\n" +
 	"\x11ListSubscriptions\x12-.barterport.users.v1.ListSubscriptionsRequest\x1a..barterport.users.v1.ListSubscriptionsResponse\x12l\n" +
+	"\x0fListHiddenUsers\x12+.barterport.users.v1.ListHiddenUsersRequest\x1a,.barterport.users.v1.ListHiddenUsersResponse\x12\x84\x01\n" +
+	"\x17IsUserHiddenByAnyOwners\x123.barterport.users.v1.IsUserHiddenByAnyOwnersRequest\x1a4.barterport.users.v1.IsUserHiddenByAnyOwnersResponse\x12l\n" +
 	"\x0fGetUserLocation\x12+.barterport.users.v1.GetUserLocationRequest\x1a,.barterport.users.v1.GetUserLocationResponseB5Z3barterport/internal/contracts/grpc/users/v1;userspbb\x06proto3"
 
 var (
@@ -680,7 +877,7 @@ func file_contracts_grpc_users_v1_users_proto_rawDescGZIP() []byte {
 	return file_contracts_grpc_users_v1_users_proto_rawDescData
 }
 
-var file_contracts_grpc_users_v1_users_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
+var file_contracts_grpc_users_v1_users_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_contracts_grpc_users_v1_users_proto_goTypes = []any{
 	(*GetUsersWithInfoRequest)(nil),          // 0: barterport.users.v1.GetUsersWithInfoRequest
 	(*UserInfo)(nil),                         // 1: barterport.users.v1.UserInfo
@@ -693,31 +890,40 @@ var file_contracts_grpc_users_v1_users_proto_goTypes = []any{
 	(*CheckSubscriptionResponse)(nil),        // 8: barterport.users.v1.CheckSubscriptionResponse
 	(*ListSubscriptionsRequest)(nil),         // 9: barterport.users.v1.ListSubscriptionsRequest
 	(*ListSubscriptionsResponse)(nil),        // 10: barterport.users.v1.ListSubscriptionsResponse
-	(*GetUserLocationRequest)(nil),           // 11: barterport.users.v1.GetUserLocationRequest
-	(*GetUserLocationResponse)(nil),          // 12: barterport.users.v1.GetUserLocationResponse
+	(*ListHiddenUsersRequest)(nil),           // 11: barterport.users.v1.ListHiddenUsersRequest
+	(*ListHiddenUsersResponse)(nil),          // 12: barterport.users.v1.ListHiddenUsersResponse
+	(*IsUserHiddenByAnyOwnersRequest)(nil),   // 13: barterport.users.v1.IsUserHiddenByAnyOwnersRequest
+	(*IsUserHiddenByAnyOwnersResponse)(nil),  // 14: barterport.users.v1.IsUserHiddenByAnyOwnersResponse
+	(*GetUserLocationRequest)(nil),           // 15: barterport.users.v1.GetUserLocationRequest
+	(*GetUserLocationResponse)(nil),          // 16: barterport.users.v1.GetUserLocationResponse
 }
 var file_contracts_grpc_users_v1_users_proto_depIdxs = []int32{
 	1,  // 0: barterport.users.v1.GetUsersWithInfoResponse.users:type_name -> barterport.users.v1.UserInfo
 	1,  // 1: barterport.users.v1.ListUsersResponse.users:type_name -> barterport.users.v1.UserInfo
 	1,  // 2: barterport.users.v1.ListUsersForChatCreationResponse.users:type_name -> barterport.users.v1.UserInfo
 	1,  // 3: barterport.users.v1.ListSubscriptionsResponse.subscriptions:type_name -> barterport.users.v1.UserInfo
-	0,  // 4: barterport.users.v1.UsersService.GetUsersWithInfo:input_type -> barterport.users.v1.GetUsersWithInfoRequest
-	3,  // 5: barterport.users.v1.UsersService.ListUsers:input_type -> barterport.users.v1.ListUsersRequest
-	5,  // 6: barterport.users.v1.UsersService.ListUsersForChatCreation:input_type -> barterport.users.v1.ListUsersForChatCreationRequest
-	7,  // 7: barterport.users.v1.UsersService.CheckSubscription:input_type -> barterport.users.v1.CheckSubscriptionRequest
-	9,  // 8: barterport.users.v1.UsersService.ListSubscriptions:input_type -> barterport.users.v1.ListSubscriptionsRequest
-	11, // 9: barterport.users.v1.UsersService.GetUserLocation:input_type -> barterport.users.v1.GetUserLocationRequest
-	2,  // 10: barterport.users.v1.UsersService.GetUsersWithInfo:output_type -> barterport.users.v1.GetUsersWithInfoResponse
-	4,  // 11: barterport.users.v1.UsersService.ListUsers:output_type -> barterport.users.v1.ListUsersResponse
-	6,  // 12: barterport.users.v1.UsersService.ListUsersForChatCreation:output_type -> barterport.users.v1.ListUsersForChatCreationResponse
-	8,  // 13: barterport.users.v1.UsersService.CheckSubscription:output_type -> barterport.users.v1.CheckSubscriptionResponse
-	10, // 14: barterport.users.v1.UsersService.ListSubscriptions:output_type -> barterport.users.v1.ListSubscriptionsResponse
-	12, // 15: barterport.users.v1.UsersService.GetUserLocation:output_type -> barterport.users.v1.GetUserLocationResponse
-	10, // [10:16] is the sub-list for method output_type
-	4,  // [4:10] is the sub-list for method input_type
-	4,  // [4:4] is the sub-list for extension type_name
-	4,  // [4:4] is the sub-list for extension extendee
-	0,  // [0:4] is the sub-list for field type_name
+	1,  // 4: barterport.users.v1.ListHiddenUsersResponse.users:type_name -> barterport.users.v1.UserInfo
+	0,  // 5: barterport.users.v1.UsersService.GetUsersWithInfo:input_type -> barterport.users.v1.GetUsersWithInfoRequest
+	3,  // 6: barterport.users.v1.UsersService.ListUsers:input_type -> barterport.users.v1.ListUsersRequest
+	5,  // 7: barterport.users.v1.UsersService.ListUsersForChatCreation:input_type -> barterport.users.v1.ListUsersForChatCreationRequest
+	7,  // 8: barterport.users.v1.UsersService.CheckSubscription:input_type -> barterport.users.v1.CheckSubscriptionRequest
+	9,  // 9: barterport.users.v1.UsersService.ListSubscriptions:input_type -> barterport.users.v1.ListSubscriptionsRequest
+	11, // 10: barterport.users.v1.UsersService.ListHiddenUsers:input_type -> barterport.users.v1.ListHiddenUsersRequest
+	13, // 11: barterport.users.v1.UsersService.IsUserHiddenByAnyOwners:input_type -> barterport.users.v1.IsUserHiddenByAnyOwnersRequest
+	15, // 12: barterport.users.v1.UsersService.GetUserLocation:input_type -> barterport.users.v1.GetUserLocationRequest
+	2,  // 13: barterport.users.v1.UsersService.GetUsersWithInfo:output_type -> barterport.users.v1.GetUsersWithInfoResponse
+	4,  // 14: barterport.users.v1.UsersService.ListUsers:output_type -> barterport.users.v1.ListUsersResponse
+	6,  // 15: barterport.users.v1.UsersService.ListUsersForChatCreation:output_type -> barterport.users.v1.ListUsersForChatCreationResponse
+	8,  // 16: barterport.users.v1.UsersService.CheckSubscription:output_type -> barterport.users.v1.CheckSubscriptionResponse
+	10, // 17: barterport.users.v1.UsersService.ListSubscriptions:output_type -> barterport.users.v1.ListSubscriptionsResponse
+	12, // 18: barterport.users.v1.UsersService.ListHiddenUsers:output_type -> barterport.users.v1.ListHiddenUsersResponse
+	14, // 19: barterport.users.v1.UsersService.IsUserHiddenByAnyOwners:output_type -> barterport.users.v1.IsUserHiddenByAnyOwnersResponse
+	16, // 20: barterport.users.v1.UsersService.GetUserLocation:output_type -> barterport.users.v1.GetUserLocationResponse
+	13, // [13:21] is the sub-list for method output_type
+	5,  // [5:13] is the sub-list for method input_type
+	5,  // [5:5] is the sub-list for extension type_name
+	5,  // [5:5] is the sub-list for extension extendee
+	0,  // [0:5] is the sub-list for field type_name
 }
 
 func init() { file_contracts_grpc_users_v1_users_proto_init() }
@@ -725,14 +931,14 @@ func file_contracts_grpc_users_v1_users_proto_init() {
 	if File_contracts_grpc_users_v1_users_proto != nil {
 		return
 	}
-	file_contracts_grpc_users_v1_users_proto_msgTypes[12].OneofWrappers = []any{}
+	file_contracts_grpc_users_v1_users_proto_msgTypes[16].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_contracts_grpc_users_v1_users_proto_rawDesc), len(file_contracts_grpc_users_v1_users_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   13,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   1,
 		},
