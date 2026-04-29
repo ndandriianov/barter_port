@@ -72,6 +72,17 @@ User:
     phoneNumber:
       $ref: './properties.yaml#/PhoneNumber'
 
+AdminUserListItem:
+  allOf:
+    - $ref: './schemas.yaml#/User'
+    - type: object
+      required:
+        - reputationPoints
+      properties:
+        reputationPoints:
+          $ref: './properties.yaml#/ReputationPoints'
+      description: |
+        Базовые данные пользователя для административного списка выбора.
 
 ReputationEvent:
   type: object

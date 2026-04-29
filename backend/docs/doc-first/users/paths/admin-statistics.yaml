@@ -43,6 +43,48 @@ adminPlatformStatistics:
             schema:
               $ref: '../components/errors.yaml#/ErrorResponse'
 
+adminUsersList:
+  get:
+    tags:
+      - admin
+      - users
+    summary: Получить список пользователей для административной проверки
+    description: |
+      Возвращает список пользователей из `users`-сервиса для выбора в административном интерфейсе.
+      Каждый элемент содержит базовые данные профиля и текущую репутацию пользователя,
+      чтобы администратор мог открыть список, выбрать нужного пользователя и затем
+      посмотреть его детальные метрики в соседних сервисах.
+
+      Endpoint доступен только администратору.
+    operationId: listAdminUsers
+    security:
+      - bearerAuth: []
+    responses:
+      '200':
+        description: Список пользователей для административной проверки
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/AdminUsersListResponse'
+      '401':
+        description: Не авторизован
+        content:
+          application/json:
+            schema:
+              $ref: '../components/errors.yaml#/ErrorResponse'
+      '403':
+        description: Доступ только для администратора
+        content:
+          application/json:
+            schema:
+              $ref: '../components/errors.yaml#/ErrorResponse'
+      '500':
+        description: Внутренняя ошибка сервера
+        content:
+          application/json:
+            schema:
+              $ref: '../components/errors.yaml#/ErrorResponse'
+
 adminUserStatistics:
   get:
     tags:

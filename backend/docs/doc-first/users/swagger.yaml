@@ -10,6 +10,8 @@ servers:
 paths:
   /admin/statistics/platform:
     $ref: './paths/admin-statistics.yaml#/adminPlatformStatistics'
+  /admin/users:
+    $ref: './paths/admin-statistics.yaml#/adminUsersList'
   /admin/users/{id}/statistics:
     $ref: './paths/admin-statistics.yaml#/adminUserStatistics'
   /users/subscriptions:
