@@ -16,6 +16,7 @@ import {
   ListItem,
   ListItemAvatar,
   ListItemText,
+  Tooltip,
   Snackbar,
   Stack,
   Typography,
@@ -33,6 +34,7 @@ function UserPage() {
     skip: !userId,
   });
   const { data: subscriptions, isLoading: isSubscriptionsLoading } = usersApi.useGetSubscriptionsQuery();
+  const { data: hiddenUsers, isLoading: isHiddenUsersLoading } = usersApi.useGetHiddenUsersQuery();
   const {
     data: userSubscriptions,
     isFetching: isUserSubscriptionsLoading,
@@ -49,6 +51,8 @@ function UserPage() {
   });
   const [subscribeToUser, { isLoading: isSubscribing }] = usersApi.useSubscribeToUserMutation();
   const [unsubscribeFromUser, { isLoading: isUnsubscribing }] = usersApi.useUnsubscribeFromUserMutation();
+  const [hideUser, { isLoading: isHidingUser }] = usersApi.useHideUserMutation();
+  const [unhideUser, { isLoading: isUnhidingUser }] = usersApi.useUnhideUserMutation();
   const [snackbarMessage, setSnackbarMessage] = useState<string | null>(null);
   const [subscriptionsDialogOpen, setSubscriptionsDialogOpen] = useState(false);
   const [subscribersDialogOpen, setSubscribersDialogOpen] = useState(false);
@@ -59,6 +63,13 @@ function UserPage() {
     }
     return subscriptions.some((sub) => sub.id === userId);
   }, [subscriptions, userId]);
+
+  const isHidden = useMemo(() => {
+    if (!hiddenUsers || !userId) {
+      return false;
+    }
+    return hiddenUsers.some((hiddenUser) => hiddenUser.id === userId);
+  }, [hiddenUsers, userId]);
 
   const handleSubscribe = async () => {
     if (!userId) {
@@ -79,11 +90,30 @@ function UserPage() {
     }
   };
 
+  const handleToggleBlacklist = async () => {
+    if (!userId) {
+      return;
+    }
+    try {
+      if (isHidden) {
+        await unhideUser({ targetUserId: userId }).unwrap();
+        setSnackbarMessage("Пользователь убран из черного списка");
+      } else {
+        await hideUser({ targetUserId: userId }).unwrap();
+        setSnackbarMessage("Пользователь добавлен в черный список");
+      }
+    } catch {
+      setSnackbarMessage(isHidden
+        ? "Не удалось убрать пользователя из черного списка"
+        : "Не удалось добавить пользователя в черный список");
+    }
+  };
+
   if (!userId) {
     return <Alert severity="warning">Пользователь не найден</Alert>;
   }
 
-  if (isCurrentUserLoading || isUserLoading || isSubscriptionsLoading) {
+  if (isCurrentUserLoading || isUserLoading || isSubscriptionsLoading || isHiddenUsersLoading) {
     return (
       <Box display="flex" justifyContent="center" py={6}>
         <CircularProgress />
@@ -208,14 +238,34 @@ function UserPage() {
             <Button
               variant={isSubscribed ? "outlined" : "contained"}
               onClick={handleSubscribe}
-              disabled={isSubscribing || isUnsubscribing}
+              disabled={isSubscribing || isUnsubscribing || isHidden}
             >
               {isSubscribed ? "Отписаться" : "Подписаться"}
             </Button>
+            <Tooltip
+              title={!isHidden && isSubscribed ? "Сначала отпишитесь от пользователя" : ""}
+              disableHoverListener={!(!isHidden && isSubscribed)}
+            >
+              <span>
+                <Button
+                  variant={isHidden ? "contained" : "outlined"}
+                  color={isHidden ? "warning" : "inherit"}
+                  onClick={handleToggleBlacklist}
+                  disabled={isHidingUser || isUnhidingUser || (!isHidden && isSubscribed)}
+                >
+                  {isHidden ? "Убрать из черного списка" : "В черный список"}
+                </Button>
+              </span>
+            </Tooltip>
             <Button component={RouterLink} to={`/users/${user.id}/reviews`} variant="outlined">
               Отзывы о пользователе
             </Button>
           </Box>
+          {isHidden ? (
+            <Alert severity="warning" sx={{ mt: 2 }}>
+              Объявления этого автора скрыты из общего списка для вашего аккаунта.
+            </Alert>
+          ) : null}
         </CardContent>
       </Card>
 

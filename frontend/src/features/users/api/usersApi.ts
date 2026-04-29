@@ -26,7 +26,7 @@ import type {
 const usersApi = createApi({
   reducerPath: "usersApi",
   baseQuery: baseQueryWithReauth,
-  tagTypes: ["CurrentUser", "Users", "Subscriptions"],
+  tagTypes: ["CurrentUser", "Users", "Subscriptions", "HiddenUsers"],
   endpoints: (builder) => ({
     getCurrentUser: builder.query<Me, void>({
       query: () => "/users/me",
@@ -95,6 +95,12 @@ const usersApi = createApi({
       providesTags: (_result, _error, id) => [{type: "Subscriptions", id: `subscribers:${id}`}],
     }),
 
+    getHiddenUsers: builder.query<SubscriptionsResponse, void>({
+      query: () => "/users/hidden-users",
+      transformResponse: (response: unknown) => subscriptionsResponseSchema.parse(response),
+      providesTags: ["HiddenUsers"],
+    }),
+
     subscribeToUser: builder.mutation<void, SubscribeRequest>({
       query: (body) => ({
         url: "/users/subscriptions",
@@ -111,6 +117,24 @@ const usersApi = createApi({
         body,
       }),
       invalidatesTags: ["Subscriptions"],
+    }),
+
+    hideUser: builder.mutation<void, SubscribeRequest>({
+      query: (body) => ({
+        url: "/users/hidden-users",
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["HiddenUsers", "Subscriptions"],
+    }),
+
+    unhideUser: builder.mutation<void, SubscribeRequest>({
+      query: (body) => ({
+        url: "/users/hidden-users",
+        method: "DELETE",
+        body,
+      }),
+      invalidatesTags: ["HiddenUsers", "Subscriptions"],
     }),
 
     getAdminPlatformStatistics: builder.query<AdminUsersPlatformStatistics, void>({

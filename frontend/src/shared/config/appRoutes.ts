@@ -52,6 +52,7 @@ export const appRoutes = {
     reputationHistory: "/app/profile/reputation/history",
     networkSubscriptions: "/app/profile/network/subscriptions",
     networkSubscribers: "/app/profile/network/subscribers",
+    networkHidden: "/app/profile/network/hidden",
     reviewsMine: "/app/profile/reviews",
     reviewsAboutMe: "/app/profile/reviews/about-me",
     statistics: "/app/profile/statistics",
