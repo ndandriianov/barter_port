@@ -111,6 +111,8 @@ func NewRouter(
 			r.Get("/subscriptions", offersHandlers.HandleGetSubscribedOffers)
 			r.Put("/{offerId}/favorite", favouritesHandlers.HandleAddOfferToFavorites)
 			r.Delete("/{offerId}/favorite", favouritesHandlers.HandleRemoveOfferFromFavorites)
+			r.Put("/{offerId}/hidden", offersHandlers.HandleHideOfferByAuthor)
+			r.Delete("/{offerId}/hidden", offersHandlers.HandleUnhideOfferByAuthor)
 			r.Get("/{offerId}", offersHandlers.HandleGetOfferByID)
 			r.Post("/{offerId}/view", offersHandlers.HandleViewOfferByID)
 			r.Patch("/{offerId}", offersHandlers.HandleUpdateOffer)

@@ -28,8 +28,13 @@ type Offer struct {
 	UpdatedAt           *time.Time        `db:"updated_at"`
 	Views               int               `db:"views"`
 	IsHidden            bool              `db:"is_hidden"`
+	HiddenByAuthor      bool              `db:"hidden_by_author"`
 	ModificationBlocked bool              `db:"modification_blocked"`
 	DraftsCount         *int              `db:"-"`
+}
+
+func (i Offer) EffectivelyHidden() bool {
+	return i.IsHidden || i.HiddenByAuthor
 }
 
 func (i *Offer) ToDto() types.Offer {
@@ -66,6 +71,7 @@ func (i *Offer) ToDto() types.Offer {
 		Views:               int64(i.Views),
 		IsFavorite:          i.IsFavorite,
 		IsHidden:            new(i.IsHidden),
+		HiddenByAuthor:      new(i.HiddenByAuthor),
 		ModificationBlocked: new(i.ModificationBlocked),
 		DraftsCount:         i.DraftsCount,
 	}
@@ -95,6 +101,7 @@ func (i *Offer) ToDTOWithInfo(info OfferInfo) types.OfferWithInfo {
 		Id:                  i.ID,
 		IsFavorite:          i.IsFavorite,
 		IsHidden:            new(i.IsHidden),
+		HiddenByAuthor:      new(i.HiddenByAuthor),
 		ModificationBlocked: new(i.ModificationBlocked),
 		Latitude:            i.Latitude,
 		Longitude:           i.Longitude,

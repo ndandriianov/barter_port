@@ -234,6 +234,7 @@ func (r *Repository) GetOffersByIDs(ctx context.Context, exec db.DB, ids []uuid.
 			COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = o.id), '{}'::uuid[]) AS photo_ids,
 			COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = o.id), '{}'::text[]) AS photo_urls,
 			o.is_hidden,
+			o.hidden_by_author,
 			o.modification_blocked,
 			o.latitude,
 			o.longitude
@@ -264,6 +265,7 @@ func (r *Repository) GetOffersByIDs(ctx context.Context, exec db.DB, ids []uuid.
 			&item.PhotoIds,
 			&item.PhotoUrls,
 			&item.IsHidden,
+			&item.HiddenByAuthor,
 			&item.ModificationBlocked,
 			&item.Latitude,
 			&item.Longitude,
@@ -298,7 +300,7 @@ func (r *Repository) GetOffer(ctx context.Context, exec db.DB, id uuid.UUID) (*d
 		       COALESCE((SELECT array_agg(ot.tag_name ORDER BY ot.tag_name) FROM offer_tags ot WHERE ot.offer_id = offers.id), '{}'::text[]) AS tags,
 		       COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
 		       COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
-		       is_hidden, modification_blocked, latitude, longitude
+		       is_hidden, hidden_by_author, modification_blocked, latitude, longitude
 		FROM offers
 		WHERE id = $1`
 
@@ -317,6 +319,7 @@ func (r *Repository) GetOffer(ctx context.Context, exec db.DB, id uuid.UUID) (*d
 		&offer.PhotoIds,
 		&offer.PhotoUrls,
 		&offer.IsHidden,
+		&offer.HiddenByAuthor,
 		&offer.ModificationBlocked,
 		&offer.Latitude,
 		&offer.Longitude,
@@ -384,7 +387,7 @@ func (r *Repository) UpdateOffer(
 		          COALESCE((SELECT array_agg(ot.tag_name ORDER BY ot.tag_name) FROM offer_tags ot WHERE ot.offer_id = offers.id), '{}'::text[]) AS tags,
 		          COALESCE((SELECT array_agg(op.id ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::uuid[]) AS photo_ids,
 		          COALESCE((SELECT array_agg(op.url ORDER BY op.position) FROM offer_photos op WHERE op.offer_id = offers.id), '{}'::text[]) AS photo_urls,
-		          is_hidden, modification_blocked, latitude, longitude`
+		          is_hidden, hidden_by_author, modification_blocked, latitude, longitude`
 
 	var offer domain.Offer
 	err := exec.QueryRow(ctx, query, offerID, userID, patch.Name, patch.Description, itemType, action,
@@ -402,6 +405,7 @@ func (r *Repository) UpdateOffer(
 		&offer.PhotoIds,
 		&offer.PhotoUrls,
 		&offer.IsHidden,
+		&offer.HiddenByAuthor,
 		&offer.ModificationBlocked,
 		&offer.Latitude,
 		&offer.Longitude,
@@ -449,6 +453,23 @@ func (r *Repository) DeleteOffer(ctx context.Context, exec db.DB, offerID uuid.U
 	}
 
 	return domain.ErrForbidden
+}
+
+func (r *Repository) SetOfferHiddenByAuthor(ctx context.Context, exec db.DB, offerID uuid.UUID, hidden bool) error {
+	tag, err := exec.Exec(ctx, `
+		UPDATE offers
+		SET hidden_by_author = $2,
+		    updated_at = NOW()
+		WHERE id = $1
+	`, offerID, hidden)
+	if err != nil {
+		return fmt.Errorf("sql set hidden_by_author: %w", err)
+	}
+	if tag.RowsAffected() == 0 {
+		return domain.ErrOfferNotFound
+	}
+
+	return nil
 }
 
 func (r *Repository) AddOfferToFavorites(ctx context.Context, exec db.DB, userID uuid.UUID, offerID uuid.UUID) error {
