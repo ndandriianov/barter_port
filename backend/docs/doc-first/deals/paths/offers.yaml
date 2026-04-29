@@ -8,6 +8,7 @@ offers:
       
       - Если `my=true`, возвращаются только объявления, созданные текущим пользователем.
         В этом режиме отображается количество черновиков, в которые входит данный offer
+      - Скрытым считается объявление, у которого `hiddenByAuthor=true` или `isHidden=true`.
       - Скрытые объявления не показываются обычным пользователям.
       - Скрытые объявления видны:
         - автору объявления (в режиме `my=true`);
@@ -261,7 +262,9 @@ offerById:
     description: |
       Возвращает одно объявление по его ID.
 
-      Правила видимости для скрытых (hidden) объявлений:
+      Скрытым считается объявление, у которого `hiddenByAuthor=true` или `isHidden=true`.
+
+      Правила видимости для скрытых объявлений:
       - автор и администратор могут получить объявление;
       - остальные пользователи получают `404 Not Found`.
 
@@ -400,6 +403,126 @@ offerById:
     responses:
       '204':
         description: Объявление удалено
+      '400':
+        description: Invalid offer ID
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: Доступ запрещён
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Offer not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+offerHiddenById:
+  put:
+    tags:
+      - offers
+    summary: Скрыть своё объявление
+    description: |
+      Помечает объявление как скрытое со стороны автора, устанавливая `hiddenByAuthor=true`.
+
+      Это обратимая альтернатива удалению объявления.
+
+      Бизнес-правила:
+      - скрыть объявление может только его автор;
+      - операция идемпотентна: если `hiddenByAuthor` уже равно `true`,
+        сервер всё равно возвращает `204 No Content`;
+      - после скрытия объявление считается скрытым, если `hiddenByAuthor=true`
+        или `isHidden=true`;
+      - скрытое объявление не показывается обычным пользователям в публичных списках и по `GET /offers/{offerId}`.
+    operationId: hideOfferByAuthor
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - name: offerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '204':
+        description: Объявление скрыто автором
+      '400':
+        description: Invalid offer ID
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: Доступ запрещён
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Offer not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+  delete:
+    tags:
+      - offers
+    summary: Убрать своё объявление из скрытых
+    description: |
+      Снимает авторское скрытие объявления, устанавливая `hiddenByAuthor=false`.
+
+      Бизнес-правила:
+      - убрать объявление из скрытых может только его автор;
+      - операция идемпотентна: если `hiddenByAuthor` уже равно `false`,
+        сервер всё равно возвращает `204 No Content`;
+      - операция очищает только флаг `hiddenByAuthor`;
+      - если объявление скрыто модератором (`isHidden=true`), оно остается скрытым
+        после вызова endpoint, потому что проверка скрытости выполняется как
+        `hiddenByAuthor=true OR isHidden=true`.
+    operationId: unhideOfferByAuthor
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - name: offerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '204':
+        description: Авторское скрытие снято
       '400':
         description: Invalid offer ID
         content:

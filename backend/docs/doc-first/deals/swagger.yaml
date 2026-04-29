@@ -62,6 +62,8 @@ paths:
     $ref: './paths/offers.yaml#/favoriteOffers'
   /offers/{offerId}:
     $ref: './paths/offers.yaml#/offerById'
+  /offers/{offerId}/hidden:
+    $ref: './paths/offers.yaml#/offerHiddenById'
   /offers/{offerId}/favorite:
     $ref: './paths/offers.yaml#/offerFavoriteById'
   /offers/{offerId}/view:
