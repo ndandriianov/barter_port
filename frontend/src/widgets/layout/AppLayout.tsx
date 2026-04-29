@@ -45,7 +45,7 @@ const sectionMeta: Record<AppSection, { label: string; description: string }> = 
   },
   admin: {
     label: "Модерация",
-    description: "Очереди модерации, статистика платформы и системные сущности",
+    description: "Жалобы, провалы сделок, статистика",
   },
 };
 

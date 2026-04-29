@@ -67,10 +67,6 @@ function AdminOfferReportsPage() {
           <Typography variant="h4" fontWeight={700} mb={1}>
             Жалобы на объявления
           </Typography>
-          <Typography variant="body1" color="text.secondary" maxWidth={760}>
-            Здесь можно просматривать все жалобы на объявления или отфильтровать их по статусу.
-            На детальной странице доступны материалы жалобы и действия модерации.
-          </Typography>
         </Box>
         <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" alignItems="center">
           {filterOptions.map((option) => (

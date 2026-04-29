@@ -18,11 +18,7 @@ function ModerationHomePage() {
           Модерация / Home
         </Typography>
         <Typography variant="h4" fontWeight={800} mb={1}>
-          Отдельная роль, отдельная рабочая зона
-        </Typography>
-        <Typography variant="body1" color="text.secondary" maxWidth={860}>
-          Админские сценарии полностью вынесены из пользовательского потока. Здесь остаются только
-          очереди модерации и системные сущности.
+          Рабочая зона админа
         </Typography>
       </Box>
 
@@ -32,7 +28,7 @@ function ModerationHomePage() {
             to={appRoutes.admin.offerReports}
             icon={<ReportProblemOutlinedIcon />}
             title="Жалобы на объявления"
-            description="Очередь report-кейсов, просмотр материалов и решение по каждой жалобе."
+            description=""
             badge={pendingReports.length}
             accent="warning"
           />
@@ -42,7 +38,7 @@ function ModerationHomePage() {
             to={appRoutes.admin.failures}
             icon={<GavelOutlinedIcon />}
             title="Провалы сделок"
-            description="Сделки, по которым участники достигли порога голосов и ждут решения администратора."
+            description=""
             badge={failureDeals.length}
             accent="secondary"
           />
@@ -52,7 +48,7 @@ function ModerationHomePage() {
             to={appRoutes.admin.system}
             icon={<SettingsSuggestOutlinedIcon />}
             title="Статистика платформы"
-            description="Сводка по auth, users, chats и deals, плюс проверка пользователя по UUID."
+            description=""
             accent="info"
           />
         </Grid>

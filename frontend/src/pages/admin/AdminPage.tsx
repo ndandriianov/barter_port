@@ -37,8 +37,6 @@ const quickActions = [
   { label: "Жалобы", to: appRoutes.admin.offerReports },
   { label: "Провалы сделок", to: appRoutes.admin.failures },
   { label: "Объявления", to: appRoutes.market.catalog },
-  { label: "Сделки", to: appRoutes.deals.home },
-  { label: "Чаты", to: appRoutes.messages.home },
 ] as const;
 
 const numberFormatter = new Intl.NumberFormat("ru-RU");
@@ -281,10 +279,7 @@ function AdminPage() {
                 </Typography>
               </Box>
               <Typography variant="h4" fontWeight={800} mb={1}>
-                Состояние платформы и проверка пользователя
-              </Typography>
-              <Typography variant="body1" sx={{ maxWidth: 760, opacity: 0.9 }}>
-                Сводка собирается из `auth`, `users`, `chats` и `deals`. Ниже есть и общий обзор, и выбор пользователя из отдельного списка `users` service.
+                Статистика по платформе и отдельно по каждому пользователю
               </Typography>
             </Box>
             <Chip
