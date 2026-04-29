@@ -50,6 +50,47 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /admin/users:
+    get:
+      tags:
+        - admin
+        - users
+      summary: Получить список пользователей для административной проверки
+      description: |
+        Возвращает список пользователей из `users`-сервиса для выбора в административном интерфейсе.
+        Каждый элемент содержит базовые данные профиля и текущую репутацию пользователя,
+        чтобы администратор мог открыть список, выбрать нужного пользователя и затем
+        посмотреть его детальные метрики в соседних сервисах.
+
+        Endpoint доступен только администратору.
+      operationId: listAdminUsers
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Список пользователей для административной проверки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUsersListResponse'
+        '401':
+          description: Не авторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Доступ только для администратора
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /admin/users/{id}/statistics:
     get:
       tags:
@@ -618,6 +659,50 @@ components:
         message:
           type: string
           example: Вы отправили некорректный запрос
+    Bio:
+      type: string
+      description: User bio
+      example: I am a software developer who loves bartering.
+    AvatarUrl:
+      type: string
+      format: uri
+      description: User avatar URL
+      example: http://localhost:8333/avatars/user-123/avatar.jpg
+    PhoneNumber:
+      type: string
+      pattern: ^\\+7 \\(\\d{3}\\) \\d{3}-\\d{2}-\\d{2}$
+      description: User phone number in format +7 (999) 123-45-67
+      example: +7 (999) 123-45-67
+    User:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          $ref: '#/components/schemas/UserId'
+        name:
+          $ref: '#/components/schemas/Name'
+        bio:
+          $ref: '#/components/schemas/Bio'
+        avatarUrl:
+          $ref: '#/components/schemas/AvatarUrl'
+        phoneNumber:
+          $ref: '#/components/schemas/PhoneNumber'
+    AdminUserListItem:
+      allOf:
+        - $ref: '#/components/schemas/User'
+        - type: object
+          required:
+            - reputationPoints
+          properties:
+            reputationPoints:
+              $ref: '#/components/schemas/ReputationPoints'
+          description: |
+            Базовые данные пользователя для административного списка выбора.
+    AdminUsersListResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/AdminUserListItem'
     ReputationEvent:
       type: object
       required:
@@ -696,35 +781,6 @@ components:
           $ref: '#/components/schemas/AdminUserReputationStatistics'
         social:
           $ref: '#/components/schemas/AdminUserSocialStatistics'
-    Bio:
-      type: string
-      description: User bio
-      example: I am a software developer who loves bartering.
-    AvatarUrl:
-      type: string
-      format: uri
-      description: User avatar URL
-      example: http://localhost:8333/avatars/user-123/avatar.jpg
-    PhoneNumber:
-      type: string
-      pattern: ^\\+7 \\(\\d{3}\\) \\d{3}-\\d{2}-\\d{2}$
-      description: User phone number in format +7 (999) 123-45-67
-      example: +7 (999) 123-45-67
-    User:
-      type: object
-      required:
-        - id
-      properties:
-        id:
-          $ref: '#/components/schemas/UserId'
-        name:
-          $ref: '#/components/schemas/Name'
-        bio:
-          $ref: '#/components/schemas/Bio'
-        avatarUrl:
-          $ref: '#/components/schemas/AvatarUrl'
-        phoneNumber:
-          $ref: '#/components/schemas/PhoneNumber'
     getSubscriptionsResponse:
       type: array
       items:

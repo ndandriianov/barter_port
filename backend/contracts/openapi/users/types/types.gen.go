@@ -66,6 +66,27 @@ type AdminTopUserByReputation struct {
 	UserId UserId `json:"userId"`
 }
 
+// AdminUserListItem defines model for AdminUserListItem.
+type AdminUserListItem struct {
+	// AvatarUrl User avatar URL
+	AvatarUrl *AvatarUrl `json:"avatarUrl,omitempty"`
+
+	// Bio User bio
+	Bio *Bio `json:"bio,omitempty"`
+
+	// Id User ID
+	Id UserId `json:"id"`
+
+	// Name User name
+	Name *Name `json:"name,omitempty"`
+
+	// PhoneNumber User phone number in format +7 (999) 123-45-67
+	PhoneNumber *PhoneNumber `json:"phoneNumber,omitempty"`
+
+	// ReputationPoints Current user reputation score including rewards and penalties
+	ReputationPoints ReputationPoints `json:"reputationPoints"`
+}
+
 // AdminUserReputationStatistics defines model for AdminUserReputationStatistics.
 type AdminUserReputationStatistics struct {
 	// CurrentPoints Current user reputation score including rewards and penalties
@@ -89,6 +110,9 @@ type AdminUserStatistics struct {
 	Reputation AdminUserReputationStatistics `json:"reputation"`
 	Social     AdminUserSocialStatistics     `json:"social"`
 }
+
+// AdminUsersListResponse defines model for AdminUsersListResponse.
+type AdminUsersListResponse = []AdminUserListItem
 
 // AvatarUploadResponse defines model for AvatarUploadResponse.
 type AvatarUploadResponse struct {
