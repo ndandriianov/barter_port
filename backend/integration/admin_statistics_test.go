@@ -53,6 +53,15 @@ type usersAdminUserStatisticsResponse struct {
 	} `json:"social"`
 }
 
+type usersAdminUsersListItem struct {
+	ID               uuid.UUID `json:"id"`
+	Name             *string   `json:"name"`
+	Bio              *string   `json:"bio"`
+	AvatarURL        *string   `json:"avatarUrl"`
+	PhoneNumber      *string   `json:"phoneNumber"`
+	ReputationPoints int       `json:"reputationPoints"`
+}
+
 type chatsAdminPlatformStatisticsResponse struct {
 	Chats struct {
 		Total int `json:"total"`
@@ -375,6 +384,17 @@ func TestAdminStatisticsEndpoints(t *testing.T) {
 	require.Equal(t, 1, usersUserStats.Social.FollowersCount)
 	require.Equal(t, 1, usersUserStats.Social.SubscriptionsCount)
 
+	usersList := mustGetUsersAdminUsersList(t, fixture, adminToken)
+	userOneFromList := findUsersAdminListItem(t, usersList, userOne.UserID)
+	require.NotNil(t, userOneFromList.Name)
+	require.Equal(t, userOneName, *userOneFromList.Name)
+	require.Equal(t, 1200, userOneFromList.ReputationPoints)
+
+	userTwoFromList := findUsersAdminListItem(t, usersList, userTwo.UserID)
+	require.NotNil(t, userTwoFromList.Name)
+	require.Equal(t, userTwoName, *userTwoFromList.Name)
+	require.Equal(t, 900, userTwoFromList.ReputationPoints)
+
 	chatsAfter := mustGetChatsAdminPlatformStatistics(t, fixture, adminToken)
 	require.Equal(t, chatsBefore.Chats.Total+1, chatsAfter.Chats.Total)
 
@@ -475,6 +495,32 @@ func mustGetUsersAdminUserStatistics(t *testing.T, fixture *Fixture, adminToken 
 	var body usersAdminUserStatisticsResponse
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
 	return body
+}
+
+func mustGetUsersAdminUsersList(t *testing.T, fixture *Fixture, adminToken string) []usersAdminUsersListItem {
+	t.Helper()
+
+	req := mustBearerRequest(t, http.MethodGet, fixture.UsersURL+"/admin/users", adminToken, nil)
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	var body []usersAdminUsersListItem
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&body))
+	return body
+}
+
+func findUsersAdminListItem(t *testing.T, items []usersAdminUsersListItem, userID uuid.UUID) usersAdminUsersListItem {
+	t.Helper()
+
+	for _, item := range items {
+		if item.ID == userID {
+			return item
+		}
+	}
+
+	t.Fatalf("user %s not found in admin users list", userID)
+	return usersAdminUsersListItem{}
 }
 
 func mustGetChatsAdminPlatformStatistics(t *testing.T, fixture *Fixture, adminToken string) chatsAdminPlatformStatisticsResponse {
