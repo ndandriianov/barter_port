@@ -1052,3 +1052,457 @@ DealFailureModeratorResolution:
     comment:
       type: string
       description: Комментарий админа к его решению.
+
+
+
+AdminPlatformStatistics:
+  type: object
+  required:
+    - offers
+    - deals
+    - reports
+    - reviews
+  properties:
+    offers:
+      $ref: '#/AdminPlatformOfferStatistics'
+    deals:
+      $ref: '#/AdminPlatformDealStatistics'
+    reports:
+      $ref: '#/AdminPlatformReportStatistics'
+    reviews:
+      $ref: '#/AdminPlatformReviewStatistics'
+
+AdminPlatformOfferStatistics:
+  type: object
+  required:
+    - total
+    - hidden
+    - byType
+    - byAction
+    - topTags
+    - averagePerUser
+    - drafts
+    - totalViews
+    - topByFavorites
+  properties:
+    total:
+      type: integer
+      minimum: 0
+      description: Общее число объявлений на платформе
+    hidden:
+      $ref: '#/AdminHiddenOfferStatistics'
+    byType:
+      $ref: '#/AdminOfferTypeDistribution'
+    byAction:
+      $ref: '#/AdminOfferActionDistribution'
+    topTags:
+      type: array
+      description: Теги с наибольшим числом объявлений
+      items:
+        $ref: '#/AdminTopTagStat'
+    averagePerUser:
+      type: number
+      format: double
+      minimum: 0
+      description: Среднее число объявлений на одного пользователя
+    drafts:
+      type: integer
+      minimum: 0
+      description: Число черновиков сделок
+    totalViews:
+      type: integer
+      format: int64
+      minimum: 0
+      description: Общее число просмотров объявлений
+    topByFavorites:
+      type: array
+      description: Топ объявлений по числу добавлений в избранное
+      items:
+        $ref: '#/AdminTopFavoriteOfferStat'
+    averageRating:
+      type: number
+      format: double
+      nullable: true
+      minimum: 1
+      maximum: 5
+      description: |
+        Средний рейтинг объявлений по платформе.
+        Рассчитывается по отзывам, содержащим `offer_id`.
+        `null`, если на платформе ещё нет таких отзывов.
+
+AdminHiddenOfferStatistics:
+  type: object
+  required:
+    - moderated
+    - hiddenByAuthor
+  properties:
+    moderated:
+      type: integer
+      minimum: 0
+      description: Число объявлений, скрытых модератором по результатам жалоб
+    hiddenByAuthor:
+      type: integer
+      minimum: 0
+      description: Число объявлений, скрытых самим пользователем
+
+AdminOfferTypeDistribution:
+  type: object
+  required:
+    - good
+    - service
+  properties:
+    good:
+      type: integer
+      minimum: 0
+      description: Число объявлений типа `good`
+    service:
+      type: integer
+      minimum: 0
+      description: Число объявлений типа `service`
+
+AdminOfferActionDistribution:
+  type: object
+  required:
+    - give
+    - take
+  properties:
+    give:
+      type: integer
+      minimum: 0
+      description: Число объявлений направления `give`
+    take:
+      type: integer
+      minimum: 0
+      description: Число объявлений направления `take`
+
+AdminTopTagStat:
+  type: object
+  required:
+    - tag
+    - offersCount
+  properties:
+    tag:
+      $ref: '#/TagName'
+    offersCount:
+      type: integer
+      minimum: 0
+      description: Количество объявлений, в которых используется тег
+
+AdminTopFavoriteOfferStat:
+  type: object
+  required:
+    - offerId
+    - authorId
+    - name
+    - favoritesCount
+  properties:
+    offerId:
+      type: string
+      format: uuid
+      description: UUID объявления
+    authorId:
+      type: string
+      format: uuid
+      description: UUID автора объявления
+    name:
+      type: string
+      description: Заголовок объявления
+    favoritesCount:
+      type: integer
+      minimum: 0
+      description: Число пользователей, добавивших объявление в избранное
+
+AdminPlatformDealStatistics:
+  type: object
+  required:
+    - total
+    - byStatus
+    - successfulConversionRate
+    - averageParticipants
+    - multiPartyShare
+  properties:
+    total:
+      type: integer
+      minimum: 0
+      description: Общее число сделок
+    byStatus:
+      $ref: '#/AdminDealStatusDistribution'
+    successfulConversionRate:
+      type: number
+      format: double
+      minimum: 0
+      maximum: 1
+      description: |
+        Доля успешных сделок среди всех завершённых сделок.
+        Под завершёнными понимаются сделки в терминальных статусах:
+        `Completed`, `Failed`, `Cancelled`.
+    averageParticipants:
+      type: number
+      format: double
+      minimum: 0
+      description: Среднее число участников в сделке
+    multiPartyShare:
+      type: number
+      format: double
+      minimum: 0
+      maximum: 1
+      description: Доля сделок, в которых участвует более двух пользователей
+
+AdminDealStatusDistribution:
+  type: object
+  required:
+    - lookingForParticipants
+    - discussion
+    - confirmed
+    - completed
+    - failed
+    - cancelled
+  properties:
+    lookingForParticipants:
+      type: integer
+      minimum: 0
+      description: Число сделок в статусе `LookingForParticipants`
+    discussion:
+      type: integer
+      minimum: 0
+      description: Число сделок в статусе `Discussion`
+    confirmed:
+      type: integer
+      minimum: 0
+      description: Число сделок в статусе `Confirmed`
+    completed:
+      type: integer
+      minimum: 0
+      description: Число сделок в статусе `Completed`
+    failed:
+      type: integer
+      minimum: 0
+      description: Число сделок в статусе `Failed`
+    cancelled:
+      type: integer
+      minimum: 0
+      description: Число сделок в статусе `Cancelled`
+
+AdminPlatformReportStatistics:
+  type: object
+  required:
+    - total
+    - pending
+    - blockedOffers
+    - adminFailureResolutions
+    - topUsersByReceivedReports
+  properties:
+    total:
+      type: integer
+      minimum: 0
+      description: Общее число жалоб на объявления
+    pending:
+      type: integer
+      minimum: 0
+      description: Число необработанных жалоб
+    blockedOffers:
+      type: integer
+      minimum: 0
+      description: Число объявлений, скрытых модератором по итогам жалоб
+    adminFailureResolutions:
+      type: integer
+      minimum: 0
+      description: Число решений администратора по спорам о провале сделок
+    topUsersByReceivedReports:
+      type: array
+      description: Топ пользователей по числу полученных жалоб на их объявления
+      items:
+        $ref: '#/AdminTopReportedUserStat'
+
+AdminTopReportedUserStat:
+  type: object
+  required:
+    - userId
+    - reportsCount
+  properties:
+    userId:
+      type: string
+      format: uuid
+      description: UUID пользователя
+    reportsCount:
+      type: integer
+      minimum: 0
+      description: Количество жалоб, полученных на объявления пользователя
+
+AdminPlatformReviewStatistics:
+  type: object
+  required:
+    - total
+    - ratingDistribution
+  properties:
+    total:
+      type: integer
+      minimum: 0
+      description: Общее число отзывов на платформе
+    averageRating:
+      type: number
+      format: double
+      nullable: true
+      minimum: 1
+      maximum: 5
+      description: Средний рейтинг по всей платформе; `null`, если отзывов пока нет
+    ratingDistribution:
+      $ref: '#/AdminRatingDistribution'
+
+AdminRatingDistribution:
+  type: object
+  required:
+    - oneStar
+    - twoStars
+    - threeStars
+    - fourStars
+    - fiveStars
+  properties:
+    oneStar:
+      type: integer
+      minimum: 0
+      description: Число отзывов с оценкой 1
+    twoStars:
+      type: integer
+      minimum: 0
+      description: Число отзывов с оценкой 2
+    threeStars:
+      type: integer
+      minimum: 0
+      description: Число отзывов с оценкой 3
+    fourStars:
+      type: integer
+      minimum: 0
+      description: Число отзывов с оценкой 4
+    fiveStars:
+      type: integer
+      minimum: 0
+      description: Число отзывов с оценкой 5
+
+AdminUserStatistics:
+  type: object
+  required:
+    - deals
+    - offers
+    - reviews
+    - reports
+  properties:
+    deals:
+      $ref: '#/AdminUserDealStatistics'
+    offers:
+      $ref: '#/AdminUserOfferStatistics'
+    reviews:
+      $ref: '#/AdminUserReviewStatistics'
+    reports:
+      $ref: '#/AdminUserReportStatistics'
+
+AdminUserDealStatistics:
+  type: object
+  required:
+    - completed
+    - active
+    - failed
+    - cancelled
+  properties:
+    completed:
+      type: integer
+      minimum: 0
+      description: Число завершённых сделок пользователя
+    active:
+      type: integer
+      minimum: 0
+      description: Число активных сделок пользователя
+    failed:
+      $ref: '#/AdminUserFailedDealStatistics'
+    cancelled:
+      type: integer
+      minimum: 0
+      description: Число отменённых сделок пользователя
+
+AdminUserFailedDealStatistics:
+  type: object
+  required:
+    - total
+    - responsible
+    - affected
+  properties:
+    total:
+      type: integer
+      minimum: 0
+      description: Общее число провальных сделок пользователя
+    responsible:
+      type: integer
+      minimum: 0
+      description: Число провальных сделок, где пользователь признан виновным
+    affected:
+      type: integer
+      minimum: 0
+      description: |
+        Число провальных сделок, где пользователь не указан виновным
+        и считается пострадавшей стороной
+
+AdminUserOfferStatistics:
+  type: object
+  required:
+    - published
+    - totalViews
+  properties:
+    published:
+      type: integer
+      minimum: 0
+      description: Число опубликованных объявлений пользователя
+    totalViews:
+      type: integer
+      format: int64
+      minimum: 0
+      description: Суммарное число просмотров объявлений пользователя
+
+AdminUserReviewStatistics:
+  type: object
+  required:
+    - received
+    - written
+  properties:
+    received:
+      type: integer
+      minimum: 0
+      description: Число отзывов, полученных пользователем
+    averageReceivedRating:
+      type: number
+      format: double
+      nullable: true
+      minimum: 1
+      maximum: 5
+      description: Средний рейтинг по полученным отзывам; `null`, если отзывов нет
+    written:
+      type: integer
+      minimum: 0
+      description: Число отзывов, оставленных пользователем
+
+AdminUserReportStatistics:
+  type: object
+  required:
+    - received
+    - filed
+  properties:
+    received:
+      $ref: '#/AdminUserReceivedReportStatistics'
+    filed:
+      type: integer
+      minimum: 0
+      description: Число жалоб, отправленных пользователем
+
+AdminUserReceivedReportStatistics:
+  type: object
+  required:
+    - accepted
+    - rejected
+  properties:
+    accepted:
+      type: integer
+      minimum: 0
+      description: Число принятых жалоб, полученных пользователем
+    rejected:
+      type: integer
+      minimum: 0
+      description: Число отклонённых жалоб, полученных пользователем

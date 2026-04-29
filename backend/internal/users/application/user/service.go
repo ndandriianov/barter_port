@@ -14,8 +14,13 @@ import (
 
 type UsersRepository interface {
 	GetUserById(ctx context.Context, id uuid.UUID) (*domain.User, error)
+	ListUsersForAdmin(ctx context.Context) ([]domain.AdminUserListItem, error)
 	GetReputationPoints(ctx context.Context, id uuid.UUID) (int, error)
 	GetReputationEvents(ctx context.Context, id uuid.UUID) ([]domain.ReputationEvent, error)
+	GetReputationStats(ctx context.Context) (average float64, median float64, err error)
+	GetTopUsersByReputation(ctx context.Context, limit int) ([]domain.User, []int, error)
+	GetFollowersCount(ctx context.Context, id uuid.UUID) (int, error)
+	GetSubscriptionsCount(ctx context.Context, id uuid.UUID) (int, error)
 	UpdateName(ctx context.Context, id uuid.UUID, name string) error
 	UpdateBio(ctx context.Context, id uuid.UUID, bio *string) error
 	UpdateAvatarURL(ctx context.Context, id uuid.UUID, avatarURL *string) error
@@ -54,6 +59,46 @@ type Me struct {
 	CreatedAt        time.Time
 	IsAdmin          bool
 	ReputationPoints int
+}
+
+type AdminPlatformStatistics struct {
+	Reputation AdminPlatformReputationStatistics
+}
+
+type AdminPlatformReputationStatistics struct {
+	Average  float64
+	Median   float64
+	TopUsers []AdminTopUserByReputation
+}
+
+type AdminTopUserByReputation struct {
+	UserID           uuid.UUID
+	Name             *string
+	ReputationPoints int
+}
+
+type AdminUserListItem struct {
+	ID               uuid.UUID
+	Name             *string
+	Bio              *string
+	AvatarURL        *string
+	PhoneNumber      *string
+	ReputationPoints int
+}
+
+type AdminUserStatistics struct {
+	Reputation AdminUserReputationStatistics
+	Social     AdminUserSocialStatistics
+}
+
+type AdminUserReputationStatistics struct {
+	CurrentPoints int
+	History       []domain.ReputationEvent
+}
+
+type AdminUserSocialStatistics struct {
+	FollowersCount     int
+	SubscriptionsCount int
 }
 
 type Service struct {
@@ -112,6 +157,105 @@ func (s *Service) GetMe(ctx context.Context, id uuid.UUID) (Me, error) {
 
 func (s *Service) GetCurrentUserReputationEvents(ctx context.Context, id uuid.UUID) ([]domain.ReputationEvent, error) {
 	return s.repository.GetReputationEvents(ctx, id)
+}
+
+func (s *Service) GetAdminPlatformStatistics(ctx context.Context, requesterID uuid.UUID) (AdminPlatformStatistics, error) {
+	if err := s.ensureAdmin(ctx, requesterID); err != nil {
+		return AdminPlatformStatistics{}, err
+	}
+
+	average, median, err := s.repository.GetReputationStats(ctx)
+	if err != nil {
+		return AdminPlatformStatistics{}, err
+	}
+
+	topUsersRaw, points, err := s.repository.GetTopUsersByReputation(ctx, 10)
+	if err != nil {
+		return AdminPlatformStatistics{}, err
+	}
+
+	topUsers := make([]AdminTopUserByReputation, 0, len(topUsersRaw))
+	for i := range topUsersRaw {
+		topUsers = append(topUsers, AdminTopUserByReputation{
+			UserID:           topUsersRaw[i].Id,
+			Name:             topUsersRaw[i].Name,
+			ReputationPoints: points[i],
+		})
+	}
+
+	return AdminPlatformStatistics{
+		Reputation: AdminPlatformReputationStatistics{
+			Average:  average,
+			Median:   median,
+			TopUsers: topUsers,
+		},
+	}, nil
+}
+
+func (s *Service) GetAdminUsersList(ctx context.Context, requesterID uuid.UUID) ([]AdminUserListItem, error) {
+	if err := s.ensureAdmin(ctx, requesterID); err != nil {
+		return nil, err
+	}
+
+	users, err := s.repository.ListUsersForAdmin(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]AdminUserListItem, 0, len(users))
+	for _, listedUser := range users {
+		result = append(result, AdminUserListItem{
+			ID:               listedUser.Id,
+			Name:             listedUser.Name,
+			Bio:              listedUser.Bio,
+			AvatarURL:        listedUser.AvatarURL,
+			PhoneNumber:      listedUser.PhoneNumber,
+			ReputationPoints: listedUser.ReputationPoints,
+		})
+	}
+
+	return result, nil
+}
+
+func (s *Service) GetAdminUserStatistics(ctx context.Context, requesterID, targetUserID uuid.UUID) (AdminUserStatistics, error) {
+	if err := s.ensureAdmin(ctx, requesterID); err != nil {
+		return AdminUserStatistics{}, err
+	}
+
+	if _, err := s.repository.GetUserById(ctx, targetUserID); err != nil {
+		return AdminUserStatistics{}, err
+	}
+
+	currentPoints, err := s.repository.GetReputationPoints(ctx, targetUserID)
+	if err != nil {
+		return AdminUserStatistics{}, err
+	}
+
+	history, err := s.repository.GetReputationEvents(ctx, targetUserID)
+	if err != nil {
+		return AdminUserStatistics{}, err
+	}
+
+	followersCount, err := s.repository.GetFollowersCount(ctx, targetUserID)
+	if err != nil {
+		return AdminUserStatistics{}, err
+	}
+
+	subscriptionsCount, err := s.repository.GetSubscriptionsCount(ctx, targetUserID)
+	if err != nil {
+		return AdminUserStatistics{}, err
+	}
+
+	return AdminUserStatistics{
+		Reputation: AdminUserReputationStatistics{
+			CurrentPoints: currentPoints,
+			History:       history,
+		},
+		Social: AdminUserSocialStatistics{
+			FollowersCount:     followersCount,
+			SubscriptionsCount: subscriptionsCount,
+		},
+	}, nil
 }
 
 // UpdateName updates users name by id.
@@ -229,6 +373,22 @@ func normalizeOptionalString(value *string) *string {
 		return nil
 	}
 	return value
+}
+
+func (s *Service) ensureAdmin(ctx context.Context, requesterID uuid.UUID) error {
+	if s.authClient == nil {
+		return ErrAuthClientNotConfigured
+	}
+
+	authMe, err := s.authClient.GetMe(ctx, &authpb.GetMeRequest{Id: requesterID.String()})
+	if err != nil {
+		return err
+	}
+	if !authMe.GetIsAdmin() {
+		return domain.ErrForbidden
+	}
+
+	return nil
 }
 
 // Subscribe subscribes subscriberID to targetUserID.

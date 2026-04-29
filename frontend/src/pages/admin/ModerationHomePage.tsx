@@ -18,11 +18,7 @@ function ModerationHomePage() {
           Модерация / Home
         </Typography>
         <Typography variant="h4" fontWeight={800} mb={1}>
-          Отдельная роль, отдельная рабочая зона
-        </Typography>
-        <Typography variant="body1" color="text.secondary" maxWidth={860}>
-          Админские сценарии полностью вынесены из пользовательского потока. Здесь остаются только
-          очереди модерации и системные сущности.
+          Рабочая зона админа
         </Typography>
       </Box>
 
@@ -32,7 +28,7 @@ function ModerationHomePage() {
             to={appRoutes.admin.offerReports}
             icon={<ReportProblemOutlinedIcon />}
             title="Жалобы на объявления"
-            description="Очередь report-кейсов, просмотр материалов и решение по каждой жалобе."
+            description=""
             badge={pendingReports.length}
             accent="warning"
           />
@@ -42,7 +38,7 @@ function ModerationHomePage() {
             to={appRoutes.admin.failures}
             icon={<GavelOutlinedIcon />}
             title="Провалы сделок"
-            description="Сделки, по которым участники достигли порога голосов и ждут решения администратора."
+            description=""
             badge={failureDeals.length}
             accent="secondary"
           />
@@ -51,8 +47,8 @@ function ModerationHomePage() {
           <SectionEntryCard
             to={appRoutes.admin.system}
             icon={<SettingsSuggestOutlinedIcon />}
-            title="Системные сущности"
-            description="Теги, обзор ключевых показателей и административные настройки второго уровня."
+            title="Статистика платформы"
+            description=""
             accent="info"
           />
         </Grid>

@@ -1,6 +1,9 @@
 import {createApi} from "@reduxjs/toolkit/query/react";
 import {baseQueryWithReauth} from "@/shared/api/baseApi.ts";
 import {
+  adminUsersListResponseSchema,
+  adminUsersPlatformStatisticsSchema,
+  adminUsersUserStatisticsSchema,
   meSchema,
   reputationEventsResponseSchema,
   subscriptionsResponseSchema,
@@ -8,6 +11,9 @@ import {
   userSchema,
 } from "@/features/users/model/schemas.ts";
 import type {
+  AdminUsersListResponse,
+  AdminUsersPlatformStatistics,
+  AdminUsersUserStatistics,
   Me,
   ReputationEvent,
   SubscribeRequest,
@@ -59,6 +65,12 @@ const usersApi = createApi({
       providesTags: (_result, _error, id) => [{type: "Users", id}],
     }),
 
+    listAdminUsers: builder.query<AdminUsersListResponse, void>({
+      query: () => "/users/admin/users",
+      transformResponse: (response: unknown) => adminUsersListResponseSchema.parse(response),
+      providesTags: ["Users"],
+    }),
+
     getSubscriptions: builder.query<SubscriptionsResponse, void>({
       query: () => "/users/subscriptions",
       transformResponse: (response: unknown) => subscriptionsResponseSchema.parse(response),
@@ -99,6 +111,16 @@ const usersApi = createApi({
         body,
       }),
       invalidatesTags: ["Subscriptions"],
+    }),
+
+    getAdminPlatformStatistics: builder.query<AdminUsersPlatformStatistics, void>({
+      query: () => "/users/admin/statistics/platform",
+      transformResponse: (response: unknown) => adminUsersPlatformStatisticsSchema.parse(response),
+    }),
+
+    getAdminUserStatistics: builder.query<AdminUsersUserStatistics, string>({
+      query: (userId) => `/users/admin/users/${userId}/statistics`,
+      transformResponse: (response: unknown) => adminUsersUserStatisticsSchema.parse(response),
     }),
   }),
 });

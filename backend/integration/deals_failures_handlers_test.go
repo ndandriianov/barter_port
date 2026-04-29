@@ -29,6 +29,13 @@ func TestGetDealsForFailureReviewAdminSuccess(t *testing.T) {
 	userA := uuid.New()
 	userB := uuid.New()
 	dealID, _ := mustCreateDiscussionDeal(t, userA, userB)
+	reqUpdate := mustUserRequest(t, http.MethodPatch, dealsURL()+"/deals/"+dealID.String(), userA, mustJSONBody(t, types.UpdateDealRequest{
+		Name: "Явно названная сделка",
+	}))
+	respUpdate := mustDo(t, reqUpdate)
+	defer func() { _ = respUpdate.Body.Close() }()
+	require.Equal(t, http.StatusOK, respUpdate.StatusCode)
+
 	mustVoteForFailure(t, userA, dealID, userB)
 
 	req := mustBearerRequest(t, http.MethodGet, dealsURL()+"/deals/failures/review", mustAdminAccessToken(t), nil)
@@ -40,10 +47,19 @@ func TestGetDealsForFailureReviewAdminSuccess(t *testing.T) {
 	require.NoError(t, json.NewDecoder(resp.Body).Decode(&deals))
 
 	var ids []uuid.UUID
+	var found *types.GetDealsResponseItem
 	for _, deal := range deals {
 		ids = append(ids, deal.Id)
+		if deal.Id == dealID {
+			dealCopy := deal
+			found = &dealCopy
+		}
 	}
 	require.Contains(t, ids, dealID)
+	require.NotNil(t, found)
+	require.NotNil(t, found.Name)
+	require.Equal(t, "Явно названная сделка", *found.Name)
+	require.NotEmpty(t, found.Items)
 }
 
 func TestVoteForFailureAndGetVotes(t *testing.T) {

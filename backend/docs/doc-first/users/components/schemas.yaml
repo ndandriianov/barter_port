@@ -72,6 +72,17 @@ User:
     phoneNumber:
       $ref: './properties.yaml#/PhoneNumber'
 
+AdminUserListItem:
+  allOf:
+    - $ref: './schemas.yaml#/User'
+    - type: object
+      required:
+        - reputationPoints
+      properties:
+        reputationPoints:
+          $ref: './properties.yaml#/ReputationPoints'
+      description: |
+        Базовые данные пользователя для административного списка выбора.
 
 ReputationEvent:
   type: object
@@ -114,3 +125,87 @@ ReputationEvent:
     comment:
       type: string
       description: Комментарий к изменению репутации (например, причина изменения или пояснение начисления)
+
+
+
+AdminPlatformStatistics:
+  type: object
+  required:
+    - reputation
+  properties:
+    reputation:
+      $ref: './schemas.yaml#/AdminPlatformReputationStatistics'
+
+AdminPlatformReputationStatistics:
+  type: object
+  required:
+    - average
+    - median
+    - topUsers
+  properties:
+    average:
+      type: number
+      format: double
+      description: Средняя репутация по всем пользователям
+    median:
+      type: number
+      format: double
+      description: Медианная репутация по всем пользователям
+    topUsers:
+      type: array
+      description: Топ-N пользователей по репутации
+      items:
+        $ref: './schemas.yaml#/AdminTopUserByReputation'
+
+AdminTopUserByReputation:
+  type: object
+  required:
+    - userId
+    - reputationPoints
+  properties:
+    userId:
+      $ref: './properties.yaml#/UserId'
+    name:
+      $ref: './properties.yaml#/Name'
+    reputationPoints:
+      $ref: './properties.yaml#/ReputationPoints'
+
+AdminUserStatistics:
+  type: object
+  required:
+    - reputation
+    - social
+  properties:
+    reputation:
+      $ref: './schemas.yaml#/AdminUserReputationStatistics'
+    social:
+      $ref: './schemas.yaml#/AdminUserSocialStatistics'
+
+AdminUserReputationStatistics:
+  type: object
+  required:
+    - currentPoints
+    - history
+  properties:
+    currentPoints:
+      $ref: './properties.yaml#/ReputationPoints'
+    history:
+      type: array
+      description: История начислений и штрафов пользователя
+      items:
+        $ref: './schemas.yaml#/ReputationEvent'
+
+AdminUserSocialStatistics:
+  type: object
+  required:
+    - followersCount
+    - subscriptionsCount
+  properties:
+    followersCount:
+      type: integer
+      minimum: 0
+      description: Число подписчиков пользователя
+    subscriptionsCount:
+      type: integer
+      minimum: 0
+      description: Число подписок пользователя

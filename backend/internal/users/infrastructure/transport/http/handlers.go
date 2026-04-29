@@ -132,6 +132,134 @@ func (h *Handlers) HandleGetCurrentUserReputationEvents(w http.ResponseWriter, r
 	httpx.WriteJSON(w, http.StatusOK, response)
 }
 
+func (h *Handlers) HandleGetAdminPlatformStatistics(w http.ResponseWriter, r *http.Request) {
+	log := httplog.LogFrom(r.Context(), slog.Default())
+
+	requesterID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
+	stats, err := h.userService.GetAdminPlatformStatistics(r.Context(), requesterID)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrForbidden):
+			httpx.WriteEmptyError(w, http.StatusForbidden)
+		default:
+			log.Error("failed to get admin users platform statistics", slog.String("error", err.Error()))
+			httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	topUsers := make([]types.AdminTopUserByReputation, 0, len(stats.Reputation.TopUsers))
+	for _, topUser := range stats.Reputation.TopUsers {
+		topUsers = append(topUsers, types.AdminTopUserByReputation{
+			UserId:           topUser.UserID,
+			Name:             topUser.Name,
+			ReputationPoints: topUser.ReputationPoints,
+		})
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, types.AdminPlatformStatistics{
+		Reputation: types.AdminPlatformReputationStatistics{
+			Average:  stats.Reputation.Average,
+			Median:   stats.Reputation.Median,
+			TopUsers: topUsers,
+		},
+	})
+}
+
+func (h *Handlers) HandleGetAdminUsersList(w http.ResponseWriter, r *http.Request) {
+	log := httplog.LogFrom(r.Context(), slog.Default())
+
+	requesterID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
+	usersList, err := h.userService.GetAdminUsersList(r.Context(), requesterID)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrForbidden):
+			httpx.WriteEmptyError(w, http.StatusForbidden)
+		default:
+			log.Error("failed to get admin users list", slog.String("error", err.Error()))
+			httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	response := make(types.AdminUsersListResponse, 0, len(usersList))
+	for _, listedUser := range usersList {
+		response = append(response, types.AdminUserListItem{
+			Id:               listedUser.ID,
+			Name:             listedUser.Name,
+			Bio:              listedUser.Bio,
+			AvatarUrl:        listedUser.AvatarURL,
+			PhoneNumber:      listedUser.PhoneNumber,
+			ReputationPoints: listedUser.ReputationPoints,
+		})
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, response)
+}
+
+func (h *Handlers) HandleGetAdminUserStatistics(w http.ResponseWriter, r *http.Request) {
+	log := httplog.LogFrom(r.Context(), slog.Default())
+
+	requesterID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
+	targetUserID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httpx.WriteErrorStr(w, http.StatusBadRequest, "invalid user id")
+		return
+	}
+
+	stats, err := h.userService.GetAdminUserStatistics(r.Context(), requesterID, targetUserID)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrForbidden):
+			httpx.WriteEmptyError(w, http.StatusForbidden)
+		case errors.Is(err, domain.ErrUserNotFound):
+			httpx.WriteEmptyError(w, http.StatusNotFound)
+		default:
+			log.Error("failed to get admin users user statistics", slog.String("error", err.Error()))
+			httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	history := make([]types.ReputationEvent, 0, len(stats.Reputation.History))
+	for _, event := range stats.Reputation.History {
+		history = append(history, types.ReputationEvent{
+			Id:         event.Id,
+			SourceType: types.ReputationEventSourceType(event.SourceType),
+			SourceId:   event.SourceID,
+			Delta:      event.Delta,
+			CreatedAt:  event.CreatedAt,
+			Comment:    event.Comment,
+		})
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, types.AdminUserStatistics{
+		Reputation: types.AdminUserReputationStatistics{
+			CurrentPoints: stats.Reputation.CurrentPoints,
+			History:       history,
+		},
+		Social: types.AdminUserSocialStatistics{
+			FollowersCount:     stats.Social.FollowersCount,
+			SubscriptionsCount: stats.Social.SubscriptionsCount,
+		},
+	})
+}
+
 // ================================================================================
 // UploadMeAvatar
 // ================================================================================

@@ -202,7 +202,7 @@ func main() {
 	dealspb.RegisterDealsServiceServer(grpcServer, transportgrpc.NewServer(dealsService))
 
 	statisticsRepository := statsrepo.NewRepository(db)
-	statisticsService := statisticssvc.NewService(statisticsRepository)
+	statisticsService := statisticssvc.NewService(statisticsRepository).WithAuthClient(authClient)
 
 	offersHandlers := offersh.NewHandlers(offersService)
 	offerGroupsHandlers := offergroupsh.NewHandlers(logg, offerGroupsService)

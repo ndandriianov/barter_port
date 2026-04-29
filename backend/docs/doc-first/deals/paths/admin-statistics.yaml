@@ -1,0 +1,125 @@
+adminPlatformStatistics:
+  get:
+    tags:
+      - admin
+      - statistics
+    summary: Получить статистику платформы из deals-сервиса
+    description: |
+      Возвращает агрегированную статистику платформы по домену `deals`.
+
+      Ответ содержит административные метрики по следующим сущностям:
+      - объявления;
+      - сделки;
+      - жалобы и результаты модерации;
+      - отзывы.
+
+      В статистику объявлений входят общие счётчики, распределения по типу и направлению,
+      популярные теги, среднее число объявлений на пользователя, число черновиков,
+      суммарные просмотры, топ объявлений по добавлениям в избранное
+      и средний рейтинг объявлений по отзывам.
+
+      В статистику сделок входят общее число сделок, распределение по статусам,
+      доля успешных завершений, среднее число участников и доля многосторонних сделок.
+
+      В статистику жалоб и модерации входят общее число жалоб, текущая очередь необработанных жалоб,
+      число скрытых модератором объявлений, число решений администратора по спорам о провале сделок
+      и топ пользователей по числу жалоб на их объявления.
+
+      В статистику отзывов входят общее число отзывов, средний рейтинг по платформе
+      и распределение оценок по шкале от 1 до 5.
+
+      Endpoint доступен только администратору.
+    operationId: getAdminDealsPlatformStatistics
+    security:
+      - bearerAuth: []
+    responses:
+      '200':
+        description: Агрегированная статистика платформы по домену deals
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/AdminPlatformStatisticsResponse'
+      '401':
+        description: Не авторизован
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: Доступ только для администратора
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Внутренняя ошибка сервера
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+adminUserStatistics:
+  get:
+    tags:
+      - admin
+      - statistics
+    summary: Получить статистику пользователя из deals-сервиса
+    description: |
+      Возвращает детализированную статистику конкретного пользователя по домену `deals`.
+
+      Ответ включает:
+      - число завершённых, активных, провальных и отменённых сделок;
+      - разбивку провальных сделок по роли пользователя: виновный или пострадавший;
+      - число опубликованных объявлений пользователя;
+      - суммарное число просмотров его объявлений;
+      - число полученных отзывов и средний рейтинг по ним;
+      - число отзывов, оставленных пользователем;
+      - число жалоб, полученных пользователем, с разбивкой на принятые и отклонённые;
+      - число жалоб, отправленных пользователем.
+
+      В ответ не входят метрики репутации, история начислений и данные о подписках:
+      эти данные находятся в зоне ответственности `users`.
+
+      Endpoint доступен только администратору.
+    operationId: getAdminDealsUserStatistics
+    security:
+      - bearerAuth: []
+    parameters:
+      - name: id
+        in: path
+        required: true
+        description: UUID пользователя
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: Статистика пользователя по домену deals
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/AdminUserStatisticsResponse'
+      '401':
+        description: Не авторизован
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '403':
+        description: Доступ только для администратора
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Пользователь не найден
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Внутренняя ошибка сервера
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'

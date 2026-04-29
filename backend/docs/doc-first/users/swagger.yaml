@@ -8,6 +8,12 @@ servers:
   - url: 'http://localhost:80'
 
 paths:
+  /admin/statistics/platform:
+    $ref: './paths/admin-statistics.yaml#/adminPlatformStatistics'
+  /admin/users:
+    $ref: './paths/admin-statistics.yaml#/adminUsersList'
+  /admin/users/{id}/statistics:
+    $ref: './paths/admin-statistics.yaml#/adminUserStatistics'
   /users/subscriptions:
     $ref: './paths/subscriptions.yaml#/subscription'
   /users/subscriptions/{id}:

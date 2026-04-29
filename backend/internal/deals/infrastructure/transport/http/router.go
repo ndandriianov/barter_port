@@ -101,6 +101,8 @@ func NewRouter(
 		r.Use(authkit.Middleware(logg, validator, nil))
 		r.Use(logger.Middleware(logg))
 		r.Get("/me/statistics", statisticsHandlers.HandleGetMyStatistics)
+		r.Get("/admin/statistics/platform", statisticsHandlers.HandleGetAdminPlatformStatistics)
+		r.Get("/admin/users/{id}/statistics", statisticsHandlers.HandleGetAdminUserStatistics)
 		r.Get("/tags", tagsHandlers.HandleListTags)
 		r.Route("/offers", func(r chi.Router) {
 			r.Post("/", offersHandlers.HandleCreateOffer)

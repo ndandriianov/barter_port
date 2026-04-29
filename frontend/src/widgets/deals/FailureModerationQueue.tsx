@@ -95,7 +95,7 @@ function FailureModerationQueue() {
                     <Box display="flex" justifyContent="space-between" gap={2} flexWrap="wrap">
                       <Box>
                         <Typography variant="subtitle1" fontWeight={700}>
-                          Сделка {deal.id}
+                          {deal.name?.trim() || "Сделка"}
                         </Typography>
                         <Typography variant="body2" color="text.secondary" mt={0.5}>
                           Участники: {deal.participants.map(getUserName).join(", ")}

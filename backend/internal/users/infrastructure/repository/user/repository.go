@@ -187,6 +187,27 @@ func (r *Repository) ListUsers(ctx context.Context) ([]domain.User, error) {
 	return users, nil
 }
 
+func (r *Repository) ListUsersForAdmin(ctx context.Context) ([]domain.AdminUserListItem, error) {
+	query := `
+		SELECT id, name, bio, avatar_url, phone_number, reputation_points
+		FROM users
+		ORDER BY id
+	`
+
+	rows, err := r.db.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("sql: %w", err)
+	}
+	defer rows.Close()
+
+	users, err := pgx.CollectRows(rows, pgx.RowToStructByName[domain.AdminUserListItem])
+	if err != nil {
+		return nil, fmt.Errorf("collect: %w", err)
+	}
+
+	return users, nil
+}
+
 // GetReputationPoints returns the reputation_points of a user.
 //
 // Errors:
@@ -226,6 +247,68 @@ func (r *Repository) GetReputationEvents(ctx context.Context, id uuid.UUID) ([]d
 	}
 
 	return events, nil
+}
+
+func (r *Repository) GetReputationStats(ctx context.Context) (average float64, median float64, err error) {
+	const query = `
+		SELECT
+			COALESCE(AVG(reputation_points)::float8, 0),
+			COALESCE(PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY reputation_points)::float8, 0)
+		FROM users
+	`
+
+	if err = r.db.QueryRow(ctx, query).Scan(&average, &median); err != nil {
+		return 0, 0, err
+	}
+
+	return average, median, nil
+}
+
+func (r *Repository) GetTopUsersByReputation(ctx context.Context, limit int) ([]domain.User, []int, error) {
+	const query = `
+		SELECT id, name, reputation_points
+		FROM users
+		ORDER BY reputation_points DESC, id ASC
+		LIMIT $1
+	`
+
+	rows, err := r.db.Query(ctx, query, limit)
+	if err != nil {
+		return nil, nil, fmt.Errorf("sql: %w", err)
+	}
+	defer rows.Close()
+
+	users := make([]domain.User, 0, limit)
+	points := make([]int, 0, limit)
+	for rows.Next() {
+		var (
+			user        domain.User
+			pointsValue int
+		)
+		if err = rows.Scan(&user.Id, &user.Name, &pointsValue); err != nil {
+			return nil, nil, fmt.Errorf("scan: %w", err)
+		}
+		users = append(users, user)
+		points = append(points, pointsValue)
+	}
+
+	return users, points, nil
+}
+
+func (r *Repository) GetFollowersCount(ctx context.Context, id uuid.UUID) (int, error) {
+	var count int
+	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM subscriptions WHERE target_user_id = $1`, id).Scan(&count); err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+func (r *Repository) GetSubscriptionsCount(ctx context.Context, id uuid.UUID) (int, error) {
+	var count int
+	if err := r.db.QueryRow(ctx, `SELECT COUNT(*) FROM subscriptions WHERE subscriber_id = $1`, id).Scan(&count); err != nil {
+		return 0, err
+	}
+	return count, nil
 }
 
 // Subscribe subscribes subscriberID to targetUserID.

@@ -84,3 +84,21 @@ User:
       type: string
       description: User display name
       example: Ivan Ivanov
+
+AdminPlatformStatistics:
+  type: object
+  required:
+    - chats
+  properties:
+    chats:
+      $ref: './schemas.yaml#/AdminChatStatistics'
+
+AdminChatStatistics:
+  type: object
+  required:
+    - total
+  properties:
+    total:
+      type: integer
+      minimum: 0
+      description: Общее число чатов на платформе

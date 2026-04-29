@@ -294,6 +294,12 @@ FailureVotesResponseItem:
 MyStatisticsResponse:
   $ref: 'schemas.yaml#/MyStatistics'
 
+AdminPlatformStatisticsResponse:
+  $ref: 'schemas.yaml#/AdminPlatformStatistics'
+
+AdminUserStatisticsResponse:
+  $ref: 'schemas.yaml#/AdminUserStatistics'
+
 
 
 FailureMaterialResponse:

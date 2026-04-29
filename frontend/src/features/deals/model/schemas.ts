@@ -163,3 +163,103 @@ export const failureMaterialsSchema = z.object({
 });
 
 export const failureModerationDealsResponseSchema = getDealsResponseSchema;
+
+export const adminDealsPlatformStatisticsSchema = z.object({
+  offers: z.object({
+    total: z.number().int(),
+    drafts: z.number().int(),
+    totalViews: z.number().int(),
+    averagePerUser: z.number(),
+    averageRating: z.number().nullable().optional(),
+    hidden: z.object({
+      moderated: z.number().int(),
+      hiddenByAuthor: z.number().int(),
+    }),
+    byType: z.object({
+      good: z.number().int(),
+      service: z.number().int(),
+    }),
+    byAction: z.object({
+      give: z.number().int(),
+      take: z.number().int(),
+    }),
+    topTags: z.array(
+      z.object({
+        tag: z.string(),
+        offersCount: z.number().int(),
+      }),
+    ),
+    topByFavorites: z.array(
+      z.object({
+        offerId: z.string().uuid(),
+        favoritesCount: z.number().int(),
+      }),
+    ),
+  }),
+  deals: z.object({
+    total: z.number().int(),
+    successfulConversionRate: z.number(),
+    averageParticipants: z.number(),
+    multiPartyShare: z.number(),
+    byStatus: z.object({
+      lookingForParticipants: z.number().int(),
+      discussion: z.number().int(),
+      confirmed: z.number().int(),
+      completed: z.number().int(),
+      failed: z.number().int(),
+      cancelled: z.number().int(),
+    }),
+  }),
+  reports: z.object({
+    total: z.number().int(),
+    pending: z.number().int(),
+    blockedOffers: z.number().int(),
+    adminFailureResolutions: z.number().int(),
+    topUsersByReceivedReports: z.array(
+      z.object({
+        userId: z.string().uuid(),
+        reportsCount: z.number().int(),
+      }),
+    ),
+  }),
+  reviews: z.object({
+    total: z.number().int(),
+    averageRating: z.number().nullable().optional(),
+    ratingDistribution: z.object({
+      oneStar: z.number().int(),
+      twoStars: z.number().int(),
+      threeStars: z.number().int(),
+      fourStars: z.number().int(),
+      fiveStars: z.number().int(),
+    }),
+  }),
+});
+
+export const adminDealsUserStatisticsSchema = z.object({
+  deals: z.object({
+    completed: z.number().int(),
+    active: z.number().int(),
+    failed: z.object({
+      total: z.number().int(),
+      responsible: z.number().int(),
+      affected: z.number().int(),
+    }),
+    cancelled: z.number().int(),
+  }),
+  offers: z.object({
+    published: z.number().int(),
+    totalViews: z.number().int(),
+  }),
+  reviews: z.object({
+    received: z.number().int(),
+    averageReceivedRating: z.number().nullable().optional(),
+    written: z.number().int(),
+  }),
+  reports: z.object({
+    received: z.object({
+      accepted: z.number().int(),
+      rejected: z.number().int(),
+    }),
+    filed: z.number().int(),
+  }),
+});

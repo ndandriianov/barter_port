@@ -41,6 +41,7 @@ func NewRouter(logg *slog.Logger, validator *validators.LocalJWT, h *Handlers) h
 	r.Group(func(r chi.Router) {
 		r.Use(authkit.Middleware(logg, validator, nil))
 		r.Use(logger.Middleware(logg))
+		r.Get("/admin/statistics/platform", h.GetAdminPlatformStatistics)
 
 		r.Route("/chats", func(r chi.Router) {
 			r.Get("/users", h.ListUsers)

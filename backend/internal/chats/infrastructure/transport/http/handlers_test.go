@@ -43,6 +43,10 @@ func (r *testChatsRepo) ListChatsForUser(context.Context, uuid.UUID) ([]domain.C
 	return nil, errors.New("not implemented")
 }
 
+func (r *testChatsRepo) CountChats(context.Context) (int, error) {
+	return 0, errors.New("not implemented")
+}
+
 func (r *testChatsRepo) IsParticipant(context.Context, uuid.UUID, uuid.UUID) (bool, error) {
 	return false, errors.New("not implemented")
 }

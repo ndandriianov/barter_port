@@ -38,3 +38,9 @@ export const listChatsResponseSchema = z.array(chatSchema);
 export const getMessagesResponseSchema = z.array(messageSchema);
 
 export const listUsersResponseSchema = z.array(userSchema);
+
+export const adminChatsPlatformStatisticsSchema = z.object({
+  chats: z.object({
+    total: z.number().int(),
+  }),
+});

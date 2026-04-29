@@ -6,6 +6,140 @@ info:
 servers:
   - url: http://localhost:80
 paths:
+  /admin/statistics/platform:
+    get:
+      tags:
+        - admin
+        - statistics
+      summary: Получить статистику платформы из users-сервиса
+      description: |
+        Возвращает агрегированные административные метрики, которыми владеет `users`:
+        - распределение пользователей по уровням репутации
+        - средняя и медианная репутация
+        - топ пользователей по репутации
+
+        Метрики регистрации и верификации email сюда не входят:
+        они относятся к `auth`.
+
+        Endpoint доступен только администратору.
+      operationId: getAdminUsersPlatformStatistics
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Агрегированная статистика платформы по домену users
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminPlatformStatistics'
+        '401':
+          description: Не авторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Доступ только для администратора
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /admin/users:
+    get:
+      tags:
+        - admin
+        - users
+      summary: Получить список пользователей для административной проверки
+      description: |
+        Возвращает список пользователей из `users`-сервиса для выбора в административном интерфейсе.
+        Каждый элемент содержит базовые данные профиля и текущую репутацию пользователя,
+        чтобы администратор мог открыть список, выбрать нужного пользователя и затем
+        посмотреть его детальные метрики в соседних сервисах.
+
+        Endpoint доступен только администратору.
+      operationId: listAdminUsers
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Список пользователей для административной проверки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUsersListResponse'
+        '401':
+          description: Не авторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Доступ только для администратора
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /admin/users/{id}/statistics:
+    get:
+      tags:
+        - admin
+        - statistics
+      summary: Получить статистику пользователя из users-сервиса
+      description: |
+        Возвращает административные метрики конкретного пользователя, которыми владеет `users`:
+        - текущий репутационный балл
+        - история начислений и штрафов
+        - число подписчиков и подписок
+
+        Endpoint доступен только администратору.
+      operationId: getAdminUsersUserStatistics
+      security:
+        - bearerAuth: []
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Статистика пользователя по домену users
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AdminUserStatistics'
+        '401':
+          description: Не авторизован
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Доступ только для администратора
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Пользователь не найден
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /users/subscriptions:
     post:
       tags:
@@ -476,6 +610,55 @@ components:
       type: string
       description: User name
       example: John Doe
+    ReputationPoints:
+      type: integer
+      description: Current user reputation score including rewards and penalties
+      example: -10
+    AdminTopUserByReputation:
+      type: object
+      required:
+        - userId
+        - reputationPoints
+      properties:
+        userId:
+          $ref: '#/components/schemas/UserId'
+        name:
+          $ref: '#/components/schemas/Name'
+        reputationPoints:
+          $ref: '#/components/schemas/ReputationPoints'
+    AdminPlatformReputationStatistics:
+      type: object
+      required:
+        - average
+        - median
+        - topUsers
+      properties:
+        average:
+          type: number
+          format: double
+          description: Средняя репутация по всем пользователям
+        median:
+          type: number
+          format: double
+          description: Медианная репутация по всем пользователям
+        topUsers:
+          type: array
+          description: Топ-N пользователей по репутации
+          items:
+            $ref: '#/components/schemas/AdminTopUserByReputation'
+    AdminPlatformStatistics:
+      type: object
+      required:
+        - reputation
+      properties:
+        reputation:
+          $ref: '#/components/schemas/AdminPlatformReputationStatistics'
+    ErrorResponse:
+      type: object
+      properties:
+        message:
+          type: string
+          example: Вы отправили некорректный запрос
     Bio:
       type: string
       description: User bio
@@ -505,16 +688,103 @@ components:
           $ref: '#/components/schemas/AvatarUrl'
         phoneNumber:
           $ref: '#/components/schemas/PhoneNumber'
+    AdminUserListItem:
+      allOf:
+        - $ref: '#/components/schemas/User'
+        - type: object
+          required:
+            - reputationPoints
+          properties:
+            reputationPoints:
+              $ref: '#/components/schemas/ReputationPoints'
+          description: |
+            Базовые данные пользователя для административного списка выбора.
+    AdminUsersListResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/AdminUserListItem'
+    ReputationEvent:
+      type: object
+      required:
+        - id
+        - sourceType
+        - sourceId
+        - delta
+        - createdAt
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Уникальный идентификатор события репутации
+        sourceType:
+          type: string
+          enum:
+            - deals.offer_report.penalty
+            - deals.deal_failure.responsible
+            - deals.deal_completion.reward
+            - deals.review_creation.reward
+          description: |
+            Источник изменения репутации.
+        sourceId:
+          type: string
+          format: uuid
+          description: |
+            Идентификатор источника изменения репутации:
+            - для `deals.offer_report.penalty` - id жалобы на оффер;
+            - для `deals.deal_failure.responsible` - уникальный id события штрафа за провал сделки;
+            - для `deals.deal_completion.reward` - уникальный id начисления за конкретную пару `(dealId, userId)`;
+            - для `deals.review_creation.reward` - уникальный id начисления за review-контекст автора.
+        delta:
+          type: integer
+          description: Изменение репутации (положительное или отрицательное)
+        createdAt:
+          type: string
+          format: date-time
+          description: Время изменения репутации
+        comment:
+          type: string
+          description: Комментарий к изменению репутации (например, причина изменения или пояснение начисления)
+    AdminUserReputationStatistics:
+      type: object
+      required:
+        - currentPoints
+        - history
+      properties:
+        currentPoints:
+          $ref: '#/components/schemas/ReputationPoints'
+        history:
+          type: array
+          description: История начислений и штрафов пользователя
+          items:
+            $ref: '#/components/schemas/ReputationEvent'
+    AdminUserSocialStatistics:
+      type: object
+      required:
+        - followersCount
+        - subscriptionsCount
+      properties:
+        followersCount:
+          type: integer
+          minimum: 0
+          description: Число подписчиков пользователя
+        subscriptionsCount:
+          type: integer
+          minimum: 0
+          description: Число подписок пользователя
+    AdminUserStatistics:
+      type: object
+      required:
+        - reputation
+        - social
+      properties:
+        reputation:
+          $ref: '#/components/schemas/AdminUserReputationStatistics'
+        social:
+          $ref: '#/components/schemas/AdminUserSocialStatistics'
     getSubscriptionsResponse:
       type: array
       items:
         $ref: '#/components/schemas/User'
-    ErrorResponse:
-      type: object
-      properties:
-        message:
-          type: string
-          example: Вы отправили некорректный запрос
     SubscribeRequest:
       type: object
       required:
@@ -524,10 +794,6 @@ components:
           type: string
           format: uuid
           description: Идентификатор пользователя, на которого нужно подписаться
-    ReputationPoints:
-      type: integer
-      description: Current user reputation score including rewards and penalties
-      example: -10
     Latitude:
       type: number
       format: double
@@ -625,47 +891,6 @@ components:
       properties:
         avatarUrl:
           $ref: '#/components/schemas/AvatarUrl'
-    ReputationEvent:
-      type: object
-      required:
-        - id
-        - sourceType
-        - sourceId
-        - delta
-        - createdAt
-      properties:
-        id:
-          type: string
-          format: uuid
-          description: Уникальный идентификатор события репутации
-        sourceType:
-          type: string
-          enum:
-            - deals.offer_report.penalty
-            - deals.deal_failure.responsible
-            - deals.deal_completion.reward
-            - deals.review_creation.reward
-          description: |
-            Источник изменения репутации.
-        sourceId:
-          type: string
-          format: uuid
-          description: |
-            Идентификатор источника изменения репутации:
-            - для `deals.offer_report.penalty` - id жалобы на оффер;
-            - для `deals.deal_failure.responsible` - уникальный id события штрафа за провал сделки;
-            - для `deals.deal_completion.reward` - уникальный id начисления за конкретную пару `(dealId, userId)`;
-            - для `deals.review_creation.reward` - уникальный id начисления за review-контекст автора.
-        delta:
-          type: integer
-          description: Изменение репутации (положительное или отрицательное)
-        createdAt:
-          type: string
-          format: date-time
-          description: Время изменения репутации
-        comment:
-          type: string
-          description: Комментарий к изменению репутации (например, причина изменения или пояснение начисления)
     GetReputationEventsResponse:
       type: array
       items:

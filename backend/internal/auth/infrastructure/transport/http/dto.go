@@ -38,3 +38,18 @@ type changePasswordReq struct {
 type refreshResponse struct {
 	AccessToken string `json:"access_token"`
 }
+
+type adminAuthPlatformStatisticsResp struct {
+	Users adminAuthPlatformUsersStatisticsResp `json:"users"`
+}
+
+type adminAuthPlatformUsersStatisticsResp struct {
+	TotalRegistered int `json:"totalRegistered"`
+	VerifiedEmails  int `json:"verifiedEmails"`
+}
+
+type adminAuthUserStatisticsResp struct {
+	UserID        uuid.UUID `json:"userId"`
+	RegisteredAt  string    `json:"registeredAt"`
+	EmailVerified bool      `json:"emailVerified"`
+}

@@ -82,6 +82,10 @@ paths:
     $ref: './paths/tags.yaml#/adminTags'
   /me/statistics:
     $ref: './paths/statistics.yaml#/myStatistics'
+  /admin/statistics/platform:
+    $ref: './paths/admin-statistics.yaml#/adminPlatformStatistics'
+  /admin/users/{id}/statistics:
+    $ref: './paths/admin-statistics.yaml#/adminUserStatistics'
   /offer-groups:
     $ref: './paths/offer-groups.yaml#/offerGroups'
   /offer-groups/{offerGroupId}:

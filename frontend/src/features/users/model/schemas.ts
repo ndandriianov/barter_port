@@ -8,6 +8,10 @@ export const userSchema = z.object({
   phoneNumber: z.string().optional(),
 });
 
+export const adminUserListItemSchema = userSchema.extend({
+  reputationPoints: z.number(),
+});
+
 export const meSchema = userSchema.extend({
   email: z.string(),
   createdAt: z.string(),
@@ -42,3 +46,29 @@ export const subscribeRequestSchema = z.object({
 });
 
 export const subscriptionsResponseSchema = z.array(userSchema);
+export const adminUsersListResponseSchema = z.array(adminUserListItemSchema);
+
+export const adminUsersPlatformStatisticsSchema = z.object({
+  reputation: z.object({
+    average: z.number(),
+    median: z.number(),
+    topUsers: z.array(
+      z.object({
+        userId: z.string().uuid(),
+        name: z.string().optional(),
+        reputationPoints: z.number().int(),
+      }),
+    ),
+  }),
+});
+
+export const adminUsersUserStatisticsSchema = z.object({
+  reputation: z.object({
+    currentPoints: z.number().int(),
+    history: reputationEventsResponseSchema,
+  }),
+  social: z.object({
+    followersCount: z.number().int(),
+    subscriptionsCount: z.number().int(),
+  }),
+});

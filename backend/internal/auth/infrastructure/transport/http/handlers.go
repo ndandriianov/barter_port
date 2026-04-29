@@ -649,6 +649,91 @@ func (h *Handlers) Me(w http.ResponseWriter, r *http.Request) {
 	httpx.WriteJSON(w, http.StatusOK, meResp{UserID: userId})
 }
 
+// GetAdminPlatformStatistics godoc
+// @Summary Get auth platform statistics for admin
+// @Description Returns auth-owned platform statistics for the administrative panel
+// @Tags auth, admin, statistics
+// @Produce json
+// @Success 200 {object} adminAuthPlatformStatisticsResp
+// @Failure 401 {object} httpx.ErrorResponse "Unauthorized"
+// @Failure 403 {object} httpx.ErrorResponse "Forbidden"
+// @Failure 500 "Internal server error"
+// @Security BearerAuth
+// @Router /auth/admin/statistics/platform [get]
+func (h *Handlers) GetAdminPlatformStatistics(w http.ResponseWriter, r *http.Request) {
+	requesterID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
+	stats, err := h.authService.GetAdminPlatformStatistics(r.Context(), requesterID)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrForbidden), errors.Is(err, domain.ErrUserNotFound):
+			httpx.WriteEmptyError(w, http.StatusForbidden)
+		default:
+			h.logger.Error("failed to get admin auth platform statistics", slog.Any("error", err))
+			httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, adminAuthPlatformStatisticsResp{
+		Users: adminAuthPlatformUsersStatisticsResp{
+			TotalRegistered: stats.Users.TotalRegistered,
+			VerifiedEmails:  stats.Users.VerifiedEmails,
+		},
+	})
+}
+
+// GetAdminUserStatistics godoc
+// @Summary Get auth user statistics for admin
+// @Description Returns auth-owned user statistics for the administrative panel
+// @Tags auth, admin, statistics
+// @Produce json
+// @Param id path string true "User ID"
+// @Success 200 {object} adminAuthUserStatisticsResp
+// @Failure 401 {object} httpx.ErrorResponse "Unauthorized"
+// @Failure 403 {object} httpx.ErrorResponse "Forbidden"
+// @Failure 404 {object} httpx.ErrorResponse "User not found"
+// @Failure 500 "Internal server error"
+// @Security BearerAuth
+// @Router /auth/admin/users/{id}/statistics [get]
+func (h *Handlers) GetAdminUserStatistics(w http.ResponseWriter, r *http.Request) {
+	requesterID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
+	targetUserID, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httpx.WriteErrorStr(w, http.StatusBadRequest, "invalid user id")
+		return
+	}
+
+	stats, err := h.authService.GetAdminUserStatistics(r.Context(), requesterID, targetUserID)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrForbidden):
+			httpx.WriteEmptyError(w, http.StatusForbidden)
+		case errors.Is(err, domain.ErrUserNotFound):
+			httpx.WriteEmptyError(w, http.StatusNotFound)
+		default:
+			h.logger.Error("failed to get admin auth user statistics", slog.Any("error", err))
+			httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, adminAuthUserStatisticsResp{
+		UserID:        stats.UserID,
+		RegisteredAt:  stats.RegisteredAt.UTC().Format(time.RFC3339),
+		EmailVerified: stats.EmailVerified,
+	})
+}
+
 type userCreationStatusResp struct {
 	Status string `json:"status"`
 }

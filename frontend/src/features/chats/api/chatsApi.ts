@@ -1,6 +1,7 @@
 import { createApi } from "@reduxjs/toolkit/query/react";
 import { baseQueryWithReauth } from "@/shared/api/baseApi.ts";
 import {
+  adminChatsPlatformStatisticsSchema,
   chatSchema,
   createChatRequestSchema,
   getMessagesResponseSchema,
@@ -10,6 +11,7 @@ import {
   sendMessageRequestSchema,
 } from "@/features/chats/model/schemas.ts";
 import type {
+  AdminChatsPlatformStatistics,
   Chat,
   CreateChatRequest,
   GetMessagesResponse,
@@ -68,6 +70,11 @@ const chatsApi = createApi({
     listUsers: builder.query<ListUsersResponse, void>({
       query: () => "/chats/users",
       transformResponse: (response: unknown) => listUsersResponseSchema.parse(response),
+    }),
+
+    getAdminPlatformStatistics: builder.query<AdminChatsPlatformStatistics, void>({
+      query: () => "/chats/admin/statistics/platform",
+      transformResponse: (response: unknown) => adminChatsPlatformStatisticsSchema.parse(response),
     }),
   }),
 });

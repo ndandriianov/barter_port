@@ -18,6 +18,7 @@ type ChatsRepository interface {
 	GetDealChatID(ctx context.Context, dealID uuid.UUID) (uuid.UUID, error)
 	GetChatByID(ctx context.Context, chatID uuid.UUID) (*domain.Chat, error)
 	ListChatsForUser(ctx context.Context, userID uuid.UUID) ([]domain.Chat, error)
+	CountChats(ctx context.Context) (int, error)
 	IsParticipant(ctx context.Context, chatID, userID uuid.UUID) (bool, error)
 	SendMessage(ctx context.Context, chatID, senderID uuid.UUID, content string) (*domain.Message, error)
 	GetMessages(ctx context.Context, chatID uuid.UUID, after *time.Time) ([]domain.Message, error)
@@ -123,6 +124,27 @@ func (s *Service) ListChatsForUser(ctx context.Context, userID uuid.UUID) ([]dom
 	}
 
 	return chats, nil
+}
+
+func (s *Service) GetAdminPlatformChatsCount(ctx context.Context, requesterID uuid.UUID) (int, error) {
+	if s.adminChecker == nil {
+		return 0, fmt.Errorf("admin checker is not configured")
+	}
+
+	isAdmin, err := s.adminChecker.IsAdmin(ctx, requesterID)
+	if err != nil {
+		return 0, fmt.Errorf("adminChecker.IsAdmin: %w", err)
+	}
+	if !isAdmin {
+		return 0, domain.ErrForbidden
+	}
+
+	count, err := s.repo.CountChats(ctx)
+	if err != nil {
+		return 0, fmt.Errorf("repo.CountChats: %w", err)
+	}
+
+	return count, nil
 }
 
 // GetMessages returns messages in a chat for an authenticated participant.
