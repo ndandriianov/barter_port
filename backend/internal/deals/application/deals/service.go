@@ -2,6 +2,7 @@ package deals
 
 import (
 	chatspb "barter-port/contracts/grpc/chats/v1"
+	userspb "barter-port/contracts/grpc/users/v1"
 	dealsusers "barter-port/contracts/kafka/messages/deals-users"
 	"barter-port/internal/deals/domain"
 	"barter-port/internal/deals/domain/enums"
@@ -35,6 +36,7 @@ type ItemPhotoStorage interface {
 var ErrItemPhotoStorageNotConfigured = errors.New("item photo storage is not configured")
 var ErrItemPhotoLimitExceeded = errors.New("item photo limit exceeded")
 var ErrItemPhotoNotFound = errors.New("item photo not found")
+var ErrUsersClientNotConfigured = errors.New("users grpc client is not configured")
 
 const maxItemPhotoCount = 10
 
@@ -55,6 +57,7 @@ type Service struct {
 	dealCompletionRewardPoints int
 	reviewCreationRewardPoints int
 	chatsClient                chatspb.ChatsServiceClient
+	usersClient                userspb.UsersServiceClient
 	adminChecker               *authkit.AdminChecker
 	logger                     *slog.Logger
 }
@@ -82,6 +85,11 @@ func NewService(
 
 func (s *Service) WithChatsClient(client chatspb.ChatsServiceClient) *Service {
 	s.chatsClient = client
+	return s
+}
+
+func (s *Service) WithUsersClient(client userspb.UsersServiceClient) *Service {
+	s.usersClient = client
 	return s
 }
 
@@ -152,6 +160,55 @@ func (s *Service) AdminChecker() *authkit.AdminChecker {
 
 func (s *Service) Logger() *slog.Logger {
 	return s.logger
+}
+
+func (s *Service) EnsureRequesterCanCreateDraftDeal(
+	ctx context.Context,
+	requesterID uuid.UUID,
+	offersList []domain.OfferIDAndInfo,
+) error {
+	if s.usersClient == nil {
+		return ErrUsersClientNotConfigured
+	}
+	if len(offersList) == 0 {
+		return nil
+	}
+
+	offerIDs := make([]uuid.UUID, len(offersList))
+	for i, offer := range offersList {
+		offerIDs[i] = offer.ID
+	}
+
+	offers, err := s.offersRepository.GetOffersByIDs(ctx, s.db, offerIDs)
+	if err != nil {
+		return fmt.Errorf("get offers by ids for hidden users check: %w", err)
+	}
+	if len(offers) == 0 {
+		return nil
+	}
+
+	ownerUserIDs := make([]string, 0, len(offers))
+	seenAuthorIDs := make(map[uuid.UUID]struct{}, len(offers))
+	for _, offer := range offers {
+		if _, seen := seenAuthorIDs[offer.AuthorId]; seen {
+			continue
+		}
+		seenAuthorIDs[offer.AuthorId] = struct{}{}
+		ownerUserIDs = append(ownerUserIDs, offer.AuthorId.String())
+	}
+
+	resp, err := s.usersClient.IsUserHiddenByAnyOwners(ctx, &userspb.IsUserHiddenByAnyOwnersRequest{
+		HiddenUserId: requesterID.String(),
+		OwnerUserIds: ownerUserIDs,
+	})
+	if err != nil {
+		return fmt.Errorf("check hidden user by owners: %w", err)
+	}
+	if resp.GetIsHidden() {
+		return domain.ErrForbidden
+	}
+
+	return nil
 }
 
 // ================================================================================

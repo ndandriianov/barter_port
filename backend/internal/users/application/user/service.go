@@ -32,8 +32,13 @@ type UsersRepository interface {
 	Subscribe(ctx context.Context, subscriberID, targetUserID uuid.UUID) error
 	Unsubscribe(ctx context.Context, subscriberID, targetUserID uuid.UUID) error
 	IsSubscribed(ctx context.Context, subscriberID, targetUserID uuid.UUID) (bool, error)
+	HideUser(ctx context.Context, ownerUserID, hiddenUserID uuid.UUID) error
+	UnhideUser(ctx context.Context, ownerUserID, hiddenUserID uuid.UUID) error
+	IsHiddenUser(ctx context.Context, ownerUserID, hiddenUserID uuid.UUID) (bool, error)
 	GetSubscriptions(ctx context.Context, userID uuid.UUID) ([]domain.User, error)
 	GetSubscribers(ctx context.Context, userID uuid.UUID) ([]domain.User, error)
+	GetHiddenUsers(ctx context.Context, userID uuid.UUID) ([]domain.User, error)
+	IsUserHiddenByAnyOwners(ctx context.Context, hiddenUserID uuid.UUID, ownerUserIDs []uuid.UUID) (bool, error)
 }
 
 var ErrAuthClientNotConfigured = errors.New("auth grpc client is not configured")
@@ -391,6 +396,22 @@ func (s *Service) ensureAdmin(ctx context.Context, requesterID uuid.UUID) error 
 	return nil
 }
 
+func (s *Service) ensureNotAdmin(ctx context.Context, requesterID uuid.UUID) error {
+	if s.authClient == nil {
+		return ErrAuthClientNotConfigured
+	}
+
+	authMe, err := s.authClient.GetMe(ctx, &authpb.GetMeRequest{Id: requesterID.String()})
+	if err != nil {
+		return err
+	}
+	if authMe.GetIsAdmin() {
+		return domain.ErrForbidden
+	}
+
+	return nil
+}
+
 // Subscribe subscribes subscriberID to targetUserID.
 //
 // Errors:
@@ -401,6 +422,15 @@ func (s *Service) Subscribe(ctx context.Context, subscriberID, targetUserID uuid
 	if subscriberID == targetUserID {
 		return domain.ErrCannotSubscribeToYourself
 	}
+
+	isHidden, err := s.repository.IsHiddenUser(ctx, subscriberID, targetUserID)
+	if err != nil {
+		return err
+	}
+	if isHidden {
+		return domain.ErrHiddenUserSubscription
+	}
+
 	return s.repository.Subscribe(ctx, subscriberID, targetUserID)
 }
 
@@ -414,6 +444,38 @@ func (s *Service) Unsubscribe(ctx context.Context, subscriberID, targetUserID uu
 		return domain.ErrCannotSubscribeToYourself
 	}
 	return s.repository.Unsubscribe(ctx, subscriberID, targetUserID)
+}
+
+// HideUser adds targetUserID to the hidden authors list of ownerUserID.
+func (s *Service) HideUser(ctx context.Context, ownerUserID, targetUserID uuid.UUID) error {
+	if err := s.ensureNotAdmin(ctx, ownerUserID); err != nil {
+		return err
+	}
+	if ownerUserID == targetUserID {
+		return domain.ErrCannotHideYourself
+	}
+
+	isSubscribed, err := s.repository.IsSubscribed(ctx, ownerUserID, targetUserID)
+	if err != nil {
+		return err
+	}
+	if isSubscribed {
+		return domain.ErrCannotHideSubscribedUser
+	}
+
+	return s.repository.HideUser(ctx, ownerUserID, targetUserID)
+}
+
+// UnhideUser removes targetUserID from the hidden authors list of ownerUserID.
+func (s *Service) UnhideUser(ctx context.Context, ownerUserID, targetUserID uuid.UUID) error {
+	if err := s.ensureNotAdmin(ctx, ownerUserID); err != nil {
+		return err
+	}
+	if ownerUserID == targetUserID {
+		return domain.ErrCannotHideYourself
+	}
+
+	return s.repository.UnhideUser(ctx, ownerUserID, targetUserID)
 }
 
 // GetSubscriptions returns users that userID is subscribed to.
@@ -453,6 +515,38 @@ func (s *Service) GetSubscribers(ctx context.Context, userID uuid.UUID) ([]domai
 		return nil, fmt.Errorf("repository.GetSubscribers: %w", err)
 	}
 	return users, nil
+}
+
+// GetHiddenUsers returns users hidden by userID.
+func (s *Service) GetHiddenUsers(ctx context.Context, userID uuid.UUID) ([]domain.User, error) {
+	if err := s.ensureNotAdmin(ctx, userID); err != nil {
+		return nil, err
+	}
+
+	users, err := s.repository.GetHiddenUsers(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("repository.GetHiddenUsers: %w", err)
+	}
+	return users, nil
+}
+
+// GetHiddenUsersUserInfo returns basic info of users hidden by userID.
+func (s *Service) GetHiddenUsersUserInfo(ctx context.Context, userID uuid.UUID) ([]domain.UserInfo, error) {
+	users, err := s.repository.GetHiddenUsers(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("repository.GetHiddenUsers: %w", err)
+	}
+
+	userInfos := make([]domain.UserInfo, len(users))
+	for i, u := range users {
+		userInfos[i] = u.GetInfo()
+	}
+
+	return userInfos, nil
+}
+
+func (s *Service) IsUserHiddenByAnyOwners(ctx context.Context, hiddenUserID uuid.UUID, ownerUserIDs []uuid.UUID) (bool, error) {
+	return s.repository.IsUserHiddenByAnyOwners(ctx, hiddenUserID, ownerUserIDs)
 }
 
 // CheckSubscription проверяет, подписан ли target на requester,

@@ -172,3 +172,59 @@ func (s *Server) ListSubscriptions(ctx context.Context, request *userspb.ListSub
 
 	return &userspb.ListSubscriptionsResponse{Subscriptions: info}, nil
 }
+
+func (s *Server) ListHiddenUsers(ctx context.Context, request *userspb.ListHiddenUsersRequest) (*userspb.ListHiddenUsersResponse, error) {
+	if request == nil {
+		return &userspb.ListHiddenUsersResponse{}, fmt.Errorf("request is nil")
+	}
+
+	userID, err := uuid.Parse(request.UserId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse user id %s: %w", request.UserId, err)
+	}
+
+	userInfos, err := s.usersService.GetHiddenUsersUserInfo(ctx, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get hidden user infos: %w", err)
+	}
+
+	info := make([]*userspb.UserInfo, len(userInfos))
+	for i, u := range userInfos {
+		info[i] = &userspb.UserInfo{
+			Id:   u.Id.String(),
+			Name: u.Name,
+		}
+	}
+
+	return &userspb.ListHiddenUsersResponse{Users: info}, nil
+}
+
+func (s *Server) IsUserHiddenByAnyOwners(
+	ctx context.Context,
+	request *userspb.IsUserHiddenByAnyOwnersRequest,
+) (*userspb.IsUserHiddenByAnyOwnersResponse, error) {
+	if request == nil {
+		return &userspb.IsUserHiddenByAnyOwnersResponse{}, fmt.Errorf("request is nil")
+	}
+
+	hiddenUserID, err := uuid.Parse(request.HiddenUserId)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse hidden user id %s: %w", request.HiddenUserId, err)
+	}
+
+	ownerUserIDs := make([]uuid.UUID, len(request.OwnerUserIds))
+	for i, ownerUserID := range request.OwnerUserIds {
+		parsedID, parseErr := uuid.Parse(ownerUserID)
+		if parseErr != nil {
+			return nil, fmt.Errorf("failed to parse owner user id %s: %w", ownerUserID, parseErr)
+		}
+		ownerUserIDs[i] = parsedID
+	}
+
+	isHidden, err := s.usersService.IsUserHiddenByAnyOwners(ctx, hiddenUserID, ownerUserIDs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to check hidden user by owners: %w", err)
+	}
+
+	return &userspb.IsUserHiddenByAnyOwnersResponse{IsHidden: isHidden}, nil
+}

@@ -408,6 +408,19 @@ func mustSubscribeToUser(t *testing.T, subscriberID, targetUserID uuid.UUID) {
 	require.Equal(t, http.StatusCreated, resp.StatusCode)
 }
 
+func mustHideUser(t *testing.T, ownerUserID, targetUserID uuid.UUID) {
+	t.Helper()
+
+	req := mustUserRequest(t, http.MethodPost, usersURL()+"/users/hidden-users", ownerUserID, mustJSONBody(t, map[string]uuid.UUID{
+		"targetUserId": targetUserID,
+	}))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusNoContent, resp.StatusCode)
+}
+
 func mustViewOfferByID(t *testing.T, userID uuid.UUID, offerID uuid.UUID) {
 	t.Helper()
 

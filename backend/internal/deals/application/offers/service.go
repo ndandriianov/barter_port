@@ -180,11 +180,18 @@ func (s *Service) GetOffers(
 ) ([]domain.Offer, *domain.UniversalCursor, error) {
 
 	isAdmin := false
+	hiddenAuthorIDs := make([]uuid.UUID, 0)
 	if requesterID != nil {
 		var err error
 		isAdmin, err = s.adminChecker.IsAdmin(ctx, *requesterID)
 		if err != nil {
 			return nil, nil, fmt.Errorf("check admin: %w", err)
+		}
+		if !isAdmin && authorID == nil {
+			hiddenAuthorIDs, err = s.listHiddenAuthorIDs(ctx, *requesterID)
+			if err != nil {
+				return nil, nil, err
+			}
 		}
 	}
 
@@ -195,7 +202,7 @@ func (s *Service) GetOffers(
 			return nil, nil, err
 		}
 
-		offers, newTimeCursor, err := s.getOffersByTime(ctx, timeCursor, limit, authorID, isAdmin, tagFilter)
+		offers, newTimeCursor, err := s.getOffersByTime(ctx, timeCursor, limit, authorID, isAdmin, tagFilter, hiddenAuthorIDs)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -231,7 +238,7 @@ func (s *Service) GetOffers(
 			return nil, nil, err
 		}
 
-		offers, newPopularityCursor, err := s.getOffersByPopularity(ctx, popularityCursor, limit, authorID, isAdmin, tagFilter)
+		offers, newPopularityCursor, err := s.getOffersByPopularity(ctx, popularityCursor, limit, authorID, isAdmin, tagFilter, hiddenAuthorIDs)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -271,7 +278,7 @@ func (s *Service) GetOffers(
 			return nil, nil, err
 		}
 
-		offers, newDistanceCursor, err := s.getOffersByDistance(ctx, distanceCursor, limit, authorID, isAdmin, tagFilter, *requestLocation)
+		offers, newDistanceCursor, err := s.getOffersByDistance(ctx, distanceCursor, limit, authorID, isAdmin, tagFilter, *requestLocation, hiddenAuthorIDs)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -300,6 +307,31 @@ func (s *Service) GetOffers(
 	default:
 		return nil, nil, fmt.Errorf("invalid sort type: %v", sortType)
 	}
+}
+
+func (s *Service) listHiddenAuthorIDs(ctx context.Context, requesterID uuid.UUID) ([]uuid.UUID, error) {
+	if s.usersClient == nil {
+		return nil, fmt.Errorf("users client is not configured")
+	}
+
+	resp, err := s.usersClient.ListHiddenUsers(ctx, &userspb.ListHiddenUsersRequest{UserId: requesterID.String()})
+	if err != nil {
+		return nil, fmt.Errorf("list hidden users: %w", err)
+	}
+
+	hiddenAuthorIDs := make([]uuid.UUID, 0, len(resp.GetUsers()))
+	for _, user := range resp.GetUsers() {
+		if user == nil {
+			continue
+		}
+		hiddenUserID, parseErr := uuid.Parse(user.GetId())
+		if parseErr != nil {
+			return nil, fmt.Errorf("parse hidden user id %q: %w", user.GetId(), parseErr)
+		}
+		hiddenAuthorIDs = append(hiddenAuthorIDs, hiddenUserID)
+	}
+
+	return hiddenAuthorIDs, nil
 }
 
 func (s *Service) GetSubscribedOffers(
@@ -452,6 +484,7 @@ func (s *Service) getOffersByTime(
 	authorID *uuid.UUID,
 	isAdmin bool,
 	tagFilter *[]string,
+	hiddenAuthorIDs []uuid.UUID,
 ) ([]domain.Offer, *domain.TimeCursor, error) {
 	tags, tagsFilterPresent := extractTagFilter(tagFilter)
 
@@ -461,14 +494,14 @@ func (s *Service) getOffersByTime(
 		case authorID != nil:
 			return s.repo.GetMyOffersOrderByTime(ctx, *cursor, *authorID, limit, tags, tagsFilterPresent)
 		default:
-			return s.repo.GetOffersOrderByTime(ctx, limit, *cursor, isAdmin, tags, tagsFilterPresent)
+			return s.repo.GetOffersOrderByTime(ctx, limit, *cursor, isAdmin, tags, tagsFilterPresent, hiddenAuthorIDs)
 		}
 	default:
 		switch { // my
 		case authorID != nil:
 			return s.repo.GetMyOffersOrderByTimeNoCursor(ctx, *authorID, limit, tags, tagsFilterPresent)
 		default:
-			return s.repo.GetOffersOrderByTimeNoCursor(ctx, limit, isAdmin, tags, tagsFilterPresent)
+			return s.repo.GetOffersOrderByTimeNoCursor(ctx, limit, isAdmin, tags, tagsFilterPresent, hiddenAuthorIDs)
 		}
 	}
 }
@@ -508,6 +541,7 @@ func (s *Service) getOffersByPopularity(
 	authorID *uuid.UUID,
 	isAdmin bool,
 	tagFilter *[]string,
+	hiddenAuthorIDs []uuid.UUID,
 ) ([]domain.Offer, *domain.PopularityCursor, error) {
 	tags, tagsFilterPresent := extractTagFilter(tagFilter)
 
@@ -517,14 +551,14 @@ func (s *Service) getOffersByPopularity(
 		case authorID != nil:
 			return s.repo.GetMyOffersOrderByPopularity(ctx, limit, *cursor, *authorID, tags, tagsFilterPresent)
 		default:
-			return s.repo.GetOffersOrderByPopularity(ctx, limit, *cursor, isAdmin, tags, tagsFilterPresent)
+			return s.repo.GetOffersOrderByPopularity(ctx, limit, *cursor, isAdmin, tags, tagsFilterPresent, hiddenAuthorIDs)
 		}
 	default:
 		switch { // my
 		case authorID != nil:
 			return s.repo.GetMyOffersOrderByPopularityNoCursor(ctx, limit, *authorID, tags, tagsFilterPresent)
 		default:
-			return s.repo.GetOffersOrderByPopularityNoCursor(ctx, limit, isAdmin, tags, tagsFilterPresent)
+			return s.repo.GetOffersOrderByPopularityNoCursor(ctx, limit, isAdmin, tags, tagsFilterPresent, hiddenAuthorIDs)
 		}
 	}
 }
@@ -551,6 +585,7 @@ func (s *Service) getOffersByDistance(
 	isAdmin bool,
 	tagFilter *[]string,
 	location domain.Location,
+	hiddenAuthorIDs []uuid.UUID,
 ) ([]domain.Offer, *domain.DistanceCursor, error) {
 	tags, tagsFilterPresent := extractTagFilter(tagFilter)
 
@@ -560,14 +595,14 @@ func (s *Service) getOffersByDistance(
 		case authorID != nil:
 			return s.repo.GetMyOffersOrderByDistance(ctx, limit, *cursor, *authorID, location.Lat, location.Lon, tags, tagsFilterPresent)
 		default:
-			return s.repo.GetOffersOrderByDistance(ctx, limit, *cursor, isAdmin, location.Lat, location.Lon, tags, tagsFilterPresent)
+			return s.repo.GetOffersOrderByDistance(ctx, limit, *cursor, isAdmin, location.Lat, location.Lon, tags, tagsFilterPresent, hiddenAuthorIDs)
 		}
 	default:
 		switch {
 		case authorID != nil:
 			return s.repo.GetMyOffersOrderByDistanceNoCursor(ctx, limit, *authorID, location.Lat, location.Lon, tags, tagsFilterPresent)
 		default:
-			return s.repo.GetOffersOrderByDistanceNoCursor(ctx, limit, isAdmin, location.Lat, location.Lon, tags, tagsFilterPresent)
+			return s.repo.GetOffersOrderByDistanceNoCursor(ctx, limit, isAdmin, location.Lat, location.Lon, tags, tagsFilterPresent, hiddenAuthorIDs)
 		}
 	}
 }

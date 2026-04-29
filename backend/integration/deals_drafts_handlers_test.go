@@ -125,6 +125,26 @@ func TestCreateDraftInvalidJSON(t *testing.T) {
 	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
 }
 
+func TestCreateDraftForbiddenWhenRequesterHiddenByOfferAuthor(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	author := mustRegisterDealsUser(t)
+	requester := mustRegisterDealsUser(t)
+	offerID := mustCreateOffer(t, author.UserID)
+
+	mustHideUser(t, author.UserID, requester.UserID)
+
+	req := mustUserRequest(t, http.MethodPost, dealsURL()+"/deals/drafts", requester.UserID, mustJSONBody(t, types.CreateDraftDealJSONRequestBody{
+		Offers: []types.OfferIDAndQuantity{{OfferID: offerID, Quantity: 1}},
+	}))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusForbidden, resp.StatusCode)
+}
+
 func TestGetDraftsEmpty(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)
