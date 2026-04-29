@@ -243,11 +243,11 @@ func TestAdminStatisticsEndpoints(t *testing.T) {
 
 	_, err = dealsDB.Exec(
 		context.Background(),
-		`INSERT INTO offers (id, author_id, name, type, action, description, created_at, views, is_hidden, hidden_at, hidden_reason)
+		`INSERT INTO offers (id, author_id, name, type, action, description, created_at, views, is_hidden, hidden_by_author, hidden_at, hidden_reason)
 		 VALUES
-		   ($1, $2, 'admin-stats-offer-1', 'good', 'give', 'stats offer 1', $4, 11, TRUE, $4, 'Accepted report'),
-		   ($5, $2, 'admin-stats-offer-2', 'service', 'take', 'stats offer 2', $4, 9, TRUE, $4, NULL),
-		   ($6, $3, 'admin-stats-offer-3', 'good', 'give', 'stats offer 3', $4, 4, FALSE, NULL, NULL)`,
+		   ($1, $2, 'admin-stats-offer-1', 'good', 'give', 'stats offer 1', $4, 11, TRUE, FALSE, $4, 'Accepted report'),
+		   ($5, $2, 'admin-stats-offer-2', 'service', 'take', 'stats offer 2', $4, 9, FALSE, TRUE, $4, NULL),
+		   ($6, $3, 'admin-stats-offer-3', 'good', 'give', 'stats offer 3', $4, 4, FALSE, FALSE, NULL, NULL)`,
 		offerOneID, userOne.UserID, userTwo.UserID, now,
 		offerTwoID, offerThreeID,
 	)

@@ -758,6 +758,107 @@ func TestGetOffersExcludesHiddenAuthors(t *testing.T) {
 	require.True(t, foundVisible)
 }
 
+func TestHideOfferByAuthorSuccessAndOfferBecomesInvisibleToOthers(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	author := mustRegisterDealsUser(t)
+	viewer := mustRegisterDealsUser(t)
+	offerID := mustCreateOffer(t, author.UserID)
+
+	mustHideOfferByAuthor(t, author.UserID, offerID)
+
+	authorOffer := mustGetOfferByID(t, author.UserID, offerID)
+	require.NotNil(t, authorOffer.HiddenByAuthor)
+	require.True(t, *authorOffer.HiddenByAuthor)
+	require.NotNil(t, authorOffer.IsHidden)
+	require.False(t, *authorOffer.IsHidden)
+
+	viewReq := mustUserRequest(t, http.MethodGet, dealsURL()+"/offers/"+offerID.String(), viewer.UserID, nil)
+	viewResp := mustDo(t, viewReq)
+	defer func() { _ = viewResp.Body.Close() }()
+	require.Equal(t, http.StatusNotFound, viewResp.StatusCode)
+
+	list := mustGetOffers(t, viewer.UserID, nil)
+	for _, offer := range list.Offers {
+		require.NotEqual(t, offerID, offer.Id)
+	}
+
+	my := true
+	myOffers := mustGetOffers(t, author.UserID, &my)
+	found := false
+	for _, offer := range myOffers.Offers {
+		if offer.Id == offerID {
+			found = true
+			require.NotNil(t, offer.HiddenByAuthor)
+			require.True(t, *offer.HiddenByAuthor)
+		}
+	}
+	require.True(t, found)
+}
+
+func TestUnhideOfferByAuthorRestoresVisibilityToOthers(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	author := mustRegisterDealsUser(t)
+	viewer := mustRegisterDealsUser(t)
+	offerID := mustCreateOffer(t, author.UserID)
+
+	mustHideOfferByAuthor(t, author.UserID, offerID)
+	mustUnhideOfferByAuthor(t, author.UserID, offerID)
+
+	authorOffer := mustGetOfferByID(t, author.UserID, offerID)
+	require.NotNil(t, authorOffer.HiddenByAuthor)
+	require.False(t, *authorOffer.HiddenByAuthor)
+
+	viewerOffer := mustGetOfferByID(t, viewer.UserID, offerID)
+	require.Equal(t, offerID, viewerOffer.Id)
+	require.NotNil(t, viewerOffer.HiddenByAuthor)
+	require.False(t, *viewerOffer.HiddenByAuthor)
+}
+
+func TestHideOfferByAuthorForbiddenForNonAuthor(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	authorID := uuid.New()
+	otherUserID := uuid.New()
+	offerID := mustCreateOffer(t, authorID)
+
+	resp := doHideOfferByAuthor(t, otherUserID, offerID)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusForbidden, resp.StatusCode)
+}
+
+func TestUnhideOfferByAuthorDoesNotOverrideModeratorHidden(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	author := mustRegisterDealsUser(t)
+	reporter := mustRegisterDealsUser(t)
+	stranger := mustRegisterDealsUser(t)
+	adminToken := mustAdminAccessToken(t)
+
+	offerID := mustCreateOffer(t, author.UserID)
+	mustHideOfferByAuthor(t, author.UserID, offerID)
+	report := mustCreateOfferReport(t, reporter.UserID, offerID, "hide by admin too")
+	mustResolveReport(t, adminToken, report.Id, true, nil)
+
+	mustUnhideOfferByAuthor(t, author.UserID, offerID)
+
+	authorOffer := mustGetOfferByID(t, author.UserID, offerID)
+	require.NotNil(t, authorOffer.HiddenByAuthor)
+	require.False(t, *authorOffer.HiddenByAuthor)
+	require.NotNil(t, authorOffer.IsHidden)
+	require.True(t, *authorOffer.IsHidden)
+
+	req := mustUserRequest(t, http.MethodGet, dealsURL()+"/offers/"+offerID.String(), stranger.UserID, nil)
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
+
 func TestUpdateOfferSuccess(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)
