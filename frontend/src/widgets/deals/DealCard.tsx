@@ -531,6 +531,11 @@ function DealCard({deal}: DealCardProps) {
     setIsEditingName(false);
   };
 
+  const dealTitle =
+    deal.name?.trim() ||
+    deal.items.map((item) => item.name.trim()).filter(Boolean).join(" / ") ||
+    "Сделка";
+
   return (
     <Card variant="outlined">
       <CardContent>
@@ -558,7 +563,7 @@ function DealCard({deal}: DealCardProps) {
         ) : (
           <Box display="flex" alignItems="center" gap={1} mb={1}>
             <Typography variant="h6" fontWeight={600}>
-              {deal.name ?? "Сделка"}
+              {dealTitle}
             </Typography>
             {isParticipant && !isFinalStatus(deal.status) && (
               <Tooltip title="Переименовать">
