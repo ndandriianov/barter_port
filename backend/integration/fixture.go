@@ -614,7 +614,7 @@ func launchSeaweed(ctx context.Context, netName string) (testcontainers.Containe
 
 	req := testcontainers.ContainerRequest{
 		Name:         name,
-		Image:        "chrislusf/seaweedfs:4.06",
+		Image:        "chrislusf/seaweedfs:3.94",
 		ExposedPorts: []string{string(seaweedPort)},
 		Networks:     []string{netName},
 		NetworkAliases: map[string][]string{

@@ -60,7 +60,7 @@ services:
       - kafka_data:/var/lib/kafka/data
 
   seaweedfs:
-    image: chrislusf/seaweedfs:4.06
+    image: chrislusf/seaweedfs:3.94
     container_name: barter-port-seaweedfs
     restart: unless-stopped
     environment:
