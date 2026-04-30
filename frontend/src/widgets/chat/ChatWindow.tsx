@@ -27,7 +27,10 @@ const POLL_INTERVAL_MS = 3000;
 function ChatWindow({ chatId, participants, readOnly = false }: Props) {
   const [content, setContent] = useState("");
   const [sendError, setSendError] = useState<string | null>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const lastMessageIdRef = useRef<string | null>(null);
+  const isPinnedToBottomRef = useRef(true);
 
   const { data: messages = [], refetch } = chatsApi.useGetMessagesQuery({ chatId });
   const { data: me } = usersApi.useGetCurrentUserQuery();
@@ -55,7 +58,14 @@ function ChatWindow({ chatId, participants, readOnly = false }: Props) {
   }
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const lastMessageId = messages.at(-1)?.id ?? null;
+    const hasNewTailMessage = lastMessageId !== lastMessageIdRef.current;
+
+    lastMessageIdRef.current = lastMessageId;
+
+    if (hasNewTailMessage && isPinnedToBottomRef.current) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
 
   useEffect(() => {
@@ -90,6 +100,17 @@ function ChatWindow({ chatId, participants, readOnly = false }: Props) {
     }
   }
 
+  function handleMessagesScroll() {
+    const container = messagesContainerRef.current;
+
+    if (!container) {
+      return;
+    }
+
+    const distanceToBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    isPinnedToBottomRef.current = distanceToBottom <= 48;
+  }
+
   return (
     <Paper
       variant="outlined"
@@ -116,7 +137,19 @@ function ChatWindow({ chatId, participants, readOnly = false }: Props) {
         </Stack>
       </Box>
 
-      <Box sx={{ flex: 1, overflowY: "auto", p: 3, display: "flex", flexDirection: "column", gap: 1.5 }}>
+      <Box
+        ref={messagesContainerRef}
+        onScroll={handleMessagesScroll}
+        sx={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: "auto",
+          p: 3,
+          display: "flex",
+          flexDirection: "column",
+          gap: 1.5,
+        }}
+      >
         {messages.map((msg: Message) => {
           const isMe = me?.id === msg.sender_id;
           const senderLabel = getSenderLabel(msg.sender_id);

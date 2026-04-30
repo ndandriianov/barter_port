@@ -109,7 +109,7 @@ function ChatsPage({ defaultMode = "all" }: ChatsPageProps) {
           onNewChat={() => setShowNewChatModal(true)}
         />
 
-        <Box sx={{ flex: 1, minWidth: 0, display: "flex" }}>
+        <Box sx={{ flex: 1, minWidth: 0, minHeight: 0, display: "flex" }}>
           {selectedChat ? (
             <ChatWindow key={selectedChat.id} chatId={selectedChat.id} participants={selectedChat.participants} />
           ) : (

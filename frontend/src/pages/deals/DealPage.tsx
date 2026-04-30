@@ -146,7 +146,15 @@ function DealPage() {
           ) : !dealChat ? (
             <Alert severity="info">Чат этой сделки пока недоступен</Alert>
           ) : (
-            <Box sx={{ border: "1px solid #e0e0e0", borderRadius: 2, height: 520, overflow: "hidden" }}>
+            <Box
+              sx={{
+                border: "1px solid #e0e0e0",
+                borderRadius: 2,
+                height: 520,
+                overflow: "hidden",
+                display: "flex",
+              }}
+            >
               <ChatWindow
                 chatId={dealChat.id}
                 participants={dealChat.participants}
