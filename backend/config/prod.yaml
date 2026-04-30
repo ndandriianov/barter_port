@@ -5,6 +5,15 @@ kafka:
   brokers:
     - "kafka:9092"
 
+mailer:
+  host: "smtp.yandex.ru"
+  port: 465
+  user: ""
+  password: ""
+  from: ""
+  tls_mode: "tls"
+  insecure_skip_verify: false
+
 storage:
   endpoint: "http://seaweedfs:8333"
   public_base_url: "http://localhost/s3"

@@ -134,6 +134,20 @@ func LoadConfig(options ConfigOptions) (Config, error) {
 	bindEnv(v, "kafka.reputation_topic")
 	bindEnv(v, "kafka.reputation_group")
 	bindEnv(v, "mailer.bypass")
+	bindEnv(v, "mailer.host")
+	bindEnv(v, "mailer.port")
+	bindEnv(v, "mailer.user")
+	bindEnv(v, "mailer.password")
+	bindEnv(v, "mailer.from")
+	bindEnv(v, "mailer.tls_mode")
+	bindEnv(v, "mailer.insecure_skip_verify")
+	applyEnvAlias(v, "mailer.host", "SMTP_HOST")
+	applyEnvAlias(v, "mailer.port", "SMTP_PORT")
+	applyEnvAlias(v, "mailer.user", "SMTP_USER")
+	applyEnvAlias(v, "mailer.password", "SMTP_PASSWORD")
+	applyEnvAlias(v, "mailer.from", "SMTP_FROM")
+	applyEnvAlias(v, "mailer.tls_mode", "SMTP_TLS_MODE")
+	applyEnvAlias(v, "mailer.insecure_skip_verify", "SMTP_INSECURE_SKIP_VERIFY")
 	bindEnv(v, "admin.email")
 	bindEnv(v, "admin.password")
 	bindEnv(v, "storage.endpoint")
@@ -157,4 +171,10 @@ func LoadConfig(options ConfigOptions) (Config, error) {
 
 func bindEnv(v *viper.Viper, key string) {
 	_ = v.BindEnv(key, strings.ToUpper(strings.ReplaceAll(key, ".", "_")))
+}
+
+func applyEnvAlias(v *viper.Viper, key, alias string) {
+	if value, ok := os.LookupEnv(alias); ok {
+		v.Set(key, value)
+	}
 }
