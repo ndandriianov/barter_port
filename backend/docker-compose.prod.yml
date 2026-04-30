@@ -7,7 +7,7 @@ x-app-common: &app_common
   restart: unless-stopped
   env_file: ./.env
   environment:
-    APP_ENV: docker
+    APP_ENV: prod
     CONFIG_COMMON: /app/config/common.yaml
   volumes:
     - ./config:/app/config:ro
@@ -122,7 +122,7 @@ services:
       kafka:
         condition: service_started
     environment:
-      APP_ENV: docker
+      APP_ENV: prod
       CONFIG_COMMON: /app/config/common.yaml
       CONFIG_SERVICE: /app/config/auth.yaml
 
@@ -134,7 +134,7 @@ services:
       db:
         condition: service_healthy
     environment:
-      APP_ENV: docker
+      APP_ENV: prod
       CONFIG_COMMON: /app/config/common.yaml
       CONFIG_SERVICE: /app/config/deals.yaml
 
@@ -150,7 +150,7 @@ services:
       auth:
         condition: service_started
     environment:
-      APP_ENV: docker
+      APP_ENV: prod
       CONFIG_COMMON: /app/config/common.yaml
       CONFIG_SERVICE: /app/config/users.yaml
       <<: *s3_credentials
@@ -168,7 +168,7 @@ services:
       deals:
         condition: service_started
     environment:
-      APP_ENV: docker
+      APP_ENV: prod
       CONFIG_COMMON: /app/config/common.yaml
       CONFIG_SERVICE: /app/config/chats.yaml
 
