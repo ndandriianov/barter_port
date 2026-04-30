@@ -58,6 +58,15 @@ func (s *Service) validatePassword(password string) error {
 	return nil
 }
 
+func (s *Service) shouldAutoVerifyEmail(email string) bool {
+	if s.emailBypassMode {
+		return true
+	}
+
+	normalizedEmail := strings.TrimSpace(strings.ToLower(email))
+	return strings.HasSuffix(normalizedEmail, "@barterport.local")
+}
+
 // --- EMAIL VERIFICATION ---
 
 func (s *Service) getVerifyURL(token string) string {

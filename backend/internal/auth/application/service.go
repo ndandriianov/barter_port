@@ -146,6 +146,8 @@ func (s *Service) Register(ctx context.Context, email, password string) (Registe
 
 	log := s.logger.With(slog.String("func", funcName), slog.String("type", typeName))
 
+	email = strings.TrimSpace(strings.ToLower(email))
+
 	if err := s.validateCredentials(email, password); err != nil {
 		return RegisterResult{}, err
 	}
@@ -156,6 +158,7 @@ func (s *Service) Register(ctx context.Context, email, password string) (Registe
 	}
 
 	u := domain.NewUser(uuid.New(), email, string(hash))
+	autoVerifyEmail := s.shouldAutoVerifyEmail(u.Email)
 	var rawToken string
 
 	err = db.RunInTx(ctx, s.db, func(ctx context.Context, tx pgx.Tx) error {
@@ -166,7 +169,7 @@ func (s *Service) Register(ctx context.Context, email, password string) (Registe
 			return fmt.Errorf("failed to create user: %w", err)
 		}
 
-		if s.emailBypassMode {
+		if autoVerifyEmail {
 			if err = s.createUser(ctx, tx, u.ID); err != nil {
 				return err
 			}
@@ -195,6 +198,13 @@ func (s *Service) Register(ctx context.Context, email, password string) (Registe
 	})
 	if err != nil {
 		return RegisterResult{}, err
+	}
+
+	if autoVerifyEmail {
+		return RegisterResult{
+			UserID: u.ID,
+			Email:  u.Email,
+		}, nil
 	}
 
 	if err = s.mailer.Send(u.Email, verifyEmailSubject, s.getVerifyEmailBody(rawToken)); err != nil {

@@ -69,6 +69,28 @@ func TestAuthRegisterSuccess(t *testing.T) {
 	require.NotEmpty(t, registered.Email)
 }
 
+func TestAuthRegisterBarterportLocalAutoVerifiesEmail(t *testing.T) {
+	t.Parallel()
+	dumpAuthLogs(t)
+
+	email := fmt.Sprintf("seed-%d@barterport.local", time.Now().UnixNano())
+	password := "password123"
+
+	payload, err := json.Marshal(registerRequest{Email: email, Password: password})
+	require.NoError(t, err)
+
+	resp, err := http.Post(globalFixture.AuthURL+"/auth/register", "application/json", bytes.NewReader(payload))
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+
+	loginResp := mustLogin(t, email, password)
+	defer func() { _ = loginResp.Body.Close() }()
+
+	require.Equal(t, http.StatusOK, loginResp.StatusCode)
+}
+
 func TestAuthRegisterDuplicateEmail(t *testing.T) {
 	t.Parallel()
 	dumpAuthLogs(t)
