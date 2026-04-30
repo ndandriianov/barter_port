@@ -5,6 +5,7 @@ import (
 	usertypes "barter-port/contracts/openapi/users/types"
 	"context"
 	"fmt"
+	"net/http"
 	"net/url"
 
 	"github.com/google/uuid"
@@ -99,6 +100,27 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 	eva := &users[4]
 	fedor := &users[5]
 
+	// ── Геолокации пользователей ─────────────────────────────────────────────
+
+	for _, loc := range []struct {
+		user     *seededUser
+		lat, lon float64
+	}{
+		{alice, 55.7500, 37.5960},
+		{bob, 55.7312, 37.5987},
+		{eva, 55.7653, 37.5843},
+		{dan, 55.7845, 37.4987},
+		{fedor, 55.7534, 37.6342},
+	} {
+		lat, lon := loc.lat, loc.lon
+		if _, err := client.updateMe(ctx, loc.user.Token, usertypes.UpdateUserRequest{
+			CurrentLatitude:  &lat,
+			CurrentLongitude: &lon,
+		}); err != nil {
+			return nil, fmt.Errorf("update location for %s: %w", loc.user.Key, err)
+		}
+	}
+
 	adminToken, err := client.ensureAdminToken(ctx, cfg.AdminEmail, cfg.AdminPassword)
 	if err != nil {
 		return nil, fmt.Errorf("ensure admin session: %w", err)
@@ -122,6 +144,10 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 
 	if err := client.logout(ctx, refreshedCookie); err != nil {
 		return nil, fmt.Errorf("logout refreshed session for alice: %w", err)
+	}
+
+	if _, err := client.login(ctx, bob.Email, bob.Password); err != nil {
+		return nil, fmt.Errorf("plain login for bob: %w", err)
 	}
 
 	// ── Offers ───────────────────────────────────────────────────────────────
@@ -384,6 +410,42 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 	}
 	warnings = append(warnings, offerWarnings...)
 
+	aliceExtraOffers, offerWarnings, err := client.createOffersWithWarnings(ctx, alice, []offerSpec{
+		{
+			Key:         "books",
+			Name:        "Книги по дизайну интерьера",
+			Description: "Подборка из пяти книг о дизайне и архитектуре, все в отличном состоянии.",
+			Type:        dealtypes.Good,
+			Action:      dealtypes.Give,
+			Tags:        []dealtypes.TagName{"книги", "дизайн"},
+			SkipPhoto:   true,
+			Latitude:    new(55.7450),
+			Longitude:   new(37.6100),
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create Alice extra offers: %w", err)
+	}
+	warnings = append(warnings, offerWarnings...)
+
+	fedorExtraOffers, offerWarnings, err := client.createOffersWithWarnings(ctx, fedor, []offerSpec{
+		{
+			Key:         "vinyl-records",
+			Name:        "Виниловые пластинки (jazz / классика)",
+			Description: "10 пластинок в хорошем состоянии: Miles Davis, Coltrane, Чайковский.",
+			Type:        dealtypes.Good,
+			Action:      dealtypes.Give,
+			Tags:        []dealtypes.TagName{"винил", "музыка", "джаз"},
+			SkipPhoto:   true,
+			Latitude:    new(55.7534),
+			Longitude:   new(37.6342),
+		},
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create Fedor extra offers: %w", err)
+	}
+	warnings = append(warnings, offerWarnings...)
+
 	if _, err := client.updateOffer(ctx, alice.Token, aliceOffers["plant-consulting"], dealtypes.UpdateOfferRequest{
 		Description: new("Помогу с подбором ухода, пересадкой и базовой диагностикой домашних растений."),
 		Tags:        &[]dealtypes.TagName{"растения", "ботаника"},
@@ -425,6 +487,11 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 		{bob.Token, fedorOffers["vinyl-player"]},
 		{eva.Token, fedorOffers["vinyl-player"]},
 		{clara.Token, evaOffers["canvas-set"]},
+		{bob.Token, aliceExtraOffers["books"]},
+		{dan.Token, aliceExtraOffers["books"]},
+		{alice.Token, fedorExtraOffers["vinyl-records"]},
+		{eva.Token, fedorExtraOffers["vinyl-records"]},
+		{clara.Token, fedorExtraOffers["vinyl-records"]},
 	} {
 		if err := client.viewOffer(ctx, view.token, view.offerID); err != nil {
 			return nil, fmt.Errorf("view offer %s: %w", view.offerID, err)
@@ -445,6 +512,15 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 	}
 	if err := client.addOfferToFavorites(ctx, clara.Token, bobOffers["bike-bag"]); err != nil {
 		return nil, fmt.Errorf("favorite bob bike bag for clara: %w", err)
+	}
+	if err := client.addOfferToFavorites(ctx, dan.Token, fedorExtraOffers["vinyl-records"]); err != nil {
+		return nil, fmt.Errorf("favorite fedor vinyl-records for dan: %w", err)
+	}
+	if err := client.addOfferToFavorites(ctx, eva.Token, aliceExtraOffers["books"]); err != nil {
+		return nil, fmt.Errorf("favorite alice books for eva: %w", err)
+	}
+	if err := client.addOfferToFavorites(ctx, fedor.Token, aliceExtraOffers["books"]); err != nil {
+		return nil, fmt.Errorf("favorite alice books for fedor: %w", err)
 	}
 
 	offersByPopularity := url.Values{}
@@ -477,6 +553,27 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 
 	if _, err := client.getOfferByID(ctx, alice.Token, bobOffers["tool-kit"]); err != nil {
 		return nil, fmt.Errorf("get bob tool-kit by alice: %w", err)
+	}
+
+	offersByDistance := url.Values{}
+	offersByDistance.Set("sort", string(dealtypes.SortTypeByDistance))
+	offersByDistance.Set("user_lat", "55.7500")
+	offersByDistance.Set("user_lon", "37.5960")
+	offersByDistance.Set("cursor_limit", "20")
+	if _, err := client.listOffers(ctx, alice.Token, offersByDistance); err != nil {
+		return nil, fmt.Errorf("list offers by distance for alice: %w", err)
+	}
+
+	// ── Скрытие/восстановление оффера автором ───────────────────────────────
+
+	if err := client.hideOfferByAuthor(ctx, alice.Token, aliceOffers["bookshelf"]); err != nil {
+		return nil, fmt.Errorf("hide alice bookshelf: %w", err)
+	}
+	if _, err := client.getOfferByID(ctx, alice.Token, aliceOffers["bookshelf"]); err != nil {
+		return nil, fmt.Errorf("get hidden bookshelf as author: %w", err)
+	}
+	if err := client.unhideOfferByAuthor(ctx, alice.Token, aliceOffers["bookshelf"]); err != nil {
+		return nil, fmt.Errorf("unhide alice bookshelf: %w", err)
 	}
 
 	// ── Offer groups and drafts ──────────────────────────────────────────────
@@ -535,6 +632,13 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 	if _, err := client.listOfferGroups(ctx, alice.Token); err != nil {
 		return nil, fmt.Errorf("list offer groups: %w", err)
 	}
+	myGroupsQuery := url.Values{"my": {"true"}}
+	if _, err := client.listOfferGroupsQuery(ctx, alice.Token, myGroupsQuery); err != nil {
+		return nil, fmt.Errorf("list my offer groups for alice: %w", err)
+	}
+	if _, err := client.listOfferGroupsQuery(ctx, eva.Token, myGroupsQuery); err != nil {
+		return nil, fmt.Errorf("list my offer groups for eva: %w", err)
+	}
 	if _, err := client.getOfferGroupByID(ctx, bob.Token, offerGroupID); err != nil {
 		return nil, fmt.Errorf("get offer group by id: %w", err)
 	}
@@ -575,13 +679,23 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 		return nil, fmt.Errorf("delete draft by dan: %w", err)
 	}
 
+	if _, err := client.listDrafts(ctx, alice.Token, true, false); err != nil {
+		return nil, fmt.Errorf("list alice's own drafts: %w", err)
+	}
+	if _, err := client.listDrafts(ctx, alice.Token, false, true); err != nil {
+		return nil, fmt.Errorf("list drafts alice participates in: %w", err)
+	}
+	if _, err := client.listDrafts(ctx, bob.Token, true, false); err != nil {
+		return nil, fmt.Errorf("list bob's own drafts: %w", err)
+	}
+
 	// ── Deals ────────────────────────────────────────────────────────────────
 
-	lookingDealID, err := client.createLookingDeal(ctx, fedor, fedorOffers["vinyl-player"],
-		"Виниловый проигрыватель ищет нового хозяина",
-		"Открытая сделка, жду партнёра с интересным предложением.")
+	lookingDealID, err := client.createTwoPartyDeal(ctx, fedor, eva, fedorOffers["vinyl-player"], evaOffers["sketchbooks"],
+		"Проигрыватель на скетчбуки",
+		"Fedor и Eva собрали открытую сделку и оставили её в поиске участников для уточнения условий обмена.")
 	if err != nil {
-		return nil, fmt.Errorf("create looking deal: %w", err)
+		return nil, fmt.Errorf("create open deal: %w", err)
 	}
 
 	discussionDealID, err := client.createTwoPartyDeal(ctx, alice, bob, aliceOffers["storage-boxes"], bobOffers["tool-kit"],
@@ -920,11 +1034,11 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 		return nil, fmt.Errorf("get moderator resolution for failed deal: %w", err)
 	}
 
-	joinDealID, err := client.createLookingDeal(ctx, bob, bobOffers["coffee-beans"],
-		"Ищу зерновой кофе",
-		"Открытая сделка, готов обменять на что-то интересное.")
+	joinDealID, err := client.createTwoPartyDeal(ctx, bob, dan, bobOffers["coffee-beans"], danOffers["repair"],
+		"Кофе на мелкий ремонт",
+		"Bob и Dan оставили сделку открытой: кофе в обмен на помощь с техникой, позже Bob добавил термос.")
 	if err != nil {
-		return nil, fmt.Errorf("create join deal: %w", err)
+		return nil, fmt.Errorf("create join-ready deal: %w", err)
 	}
 
 	joinDeal, err := client.addDealItem(ctx, bob.Token, joinDealID, dealtypes.AddDealItemRequest{
@@ -956,12 +1070,15 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 	if err := client.processJoinRequest(ctx, bob.Token, joinDealID, eva.UserID, true); err != nil {
 		return nil, fmt.Errorf("bob process join request: %w", err)
 	}
+	if err := client.processJoinRequest(ctx, dan.Token, joinDealID, eva.UserID, true); err != nil {
+		return nil, fmt.Errorf("dan process join request: %w", err)
+	}
 
-	leaveJoinDealID, err := client.createLookingDeal(ctx, clara, claraOffers["english-session"],
-		"Временная сделка для leave join",
-		"Техническая открытая сделка, чтобы покрыть выход из join request.")
+	leaveJoinDealID, err := client.createTwoPartyDeal(ctx, clara, alice, claraOffers["english-session"], aliceOffers["storage-boxes"],
+		"Английский на короба для хранения",
+		"Clara и Alice оставили сделку открытой, чтобы рассмотреть дополнительные предложения по обмену.")
 	if err != nil {
-		return nil, fmt.Errorf("create leave-join deal: %w", err)
+		return nil, fmt.Errorf("create leave-join-ready deal: %w", err)
 	}
 	if err := client.requestJoinDeal(ctx, eva.Token, leaveJoinDealID); err != nil {
 		return nil, fmt.Errorf("eva request leave-join deal: %w", err)
@@ -971,6 +1088,16 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 	}
 	if err := client.leaveDeal(ctx, eva.Token, leaveJoinDealID); err != nil {
 		return nil, fmt.Errorf("eva leave join deal: %w", err)
+	}
+
+	if err := client.requestJoinDeal(ctx, fedor.Token, leaveJoinDealID); err != nil {
+		return nil, fmt.Errorf("fedor request join leave deal: %w", err)
+	}
+	if _, err := client.getDealJoinRequests(ctx, clara.Token, leaveJoinDealID); err != nil {
+		return nil, fmt.Errorf("get join requests after fedor join: %w", err)
+	}
+	if err := client.processJoinRequest(ctx, clara.Token, leaveJoinDealID, fedor.UserID, false); err != nil {
+		return nil, fmt.Errorf("clara reject fedor join request: %w", err)
 	}
 
 	openDealsQuery := url.Values{}
@@ -1010,6 +1137,10 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 	}
 	if err := client.unsubscribeFromUser(ctx, bob.Token, clara.UserID); err != nil {
 		return nil, fmt.Errorf("unsubscribe bob -> clara temporary: %w", err)
+	}
+
+	if err := client.hideUser(ctx, dan.Token, fedor.UserID); err != nil {
+		return nil, fmt.Errorf("dan hide fedor: %w", err)
 	}
 
 	if _, err := client.listSubscriptions(ctx, alice.Token); err != nil {
@@ -1102,6 +1233,17 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 		return nil, fmt.Errorf("send clara-dan chat messages: %w", err)
 	}
 
+	evaFedorChatID, err := client.createDirectChat(ctx, eva.Token, fedor.UserID)
+	if err != nil {
+		return nil, fmt.Errorf("create direct chat eva-fedor: %w", err)
+	}
+	if err := client.sendChatMessages(ctx, evaFedorChatID, []chatMessage{
+		{Token: eva.Token, Content: "Привет! Как дела с нашим обменом наушников на холсты?"},
+		{Token: fedor.Token, Content: "Всё отлично, очень доволен холстами! Напишу отзыв позже."},
+	}); err != nil {
+		return nil, fmt.Errorf("send eva-fedor chat messages: %w", err)
+	}
+
 	// ── Offer reports ────────────────────────────────────────────────────────
 
 	pendingReport, err := client.createOfferReport(ctx, clara.Token, danOffers["board-game-sleeves"],
@@ -1166,6 +1308,33 @@ func RunSeed(ctx context.Context, client *SeedClient, cfg SeedConfig) (*SeedSumm
 	}
 	if _, err := client.listTags(ctx, alice.Token); err != nil {
 		return nil, fmt.Errorf("list tags: %w", err)
+	}
+
+	// ── Admin statistics ─────────────────────────────────────────────────────
+
+	if err := client.doJSON(ctx, http.MethodGet, "/auth/admin/statistics/platform", adminToken, nil, nil, http.StatusOK); err != nil {
+		return nil, fmt.Errorf("get auth admin platform statistics: %w", err)
+	}
+	if err := client.doJSON(ctx, http.MethodGet, fmt.Sprintf("/auth/admin/users/%s/statistics", alice.UserID), adminToken, nil, nil, http.StatusOK); err != nil {
+		return nil, fmt.Errorf("get auth admin user statistics for alice: %w", err)
+	}
+	if err := client.doJSON(ctx, http.MethodGet, "/users/admin/statistics/platform", adminToken, nil, nil, http.StatusOK); err != nil {
+		return nil, fmt.Errorf("get users admin platform statistics: %w", err)
+	}
+	if err := client.doJSON(ctx, http.MethodGet, fmt.Sprintf("/users/admin/users/%s/statistics", alice.UserID), adminToken, nil, nil, http.StatusOK); err != nil {
+		return nil, fmt.Errorf("get users admin user statistics for alice: %w", err)
+	}
+	if err := client.doJSON(ctx, http.MethodGet, "/users/admin/users", adminToken, nil, nil, http.StatusOK); err != nil {
+		return nil, fmt.Errorf("list admin users: %w", err)
+	}
+	if err := client.doJSON(ctx, http.MethodGet, "/deals/admin/statistics/platform", adminToken, nil, nil, http.StatusOK); err != nil {
+		return nil, fmt.Errorf("get deals admin platform statistics: %w", err)
+	}
+	if err := client.doJSON(ctx, http.MethodGet, fmt.Sprintf("/deals/admin/users/%s/statistics", alice.UserID), adminToken, nil, nil, http.StatusOK); err != nil {
+		return nil, fmt.Errorf("get deals admin user statistics for alice: %w", err)
+	}
+	if err := client.doJSON(ctx, http.MethodGet, "/chats/admin/statistics/platform", adminToken, nil, nil, http.StatusOK); err != nil {
+		return nil, fmt.Errorf("get chats admin platform statistics: %w", err)
 	}
 
 	summary := &SeedSummary{

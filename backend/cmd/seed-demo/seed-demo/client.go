@@ -684,6 +684,29 @@ func (c *SeedClient) viewOffer(ctx context.Context, token string, offerID uuid.U
 	return c.doJSON(ctx, http.MethodPost, path, token, nil, nil, http.StatusOK)
 }
 
+func (c *SeedClient) hideOfferByAuthor(ctx context.Context, token string, offerID uuid.UUID) error {
+	path := fmt.Sprintf("/offers/%s/hidden", offerID)
+	return c.doJSON(ctx, http.MethodPut, path, token, nil, nil, http.StatusNoContent)
+}
+
+func (c *SeedClient) unhideOfferByAuthor(ctx context.Context, token string, offerID uuid.UUID) error {
+	path := fmt.Sprintf("/offers/%s/hidden", offerID)
+	return c.doJSON(ctx, http.MethodDelete, path, token, nil, nil, http.StatusNoContent)
+}
+
+func (c *SeedClient) hideUser(ctx context.Context, token string, targetUserID uuid.UUID) error {
+	return c.doJSON(ctx, http.MethodPost, "/users/hidden-users", token,
+		map[string]uuid.UUID{"targetUserId": targetUserID}, nil, http.StatusNoContent)
+}
+
+func (c *SeedClient) listOfferGroupsQuery(ctx context.Context, token string, query url.Values) (dealtypes.ListOfferGroupsResponse, error) {
+	var body dealtypes.ListOfferGroupsResponse
+	if err := c.doJSON(ctx, http.MethodGet, pathWithQuery("/offer-groups", query), token, nil, &body, http.StatusOK); err != nil {
+		return nil, err
+	}
+	return body, nil
+}
+
 func (c *SeedClient) getOfferReports(ctx context.Context, token string, offerID uuid.UUID) (dealtypes.OfferReportsForOffer, error) {
 	var body dealtypes.OfferReportsForOffer
 	path := fmt.Sprintf("/offers/%s/reports", offerID)
@@ -1244,28 +1267,6 @@ func (c *SeedClient) getChatMessages(ctx context.Context, token string, chatID u
 	}
 
 	return body, nil
-}
-
-func (c *SeedClient) createLookingDeal(ctx context.Context, user *seededUser, offerID uuid.UUID, name, description string) (uuid.UUID, error) {
-	before, err := c.listMyDeals(ctx, user.Token)
-	if err != nil {
-		return uuid.Nil, fmt.Errorf("list deals before looking draft: %w", err)
-	}
-
-	draftID, err := c.createDraft(ctx, user.Token, dealtypes.CreateDraftDealRequest{
-		Name:        &name,
-		Description: &description,
-		Offers:      []dealtypes.OfferIDAndQuantity{{OfferID: offerID, Quantity: 1}},
-	})
-	if err != nil {
-		return uuid.Nil, err
-	}
-
-	if err := c.confirmDraft(ctx, user.Token, draftID); err != nil {
-		return uuid.Nil, fmt.Errorf("confirm looking draft: %w", err)
-	}
-
-	return c.waitForNewDeal(ctx, user.Token, before)
 }
 
 func (c *SeedClient) createAndCancelDeal(ctx context.Context, userA, userB *seededUser, offerA, offerB uuid.UUID, name, description string) (uuid.UUID, error) {

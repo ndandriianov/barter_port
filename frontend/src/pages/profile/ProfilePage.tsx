@@ -9,6 +9,10 @@ import {
   Card,
   CardContent,
   CircularProgress,
+  List,
+  ListItem,
+  ListItemAvatar,
+  ListItemText,
   Stack,
   TextField,
   Typography,
@@ -27,6 +31,13 @@ const MAX_AVATAR_FILE_SIZE = 5 * 1024 * 1024;
 
 function ProfilePage() {
   const { data, isLoading, refetch } = usersApi.useGetCurrentUserQuery();
+  const {
+    data: hiddenUsers,
+    isLoading: isHiddenUsersLoading,
+    isFetching: isHiddenUsersFetching,
+    error: hiddenUsersError,
+    refetch: refetchHiddenUsers,
+  } = usersApi.useGetHiddenUsersQuery();
   const [updateCurrentUser, { isLoading: isSaving, error: updateError }] =
     usersApi.useUpdateCurrentUserMutation();
   const [uploadCurrentUserAvatar, { isLoading: isUploadingAvatar, error: uploadAvatarError }] =
@@ -79,6 +90,11 @@ function ProfilePage() {
   const avatarPreviewUrl = normalizedAvatarUrl || undefined;
   const hasAvatarPreview = Boolean(avatarPreviewUrl);
   const isSubmitting = isSaving || isUploadingAvatar;
+
+  const handleRefresh = () => {
+    void refetch();
+    void refetchHiddenUsers();
+  };
 
   const handleLogout = async () => {
     await dispatch(performLogout());
@@ -188,7 +204,11 @@ function ProfilePage() {
       title="Личные данные"
       description=""
       actions={
-        <Button variant="outlined" onClick={() => refetch()} disabled={isSubmitting}>
+        <Button
+          variant="outlined"
+          onClick={handleRefresh}
+          disabled={isSubmitting || isHiddenUsersFetching}
+        >
           Обновить
         </Button>
       }
@@ -334,6 +354,57 @@ function ProfilePage() {
                   Очистить поля
                 </Button>
               </Box>
+            </Stack>
+          </CardContent>
+        </Card>
+
+        <Card variant="outlined">
+          <CardContent>
+            <Stack spacing={2}>
+              <Box display="flex" justifyContent="space-between" alignItems="flex-start" gap={2} flexWrap="wrap">
+                <Box>
+                  <Typography variant="h6" fontWeight={800}>
+                    Черный список
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Пользователи, чьи объявления скрыты из общего каталога для вашего аккаунта.
+                  </Typography>
+                </Box>
+                <Button component={RouterLink} to={appRoutes.profile.networkHidden} variant="outlined">
+                  Управлять списком
+                </Button>
+              </Box>
+
+              {isHiddenUsersLoading ? (
+                <Typography color="text.secondary">Загрузка списка...</Typography>
+              ) : hiddenUsersError ? (
+                <Alert severity="error">Не удалось загрузить черный список.</Alert>
+              ) : !hiddenUsers || hiddenUsers.length === 0 ? (
+                <Alert severity="info">Черный список пока пуст.</Alert>
+              ) : (
+                <Box>
+                  <Typography variant="subtitle2" color="text.secondary" mb={1}>
+                    Добавлено пользователей: {hiddenUsers.length}
+                  </Typography>
+                  <List disablePadding>
+                    {hiddenUsers.map((user) => (
+                      <ListItem
+                        key={user.id}
+                        component={RouterLink}
+                        to={`/users/${user.id}`}
+                        sx={{ px: 0, textDecoration: "none", color: "inherit" }}
+                      >
+                        <ListItemAvatar>
+                          <Avatar src={user.avatarUrl?.trim() || undefined} sx={{ width: 44, height: 44 }}>
+                            {!user.avatarUrl?.trim() && <PersonOutlineIcon fontSize="small" />}
+                          </Avatar>
+                        </ListItemAvatar>
+                        <ListItemText primary={user.name?.trim() || "Имя не указано"} />
+                      </ListItem>
+                    ))}
+                  </List>
+                </Box>
+              )}
             </Stack>
           </CardContent>
         </Card>
