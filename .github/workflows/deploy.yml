@@ -119,16 +119,20 @@ jobs:
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
           PROD_ENV: ${{ secrets.PROD_ENV }}
           IMAGE_OWNER: ${{ github.repository_owner }}
+          DEPLOY_HOST: ${{ secrets.SSH_HOST }}
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
-          envs: GHCR_USER,GHCR_TOKEN,PROD_ENV,IMAGE_OWNER
+          envs: GHCR_USER,GHCR_TOKEN,PROD_ENV,IMAGE_OWNER,DEPLOY_HOST
           script: |
             set -e
             cd /srv/barter-port
 
             printf '%s' "$PROD_ENV" > .env
+            if ! grep -q '^FRONTEND_URL=' .env; then
+              printf '\nFRONTEND_URL=http://%s\n' "$DEPLOY_HOST" >> .env
+            fi
 
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
 

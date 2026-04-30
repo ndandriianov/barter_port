@@ -128,6 +128,7 @@ func LoadConfig(options ConfigOptions) (Config, error) {
 
 	// переопределение через переменные окружения
 	bindEnv(v, "db.password")
+	bindEnv(v, "frontend.url")
 	bindEnv(v, "jwt.access_secret")
 	bindEnv(v, "jwt.refresh_secret")
 	bindEnv(v, "kafka.user_creation_topic")
