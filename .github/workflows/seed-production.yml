@@ -44,6 +44,8 @@ jobs:
         env:
           SEED_BASE_URL: ${{ env.SEED_BASE_URL }}
           SEED_SMTP4DEV_URL: ""
+          SEED_TIMEOUT: 15m
+          SEED_HTTP_TIMEOUT: 60s
           SEED_PASSWORD: ${{ secrets.SEED_PASSWORD }}
           SEED_ADMIN_EMAIL: ${{ secrets.SEED_ADMIN_EMAIL }}
           SEED_ADMIN_PASSWORD: ${{ secrets.SEED_ADMIN_PASSWORD }}
