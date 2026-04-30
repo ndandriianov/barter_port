@@ -128,16 +128,16 @@ jobs:
             set -e
             cd /srv/barter-port
 
-            printf '%s' "$PROD_ENV" > backend/.env
+            printf '%s' "$PROD_ENV" > .env
 
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
 
             GHCR_OWNER="$IMAGE_OWNER" docker compose \
-              -f backend/docker-compose.prod.yml \
+              -f docker-compose.prod.yml \
               pull
 
             GHCR_OWNER="$IMAGE_OWNER" docker compose \
-              -f backend/docker-compose.prod.yml \
+              -f docker-compose.prod.yml \
               up -d --remove-orphans
 
             docker image prune -f
