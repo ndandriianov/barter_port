@@ -34,7 +34,11 @@ func ParseConfig() (SeedConfig, error) {
 	fs := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
 
 	baseURL := fs.String("base-url", firstNonEmpty(os.Getenv("SEED_BASE_URL"), defaultBaseURL), "HTTP base URL for the app gateway")
-	smtp4devURL := fs.String("smtp4dev-url", firstNonEmpty(os.Getenv("SEED_SMTP4DEV_URL"), defaultSMTP4DevURL), "HTTP base URL for smtp4dev API/UI")
+	smtp4devURLDefault := defaultSMTP4DevURL
+	if rawSMTP4DevURL, ok := os.LookupEnv("SEED_SMTP4DEV_URL"); ok {
+		smtp4devURLDefault = rawSMTP4DevURL
+	}
+	smtp4devURL := fs.String("smtp4dev-url", smtp4devURLDefault, "HTTP base URL for smtp4dev API/UI")
 	smtp4devUser := fs.String("smtp4dev-user", strings.TrimSpace(os.Getenv("SEED_SMTP4DEV_USER")), "Optional smtp4dev HTTP basic auth username")
 	smtp4devPass := fs.String("smtp4dev-password", os.Getenv("SEED_SMTP4DEV_PASSWORD"), "Optional smtp4dev HTTP basic auth password")
 	password := fs.String("password", firstNonEmpty(os.Getenv("SEED_PASSWORD"), defaultPassword), "Password for seeded demo users")

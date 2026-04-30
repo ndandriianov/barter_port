@@ -64,16 +64,18 @@ func (c *SeedClient) ensureUser(ctx context.Context, email, password string) (re
 
 	registered, err := c.register(ctx, email, password)
 	if err == nil {
-		tokenValue, err := c.waitForVerificationTokenFromEmail(ctx, email, lastSeenID)
-		if err != nil {
-			return registerResponse{}, "", err
-		}
-		if err := c.verifyEmail(ctx, tokenValue); err != nil {
-			return registerResponse{}, "", fmt.Errorf("verify email %s: %w", email, err)
-		}
-
 		if err := c.waitForAuthProvisioning(ctx, registered.UserID); err != nil {
 			return registerResponse{}, "", err
+		}
+
+		if c.smtp4devConfigured() {
+			tokenValue, err := c.waitForVerificationTokenFromEmail(ctx, email, lastSeenID)
+			if err != nil {
+				return registerResponse{}, "", err
+			}
+			if err := c.verifyEmail(ctx, tokenValue); err != nil {
+				return registerResponse{}, "", fmt.Errorf("verify email %s: %w", email, err)
+			}
 		}
 
 		token, err := c.login(ctx, email, password)
@@ -94,6 +96,9 @@ func (c *SeedClient) ensureUser(ctx context.Context, email, password string) (re
 
 	token, err := c.login(ctx, email, password)
 	if err != nil && strings.Contains(strings.ToLower(err.Error()), "email not verified") {
+		if !c.smtp4devConfigured() {
+			return registerResponse{}, "", fmt.Errorf("user %s is not verified and smtp4dev is disabled", email)
+		}
 		lastSeenID, inboxErr := c.waitForLatestSMTP4DevMessageID(ctx)
 		if inboxErr != nil {
 			return registerResponse{}, "", fmt.Errorf("prepare smtp4dev checkpoint: %w", inboxErr)
@@ -137,6 +142,9 @@ func (c *SeedClient) ensureAdminToken(ctx context.Context, email, password strin
 
 	lowerErr := strings.ToLower(err.Error())
 	if strings.Contains(lowerErr, "email not verified") {
+		if !c.smtp4devConfigured() {
+			return "", fmt.Errorf("admin account %s is not verified and smtp4dev is disabled", email)
+		}
 		lastSeenID, inboxErr := c.waitForLatestSMTP4DevMessageID(ctx)
 		if inboxErr != nil {
 			return "", fmt.Errorf("prepare smtp4dev checkpoint for admin: %w", inboxErr)
@@ -174,15 +182,18 @@ func (c *SeedClient) ensureAdminToken(ctx context.Context, email, password strin
 
 	registered, registerErr := c.register(ctx, email, password)
 	if registerErr == nil {
-		tokenValue, err := c.waitForVerificationTokenFromEmail(ctx, email, lastSeenID)
-		if err != nil {
-			return "", err
-		}
-		if err := c.verifyEmail(ctx, tokenValue); err != nil {
-			return "", fmt.Errorf("verify admin email %s: %w", email, err)
-		}
 		if err := c.waitForAuthProvisioning(ctx, registered.UserID); err != nil {
 			return "", err
+		}
+
+		if c.smtp4devConfigured() {
+			tokenValue, err := c.waitForVerificationTokenFromEmail(ctx, email, lastSeenID)
+			if err != nil {
+				return "", err
+			}
+			if err := c.verifyEmail(ctx, tokenValue); err != nil {
+				return "", fmt.Errorf("verify admin email %s: %w", email, err)
+			}
 		}
 
 		token, err := c.login(ctx, email, password)
