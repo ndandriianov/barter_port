@@ -29,7 +29,7 @@
 	}
 
 	handle /swagger-specs/auth/swagger.json {
-		reverse_proxy auth:8081 {
+		reverse_proxy auth:8080 {
 			rewrite /swagger/doc.json
 		}
 	}
@@ -41,12 +41,12 @@
 
 	handle /swagger-specs/users/* {
 		uri replace /swagger-specs/users /swagger
-		reverse_proxy users:8082
+		reverse_proxy users:8080
 	}
 
 	handle /swagger-specs/chats/* {
 		uri replace /swagger-specs/chats /swagger
-		reverse_proxy chats:8083
+		reverse_proxy chats:8080
 	}
 
 	# SeaweedFS S3 — публичный доступ к файлам (аватарам) с клиента
@@ -57,17 +57,17 @@
 
 	# Auth service по префиксу /auth/*
 	handle /auth/* {
-		reverse_proxy auth:8081
+		reverse_proxy auth:8080
 	}
 
 	handle /users/admin/* {
 		uri replace /users/admin /admin
-		reverse_proxy users:8082
+		reverse_proxy users:8080
 	}
 
 	handle /chats/admin/* {
 		uri replace /chats/admin /admin
-		reverse_proxy chats:8083
+		reverse_proxy chats:8080
 	}
 
 	handle /deals/admin/* {
@@ -77,12 +77,12 @@
 
 	# Users service по префиксу /users/*
 	handle /users/* {
-		reverse_proxy users:8082
+		reverse_proxy users:8080
 	}
 
 	# Chats service по префиксу /chats*
 	handle /chats* {
-		reverse_proxy chats:8083
+		reverse_proxy chats:8080
 	}
 
 	# Всё остальное — основной backend
