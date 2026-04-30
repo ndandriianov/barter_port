@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -19,6 +20,7 @@ import (
 
 type Config struct {
 	Endpoint        string
+	FilerEndpoint   string
 	PublicBaseURL   string
 	Bucket          string
 	AccessKeyID     string
@@ -29,11 +31,14 @@ type Config struct {
 type Storage struct {
 	publicBaseURL string
 	bucket        string
+	filerEndpoint string
 	client        *s3.Client
+	httpClient    *http.Client
 }
 
 func NewStorage(cfg Config) (*Storage, error) {
 	endpoint := strings.TrimRight(cfg.Endpoint, "/")
+	filerEndpoint := strings.TrimRight(cfg.FilerEndpoint, "/")
 	publicBaseURL := strings.TrimRight(cfg.PublicBaseURL, "/")
 	bucket := strings.Trim(strings.TrimSpace(cfg.Bucket), "/")
 	accessKeyID := strings.TrimSpace(cfg.AccessKeyID)
@@ -71,6 +76,9 @@ func NewStorage(cfg Config) (*Storage, error) {
 	awsCfg.HTTPClient = &http.Client{
 		Timeout: 15 * time.Second,
 	}
+	httpClient := &http.Client{
+		Timeout: 15 * time.Second,
+	}
 
 	client := s3.NewFromConfig(awsCfg, func(o *s3.Options) {
 		o.BaseEndpoint = aws.String(endpoint)
@@ -83,7 +91,9 @@ func NewStorage(cfg Config) (*Storage, error) {
 	storage := &Storage{
 		publicBaseURL: publicBaseURL,
 		bucket:        bucket,
+		filerEndpoint: defaultFilerEndpoint(endpoint, filerEndpoint),
 		client:        client,
+		httpClient:    httpClient,
 	}
 
 	initCtx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
@@ -224,10 +234,95 @@ func (s *Storage) ensureBucket(ctx context.Context) error {
 	if _, ok := errors.AsType[*types.BucketAlreadyExists](err); ok || errors.As(err, &bucketAlreadyOwnedByYou) {
 		return nil
 	}
+	if shouldFallbackToFiler(err) {
+		if filerErr := s.ensureBucketViaFiler(ctx); filerErr == nil {
+			return nil
+		} else {
+			return fmt.Errorf("create bucket via s3: %w; create bucket via filer: %v", err, filerErr)
+		}
+	}
 
 	return fmt.Errorf("create bucket: %w", err)
 }
 
 func sameOrigin(a *url.URL, b *url.URL) bool {
 	return strings.EqualFold(a.Scheme, b.Scheme) && strings.EqualFold(a.Host, b.Host)
+}
+
+func shouldFallbackToFiler(err error) bool {
+	if err == nil {
+		return false
+	}
+	return strings.Contains(err.Error(), "SignatureDoesNotMatch")
+}
+
+func (s *Storage) ensureBucketViaFiler(ctx context.Context) error {
+	if s.filerEndpoint == "" {
+		return fmt.Errorf("filer endpoint is not configured")
+	}
+
+	bucketURL := s.filerEndpoint + "/buckets/" + url.PathEscape(s.bucket) + "/"
+
+	getReq, err := http.NewRequestWithContext(ctx, http.MethodGet, bucketURL, nil)
+	if err != nil {
+		return fmt.Errorf("build filer get bucket request: %w", err)
+	}
+	getResp, err := s.httpClient.Do(getReq)
+	if err != nil {
+		return fmt.Errorf("check filer bucket: %w", err)
+	}
+	io.Copy(io.Discard, getResp.Body)
+	getResp.Body.Close()
+	if getResp.StatusCode == http.StatusOK {
+		return nil
+	}
+	if getResp.StatusCode != http.StatusNotFound {
+		return fmt.Errorf("check filer bucket: unexpected status %d", getResp.StatusCode)
+	}
+
+	postReq, err := http.NewRequestWithContext(ctx, http.MethodPost, bucketURL, nil)
+	if err != nil {
+		return fmt.Errorf("build filer create bucket request: %w", err)
+	}
+	postResp, err := s.httpClient.Do(postReq)
+	if err != nil {
+		return fmt.Errorf("create filer bucket: %w", err)
+	}
+	io.Copy(io.Discard, postResp.Body)
+	postResp.Body.Close()
+	if postResp.StatusCode >= 200 && postResp.StatusCode < 300 {
+		return nil
+	}
+
+	return fmt.Errorf("create filer bucket: unexpected status %d", postResp.StatusCode)
+}
+
+func defaultFilerEndpoint(s3Endpoint string, configured string) string {
+	if configured != "" {
+		return configured
+	}
+
+	parsed, err := url.Parse(s3Endpoint)
+	if err != nil {
+		return ""
+	}
+
+	host := parsed.Hostname()
+	if host == "" {
+		return ""
+	}
+
+	port := parsed.Port()
+	switch port {
+	case "8333":
+		parsed.Host = host + ":8888"
+	default:
+		return ""
+	}
+
+	parsed.Path = ""
+	parsed.RawPath = ""
+	parsed.RawQuery = ""
+	parsed.Fragment = ""
+	return strings.TrimRight(parsed.String(), "/")
 }

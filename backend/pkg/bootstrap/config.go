@@ -68,6 +68,7 @@ type Config struct {
 
 	Storage struct {
 		Endpoint         string `mapstructure:"endpoint"`
+		FilerEndpoint    string `mapstructure:"filer_endpoint"`
 		PublicBaseURL    string `mapstructure:"public_base_url"`
 		AvatarBucket     string `mapstructure:"avatar_bucket"`
 		OfferPhotoBucket string `mapstructure:"offer_photo_bucket"`
@@ -152,6 +153,7 @@ func LoadConfig(options ConfigOptions) (Config, error) {
 	bindEnv(v, "admin.email")
 	bindEnv(v, "admin.password")
 	bindEnv(v, "storage.endpoint")
+	bindEnv(v, "storage.filer_endpoint")
 	bindEnv(v, "storage.public_base_url")
 	bindEnv(v, "storage.avatar_bucket")
 	bindEnv(v, "storage.offer_photo_bucket")

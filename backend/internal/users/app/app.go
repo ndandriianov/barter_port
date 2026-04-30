@@ -73,6 +73,7 @@ func NewApp(cfg bootstrap.Config) (*App, error) {
 	userRepo := user.NewRepository(app.db)
 	avatarStorage, err := avatarstorage.NewStorage(avatarstorage.Config{
 		Endpoint:        cfg.Storage.Endpoint,
+		FilerEndpoint:   cfg.Storage.FilerEndpoint,
 		PublicBaseURL:   cfg.Storage.PublicBaseURL,
 		Bucket:          cfg.Storage.AvatarBucket,
 		AccessKeyID:     cfg.Storage.AccessKeyID,

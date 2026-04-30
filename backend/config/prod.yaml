@@ -16,6 +16,7 @@ mailer:
 
 storage:
   endpoint: "http://seaweedfs:8333"
+  filer_endpoint: "http://seaweedfs:8888"
   public_base_url: "http://localhost/s3"
 
 auth_grpc_addr: "auth:50051"

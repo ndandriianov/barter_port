@@ -78,6 +78,7 @@ func main() {
 	offersRepo := offersr.NewRepository(db)
 	offerPhotoStorage, err := offerphotostorage.NewStorage(offerphotostorage.Config{
 		Endpoint:        cfg.Storage.Endpoint,
+		FilerEndpoint:   cfg.Storage.FilerEndpoint,
 		PublicBaseURL:   cfg.Storage.PublicBaseURL,
 		Bucket:          cfg.Storage.OfferPhotoBucket,
 		AccessKeyID:     cfg.Storage.AccessKeyID,
@@ -89,6 +90,7 @@ func main() {
 	}
 	itemPhotoStorage, err := itemphotostorage.NewStorage(itemphotostorage.Config{
 		Endpoint:        cfg.Storage.Endpoint,
+		FilerEndpoint:   cfg.Storage.FilerEndpoint,
 		PublicBaseURL:   cfg.Storage.PublicBaseURL,
 		Bucket:          cfg.Storage.OfferPhotoBucket,
 		AccessKeyID:     cfg.Storage.AccessKeyID,
