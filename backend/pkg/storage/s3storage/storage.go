@@ -80,18 +80,23 @@ func NewStorage(cfg Config) (*Storage, error) {
 		o.ContinueHeaderThresholdBytes = -1
 	})
 
-	return &Storage{
+	storage := &Storage{
 		publicBaseURL: publicBaseURL,
 		bucket:        bucket,
 		client:        client,
-	}, nil
+	}
+
+	initCtx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+
+	if err := storage.ensureBucket(initCtx); err != nil {
+		return nil, err
+	}
+
+	return storage, nil
 }
 
 func (s *Storage) PutObject(ctx context.Context, key string, contentType string, content []byte) error {
-	if err := s.ensureBucket(ctx); err != nil {
-		return err
-	}
-
 	_, err := s.client.PutObject(ctx, &s3.PutObjectInput{
 		Bucket:      aws.String(s.bucket),
 		Key:         aws.String(key),
@@ -118,10 +123,6 @@ func (s *Storage) ReplaceObject(ctx context.Context, key string, contentType str
 }
 
 func (s *Storage) CopyObject(ctx context.Context, sourceKey string, destinationKey string) error {
-	if err := s.ensureBucket(ctx); err != nil {
-		return err
-	}
-
 	_, err := s.client.CopyObject(ctx, &s3.CopyObjectInput{
 		Bucket:     aws.String(s.bucket),
 		CopySource: aws.String(s.bucket + "/" + sourceKey),
