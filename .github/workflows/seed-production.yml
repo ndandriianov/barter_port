@@ -1,0 +1,49 @@
+name: Seed Production Data
+
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Public base URL for the deployed app (for example, https://example.com). Leave empty to use SSH_HOST."
+        required: false
+        type: string
+
+concurrency:
+  group: production-seed
+  cancel-in-progress: false
+
+jobs:
+  seed:
+    name: Run seed-demo against production
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: backend/go.sum
+
+      - name: Resolve seed base URL
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          BASE_URL="${{ inputs.base_url }}"
+          if [ -z "$BASE_URL" ]; then
+            BASE_URL="http://${{ secrets.SSH_HOST }}"
+          fi
+
+          echo "SEED_BASE_URL=$BASE_URL" >> "$GITHUB_ENV"
+          echo "Using SEED_BASE_URL=$BASE_URL"
+
+      - name: Run seed-demo
+        working-directory: backend
+        env:
+          SEED_BASE_URL: ${{ env.SEED_BASE_URL }}
+          SEED_PASSWORD: ${{ secrets.SEED_PASSWORD }}
+          SEED_ADMIN_EMAIL: ${{ secrets.SEED_ADMIN_EMAIL }}
+          SEED_ADMIN_PASSWORD: ${{ secrets.SEED_ADMIN_PASSWORD }}
+        run: go run ./cmd/seed-demo

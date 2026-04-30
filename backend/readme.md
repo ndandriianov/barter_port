@@ -105,3 +105,34 @@ Seed теперь проходит обычный auth flow: после реги
 - `SEED_ADMIN_PASSWORD`
 - `SEED_TIMEOUT`
 - `SEED_POLL_INTERVAL`
+
+## Прод: очистка базы и перезапуск
+
+Если нужно полностью снести текущие данные в продовом docker-контуре и заново поднять приложение:
+
+```bash
+ssh <user>@<server>
+cd /srv/barter-port
+GHCR_OWNER=<github-owner> docker compose -f docker-compose.prod.yml down -v
+GHCR_OWNER=<github-owner> docker compose -f docker-compose.prod.yml up -d
+```
+
+Если нужно перед поднятием подтянуть свежие образы:
+
+```bash
+ssh <user>@<server>
+cd /srv/barter-port
+GHCR_OWNER=<github-owner> docker compose -f docker-compose.prod.yml pull
+GHCR_OWNER=<github-owner> docker compose -f docker-compose.prod.yml down -v
+GHCR_OWNER=<github-owner> docker compose -f docker-compose.prod.yml up -d
+```
+
+Что делает `down -v`:
+- останавливает и удаляет контейнеры;
+- удаляет named volumes, включая postgres data volume;
+- при следующем `up -d` базы создаются заново через `init.sql`, а сервисы прогоняют свои миграции на старте.
+
+После такого сброса:
+- админ создаётся заново при старте `auth`-сервиса;
+- demo-данные автоматически не появляются;
+- demo seed запускается только вручную через отдельный GitHub Actions workflow `Seed Production Data` или другим явным запуском.
