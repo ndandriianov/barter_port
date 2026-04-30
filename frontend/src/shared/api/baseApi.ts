@@ -23,7 +23,7 @@ const REAUTH_EXCLUDED_URLS = new Set([
 let refreshPromise: Promise<boolean> | null = null;
 
 const rawBaseQuery = fetchBaseQuery({
-  baseUrl: "http://localhost:80",
+  baseUrl: import.meta.env.VITE_API_BASE_URL ?? "",
   credentials: "include", // для refresh cookie
   paramsSerializer: (params) => {
     const searchParams = new URLSearchParams();

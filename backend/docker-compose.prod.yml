@@ -1,0 +1,180 @@
+x-s3-credentials: &s3_credentials
+  S3_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-barter-port-s3}
+  S3_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-barter-port-s3-secret}
+  S3_REGION: ${S3_REGION:-us-east-1}
+
+x-app-common: &app_common
+  restart: unless-stopped
+  env_file: ./.env
+  environment:
+    APP_ENV: docker
+    CONFIG_COMMON: /app/config/common.yaml
+  volumes:
+    - ./config:/app/config:ro
+
+services:
+  db:
+    image: postgres:16
+    container_name: barter-port-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: postgres
+    volumes:
+      - db_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  kafka:
+    image: apache/kafka:4.2.0
+    container_name: barter-port-kafka
+    restart: unless-stopped
+    environment:
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_NUM_PARTITIONS: 1
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    volumes:
+      - kafka_data:/var/lib/kafka/data
+
+  seaweedfs:
+    image: chrislusf/seaweedfs:4.06
+    container_name: barter-port-seaweedfs
+    restart: unless-stopped
+    environment:
+      <<: *s3_credentials
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - >
+        sed
+        -e "s|__S3_ACCESS_KEY_ID__|$${S3_ACCESS_KEY_ID}|g"
+        -e "s|__S3_SECRET_ACCESS_KEY__|$${S3_SECRET_ACCESS_KEY}|g"
+        /etc/seaweedfs/s3-config.json > /tmp/s3-config.json &&
+        exec weed server
+        -dir=/data
+        -volume.max=100
+        -master.volumeSizeLimitMB=128
+        -filer
+        -filer.allowedOrigins="*"
+        -s3
+        -s3.config=/tmp/s3-config.json
+    volumes:
+      - ./config/seaweedfs-s3.json:/etc/seaweedfs/s3-config.json:ro
+      - seaweed_data:/data
+
+  caddy:
+    image: caddy:2
+    container_name: barter-port-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile.prod:/etc/caddy/Caddyfile:ro
+      - /srv/barter-port/frontend:/srv/frontend:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+  swagger-ui:
+    image: swaggerapi/swagger-ui:latest
+    container_name: barter-port-swagger-ui
+    restart: unless-stopped
+    environment:
+      URLS: |
+        [
+          { "url": "/swagger-specs/auth/swagger.json", "name": "Auth API" },
+          { "url": "/swagger-specs/deals/swagger.yaml", "name": "Deals API" },
+          { "url": "/swagger-specs/users/swagger.yaml", "name": "Users API" },
+          { "url": "/swagger-specs/chats/swagger.yaml", "name": "Chats API" }
+        ]
+      BASE_URL: /docs
+
+  auth:
+    <<: *app_common
+    image: ghcr.io/${GHCR_OWNER}/barter-port-auth:latest
+    container_name: barter-port-auth
+    depends_on:
+      db:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+    environment:
+      APP_ENV: docker
+      CONFIG_COMMON: /app/config/common.yaml
+      CONFIG_SERVICE: /app/config/auth.yaml
+
+  deals:
+    <<: *app_common
+    image: ghcr.io/${GHCR_OWNER}/barter-port-deals:latest
+    container_name: barter-port-deals
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      APP_ENV: docker
+      CONFIG_COMMON: /app/config/common.yaml
+      CONFIG_SERVICE: /app/config/deals.yaml
+
+  users:
+    <<: *app_common
+    image: ghcr.io/${GHCR_OWNER}/barter-port-users:latest
+    container_name: barter-port-users
+    depends_on:
+      db:
+        condition: service_healthy
+      kafka:
+        condition: service_started
+      auth:
+        condition: service_started
+    environment:
+      APP_ENV: docker
+      CONFIG_COMMON: /app/config/common.yaml
+      CONFIG_SERVICE: /app/config/users.yaml
+      <<: *s3_credentials
+      STORAGE_ACCESS_KEY_ID: ${S3_ACCESS_KEY_ID:-barter-port-s3}
+      STORAGE_SECRET_ACCESS_KEY: ${S3_SECRET_ACCESS_KEY:-barter-port-s3-secret}
+      STORAGE_REGION: ${S3_REGION:-us-east-1}
+
+  chats:
+    <<: *app_common
+    image: ghcr.io/${GHCR_OWNER}/barter-port-chats:latest
+    container_name: barter-port-chats
+    depends_on:
+      db:
+        condition: service_healthy
+      deals:
+        condition: service_started
+    environment:
+      APP_ENV: docker
+      CONFIG_COMMON: /app/config/common.yaml
+      CONFIG_SERVICE: /app/config/chats.yaml
+
+volumes:
+  db_data:
+  kafka_data:
+  seaweed_data:
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,81 @@
+:80 {
+	log {
+		output stdout
+		format console
+	}
+
+	# Static frontend assets (JS/CSS/images built by Vite)
+	@staticAsset path_regexp `\.(js|css|ico|png|jpg|jpeg|svg|woff|woff2|webp|map|txt)$`
+	handle @staticAsset {
+		root * /srv/frontend
+		file_server
+	}
+
+	# React SPA routes — serve index.html
+	@spa path /app/* /login /register /verify-email /reset-password /
+	handle @spa {
+		root * /srv/frontend
+		rewrite * /index.html
+		file_server
+	}
+
+	# Swagger UI
+	handle /docs* {
+		reverse_proxy swagger-ui:8080
+	}
+	handle /swagger-specs/auth/swagger.json {
+		reverse_proxy auth:8081 {
+			rewrite /swagger/doc.json
+		}
+	}
+	handle /swagger-specs/deals/* {
+		uri replace /swagger-specs/deals /swagger
+		reverse_proxy deals:8080
+	}
+	handle /swagger-specs/users/* {
+		uri replace /swagger-specs/users /swagger
+		reverse_proxy users:8082
+	}
+	handle /swagger-specs/chats/* {
+		uri replace /swagger-specs/chats /swagger
+		reverse_proxy chats:8083
+	}
+
+	# SeaweedFS S3
+	handle /s3/* {
+		uri strip_prefix /s3
+		reverse_proxy seaweedfs:8333
+	}
+
+	# Auth service
+	handle /auth/* {
+		reverse_proxy auth:8081
+	}
+
+	# Users service (admin route rewrite)
+	handle /users/admin/* {
+		uri replace /users/admin /admin
+		reverse_proxy users:8082
+	}
+	handle /users/* {
+		reverse_proxy users:8082
+	}
+
+	# Chats service (admin route rewrite)
+	handle /chats/admin/* {
+		uri replace /chats/admin /admin
+		reverse_proxy chats:8083
+	}
+	handle /chats* {
+		reverse_proxy chats:8083
+	}
+
+	# Deals service — admin route rewrite + API catch-all
+	handle /deals/admin/* {
+		uri replace /deals/admin /admin
+		reverse_proxy deals:8080
+	}
+	handle {
+		reverse_proxy deals:8080
+	}
+}
