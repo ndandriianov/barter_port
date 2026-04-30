@@ -224,6 +224,8 @@ VITE_YANDEX_MAPS_API_KEY=<ваш ключ Яндекс Карт>
 
 Ключ Яндекс Карт нужен для карты выбора местоположения в офферах и профиле. Без ключа карта не загрузится, но остальной функционал работает.
 
+В production-сборке через GitHub Actions ключ берётся из repository secret `YANDEX_MAPS_API_KEY` и прокидывается в frontend build как `VITE_YANDEX_MAPS_API_KEY`.
+
 ---
 
 ## Функциональные требования
