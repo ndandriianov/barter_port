@@ -17,7 +17,7 @@ import {
 } from "@mui/material";
 import offersApi from "@/features/offers/api/offersApi";
 import dealsApi from "@/features/deals/api/dealsApi";
-import type { Offer } from "@/features/offers/model/types";
+import type { Offer, SuitableOffersListItem } from "@/features/offers/model/types";
 import { getCreateDraftDealErrorMessage } from "@/shared/utils/getCreateDraftErrorMessage.ts";
 
 interface RespondToOfferModalProps {
@@ -37,8 +37,8 @@ function RespondToOfferModal({ targetOffer, isOpen, onClose }: RespondToOfferMod
     onClose();
   };
 
-  const { data, isLoading, error } = offersApi.useGetOffersQuery(
-    { sort: "ByTime", my: true, cursor_limit: 100 },
+  const { data, isLoading, error } = offersApi.useListSuitableOffersQuery(
+    targetOffer.id,
     { skip: !isOpen },
   );
 
@@ -46,8 +46,8 @@ function RespondToOfferModal({ targetOffer, isOpen, onClose }: RespondToOfferMod
     dealsApi.useCreateDraftDealMutation();
 
   const selectedOffers = useMemo(
-    () => data?.offers.filter((entry) => selectedOfferIds.includes(entry.id)) ?? [],
-    [data?.offers, selectedOfferIds],
+    () => (data ?? []).filter((entry) => selectedOfferIds.includes(entry.offerId)),
+    [data, selectedOfferIds],
   );
 
   const quantitiesByOfferId = useMemo(() => {
@@ -98,8 +98,8 @@ function RespondToOfferModal({ targetOffer, isOpen, onClose }: RespondToOfferMod
       offers: [
         { offerID: targetOffer.id, quantity: 1 },
         ...selectedOffers.map((offer) => ({
-          offerID: offer.id,
-          quantity: quantitiesByOfferId[offer.id] ?? 1,
+          offerID: offer.offerId,
+          quantity: quantitiesByOfferId[offer.offerId] ?? 1,
         })),
       ],
     }).unwrap();
@@ -125,18 +125,18 @@ function RespondToOfferModal({ targetOffer, isOpen, onClose }: RespondToOfferMod
         {error && <Alert severity="error">Не удалось загрузить ваши объявления</Alert>}
 
         {!isLoading && !error && data && (
-          data.offers.length === 0 ? (
+          data.length === 0 ? (
             <Typography color="text.secondary">У вас пока нет объявлений для отклика</Typography>
           ) : (
             <FormControl component="fieldset" fullWidth>
               <Box display="flex" flexDirection="column">
-                {data.offers.map((offer) => {
-                  const isSelected = selectedOfferIds.includes(offer.id);
-                  const quantityError = isSelected && quantitiesByOfferId[offer.id] === null;
+                {data.map((offer: SuitableOffersListItem) => {
+                  const isSelected = selectedOfferIds.includes(offer.offerId);
+                  const quantityError = isSelected && quantitiesByOfferId[offer.offerId] === null;
 
                   return (
                     <Box
-                      key={offer.id}
+                      key={offer.offerId}
                       display="flex"
                       alignItems="flex-start"
                       justifyContent="space-between"
@@ -145,7 +145,7 @@ function RespondToOfferModal({ targetOffer, isOpen, onClose }: RespondToOfferMod
                     >
                       <FormControlLabel
                         control={
-                          <Checkbox checked={isSelected} onChange={() => toggleSelectedOffer(offer.id)} />
+                          <Checkbox checked={isSelected} onChange={() => toggleSelectedOffer(offer.offerId)} />
                         }
                         label={
                           <Box>
@@ -167,8 +167,8 @@ function RespondToOfferModal({ targetOffer, isOpen, onClose }: RespondToOfferMod
                           label="Количество"
                           type="number"
                           size="small"
-                          value={offerQuantities[offer.id] ?? "1"}
-                          onChange={(e) => updateOfferQuantity(offer.id, e.target.value)}
+                          value={offerQuantities[offer.offerId] ?? "1"}
+                          onChange={(e) => updateOfferQuantity(offer.offerId, e.target.value)}
                           error={quantityError}
                           helperText={quantityError ? "Минимум 1" : " "}
                           slotProps={{ htmlInput: { min: 1, step: 1 } }}

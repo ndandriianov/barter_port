@@ -5,6 +5,7 @@ import {
   getOffersResponseSchema,
   listTagsResponseSchema,
   listOfferReportsResponseSchema,
+  listSuitableOffersResponseSchema,
   offerReportDetailsSchema,
   offerReportSchema,
   offerReportsForOfferSchema,
@@ -19,6 +20,7 @@ import type {
   GetOffersResponse,
   GetSubscribedOffersParams,
   ListOfferReportsResponse,
+  ListSuitableOffersResponse,
   ListTagsResponse,
   Offer,
   OfferReport,
@@ -283,6 +285,11 @@ const offersApi = createApi({
       query: (reportId) => `/admin/offer-reports/${reportId}`,
       transformResponse: (response: unknown) => offerReportDetailsSchema.parse(response),
       providesTags: (_result, _error, reportId) => [{ type: "AdminOfferReports", id: reportId }],
+    }),
+
+    listSuitableOffers: builder.query<ListSuitableOffersResponse, string>({
+      query: (offerId) => `/offers/suitable-for/${offerId}`,
+      transformResponse: (response: unknown) => listSuitableOffersResponseSchema.parse(response),
     }),
 
     resolveAdminOfferReport: builder.mutation<OfferReport, { reportId: string; body: ResolveOfferReportRequest }>({

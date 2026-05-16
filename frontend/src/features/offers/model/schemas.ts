@@ -92,3 +92,13 @@ export const getFavoriteOffersResponseSchema = z.object({
 });
 
 export const listTagsResponseSchema = z.array(z.string());
+
+export const suitableOffersListItemSchema = z.object({
+  offerId: z.string(),
+  name: z.string(),
+  description: z.string(),
+  action: offerActionSchema,
+  type: offerTypeSchema,
+});
+
+export const listSuitableOffersResponseSchema = z.array(suitableOffersListItemSchema);
