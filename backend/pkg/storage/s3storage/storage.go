@@ -99,11 +99,39 @@ func NewStorage(cfg Config) (*Storage, error) {
 	initCtx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 
-	if err := storage.ensureBucket(initCtx); err != nil {
-		return nil, err
+	var lastErr error
+	for {
+		lastErr = storage.ensureBucket(initCtx)
+		if lastErr == nil {
+			break
+		}
+		if initCtx.Err() != nil {
+			break
+		}
+		if !isTransientError(lastErr) {
+			break
+		}
+		select {
+		case <-time.After(2 * time.Second):
+		case <-initCtx.Done():
+		}
+	}
+	if lastErr != nil {
+		return nil, lastErr
 	}
 
 	return storage, nil
+}
+
+func isTransientError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "connection reset by peer") ||
+		strings.Contains(msg, "connection refused") ||
+		strings.Contains(msg, "no such host") ||
+		strings.Contains(msg, "i/o timeout")
 }
 
 func (s *Storage) PutObject(ctx context.Context, key string, contentType string, content []byte) error {

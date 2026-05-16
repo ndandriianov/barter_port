@@ -1,0 +1,6 @@
+storage:
+  endpoint: "http://127.0.0.1:8333"
+  public_base_url: "http://127.0.0.1:8333"
+
+mailer:
+  bypass: true
