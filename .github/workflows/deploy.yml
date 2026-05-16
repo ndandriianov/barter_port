@@ -131,9 +131,6 @@ jobs:
             cd /srv/barter-port
 
             printf '%s' "$PROD_ENV" > .env
-            if ! grep -q '^FRONTEND_URL=' .env; then
-              printf '\nFRONTEND_URL=http://%s\n' "$DEPLOY_HOST" >> .env
-            fi
 
             echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
 
@@ -144,5 +141,7 @@ jobs:
             GHCR_OWNER="$IMAGE_OWNER" docker compose \
               -f docker-compose.prod.yml \
               up -d --remove-orphans
+
+            docker compose -f docker-compose.prod.yml restart caddy
 
             docker image prune -f
