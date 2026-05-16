@@ -1105,3 +1105,318 @@ func mustRegisterDealsUser(t *testing.T) registerResponse {
 
 	return user
 }
+
+// ================================================================================
+// LIST SUITABLE OFFERS
+// ================================================================================
+
+func TestListSuitableOffersReturnsMatchingOffers(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	requesterID := uuid.New()
+	targetAuthorID := uuid.New()
+
+	// target offer is "give" — requester needs to have "give" offers to respond
+	targetOffer := mustCreateOfferDetails(t, targetAuthorID, types.CreateOfferRequest{
+		Name:        "target offer",
+		Description: "something to respond to",
+		Type:        types.Good,
+		Action:      types.Give,
+	})
+
+	// requester has two "give" offers and one "take" offer
+	matchA := mustCreateOfferDetails(t, requesterID, types.CreateOfferRequest{
+		Name:        "suitable give A",
+		Description: "desc A",
+		Type:        types.Good,
+		Action:      types.Give,
+	})
+	matchB := mustCreateOfferDetails(t, requesterID, types.CreateOfferRequest{
+		Name:        "suitable give B",
+		Description: "desc B",
+		Type:        types.Service,
+		Action:      types.Give,
+	})
+	mustCreateOfferWithAction(t, requesterID, types.Take)
+
+	result := mustListSuitableOffers(t, requesterID, targetOffer.Id)
+
+	ids := make([]uuid.UUID, 0, len(result))
+	for _, item := range result {
+		ids = append(ids, item.OfferId)
+	}
+	require.Contains(t, ids, matchA.Id)
+	require.Contains(t, ids, matchB.Id)
+	// "take" offer must not appear
+	for _, item := range result {
+		require.Equal(t, types.Give, item.Action)
+	}
+}
+
+func TestListSuitableOffersResponseFields(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	requesterID := uuid.New()
+	targetAuthorID := uuid.New()
+
+	targetOffer := mustCreateOfferDetails(t, targetAuthorID, types.CreateOfferRequest{
+		Name:        "target",
+		Description: "target desc",
+		Type:        types.Good,
+		Action:      types.Take,
+	})
+
+	created := mustCreateOfferDetails(t, requesterID, types.CreateOfferRequest{
+		Name:        "my suitable offer",
+		Description: "my desc",
+		Type:        types.Service,
+		Action:      types.Take,
+	})
+
+	result := mustListSuitableOffers(t, requesterID, targetOffer.Id)
+
+	var found *types.SuitableOffersListItem
+	for i := range result {
+		if result[i].OfferId == created.Id {
+			found = &result[i]
+			break
+		}
+	}
+	require.NotNil(t, found)
+	require.Equal(t, created.Id, found.OfferId)
+	require.Equal(t, "my suitable offer", found.Name)
+	require.Equal(t, "my desc", found.Description)
+	require.Equal(t, types.Take, found.Action)
+	require.Equal(t, types.Service, found.Type)
+}
+
+func TestListSuitableOffersExcludesOffersHiddenByAuthor(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	requesterID := uuid.New()
+	targetAuthorID := uuid.New()
+
+	targetOffer := mustCreateOfferDetails(t, targetAuthorID, types.CreateOfferRequest{
+		Name:        "target",
+		Description: "desc",
+		Type:        types.Good,
+		Action:      types.Give,
+	})
+
+	hiddenOffer := mustCreateOfferDetails(t, requesterID, types.CreateOfferRequest{
+		Name:        "hidden by author",
+		Description: "desc",
+		Type:        types.Good,
+		Action:      types.Give,
+	})
+	mustHideOfferByAuthor(t, requesterID, hiddenOffer.Id)
+
+	result := mustListSuitableOffers(t, requesterID, targetOffer.Id)
+
+	for _, item := range result {
+		require.NotEqual(t, hiddenOffer.Id, item.OfferId)
+	}
+}
+
+func TestListSuitableOffersExcludesOffersHiddenByModerator(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	requesterID := uuid.New()
+	targetAuthorID := uuid.New()
+
+	targetOffer := mustCreateOfferDetails(t, targetAuthorID, types.CreateOfferRequest{
+		Name:        "target",
+		Description: "desc",
+		Type:        types.Good,
+		Action:      types.Give,
+	})
+
+	hiddenOffer := mustCreateOfferDetails(t, requesterID, types.CreateOfferRequest{
+		Name:        "hidden by moderator",
+		Description: "desc",
+		Type:        types.Good,
+		Action:      types.Give,
+	})
+	mustSetOfferHidden(t, hiddenOffer.Id, true)
+
+	result := mustListSuitableOffers(t, requesterID, targetOffer.Id)
+
+	for _, item := range result {
+		require.NotEqual(t, hiddenOffer.Id, item.OfferId)
+	}
+}
+
+func TestListSuitableOffersSortedNewestFirst(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	requesterID := uuid.New()
+	targetAuthorID := uuid.New()
+
+	targetOffer := mustCreateOfferDetails(t, targetAuthorID, types.CreateOfferRequest{
+		Name:        "target",
+		Description: "desc",
+		Type:        types.Good,
+		Action:      types.Give,
+	})
+
+	olderOffer := mustCreateOfferDetails(t, requesterID, types.CreateOfferRequest{
+		Name:        "older offer",
+		Description: "desc",
+		Type:        types.Good,
+		Action:      types.Give,
+	})
+	newerOffer := mustCreateOfferDetails(t, requesterID, types.CreateOfferRequest{
+		Name:        "newer offer",
+		Description: "desc",
+		Type:        types.Good,
+		Action:      types.Give,
+	})
+
+	baseTime := time.Now()
+	mustSetOfferCreatedAt(t, olderOffer.Id, baseTime.Add(-2*time.Second))
+	mustSetOfferCreatedAt(t, newerOffer.Id, baseTime.Add(-1*time.Second))
+
+	result := mustListSuitableOffers(t, requesterID, targetOffer.Id)
+
+	var olderIdx, newerIdx int = -1, -1
+	for i, item := range result {
+		if item.OfferId == olderOffer.Id {
+			olderIdx = i
+		}
+		if item.OfferId == newerOffer.Id {
+			newerIdx = i
+		}
+	}
+	require.NotEqual(t, -1, olderIdx)
+	require.NotEqual(t, -1, newerIdx)
+	require.Less(t, newerIdx, olderIdx, "newer offer must appear before older offer")
+}
+
+func TestListSuitableOffersReturnsEmptyWhenNoMatchingOffers(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	requesterID := uuid.New()
+	targetAuthorID := uuid.New()
+
+	// target is "give", but requester only has "take" offers
+	targetOffer := mustCreateOfferDetails(t, targetAuthorID, types.CreateOfferRequest{
+		Name:        "target",
+		Description: "desc",
+		Type:        types.Good,
+		Action:      types.Give,
+	})
+	mustCreateOfferWithAction(t, requesterID, types.Take)
+
+	result := mustListSuitableOffers(t, requesterID, targetOffer.Id)
+	require.Empty(t, result)
+}
+
+func TestListSuitableOffersReturnsEmptyWhenRequesterHasNoOffers(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	requesterID := uuid.New()
+	targetAuthorID := uuid.New()
+
+	targetOffer := mustCreateOfferDetails(t, targetAuthorID, types.CreateOfferRequest{
+		Name:        "target",
+		Description: "desc",
+		Type:        types.Good,
+		Action:      types.Give,
+	})
+
+	result := mustListSuitableOffers(t, requesterID, targetOffer.Id)
+	require.Empty(t, result)
+}
+
+func TestListSuitableOffersOwnOfferReturns409(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	ownOffer := mustCreateOfferDetails(t, userID, types.CreateOfferRequest{
+		Name:        "my own offer",
+		Description: "desc",
+		Type:        types.Good,
+		Action:      types.Give,
+	})
+
+	resp := doListSuitableOffers(t, userID, ownOffer.Id)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusConflict, resp.StatusCode)
+}
+
+func TestListSuitableOffersNotFoundReturns404(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	resp := doListSuitableOffers(t, userID, uuid.New())
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
+
+func TestListSuitableOffersUnauthorizedReturns401(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	targetAuthorID := uuid.New()
+	targetOffer := mustCreateOfferDetails(t, targetAuthorID, types.CreateOfferRequest{
+		Name:        "target",
+		Description: "desc",
+		Type:        types.Good,
+		Action:      types.Give,
+	})
+
+	req := mustRequest(t, http.MethodGet, dealsURL()+"/offers/suitable-for/"+targetOffer.Id.String(), nil)
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+}
+
+func TestListSuitableOffersInvalidUUIDReturns400(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	userID := uuid.New()
+	req := mustUserRequest(t, http.MethodGet, dealsURL()+"/offers/suitable-for/not-a-uuid", userID, nil)
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusBadRequest, resp.StatusCode)
+}
+
+func TestListSuitableOffersDoesNotReturnOtherUsersOffers(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	requesterID := uuid.New()
+	targetAuthorID := uuid.New()
+	thirdUserID := uuid.New()
+
+	targetOffer := mustCreateOfferDetails(t, targetAuthorID, types.CreateOfferRequest{
+		Name:        "target",
+		Description: "desc",
+		Type:        types.Good,
+		Action:      types.Give,
+	})
+
+	// third user has a matching offer — must not appear in requester's suitable list
+	thirdUserOffer := mustCreateOfferDetails(t, thirdUserID, types.CreateOfferRequest{
+		Name:        "third user give offer",
+		Description: "desc",
+		Type:        types.Good,
+		Action:      types.Give,
+	})
+
+	result := mustListSuitableOffers(t, requesterID, targetOffer.Id)
+
+	for _, item := range result {
+		require.NotEqual(t, thirdUserOffer.Id, item.OfferId)
+	}
+}

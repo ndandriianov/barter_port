@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Alert,
@@ -17,8 +17,10 @@ import {
 } from "@mui/material";
 import offersApi from "@/features/offers/api/offersApi";
 import dealsApi from "@/features/deals/api/dealsApi";
-import type { Offer } from "@/features/offers/model/types";
+import type { Offer, SuitableOffersListItem } from "@/features/offers/model/types";
 import { getCreateDraftDealErrorMessage } from "@/shared/utils/getCreateDraftErrorMessage.ts";
+
+const RANGED_TIMEOUT_MS = Number(import.meta.env.VITE_LLM_RANGED_TIMEOUT_MS ?? 5000);
 
 interface RespondToOfferModalProps {
   targetOffer: Offer;
@@ -26,9 +28,12 @@ interface RespondToOfferModalProps {
   onClose: () => void;
 }
 
+type AnyOfferItem = SuitableOffersListItem & { comment?: string };
+
 function RespondToOfferModal({ targetOffer, isOpen, onClose }: RespondToOfferModalProps) {
   const [selectedOfferIds, setSelectedOfferIds] = useState<string[]>([]);
   const [offerQuantities, setOfferQuantities] = useState<Record<string, string>>({});
+  const [useFallback, setUseFallback] = useState(false);
   const navigate = useNavigate();
 
   const closeModal = () => {
@@ -37,17 +42,45 @@ function RespondToOfferModal({ targetOffer, isOpen, onClose }: RespondToOfferMod
     onClose();
   };
 
-  const { data, isLoading, error } = offersApi.useGetOffersQuery(
-    { sort: "ByTime", my: true, cursor_limit: 100 },
-    { skip: !isOpen },
+  // Сброс fallback при закрытии модала, чтобы при следующем открытии снова пробовать ranged
+  useEffect(() => {
+    if (!isOpen) setUseFallback(false);
+  }, [isOpen]);
+
+  const rangedQuery = offersApi.useListSuitableOffersRangedQuery(
+    targetOffer.id,
+    { skip: !isOpen || useFallback },
   );
+
+  const fallbackQuery = offersApi.useListSuitableOffersQuery(
+    targetOffer.id,
+    { skip: !isOpen || !useFallback },
+  );
+
+  // Таймаут: если ranged не ответил за RANGED_TIMEOUT_MS — переключаемся на fallback
+  useEffect(() => {
+    if (!isOpen || useFallback || rangedQuery.isSuccess) return;
+    const timer = setTimeout(() => setUseFallback(true), RANGED_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [isOpen, useFallback, rangedQuery.isSuccess]);
+
+  // 503 от бэкенда (LLM недоступен) — немедленный fallback
+  useEffect(() => {
+    const err = rangedQuery.error;
+    if (err && typeof err === "object" && "status" in err && err.status === 503) {
+      setUseFallback(true);
+    }
+  }, [rangedQuery.error]);
+
+  const { data, isLoading, error } = useFallback ? fallbackQuery : rangedQuery;
+  const offers = (data ?? []) as AnyOfferItem[];
 
   const [createDraftDeal, { isLoading: isCreating, error: createError }] =
     dealsApi.useCreateDraftDealMutation();
 
   const selectedOffers = useMemo(
-    () => data?.offers.filter((entry) => selectedOfferIds.includes(entry.id)) ?? [],
-    [data?.offers, selectedOfferIds],
+    () => offers.filter((entry) => selectedOfferIds.includes(entry.offerId)),
+    [offers, selectedOfferIds],
   );
 
   const quantitiesByOfferId = useMemo(() => {
@@ -67,7 +100,7 @@ function RespondToOfferModal({ targetOffer, isOpen, onClose }: RespondToOfferMod
 
       if (isSelected) {
         setOfferQuantities((quantities) => {
-          const next = {...quantities};
+          const next = { ...quantities };
           delete next[offerId];
           return next;
         });
@@ -98,8 +131,8 @@ function RespondToOfferModal({ targetOffer, isOpen, onClose }: RespondToOfferMod
       offers: [
         { offerID: targetOffer.id, quantity: 1 },
         ...selectedOffers.map((offer) => ({
-          offerID: offer.id,
-          quantity: quantitiesByOfferId[offer.id] ?? 1,
+          offerID: offer.offerId,
+          quantity: quantitiesByOfferId[offer.offerId] ?? 1,
         })),
       ],
     }).unwrap();
@@ -125,18 +158,18 @@ function RespondToOfferModal({ targetOffer, isOpen, onClose }: RespondToOfferMod
         {error && <Alert severity="error">Не удалось загрузить ваши объявления</Alert>}
 
         {!isLoading && !error && data && (
-          data.offers.length === 0 ? (
+          offers.length === 0 ? (
             <Typography color="text.secondary">У вас пока нет объявлений для отклика</Typography>
           ) : (
             <FormControl component="fieldset" fullWidth>
               <Box display="flex" flexDirection="column">
-                {data.offers.map((offer) => {
-                  const isSelected = selectedOfferIds.includes(offer.id);
-                  const quantityError = isSelected && quantitiesByOfferId[offer.id] === null;
+                {offers.map((offer) => {
+                  const isSelected = selectedOfferIds.includes(offer.offerId);
+                  const quantityError = isSelected && quantitiesByOfferId[offer.offerId] === null;
 
                   return (
                     <Box
-                      key={offer.id}
+                      key={offer.offerId}
                       display="flex"
                       alignItems="flex-start"
                       justifyContent="space-between"
@@ -145,7 +178,7 @@ function RespondToOfferModal({ targetOffer, isOpen, onClose }: RespondToOfferMod
                     >
                       <FormControlLabel
                         control={
-                          <Checkbox checked={isSelected} onChange={() => toggleSelectedOffer(offer.id)} />
+                          <Checkbox checked={isSelected} onChange={() => toggleSelectedOffer(offer.offerId)} />
                         }
                         label={
                           <Box>
@@ -155,6 +188,11 @@ function RespondToOfferModal({ targetOffer, isOpen, onClose }: RespondToOfferMod
                             {offer.description && (
                               <Typography variant="body2" color="text.secondary">
                                 {offer.description}
+                              </Typography>
+                            )}
+                            {offer.comment && (
+                              <Typography variant="caption" color="primary.main" fontStyle="italic">
+                                {offer.comment}
                               </Typography>
                             )}
                           </Box>
@@ -167,8 +205,8 @@ function RespondToOfferModal({ targetOffer, isOpen, onClose }: RespondToOfferMod
                           label="Количество"
                           type="number"
                           size="small"
-                          value={offerQuantities[offer.id] ?? "1"}
-                          onChange={(e) => updateOfferQuantity(offer.id, e.target.value)}
+                          value={offerQuantities[offer.offerId] ?? "1"}
+                          onChange={(e) => updateOfferQuantity(offer.offerId, e.target.value)}
                           error={quantityError}
                           helperText={quantityError ? "Минимум 1" : " "}
                           slotProps={{ htmlInput: { min: 1, step: 1 } }}

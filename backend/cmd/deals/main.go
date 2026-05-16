@@ -12,6 +12,7 @@ import (
 	reviewssvc "barter-port/internal/deals/application/reviews"
 	statisticssvc "barter-port/internal/deals/application/statistics"
 	penaltyoutbox "barter-port/internal/deals/infrastructure/kafka/producer/penalty-outbox"
+	"barter-port/internal/deals/infrastructure/llm"
 	"barter-port/internal/deals/infrastructure/repository/deals"
 	"barter-port/internal/deals/infrastructure/repository/drafts"
 	failuresrepo "barter-port/internal/deals/infrastructure/repository/failures"
@@ -134,7 +135,9 @@ func main() {
 
 	adminChecker := authkit.NewAdminChecker(authClient)
 	draftsRepo := drafts.NewRepository()
-	offersService := offers.NewService(db, offersRepo, draftsRepo, usersClient, offerPhotoStorage, adminChecker, logg)
+	llmRanker := llm.NewDeepSeekRanker(cfg.LLM.APIKey, cfg.LLM.BaseURL, cfg.LLM.Model)
+	offersService := offers.NewService(db, offersRepo, draftsRepo, usersClient, offerPhotoStorage, adminChecker, logg).
+		WithRanker(llmRanker)
 
 	dealsRepo := deals.NewRepository()
 	failuresRepo := failuresrepo.NewRepository(dealsRepo)

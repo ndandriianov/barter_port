@@ -5,6 +5,7 @@ import (
 	"barter-port/internal/deals/domain"
 	"barter-port/internal/deals/domain/enums"
 	"barter-port/internal/deals/domain/htypes"
+	"barter-port/internal/deals/infrastructure/llm"
 	"barter-port/internal/deals/infrastructure/repository/drafts"
 	offersrep "barter-port/internal/deals/infrastructure/repository/offers"
 	"barter-port/pkg/authkit"
@@ -46,6 +47,12 @@ type Service struct {
 	usersClient    userspb.UsersServiceClient
 	adminChecker   *authkit.AdminChecker
 	fallbackLogger *slog.Logger
+	ranker         llm.Ranker
+}
+
+func (s *Service) WithRanker(r llm.Ranker) *Service {
+	s.ranker = r
+	return s
 }
 
 func NewService(
@@ -1098,6 +1105,91 @@ func (s *Service) DeleteTag(ctx context.Context, requesterID uuid.UUID, rawName 
 	}
 
 	return s.repo.DeleteTagByName(ctx, s.db, normalized)
+}
+
+// ================================================================================
+// SUITABLE OFFERS
+// ================================================================================
+
+// ListSuitableOffers returns offers owned by requesterID that have the same action
+// as the target offer and can be used to respond to it.
+//
+// Errors:
+//   - domain.ErrOfferNotFound: target offer does not exist
+//   - domain.ErrOwnOfferResponse: requester is the author of the target offer
+func (s *Service) ListSuitableOffers(ctx context.Context, requesterID uuid.UUID, targetOfferID uuid.UUID) ([]domain.Offer, error) {
+	target, err := s.repo.GetOfferByID(ctx, targetOfferID)
+	if err != nil {
+		return nil, err
+	}
+
+	if target.AuthorId == requesterID {
+		return nil, domain.ErrOwnOfferResponse
+	}
+
+	return s.repo.ListSuitableOffers(ctx, requesterID, target.Action.String(), targetOfferID)
+}
+
+// ListSuitableOffersRanged returns the same set as ListSuitableOffers but ranked
+// by LLM relevance with a per-offer comment.
+//
+// Errors:
+//   - domain.ErrOfferNotFound
+//   - domain.ErrOwnOfferResponse
+//   - llm.ErrLLMUnavailable
+func (s *Service) ListSuitableOffersRanged(ctx context.Context, requesterID uuid.UUID, targetOfferID uuid.UUID) ([]domain.RankedOffer, error) {
+	candidates, err := s.ListSuitableOffers(ctx, requesterID, targetOfferID)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(candidates) == 0 {
+		return []domain.RankedOffer{}, nil
+	}
+
+	target, err := s.repo.GetOfferByID(ctx, targetOfferID)
+	if err != nil {
+		return nil, err
+	}
+
+	targetInfo := llm.OfferInfo{
+		OfferID:     target.ID,
+		Name:        target.Name,
+		Description: target.Description,
+		Tags:        target.Tags,
+	}
+
+	candidateInfos := make([]llm.OfferInfo, 0, len(candidates))
+	for _, c := range candidates {
+		candidateInfos = append(candidateInfos, llm.OfferInfo{
+			OfferID:     c.ID,
+			Name:        c.Name,
+			Description: c.Description,
+			Tags:        c.Tags,
+		})
+	}
+
+	ranked, err := s.ranker.Rank(ctx, targetInfo, candidateInfos)
+	if err != nil {
+		return nil, err
+	}
+
+	// Index candidates by ID for O(1) lookup.
+	byID := make(map[uuid.UUID]domain.Offer, len(candidates))
+	for _, c := range candidates {
+		byID[c.ID] = c
+	}
+
+	result := make([]domain.RankedOffer, 0, len(ranked))
+	for _, r := range ranked {
+		offer, ok := byID[r.OfferID]
+		if !ok {
+			continue
+		}
+		result = append(result, domain.RankedOffer{Offer: offer, Comment: r.Comment})
+	}
+
+	return result, nil
 }
 
 func extractTagFilter(tagFilter *[]string) ([]string, bool) {

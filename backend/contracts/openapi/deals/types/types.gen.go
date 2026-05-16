@@ -949,6 +949,12 @@ type ListOffersResponse struct {
 	Offers []Offer `json:"offers"`
 }
 
+// ListSuitableOffersRangedResponse defines model for ListSuitableOffersRangedResponse.
+type ListSuitableOffersRangedResponse = []SuitableOffersRangedListItem
+
+// ListSuitableOffersResponse defines model for ListSuitableOffersResponse.
+type ListSuitableOffersResponse = []SuitableOffersListItem
+
 // ListTagsResponse defines model for ListTagsResponse.
 type ListTagsResponse = []TagName
 
@@ -1467,6 +1473,45 @@ type ReviewSummary struct {
 	// Count Общее количество отзывов в выборке.
 	Count           int                   `json:"count"`
 	RatingBreakdown ReviewRatingBreakdown `json:"ratingBreakdown"`
+}
+
+// SuitableOffersListItem defines model for SuitableOffersListItem.
+type SuitableOffersListItem struct {
+	// Action Whether the user offers or requests something
+	Action OfferAction `json:"action"`
+
+	// Description Описание объявления, подходящего для сделки
+	Description string `json:"description"`
+
+	// Name Название объявления, подходящего для сделки
+	Name string `json:"name"`
+
+	// OfferId Идентификатор объявления, подходящего для сделки
+	OfferId openapi_types.UUID `json:"offerId"`
+
+	// Type Type of barter item
+	Type ItemType `json:"type"`
+}
+
+// SuitableOffersRangedListItem defines model for SuitableOffersRangedListItem.
+type SuitableOffersRangedListItem struct {
+	// Action Whether the user offers or requests something
+	Action OfferAction `json:"action"`
+
+	// Comment Комментарий к тому, почему объявление подходит для сделки. Может быть пустой строкой, но не может быть null.
+	Comment *string `json:"comment,omitempty"`
+
+	// Description Описание объявления, подходящего для сделки
+	Description string `json:"description"`
+
+	// Name Название объявления, подходящего для сделки
+	Name string `json:"name"`
+
+	// OfferId Идентификатор объявления, подходящего для сделки
+	OfferId openapi_types.UUID `json:"offerId"`
+
+	// Type Type of barter item
+	Type ItemType `json:"type"`
 }
 
 // TagName Имя тега. Сервер выполняет нормализацию `trim + lowercase`.

@@ -47,4 +47,5 @@ var (
 	ErrSelfReport              = errors.New("cannot report own offer")
 	ErrReporterAlreadyAttached = errors.New("reporter already attached to this report")
 	ErrModificationBlocked     = errors.New("offer modification is blocked due to pending report")
+	ErrOwnOfferResponse        = errors.New("cannot respond to own offer")
 )

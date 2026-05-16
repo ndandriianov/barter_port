@@ -2177,6 +2177,104 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
+  /offers/suitable-for/{offerId}:
+    get:
+      tags:
+        - offers
+      summary: Список подходящих объявлений для отклика
+      description: |
+        Возвращает список объявлений, которые подходят для отклика на выбранное предложение.
+        Список сортируется по новизне.
+      operationId: listSuitableOffers
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: offerId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Список подходящих объявлений
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListSuitableOffersResponse'
+        '400':
+          description: Invalid offer ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Offer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /offers/suitable-for/{offerId}/ranged:
+    get:
+      tags:
+        - offers
+      summary: Список подходящих объявлений для отклика, отсортированный llm по релевантности
+      description: |
+        Возвращает список объявлений, которые подходят для отклика на выбранное предложение.
+        Список сортируется по релевантности.
+      operationId: listSuitableOffersRanged
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: offerId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Список подходящих объявлений
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListSuitableOffersRangedResponse'
+        '400':
+          description: Invalid offer ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Offer not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
   /tags:
     get:
       tags:
@@ -4723,6 +4821,63 @@ components:
           description: |
             Долгота точки объявления.
             Должна передаваться вместе с `latitude`.
+    SuitableOffersListItem:
+      type: object
+      required:
+        - name
+        - offerId
+        - description
+        - action
+        - type
+      properties:
+        name:
+          type: string
+          description: Название объявления, подходящего для сделки
+        offerId:
+          type: string
+          format: uuid
+          description: Идентификатор объявления, подходящего для сделки
+        description:
+          type: string
+          description: Описание объявления, подходящего для сделки
+        action:
+          $ref: '#/components/schemas/OfferAction'
+        type:
+          $ref: '#/components/schemas/ItemType'
+    ListSuitableOffersResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/SuitableOffersListItem'
+    SuitableOffersRangedListItem:
+      type: object
+      required:
+        - name
+        - offerId
+        - description
+        - action
+        - type
+      properties:
+        name:
+          type: string
+          description: Название объявления, подходящего для сделки
+        offerId:
+          type: string
+          format: uuid
+          description: Идентификатор объявления, подходящего для сделки
+        description:
+          type: string
+          description: Описание объявления, подходящего для сделки
+        action:
+          $ref: '#/components/schemas/OfferAction'
+        type:
+          $ref: '#/components/schemas/ItemType'
+        comment:
+          type: string
+          description: Комментарий к тому, почему объявление подходит для сделки. Может быть пустой строкой, но не может быть null.
+    ListSuitableOffersRangedResponse:
+      type: array
+      items:
+        $ref: '#/components/schemas/SuitableOffersRangedListItem'
     ListTagsResponse:
       type: array
       items:

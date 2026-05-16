@@ -313,3 +313,16 @@ FailureMaterialResponse:
       type: string
       format: uuid
       description: Идентификатор чата, в котором обсуждалась сделка, если чат был создан
+
+
+
+ListSuitableOffersResponse:
+  type: array
+  items:
+    $ref: 'schemas.yaml#/SuitableOffersListItem'
+
+
+ListSuitableOffersRangedResponse:
+  type: array
+  items:
+    $ref: 'schemas.yaml#/SuitableOffersRangedListItem'

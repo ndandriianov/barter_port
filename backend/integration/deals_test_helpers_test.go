@@ -1102,3 +1102,19 @@ func mustVoteForFailure(t *testing.T, userID uuid.UUID, dealID uuid.UUID, votedF
 	defer func() { _ = resp.Body.Close() }()
 	require.Equal(t, http.StatusNoContent, resp.StatusCode)
 }
+
+func doListSuitableOffers(t *testing.T, userID uuid.UUID, targetOfferID uuid.UUID) *http.Response {
+	t.Helper()
+	req := mustUserRequest(t, http.MethodGet, dealsURL()+"/offers/suitable-for/"+targetOfferID.String(), userID, nil)
+	return mustDo(t, req)
+}
+
+func mustListSuitableOffers(t *testing.T, userID uuid.UUID, targetOfferID uuid.UUID) []types.SuitableOffersListItem {
+	t.Helper()
+	resp := doListSuitableOffers(t, userID, targetOfferID)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	var result []types.SuitableOffersListItem
+	require.NoError(t, json.NewDecoder(resp.Body).Decode(&result))
+	return result
+}

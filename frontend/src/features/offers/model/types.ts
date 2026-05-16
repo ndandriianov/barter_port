@@ -6,6 +6,8 @@ import {
   getOffersResponseSchema,
   listTagsResponseSchema,
   listOfferReportsResponseSchema,
+  listSuitableOffersRangedResponseSchema,
+  listSuitableOffersResponseSchema,
   offerActionSchema,
   offerReportDetailsSchema,
   offerReportMessageSchema,
@@ -15,6 +17,8 @@ import {
   offerReportsForOfferSchema,
   offerSchema,
   offerTypeSchema,
+  suitableOffersListItemSchema,
+  suitableOffersRangedListItemSchema,
   universalCursorSchema,
 } from "@/features/offers/model/schemas.ts";
 
@@ -32,6 +36,10 @@ export type UniversalCursor = z.Infer<typeof universalCursorSchema>;
 export type FavoriteOffersCursor = z.Infer<typeof favoriteOffersCursorSchema>;
 export type FavoritedOffer = z.Infer<typeof favoritedOfferSchema>;
 export type ListOfferReportsResponse = z.Infer<typeof listOfferReportsResponseSchema>;
+export type SuitableOffersListItem = z.Infer<typeof suitableOffersListItemSchema>;
+export type ListSuitableOffersResponse = z.Infer<typeof listSuitableOffersResponseSchema>;
+export type SuitableOffersRangedListItem = z.Infer<typeof suitableOffersRangedListItemSchema>;
+export type ListSuitableOffersRangedResponse = z.Infer<typeof listSuitableOffersRangedResponseSchema>;
 
 export type SortType = "ByTime" | "ByPopularity" | "ByDistance";
 

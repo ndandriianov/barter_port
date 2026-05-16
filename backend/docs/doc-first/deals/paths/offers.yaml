@@ -1034,3 +1034,129 @@ adminOfferReportResolution:
           application/json:
             schema:
               $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+mySuitableOffers:
+  get:
+    tags:
+      - offers
+    summary: Список подходящих объявлений для отклика
+    description: |
+      Возвращает список объявлений, которые подходят для отклика на выбранное предложение.
+      
+      Подходящими считаются объявления, которые соответствуют следующим критериям:
+      - имеет тот же Action, что и предложение offerId
+      - автором является пользователь, отправивший запрос
+      
+      Вернуть 409 если offerId создан автором запроса, так как пользователь не может откликнуться на своё предложение.
+      
+      Список сортируется по новизне.
+    operationId: listSuitableOffers
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - name: offerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: Список подходящих объявлений
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ListSuitableOffersResponse'
+      '400':
+        description: Invalid offer ID
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Offer not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '409':
+        description: Невозможно подобрать объявления для данного предложения
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+
+
+
+mySuitableOffersRanged:
+  get:
+    tags:
+      - offers
+    summary: Список подходящих объявлений для отклика, отсортированный llm по релевантности
+    description: |
+      Возвращает список объявлений, которые подходят для отклика на выбранное предложение.
+      
+      Все то же самое что и для listSuitableOffers, но с сортировкой и комментариями от LLM,
+      которые объясняют релевантность каждого объявления к предложению offerId.
+      
+      Список сортируется по релевантности.
+    operationId: listSuitableOffersRanged
+    security:
+      - bearerAuth: [ ]
+    parameters:
+      - name: offerId
+        in: path
+        required: true
+        schema:
+          type: string
+          format: uuid
+    responses:
+      '200':
+        description: Список подходящих объявлений
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ListSuitableOffersRangedResponse'
+      '400':
+        description: Invalid offer ID
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '401':
+        description: Unauthorized
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '404':
+        description: Offer not found
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '409':
+        description: Невозможно подобрать объявления для данного предложения
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
+      '500':
+        description: Internal server error
+        content:
+          application/json:
+            schema:
+              $ref: '../components/responses.yaml#/ErrorResponse'
