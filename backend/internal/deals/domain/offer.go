@@ -33,6 +33,11 @@ type Offer struct {
 	DraftsCount         *int              `db:"-"`
 }
 
+type RankedOffer struct {
+	Offer
+	Comment string
+}
+
 func (i Offer) EffectivelyHidden() bool {
 	return i.IsHidden || i.HiddenByAuthor
 }

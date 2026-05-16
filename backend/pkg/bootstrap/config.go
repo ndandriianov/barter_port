@@ -78,6 +78,12 @@ type Config struct {
 		Region           string `mapstructure:"region"`
 	} `mapstructure:"storage"`
 
+	LLM struct {
+		APIKey  string `mapstructure:"api_key"`
+		BaseURL string `mapstructure:"base_url"`
+		Model   string `mapstructure:"model"`
+	} `mapstructure:"llm"`
+
 	Port                int    `mapstructure:"port"`
 	AuthGRPCAddr        string `mapstructure:"auth_grpc_addr"`
 	AuthGRPCListenAddr  string `mapstructure:"auth_grpc_listen_addr"`
@@ -163,6 +169,9 @@ func LoadConfig(options ConfigOptions) (Config, error) {
 	bindEnv(v, "storage.region")
 	bindEnv(v, "reputation.deal_completion_reward_points")
 	bindEnv(v, "reputation.review_creation_reward_points")
+	bindEnv(v, "llm.api_key")
+	bindEnv(v, "llm.base_url")
+	bindEnv(v, "llm.model")
 
 	// десериализация в структуру
 	var config Config

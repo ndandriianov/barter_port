@@ -6,6 +6,7 @@ import (
 	"barter-port/internal/deals/domain"
 	"barter-port/internal/deals/domain/enums"
 	"barter-port/internal/deals/domain/htypes"
+	"barter-port/internal/deals/infrastructure/llm"
 	"barter-port/pkg/authkit"
 	"barter-port/pkg/httpx"
 	"barter-port/pkg/logger"
@@ -927,6 +928,58 @@ func (h *Handlers) HandleListSuitableOffers(w http.ResponseWriter, r *http.Reque
 			Description: o.Description,
 			Action:      types.OfferAction(o.Action.String()),
 			Type:        types.ItemType(o.Type.String()),
+		})
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, result)
+}
+
+// ================================================================================
+// LIST SUITABLE OFFERS RANGED
+// ================================================================================
+
+func (h *Handlers) HandleListSuitableOffersRanged(w http.ResponseWriter, r *http.Request) {
+	log := logger.LogFrom(r.Context(), slog.Default()).With(slog.String("handler", "ListSuitableOffersRanged"))
+
+	userID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		log.Error("failed to get userID from context")
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
+	offerID, ok := parseOfferID(w, r)
+	if !ok {
+		return
+	}
+
+	offers, err := h.offerService.ListSuitableOffersRanged(r.Context(), userID, offerID)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrOfferNotFound):
+			httpx.WriteEmptyError(w, http.StatusNotFound)
+		case errors.Is(err, domain.ErrOwnOfferResponse):
+			httpx.WriteEmptyError(w, http.StatusConflict)
+		case errors.Is(err, llm.ErrLLMUnavailable):
+			log.Error("llm unavailable", slog.Any("error", err))
+			httpx.WriteEmptyError(w, http.StatusServiceUnavailable)
+		default:
+			log.Error("failed to list suitable offers ranged", slog.Any("error", err))
+			httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	result := make([]types.SuitableOffersRangedListItem, 0, len(offers))
+	for _, o := range offers {
+		comment := o.Comment
+		result = append(result, types.SuitableOffersRangedListItem{
+			OfferId:     o.ID,
+			Name:        o.Name,
+			Description: o.Description,
+			Action:      types.OfferAction(o.Action.String()),
+			Type:        types.ItemType(o.Type.String()),
+			Comment:     &comment,
 		})
 	}
 
