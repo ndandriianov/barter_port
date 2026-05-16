@@ -1,0 +1,29 @@
+name: Teardown Production
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "yes" to confirm teardown (stops all services and deletes all data)'
+        required: true
+
+jobs:
+  teardown:
+    name: Teardown
+    runs-on: ubuntu-latest
+    if: ${{ github.event.inputs.confirm == 'yes' }}
+
+    steps:
+      - name: Teardown on server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            cd /srv/barter-port
+
+            docker compose -f docker-compose.prod.yml down -v --remove-orphans
+
+            docker image prune -af
