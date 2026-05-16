@@ -54,6 +54,10 @@ paths:
     $ref: './paths/failures.yaml#/dealFailureModeratorResolution'
   /offers:
     $ref: './paths/offers.yaml#/offers'
+  /offers/suitable-for/{offerId}:
+    $ref: './paths/offers.yaml#/mySuitableOffers'
+  /offers/suitable-for/{offerId}/ranged:
+    $ref: './paths/offers.yaml#/mySuitableOffersRanged'
   /tags:
     $ref: './paths/tags.yaml#/tagsCollection'
   /offers/subscriptions:

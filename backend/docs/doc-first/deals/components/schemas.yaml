@@ -1513,3 +1513,57 @@ AdminUserReceivedReportStatistics:
       type: integer
       minimum: 0
       description: Число отклонённых жалоб, полученных пользователем
+
+
+SuitableOffersListItem:
+  type: object
+  required:
+    - name
+    - offerId
+    - description
+    - action
+    - type
+  properties:
+    name:
+      type: string
+      description: Название объявления, подходящего для сделки
+    offerId:
+      type: string
+      format: uuid
+      description: Идентификатор объявления, подходящего для сделки
+    description:
+      type: string
+      description: Описание объявления, подходящего для сделки
+    action:
+      $ref: '#/OfferAction'
+    type:
+      $ref: '#/ItemType'
+
+
+
+SuitableOffersRangedListItem:
+  type: object
+  required:
+    - name
+    - offerId
+    - description
+    - action
+    - type
+  properties:
+    name:
+      type: string
+      description: Название объявления, подходящего для сделки
+    offerId:
+      type: string
+      format: uuid
+      description: Идентификатор объявления, подходящего для сделки
+    description:
+      type: string
+      description: Описание объявления, подходящего для сделки
+    action:
+      $ref: '#/OfferAction'
+    type:
+      $ref: '#/ItemType'
+    comment:
+      type: string
+      description: Комментарий к тому, почему объявление подходит для сделки. Может быть пустой строкой, но не может быть null.
