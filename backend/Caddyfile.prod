@@ -1,3 +1,7 @@
+:80 {
+	redir https://barterport.online{uri} permanent
+}
+
 barterport.online {
 	log {
 		output stdout
