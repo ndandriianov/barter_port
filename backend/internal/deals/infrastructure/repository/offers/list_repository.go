@@ -623,6 +623,29 @@ func (r *Repository) GetFavoriteOffersNoCursor(
 	return offersAndFavoriteCursor(r.scanFavoriteOffers(ctx, query, userID, limit, isAdmin))
 }
 
+// ================================================================================
+// SUITABLE OFFERS
+// ================================================================================
+
+func (r *Repository) ListSuitableOffers(
+	ctx context.Context,
+	authorID uuid.UUID,
+	targetAction string,
+	excludeOfferID uuid.UUID,
+) ([]domain.Offer, error) {
+	query := `
+		SELECT ` + rowsToSelect + `
+		FROM offers
+		WHERE author_id = $1
+		  AND action = $2
+		  AND id != $3
+		  AND NOT is_hidden
+		  AND NOT hidden_by_author
+		ORDER BY created_at DESC, id DESC`
+
+	return repox.FetchStructs[domain.Offer](ctx, r.db, query, authorID, targetAction, excludeOfferID)
+}
+
 func (r *Repository) scanFavoriteOffers(ctx context.Context, query string, args ...interface{}) ([]domain.FavoritedOffer, error) {
 	rows, err := r.db.Query(ctx, query, args...)
 	if err != nil {

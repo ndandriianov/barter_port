@@ -1100,6 +1100,29 @@ func (s *Service) DeleteTag(ctx context.Context, requesterID uuid.UUID, rawName 
 	return s.repo.DeleteTagByName(ctx, s.db, normalized)
 }
 
+// ================================================================================
+// SUITABLE OFFERS
+// ================================================================================
+
+// ListSuitableOffers returns offers owned by requesterID that have the same action
+// as the target offer and can be used to respond to it.
+//
+// Errors:
+//   - domain.ErrOfferNotFound: target offer does not exist
+//   - domain.ErrOwnOfferResponse: requester is the author of the target offer
+func (s *Service) ListSuitableOffers(ctx context.Context, requesterID uuid.UUID, targetOfferID uuid.UUID) ([]domain.Offer, error) {
+	target, err := s.repo.GetOfferByID(ctx, targetOfferID)
+	if err != nil {
+		return nil, err
+	}
+
+	if target.AuthorId == requesterID {
+		return nil, domain.ErrOwnOfferResponse
+	}
+
+	return s.repo.ListSuitableOffers(ctx, requesterID, target.Action.String(), targetOfferID)
+}
+
 func extractTagFilter(tagFilter *[]string) ([]string, bool) {
 	if tagFilter == nil {
 		return nil, false

@@ -885,3 +885,50 @@ func newRequestLocationFromParams(userLat *types.Latitude, userLon *types.Longit
 		Lon: float64(*userLon),
 	}, nil
 }
+
+// ================================================================================
+// LIST SUITABLE OFFERS
+// ================================================================================
+
+func (h *Handlers) HandleListSuitableOffers(w http.ResponseWriter, r *http.Request) {
+	log := logger.LogFrom(r.Context(), slog.Default()).With(slog.String("handler", "ListSuitableOffers"))
+
+	userID, ok := authkit.UserIDFromContext(r.Context())
+	if !ok {
+		log.Error("failed to get userID from context")
+		httpx.WriteEmptyError(w, http.StatusUnauthorized)
+		return
+	}
+
+	offerID, ok := parseOfferID(w, r)
+	if !ok {
+		return
+	}
+
+	offers, err := h.offerService.ListSuitableOffers(r.Context(), userID, offerID)
+	if err != nil {
+		switch {
+		case errors.Is(err, domain.ErrOfferNotFound):
+			httpx.WriteEmptyError(w, http.StatusNotFound)
+		case errors.Is(err, domain.ErrOwnOfferResponse):
+			httpx.WriteEmptyError(w, http.StatusConflict)
+		default:
+			log.Error("failed to list suitable offers", slog.Any("error", err))
+			httpx.WriteEmptyError(w, http.StatusInternalServerError)
+		}
+		return
+	}
+
+	result := make([]types.SuitableOffersListItem, 0, len(offers))
+	for _, o := range offers {
+		result = append(result, types.SuitableOffersListItem{
+			OfferId:     o.ID,
+			Name:        o.Name,
+			Description: o.Description,
+			Action:      types.OfferAction(o.Action.String()),
+			Type:        types.ItemType(o.Type.String()),
+		})
+	}
+
+	httpx.WriteJSON(w, http.StatusOK, result)
+}
