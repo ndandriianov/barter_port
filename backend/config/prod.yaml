@@ -17,7 +17,10 @@ mailer:
 storage:
   endpoint: "http://seaweedfs:8333"
   filer_endpoint: "http://seaweedfs:8888"
-  public_base_url: "http://localhost/s3"
+  public_base_url: "https://barterport.online/s3"
+
+frontend:
+  url: "https://barterport.online"
 
 auth_grpc_addr: "auth:50051"
 auth_grpc_listen_addr: ":50051"
