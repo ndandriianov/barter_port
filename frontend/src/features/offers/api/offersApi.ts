@@ -5,6 +5,7 @@ import {
   getOffersResponseSchema,
   listTagsResponseSchema,
   listOfferReportsResponseSchema,
+  listSuitableOffersRangedResponseSchema,
   listSuitableOffersResponseSchema,
   offerReportDetailsSchema,
   offerReportSchema,
@@ -20,6 +21,7 @@ import type {
   GetOffersResponse,
   GetSubscribedOffersParams,
   ListOfferReportsResponse,
+  ListSuitableOffersRangedResponse,
   ListSuitableOffersResponse,
   ListTagsResponse,
   Offer,
@@ -290,6 +292,11 @@ const offersApi = createApi({
     listSuitableOffers: builder.query<ListSuitableOffersResponse, string>({
       query: (offerId) => `/offers/suitable-for/${offerId}`,
       transformResponse: (response: unknown) => listSuitableOffersResponseSchema.parse(response),
+    }),
+
+    listSuitableOffersRanged: builder.query<ListSuitableOffersRangedResponse, string>({
+      query: (offerId) => `/offers/suitable-for/${offerId}/ranged`,
+      transformResponse: (response: unknown) => listSuitableOffersRangedResponseSchema.parse(response),
     }),
 
     resolveAdminOfferReport: builder.mutation<OfferReport, { reportId: string; body: ResolveOfferReportRequest }>({

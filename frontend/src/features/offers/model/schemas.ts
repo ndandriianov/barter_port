@@ -102,3 +102,9 @@ export const suitableOffersListItemSchema = z.object({
 });
 
 export const listSuitableOffersResponseSchema = z.array(suitableOffersListItemSchema);
+
+export const suitableOffersRangedListItemSchema = suitableOffersListItemSchema.extend({
+  comment: z.string().optional().transform((v) => v ?? ""),
+});
+
+export const listSuitableOffersRangedResponseSchema = z.array(suitableOffersRangedListItemSchema);

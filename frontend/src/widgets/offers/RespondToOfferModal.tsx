@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Alert,
@@ -20,15 +20,20 @@ import dealsApi from "@/features/deals/api/dealsApi";
 import type { Offer, SuitableOffersListItem } from "@/features/offers/model/types";
 import { getCreateDraftDealErrorMessage } from "@/shared/utils/getCreateDraftErrorMessage.ts";
 
+const RANGED_TIMEOUT_MS = Number(import.meta.env.VITE_LLM_RANGED_TIMEOUT_MS ?? 5000);
+
 interface RespondToOfferModalProps {
   targetOffer: Offer;
   isOpen: boolean;
   onClose: () => void;
 }
 
+type AnyOfferItem = SuitableOffersListItem & { comment?: string };
+
 function RespondToOfferModal({ targetOffer, isOpen, onClose }: RespondToOfferModalProps) {
   const [selectedOfferIds, setSelectedOfferIds] = useState<string[]>([]);
   const [offerQuantities, setOfferQuantities] = useState<Record<string, string>>({});
+  const [useFallback, setUseFallback] = useState(false);
   const navigate = useNavigate();
 
   const closeModal = () => {
@@ -37,17 +42,45 @@ function RespondToOfferModal({ targetOffer, isOpen, onClose }: RespondToOfferMod
     onClose();
   };
 
-  const { data, isLoading, error } = offersApi.useListSuitableOffersQuery(
+  // Сброс fallback при закрытии модала, чтобы при следующем открытии снова пробовать ranged
+  useEffect(() => {
+    if (!isOpen) setUseFallback(false);
+  }, [isOpen]);
+
+  const rangedQuery = offersApi.useListSuitableOffersRangedQuery(
     targetOffer.id,
-    { skip: !isOpen },
+    { skip: !isOpen || useFallback },
   );
+
+  const fallbackQuery = offersApi.useListSuitableOffersQuery(
+    targetOffer.id,
+    { skip: !isOpen || !useFallback },
+  );
+
+  // Таймаут: если ranged не ответил за RANGED_TIMEOUT_MS — переключаемся на fallback
+  useEffect(() => {
+    if (!isOpen || useFallback || rangedQuery.isSuccess) return;
+    const timer = setTimeout(() => setUseFallback(true), RANGED_TIMEOUT_MS);
+    return () => clearTimeout(timer);
+  }, [isOpen, useFallback, rangedQuery.isSuccess]);
+
+  // 503 от бэкенда (LLM недоступен) — немедленный fallback
+  useEffect(() => {
+    const err = rangedQuery.error;
+    if (err && typeof err === "object" && "status" in err && err.status === 503) {
+      setUseFallback(true);
+    }
+  }, [rangedQuery.error]);
+
+  const { data, isLoading, error } = useFallback ? fallbackQuery : rangedQuery;
+  const offers = (data ?? []) as AnyOfferItem[];
 
   const [createDraftDeal, { isLoading: isCreating, error: createError }] =
     dealsApi.useCreateDraftDealMutation();
 
   const selectedOffers = useMemo(
-    () => (data ?? []).filter((entry) => selectedOfferIds.includes(entry.offerId)),
-    [data, selectedOfferIds],
+    () => offers.filter((entry) => selectedOfferIds.includes(entry.offerId)),
+    [offers, selectedOfferIds],
   );
 
   const quantitiesByOfferId = useMemo(() => {
@@ -67,7 +100,7 @@ function RespondToOfferModal({ targetOffer, isOpen, onClose }: RespondToOfferMod
 
       if (isSelected) {
         setOfferQuantities((quantities) => {
-          const next = {...quantities};
+          const next = { ...quantities };
           delete next[offerId];
           return next;
         });
@@ -125,12 +158,12 @@ function RespondToOfferModal({ targetOffer, isOpen, onClose }: RespondToOfferMod
         {error && <Alert severity="error">Не удалось загрузить ваши объявления</Alert>}
 
         {!isLoading && !error && data && (
-          data.length === 0 ? (
+          offers.length === 0 ? (
             <Typography color="text.secondary">У вас пока нет объявлений для отклика</Typography>
           ) : (
             <FormControl component="fieldset" fullWidth>
               <Box display="flex" flexDirection="column">
-                {data.map((offer: SuitableOffersListItem) => {
+                {offers.map((offer) => {
                   const isSelected = selectedOfferIds.includes(offer.offerId);
                   const quantityError = isSelected && quantitiesByOfferId[offer.offerId] === null;
 
@@ -155,6 +188,11 @@ function RespondToOfferModal({ targetOffer, isOpen, onClose }: RespondToOfferMod
                             {offer.description && (
                               <Typography variant="body2" color="text.secondary">
                                 {offer.description}
+                              </Typography>
+                            )}
+                            {offer.comment && (
+                              <Typography variant="caption" color="primary.main" fontStyle="italic">
+                                {offer.comment}
                               </Typography>
                             )}
                           </Box>
