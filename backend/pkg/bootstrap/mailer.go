@@ -24,6 +24,9 @@ func InitMailerFromConfig(cfg Config) *mailer.SMTPMailer {
 }
 
 func ValidateMailConfig(cfg Config) error {
+	if cfg.Mailer.Bypass {
+		return nil
+	}
 	if cfg.Mailer.Host == "" {
 		return fmt.Errorf("mail.host is required")
 	}

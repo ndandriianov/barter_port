@@ -3,6 +3,7 @@ package bootstrap
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -118,7 +119,7 @@ func LoadConfig(options ConfigOptions) (Config, error) {
 
 	// конфиг для конкретного окружения, может быть не указан, тогда будет использоваться только общий и сервисный
 	if options.AppEnv != "" {
-		overridePath := "./config/" + options.AppEnv + ".yaml"
+		overridePath := filepath.Join(filepath.Dir(options.CommonPath), options.AppEnv+".yaml")
 		if _, err := os.Stat(overridePath); err == nil {
 			v.SetConfigFile(overridePath)
 			if err := v.MergeInConfig(); err != nil {
