@@ -4,6 +4,7 @@ import FavoriteBorderOutlinedIcon from "@mui/icons-material/FavoriteBorderOutlin
 import NotificationsActiveOutlinedIcon from "@mui/icons-material/NotificationsActiveOutlined";
 import StorefrontOutlinedIcon from "@mui/icons-material/StorefrontOutlined";
 import { Link as RouterLink } from "react-router-dom";
+import usersApi from "@/features/users/api/usersApi.ts";
 import OffersListWidget from "@/widgets/offers/OffersListWidget.tsx";
 import { appRoutes } from "@/shared/config/appRoutes.ts";
 
@@ -29,6 +30,9 @@ const meta: Record<MarketCatalogMode, { title: string; description: string }> = 
 };
 
 function MarketCatalogPage({ mode }: MarketCatalogPageProps) {
+  const { data: currentUser } = usersApi.useGetCurrentUserQuery();
+  const effectiveMode = currentUser?.isAdmin ? "others" : mode;
+
   return (
     <Stack spacing={3}>
       <Box display="flex" justifyContent="space-between" alignItems="flex-start" gap={2} flexWrap="wrap">
@@ -37,10 +41,10 @@ function MarketCatalogPage({ mode }: MarketCatalogPageProps) {
             Объявления / Каталог
           </Typography>
           <Typography variant="h4" fontWeight={800} mb={1}>
-            {meta[mode].title}
+            {meta[effectiveMode].title}
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            {meta[mode].description}
+            {meta[effectiveMode].description}
           </Typography>
         </Box>
         <Button
@@ -66,30 +70,34 @@ function MarketCatalogPage({ mode }: MarketCatalogPageProps) {
         <Button
           component={RouterLink}
           to={appRoutes.market.catalog}
-          variant={mode === "others" ? "contained" : "text"}
+          variant={effectiveMode === "others" ? "contained" : "text"}
           startIcon={<StorefrontOutlinedIcon />}
         >
           Все
         </Button>
-        <Button
-          component={RouterLink}
-          to={appRoutes.market.catalogSubscriptions}
-          variant={mode === "subscriptions" ? "contained" : "text"}
-          startIcon={<NotificationsActiveOutlinedIcon />}
-        >
-          Подписки
-        </Button>
-        <Button
-          component={RouterLink}
-          to={appRoutes.market.catalogFavorites}
-          variant={mode === "favorites" ? "contained" : "text"}
-          startIcon={<FavoriteBorderOutlinedIcon />}
-        >
-          Избранное
-        </Button>
+        {!currentUser?.isAdmin ? (
+          <Button
+            component={RouterLink}
+            to={appRoutes.market.catalogSubscriptions}
+            variant={effectiveMode === "subscriptions" ? "contained" : "text"}
+            startIcon={<NotificationsActiveOutlinedIcon />}
+          >
+            Подписки
+          </Button>
+        ) : null}
+        {!currentUser?.isAdmin ? (
+          <Button
+            component={RouterLink}
+            to={appRoutes.market.catalogFavorites}
+            variant={effectiveMode === "favorites" ? "contained" : "text"}
+            startIcon={<FavoriteBorderOutlinedIcon />}
+          >
+            Избранное
+          </Button>
+        ) : null}
       </ButtonGroup>
 
-      <OffersListWidget mode={mode} />
+      <OffersListWidget mode={effectiveMode} />
     </Stack>
   );
 }
