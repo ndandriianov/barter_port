@@ -35,25 +35,27 @@ function MarketHomePage() {
             </Typography>
           </Box>
 
-          <Box display="flex" gap={1.5} flexWrap="wrap">
-            <Button
-              component={RouterLink}
-              to={appRoutes.market.createOffer}
-              variant="contained"
-              color="secondary"
-              startIcon={<AddCircleOutlineOutlinedIcon />}
-            >
-              Создать объявление
-            </Button>
-            <Button
-              component={RouterLink}
-              to={appRoutes.market.createExchangeGroup}
-              variant="outlined"
-              sx={{ color: "common.white", borderColor: "rgba(255,255,255,0.4)" }}
-            >
-              Создать группу объявлений
-            </Button>
-          </Box>
+          {!currentUser?.isAdmin ? (
+            <Box display="flex" gap={1.5} flexWrap="wrap">
+              <Button
+                component={RouterLink}
+                to={appRoutes.market.createOffer}
+                variant="contained"
+                color="secondary"
+                startIcon={<AddCircleOutlineOutlinedIcon />}
+              >
+                Создать объявление
+              </Button>
+              <Button
+                component={RouterLink}
+                to={appRoutes.market.createExchangeGroup}
+                variant="outlined"
+                sx={{ color: "common.white", borderColor: "rgba(255,255,255,0.4)" }}
+              >
+                Создать группу объявлений
+              </Button>
+            </Box>
+          ) : null}
         </Stack>
       </Box>
 
