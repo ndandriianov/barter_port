@@ -63,7 +63,7 @@ function OfferReviewsPage() {
       <Box display="flex" justifyContent="space-between" alignItems="flex-start" gap={2} flexWrap="wrap" mb={3}>
         <div>
           <Typography variant="h4" fontWeight={700}>
-            Отзывы по offer
+            Отзывы по объявлению
           </Typography>
           <Typography variant="body1" color="text.secondary" mt={1}>
             {offer.name}
@@ -71,7 +71,7 @@ function OfferReviewsPage() {
         </div>
 
         <Button component={RouterLink} to={`/offers/${offer.id}`} variant="outlined">
-          Вернуться к offer
+          Вернуться к объявлению
         </Button>
       </Box>
 
