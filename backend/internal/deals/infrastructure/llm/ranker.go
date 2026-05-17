@@ -44,10 +44,22 @@ func NewDeepSeekRanker(apiKey, baseURL, model string) *DeepSeekRanker {
 	return &DeepSeekRanker{client: client, model: model}
 }
 
-const systemPrompt = `You are a barter matching assistant. Given a target offer and candidate offers, rank the candidates by relevance to the target and briefly explain each match.
-Respond with a JSON array only, no extra text:
-[{"offerId":"<uuid>","comment":"<why it matches>"},...]
-Ordered from most to least relevant. Language: Russian.`
+const systemPrompt = `
+		You are a barter matching assistant. Given a target offer and candidate offers, rank the candidates by relevance to the target, prioritizing items with approximately equal market value, category similarity, condition, and exchange fairness.
+		
+		Important:
+		- Prefer candidates that are close in estimated value to the target offer.
+		- Penalize offers that are significantly more expensive or significantly cheaper.
+		- If possible, infer value from brand, condition, rarity, specifications, and category.
+		- Relevance should balance BOTH semantic similarity and comparable value.
+		- Do not recommend unfair exchanges unless no better alternatives exist.
+		- Briefly explain why the offer matches, mentioning value equivalence when relevant.
+		
+		Respond with a JSON array only, no extra text:
+		[{"offerId":"<uuid>","comment":"<why it matches>"}]
+		
+		Ordered from best to worst match.
+		Language: Russian.`
 
 func (r *DeepSeekRanker) Rank(ctx context.Context, target OfferInfo, candidates []OfferInfo) ([]RankedOffer, error) {
 	userPrompt, err := buildUserPrompt(target, candidates)
