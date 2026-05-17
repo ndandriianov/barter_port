@@ -12,6 +12,7 @@ import RespondToOfferModal from "@/widgets/offers/RespondToOfferModal";
 import ReviewSummaryCard from "@/widgets/reviews/ReviewSummaryCard.tsx";
 import CreateOfferReportDialog from "@/widgets/offers/CreateOfferReportDialog.tsx";
 import { getStatusCode } from "@/shared/utils/getStatusCode.ts";
+import { appRoutes } from "@/shared/config/appRoutes.ts";
 
 function OfferPage() {
   const { offerId } = useParams<{ offerId: string }>();
@@ -83,7 +84,7 @@ function OfferPage() {
 
     try {
       await deleteOffer(offer.id).unwrap();
-      navigate("/offers?tab=mine", { replace: true });
+      navigate(isOwnOffer ? appRoutes.market.myPublicationOffers : appRoutes.market.catalog, { replace: true });
     } catch {
       // The error is surfaced via RTK Query state.
     }
@@ -288,7 +289,7 @@ function OfferPage() {
             Редактировать
           </Button>
         )}
-        {isOwnOffer && (
+        {(isOwnOffer || isAdmin) && (
           <Button
             variant="outlined"
             color="error"

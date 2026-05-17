@@ -1046,6 +1046,22 @@ func TestDeleteOfferForbiddenForNonAuthor(t *testing.T) {
 	require.Equal(t, http.StatusForbidden, resp.StatusCode)
 }
 
+func TestDeleteOfferAllowedForAdmin(t *testing.T) {
+	t.Parallel()
+	dumpDealsLogs(t)
+
+	authorID := uuid.New()
+	adminToken := mustAdminAccessToken(t)
+	offerID := mustCreateOffer(t, authorID)
+
+	mustDeleteOfferAsAdmin(t, adminToken, offerID)
+
+	req := mustUserRequest(t, http.MethodGet, dealsURL()+"/offers/"+offerID.String(), authorID, nil)
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusNotFound, resp.StatusCode)
+}
+
 func TestDeleteOfferKeepsExistingDealItems(t *testing.T) {
 	t.Parallel()
 	dumpDealsLogs(t)
