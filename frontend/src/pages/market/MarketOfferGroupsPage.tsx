@@ -3,6 +3,7 @@ import AddIcon from "@mui/icons-material/Add";
 import HubOutlinedIcon from "@mui/icons-material/HubOutlined";
 import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
 import { Link as RouterLink } from "react-router-dom";
+import usersApi from "@/features/users/api/usersApi.ts";
 import OfferGroupsListWidget from "@/widgets/offer-groups/OfferGroupsListWidget.tsx";
 import { appRoutes } from "@/shared/config/appRoutes.ts";
 
@@ -11,6 +12,9 @@ interface MarketOfferGroupsPageProps {
 }
 
 function MarketOfferGroupsPage({ mode }: MarketOfferGroupsPageProps) {
+  const { data: currentUser } = usersApi.useGetCurrentUserQuery();
+  const effectiveMode = currentUser?.isAdmin ? "others" : mode;
+
   return (
     <Stack spacing={3}>
       <Box display="flex" justifyContent="space-between" alignItems="flex-start" gap={2} flexWrap="wrap">
@@ -19,10 +23,10 @@ function MarketOfferGroupsPage({ mode }: MarketOfferGroupsPageProps) {
             Объявления / Группы объявлений
           </Typography>
           <Typography variant="h4" fontWeight={800} mb={1}>
-            {mode === "mine" ? "Мои группы объявлений" : "Группы объявлений"}
+            {effectiveMode === "mine" ? "Мои группы объявлений" : "Группы объявлений"}
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            {mode === "mine"
+            {effectiveMode === "mine"
               ? "Здесь собраны ваши группы объявлений"
               : "Группы объявлений позволяют более гибко искать взаимовыгодный обмен"}
           </Typography>
@@ -51,22 +55,24 @@ function MarketOfferGroupsPage({ mode }: MarketOfferGroupsPageProps) {
         <Button
           component={RouterLink}
           to={appRoutes.market.exchangeGroups}
-          variant={mode === "others" ? "contained" : "text"}
+          variant={effectiveMode === "others" ? "contained" : "text"}
           startIcon={<HubOutlinedIcon />}
         >
           Все сценарии
         </Button>
-        <Button
-          component={RouterLink}
-          to={appRoutes.market.exchangeGroupsMine}
-          variant={mode === "mine" ? "contained" : "text"}
-          startIcon={<Inventory2OutlinedIcon />}
-        >
-          Мои
-        </Button>
+        {!currentUser?.isAdmin ? (
+          <Button
+            component={RouterLink}
+            to={appRoutes.market.exchangeGroupsMine}
+            variant={effectiveMode === "mine" ? "contained" : "text"}
+            startIcon={<Inventory2OutlinedIcon />}
+          >
+            Мои
+          </Button>
+        ) : null}
       </ButtonGroup>
 
-      <OfferGroupsListWidget mode={mode} />
+      <OfferGroupsListWidget mode={effectiveMode} />
     </Stack>
   );
 }
