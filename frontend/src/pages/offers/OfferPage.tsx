@@ -12,6 +12,7 @@ import RespondToOfferModal from "@/widgets/offers/RespondToOfferModal";
 import ReviewSummaryCard from "@/widgets/reviews/ReviewSummaryCard.tsx";
 import CreateOfferReportDialog from "@/widgets/offers/CreateOfferReportDialog.tsx";
 import { getStatusCode } from "@/shared/utils/getStatusCode.ts";
+import { appRoutes } from "@/shared/config/appRoutes.ts";
 
 function OfferPage() {
   const { offerId } = useParams<{ offerId: string }>();
@@ -83,7 +84,7 @@ function OfferPage() {
 
     try {
       await deleteOffer(offer.id).unwrap();
-      navigate("/offers?tab=mine", { replace: true });
+      navigate(isOwnOffer ? appRoutes.market.myPublicationOffers : appRoutes.market.catalog, { replace: true });
     } catch {
       // The error is surfaced via RTK Query state.
     }
@@ -250,68 +251,89 @@ function OfferPage() {
       )}
 
       <Box display="flex" gap={2} flexWrap="wrap">
-        {canRespond && (
-          <Button variant="contained" onClick={() => setIsRespondModalOpen(true)}>
-            Откликнуться
-          </Button>
+        {isAdmin ? (
+          <>
+            <Button component={RouterLink} to={`/offers/${offer.id}/reviews`} variant="outlined">
+              Смотреть отзыв
+            </Button>
+            <Button component={RouterLink} to={`/users/${offer.authorId}/reviews`} variant="outlined">
+              Отзывы о поставщике
+            </Button>
+            <Button
+              variant="outlined"
+              color="error"
+              onClick={handleDelete}
+              disabled={isDeleting || offer.isHidden || offer.modificationBlocked}
+            >
+              {isDeleting ? "Удаление..." : "Удалить"}
+            </Button>
+          </>
+        ) : (
+          <>
+            {canRespond && (
+              <Button variant="contained" onClick={() => setIsRespondModalOpen(true)}>
+                Откликнуться
+              </Button>
+            )}
+            {canRespond && (
+              <Button
+                variant={displayedIsFavorite ? "contained" : "outlined"}
+                color={displayedIsFavorite ? "error" : "inherit"}
+                startIcon={displayedIsFavorite ? <FavoriteRoundedIcon /> : <FavoriteBorderOutlinedIcon />}
+                onClick={() => void handleToggleFavorite()}
+                disabled={isFavoriteActionLoading}
+              >
+                {displayedIsFavorite ? "В избранном" : "В избранное"}
+              </Button>
+            )}
+            {isOwnOffer && (
+              <Button
+                variant={offer.hiddenByAuthor ? "contained" : "outlined"}
+                color={offer.hiddenByAuthor ? "warning" : "inherit"}
+                onClick={() => void handleToggleHidden()}
+                disabled={isVisibilityActionLoading}
+              >
+                {isVisibilityActionLoading
+                  ? "Сохраняем..."
+                  : hideActionLabel}
+              </Button>
+            )}
+            {isOwnOffer && (
+              <Button
+                component={RouterLink}
+                to={`/offers/${offer.id}/edit`}
+                variant="contained"
+                disabled={offer.isHidden || offer.modificationBlocked}
+              >
+                Редактировать
+              </Button>
+            )}
+            {isOwnOffer && (
+              <Button
+                variant="outlined"
+                color="error"
+                onClick={handleDelete}
+                disabled={isDeleting || offer.isHidden || offer.modificationBlocked}
+              >
+                {isDeleting ? "Удаление..." : "Удалить"}
+              </Button>
+            )}
+            <Button component={RouterLink} to={`/offers/${offer.id}/reviews`} variant="outlined">
+              Смотреть отзывы
+            </Button>
+            <Button component={RouterLink} to={`/users/${offer.authorId}/reviews`} variant="outlined">
+              Отзывы о поставщике
+            </Button>
+            <Button
+              variant="outlined"
+              color="error"
+              onClick={() => setIsReportDialogOpen(true)}
+              disabled={!canRespond}
+            >
+              Пожаловаться
+            </Button>
+          </>
         )}
-        {canRespond && (
-          <Button
-            variant={displayedIsFavorite ? "contained" : "outlined"}
-            color={displayedIsFavorite ? "error" : "inherit"}
-            startIcon={displayedIsFavorite ? <FavoriteRoundedIcon /> : <FavoriteBorderOutlinedIcon />}
-            onClick={() => void handleToggleFavorite()}
-            disabled={isFavoriteActionLoading}
-          >
-            {displayedIsFavorite ? "В избранном" : "В избранное"}
-          </Button>
-        )}
-        {isOwnOffer && (
-          <Button
-            variant={offer.hiddenByAuthor ? "contained" : "outlined"}
-            color={offer.hiddenByAuthor ? "warning" : "inherit"}
-            onClick={() => void handleToggleHidden()}
-            disabled={isVisibilityActionLoading}
-          >
-            {isVisibilityActionLoading
-              ? "Сохраняем..."
-              : hideActionLabel}
-          </Button>
-        )}
-        {isOwnOffer && (
-          <Button
-            component={RouterLink}
-            to={`/offers/${offer.id}/edit`}
-            variant="contained"
-            disabled={offer.isHidden || offer.modificationBlocked}
-          >
-            Редактировать
-          </Button>
-        )}
-        {isOwnOffer && (
-          <Button
-            variant="outlined"
-            color="error"
-            onClick={handleDelete}
-            disabled={isDeleting || offer.isHidden || offer.modificationBlocked}
-          >
-            {isDeleting ? "Удаление..." : "Удалить"}
-          </Button>
-        )}
-        <Button component={RouterLink} to={`/offers/${offer.id}/reviews`} variant="outlined">
-          Смотреть отзывы
-        </Button>
-        <Button component={RouterLink} to={`/users/${offer.authorId}/reviews`} variant="outlined">
-          Отзывы о поставщике
-        </Button>
-        <Button
-          variant="outlined"
-          color="error"
-          onClick={() => setIsReportDialogOpen(true)}
-          disabled={!canRespond}
-        >
-          Пожаловаться
-        </Button>
       </Box>
 
       <RespondToOfferModal

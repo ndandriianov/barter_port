@@ -188,12 +188,6 @@ function UserPage() {
               <Typography variant="h5" fontWeight={700}>
                 {displayName}
               </Typography>
-              <Typography variant="caption" color="text.secondary">
-                ID
-              </Typography>
-              <Typography variant="body2" fontFamily="monospace" fontWeight={500}>
-                {user.id}
-              </Typography>
               <Button
                 variant="text"
                 size="small"

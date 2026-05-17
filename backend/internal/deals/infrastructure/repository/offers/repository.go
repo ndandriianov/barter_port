@@ -429,13 +429,12 @@ func (r *Repository) UpdateOffer(
 	return domain.Offer{}, domain.ErrForbidden
 }
 
-// DeleteOffer deletes an offer owned by the specified author.
+// DeleteOffer deletes an offer by id.
 //
 // Domain errors:
 //   - domain.ErrOfferNotFound: if the offer does not exist.
-//   - domain.ErrForbidden: if the offer exists but belongs to another author.
-func (r *Repository) DeleteOffer(ctx context.Context, exec db.DB, offerID uuid.UUID, userID uuid.UUID) error {
-	tag, err := exec.Exec(ctx, `DELETE FROM offers WHERE id = $1 AND author_id = $2`, offerID, userID)
+func (r *Repository) DeleteOffer(ctx context.Context, exec db.DB, offerID uuid.UUID) error {
+	tag, err := exec.Exec(ctx, `DELETE FROM offers WHERE id = $1`, offerID)
 	if err != nil {
 		return fmt.Errorf("sql delete offer: %w", err)
 	}
@@ -443,8 +442,8 @@ func (r *Repository) DeleteOffer(ctx context.Context, exec db.DB, offerID uuid.U
 		return nil
 	}
 
-	var authorID uuid.UUID
-	checkErr := exec.QueryRow(ctx, `SELECT author_id FROM offers WHERE id = $1`, offerID).Scan(&authorID)
+	var existingOfferID uuid.UUID
+	checkErr := exec.QueryRow(ctx, `SELECT id FROM offers WHERE id = $1`, offerID).Scan(&existingOfferID)
 	if errors.Is(checkErr, pgx.ErrNoRows) {
 		return domain.ErrOfferNotFound
 	}
@@ -452,7 +451,7 @@ func (r *Repository) DeleteOffer(ctx context.Context, exec db.DB, offerID uuid.U
 		return fmt.Errorf("sql check offer before delete: %w", checkErr)
 	}
 
-	return domain.ErrForbidden
+	return nil
 }
 
 func (r *Repository) SetOfferHiddenByAuthor(ctx context.Context, exec db.DB, offerID uuid.UUID, hidden bool) error {

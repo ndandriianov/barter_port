@@ -4,10 +4,13 @@ import GridViewOutlinedIcon from "@mui/icons-material/GridViewOutlined";
 import Inventory2OutlinedIcon from "@mui/icons-material/Inventory2Outlined";
 import ViewInArOutlinedIcon from "@mui/icons-material/ViewInArOutlined";
 import { Link as RouterLink } from "react-router-dom";
+import usersApi from "@/features/users/api/usersApi.ts";
 import SectionEntryCard from "@/shared/ui/SectionEntryCard.tsx";
 import { appRoutes } from "@/shared/config/appRoutes.ts";
 
 function MarketHomePage() {
+  const { data: currentUser } = usersApi.useGetCurrentUserQuery();
+
   return (
     <Stack spacing={4}>
       <Box
@@ -32,25 +35,27 @@ function MarketHomePage() {
             </Typography>
           </Box>
 
-          <Box display="flex" gap={1.5} flexWrap="wrap">
-            <Button
-              component={RouterLink}
-              to={appRoutes.market.createOffer}
-              variant="contained"
-              color="secondary"
-              startIcon={<AddCircleOutlineOutlinedIcon />}
-            >
-              Создать объявление
-            </Button>
-            <Button
-              component={RouterLink}
-              to={appRoutes.market.createExchangeGroup}
-              variant="outlined"
-              sx={{ color: "common.white", borderColor: "rgba(255,255,255,0.4)" }}
-            >
-              Создать группу объявлений
-            </Button>
-          </Box>
+          {!currentUser?.isAdmin ? (
+            <Box display="flex" gap={1.5} flexWrap="wrap">
+              <Button
+                component={RouterLink}
+                to={appRoutes.market.createOffer}
+                variant="contained"
+                color="secondary"
+                startIcon={<AddCircleOutlineOutlinedIcon />}
+              >
+                Создать объявление
+              </Button>
+              <Button
+                component={RouterLink}
+                to={appRoutes.market.createExchangeGroup}
+                variant="outlined"
+                sx={{ color: "common.white", borderColor: "rgba(255,255,255,0.4)" }}
+              >
+                Создать группу объявлений
+              </Button>
+            </Box>
+          ) : null}
         </Stack>
       </Box>
 
@@ -73,15 +78,17 @@ function MarketHomePage() {
             accent="secondary"
           />
         </Grid>
-        <Grid size={{ xs: 12, md: 4 }}>
-          <SectionEntryCard
-            to={appRoutes.market.myPublications}
-            icon={<Inventory2OutlinedIcon />}
-            title="Мои публикации"
-            description="Мои объявления, мои группы и жалобы на мои объявления"
-            accent="info"
-          />
-        </Grid>
+        {!currentUser?.isAdmin ? (
+          <Grid size={{ xs: 12, md: 4 }}>
+            <SectionEntryCard
+              to={appRoutes.market.myPublications}
+              icon={<Inventory2OutlinedIcon />}
+              title="Мои публикации"
+              description="Мои объявления, мои группы и жалобы на мои объявления"
+              accent="info"
+            />
+          </Grid>
+        ) : null}
       </Grid>
     </Stack>
   );

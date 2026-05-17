@@ -1039,7 +1039,7 @@ func (s *Service) UpdateOffer(
 	return offer, nil
 }
 
-// DeleteOffer deletes an offer. Only the author can delete it.
+// DeleteOffer deletes an offer. The author or an admin can delete it.
 //
 // Domain errors:
 //   - domain.ErrOfferNotFound
@@ -1051,13 +1051,18 @@ func (s *Service) DeleteOffer(ctx context.Context, userID uuid.UUID, offerID uui
 		if err != nil {
 			return err
 		}
-		if offer.AuthorId != userID {
+
+		isAdmin, err := s.isAdmin(ctx, userID)
+		if err != nil {
+			return fmt.Errorf("check admin: %w", err)
+		}
+		if offer.AuthorId != userID && !isAdmin {
 			return domain.ErrForbidden
 		}
 		if offer.ModificationBlocked {
 			return domain.ErrModificationBlocked
 		}
-		if err := s.repo.DeleteOffer(ctx, tx, offerID, userID); err != nil {
+		if err := s.repo.DeleteOffer(ctx, tx, offerID); err != nil {
 			return err
 		}
 		return s.repo.DeleteUnusedTags(ctx, tx)
@@ -1084,6 +1089,14 @@ func (s *Service) setOfferHiddenByAuthor(ctx context.Context, userID uuid.UUID, 
 
 		return s.repo.SetOfferHiddenByAuthor(ctx, tx, offerID, hidden)
 	})
+}
+
+func (s *Service) isAdmin(ctx context.Context, userID uuid.UUID) (bool, error) {
+	if s.adminChecker == nil {
+		return false, fmt.Errorf("admin checker is not configured")
+	}
+
+	return s.adminChecker.IsAdmin(ctx, userID)
 }
 
 func (s *Service) ListTags(ctx context.Context) ([]string, error) {

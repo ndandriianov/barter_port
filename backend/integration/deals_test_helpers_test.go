@@ -579,6 +579,15 @@ func mustDeleteOffer(t *testing.T, userID uuid.UUID, offerID uuid.UUID) {
 	require.Equal(t, http.StatusNoContent, resp.StatusCode)
 }
 
+func mustDeleteOfferAsAdmin(t *testing.T, adminToken string, offerID uuid.UUID) {
+	t.Helper()
+
+	req := mustBearerRequest(t, http.MethodDelete, dealsURL()+"/offers/"+offerID.String(), adminToken, nil)
+	resp := mustDo(t, req)
+	defer func() { _ = resp.Body.Close() }()
+	require.Equal(t, http.StatusNoContent, resp.StatusCode)
+}
+
 func mustCreateDraft(
 	t *testing.T,
 	userID uuid.UUID,
