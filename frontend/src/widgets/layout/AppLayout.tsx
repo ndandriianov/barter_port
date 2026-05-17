@@ -65,16 +65,9 @@ function AppLayout() {
   );
 
   const navLinks = useMemo(() => {
-    const base = [
-      { key: "market" as const, label: "Объявления", to: appRoutes.market.home, badge: 0 },
-      { key: "deals" as const, label: "Сделки", to: appRoutes.deals.home, badge: totalActionCount },
-      { key: "messages" as const, label: "Сообщения", to: appRoutes.messages.home, badge: 0 },
-      { key: "profile" as const, label: "Профиль", to: appRoutes.profile.home, badge: 0 },
-    ];
-
     if (currentUser?.isAdmin) {
       return [
-        ...base,
+        { key: "market" as const, label: "Объявления", to: appRoutes.market.home, badge: 0 },
         {
           key: "admin" as const,
           label: "Модерация",
@@ -84,7 +77,12 @@ function AppLayout() {
       ];
     }
 
-    return base;
+    return [
+      { key: "market" as const, label: "Объявления", to: appRoutes.market.home, badge: 0 },
+      { key: "deals" as const, label: "Сделки", to: appRoutes.deals.home, badge: totalActionCount },
+      { key: "messages" as const, label: "Сообщения", to: appRoutes.messages.home, badge: 0 },
+      { key: "profile" as const, label: "Профиль", to: appRoutes.profile.home, badge: 0 },
+    ];
   }, [currentUser?.isAdmin, failureDeals.length, pendingReports.length, totalActionCount]);
 
   const handleLogout = async () => {
